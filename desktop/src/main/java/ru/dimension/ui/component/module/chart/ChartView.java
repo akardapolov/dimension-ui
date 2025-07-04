@@ -1,0 +1,179 @@
+package ru.dimension.ui.component.module.chart;
+
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
+import javax.swing.border.EtchedBorder;
+import lombok.Data;
+import lombok.Getter;
+import lombok.extern.log4j.Log4j2;
+import ru.dimension.ui.component.module.chart.block.HistoryConfigBlock;
+import ru.dimension.ui.component.module.config.panel.LegendPanel;
+import ru.dimension.ui.component.module.config.panel.MetricFunctionPanel;
+import ru.dimension.ui.component.module.config.panel.range.HistoryRangePanel;
+import ru.dimension.ui.component.module.config.panel.range.RealTimeRangePanel;
+import ru.dimension.ui.view.analyze.timeseries.AnalyzeAnomalyPanel;
+import ru.dimension.ui.component.model.AnalyzeTabType;
+import ru.dimension.ui.component.model.PanelTabType;
+import ru.dimension.ui.component.module.chart.block.RealTimeConfigBlock;
+import ru.dimension.ui.helper.GUIHelper;
+import ru.dimension.ui.view.analyze.timeseries.AnalyzeForecastPanel;
+
+@Data
+@Log4j2
+public class ChartView extends JPanel {
+  private int lastRealTimeConfigDividerLocation = 30;
+  private int lastRealTimeChartDividerLocation = 200;
+  private int lastHistoryConfigDividerLocation = 30;
+  private int lastHistoryChartDividerLocation = 200;
+
+  private JTabbedPane tabbedPane;
+
+  private MetricFunctionPanel realTimeMetricFunctionPanel;
+  private RealTimeRangePanel realTimeRangePanel;
+  private LegendPanel realTimeLegendPanel;
+
+  private MetricFunctionPanel historyMetricFunctionPanel;
+  private HistoryRangePanel historyRangePanel;
+  private LegendPanel historyLegendPanel;
+
+  private RealTimeConfigBlock realTimeConfigBlock;
+  private HistoryConfigBlock historyConfigBlock;
+
+  @Getter
+  private JPanel realTimeChartPanel;
+  private JPanel realTimeDetailPanel;
+  @Getter
+  private JPanel historyChartPanel;
+  private JPanel historyDetailPanel;
+
+  @Getter
+  private JTabbedPane analyzeTabbedPane;
+  private AnalyzeAnomalyPanel analyzeAnomalyPanel;
+  private AnalyzeForecastPanel analyzeForecastPanel;
+
+  private JSplitPane realTimeChartDetailSplitPane;
+  private JSplitPane historyChartDetailSplitPane;
+
+  private JSplitPane realTimeConfigChartDetail;
+  private JSplitPane historyConfigChartDetail;
+
+  public ChartView() {
+    tabbedPane = new JTabbedPane();
+    tabbedPane.setBorder(new EtchedBorder());
+
+    realTimeMetricFunctionPanel = new MetricFunctionPanel(getLabel("Group: "));
+    realTimeRangePanel = new RealTimeRangePanel(getLabel("Range: "));
+    realTimeLegendPanel = new LegendPanel(getLabel("Legend: "));
+
+    realTimeConfigBlock = new RealTimeConfigBlock(realTimeMetricFunctionPanel, realTimeRangePanel, realTimeLegendPanel);
+
+    historyMetricFunctionPanel = new MetricFunctionPanel(getLabel("Group: "));
+    historyRangePanel = new HistoryRangePanel(getLabel("Range: "));
+    historyLegendPanel = new LegendPanel(getLabel("Legend: "));
+
+    historyConfigBlock = new HistoryConfigBlock(historyMetricFunctionPanel, historyRangePanel, historyLegendPanel);
+
+    realTimeChartPanel = new JPanel(new BorderLayout());
+    realTimeDetailPanel = new JPanel(new BorderLayout());
+
+    historyChartPanel = new JPanel(new BorderLayout());
+    historyDetailPanel = new JPanel(new BorderLayout());
+
+    analyzeTabbedPane = new JTabbedPane();
+    analyzeTabbedPane.addTab(AnalyzeTabType.ANOMALY.getName(), new JPanel());
+    analyzeTabbedPane.addTab(AnalyzeTabType.FORECAST.getName(), new JPanel());
+
+    // Create tabs
+    tabbedPane.addTab(PanelTabType.REALTIME.getName(), createRealTimeTab());
+    tabbedPane.addTab(PanelTabType.HISTORY.getName(), createHistoryTab());
+  }
+
+  private JLabel getLabel(String text) {
+    JLabel label = new JLabel(text);
+    label.setFont(label.getFont().deriveFont(java.awt.Font.BOLD));
+    return label;
+  }
+
+  private JSplitPane createRealTimeTab() {
+    realTimeConfigChartDetail = createBaseSplitPane();
+    realTimeChartDetailSplitPane = createChartDetailSplitPane();
+
+    GUIHelper.addToJSplitPane(realTimeChartDetailSplitPane, realTimeChartPanel, JSplitPane.TOP);
+    GUIHelper.addToJSplitPane(realTimeChartDetailSplitPane, realTimeDetailPanel, JSplitPane.BOTTOM);
+
+    realTimeConfigChartDetail.setTopComponent(realTimeConfigBlock);
+    realTimeConfigChartDetail.setBottomComponent(realTimeChartDetailSplitPane);
+
+    realTimeConfigChartDetail.setDividerLocation(30);
+    realTimeChartDetailSplitPane.setDividerLocation(200);
+
+    return realTimeConfigChartDetail;
+  }
+
+  private JSplitPane createHistoryTab() {
+    historyConfigChartDetail = createBaseSplitPane();
+    historyChartDetailSplitPane = createChartDetailSplitPane();
+
+    historyChartDetailSplitPane.setTopComponent(historyChartPanel);
+    historyChartDetailSplitPane.setBottomComponent(historyDetailPanel);
+
+    historyConfigChartDetail.setTopComponent(historyConfigBlock);
+    historyConfigChartDetail.setBottomComponent(historyChartDetailSplitPane);
+
+    historyConfigChartDetail.setDividerLocation(lastHistoryConfigDividerLocation);
+    historyChartDetailSplitPane.setDividerLocation(lastHistoryChartDividerLocation);
+
+    return historyConfigChartDetail;
+  }
+
+  private JSplitPane createBaseSplitPane() {
+    JSplitPane splitPane = GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, 30);
+    splitPane.setDividerLocation(30);
+    splitPane.setResizeWeight(0.5);
+    splitPane.setPreferredSize(new Dimension(100, 400));
+    splitPane.setMaximumSize(new Dimension(100, 400));
+    return splitPane;
+  }
+
+  private JSplitPane createChartDetailSplitPane() {
+    JSplitPane splitPane = GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, 200);
+    splitPane.setDividerLocation(200);
+    splitPane.setResizeWeight(0.5);
+    return splitPane;
+  }
+
+  public void setRealTimeDetailVisible(boolean visible) {
+    if (visible) {
+      realTimeChartDetailSplitPane.getBottomComponent().setVisible(true);
+      realTimeChartDetailSplitPane.setDividerLocation(lastRealTimeChartDividerLocation);
+    } else {
+      realTimeChartDetailSplitPane.getBottomComponent().setVisible(false);
+      realTimeChartDetailSplitPane.setDividerLocation(1.0); // Moves divider to bottom
+    }
+
+    // Update UI
+    realTimeChartDetailSplitPane.revalidate();
+    realTimeChartDetailSplitPane.repaint();
+    realTimeConfigChartDetail.revalidate();
+    realTimeConfigChartDetail.repaint();
+  }
+
+  public void setHistoryDetailVisible(boolean visible) {
+    if (visible) {
+      historyChartDetailSplitPane.getBottomComponent().setVisible(true);
+      historyChartDetailSplitPane.setDividerLocation(lastHistoryChartDividerLocation);
+    } else {
+      historyChartDetailSplitPane.getBottomComponent().setVisible(false);
+      historyChartDetailSplitPane.setDividerLocation(1.0); // Moves divider to bottom
+    }
+
+    historyChartDetailSplitPane.revalidate();
+    historyChartDetailSplitPane.repaint();
+    historyConfigChartDetail.revalidate();
+    historyConfigChartDetail.repaint();
+  }
+}

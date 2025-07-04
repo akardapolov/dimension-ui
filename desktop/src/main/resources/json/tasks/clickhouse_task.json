@@ -1,0 +1,10 @@
+{
+  "description": "",
+  "pullTimeout": 1,
+  "connectionId": 1003,
+  "queryList": [
+    1005
+  ],
+  "id": 7,
+  "name": "Clickhouse task"
+}

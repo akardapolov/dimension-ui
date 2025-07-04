@@ -1,0 +1,57 @@
+{
+  "text": "SELECT * FROM v$active_session_history",
+  "description": "Active session history, EE option",
+  "gatherDataMode": "BY_CLIENT_JDBC",
+  "loadDataMode": "JDBC_REAL_TIME",
+  "metricList": [
+    {
+      "id": 4,
+      "name": "Top ASH waits",
+      "isDefault": false,
+      "xAxis": {
+        "colId": 1,
+        "colIdSql": 2,
+        "colName": "SAMPLE_TIME",
+        "colDbTypeName": "TIMESTAMP",
+        "colSizeDisplay": 20,
+        "colSizeSqlType": 93,
+        "csType": {
+          "isTimeStamp": true,
+          "sType": "RAW",
+          "cType": "LONG"
+        }
+      },
+      "yAxis": {
+        "colId": 44,
+        "colIdSql": 45,
+        "colName": "WAIT_CLASS",
+        "colDbTypeName": "VARCHAR2",
+        "colSizeDisplay": 64,
+        "colSizeSqlType": 12,
+        "csType": {
+          "isTimeStamp": false,
+          "sType": "RAW",
+          "cType": "STRING"
+        }
+      },
+      "group": {
+        "colId": 44,
+        "colIdSql": 45,
+        "colName": "WAIT_CLASS",
+        "colDbTypeName": "VARCHAR2",
+        "colSizeDisplay": 64,
+        "colSizeSqlType": 12,
+        "csType": {
+          "isTimeStamp": false,
+          "sType": "RAW",
+          "cType": "STRING"
+        }
+      },
+      "metricFunction": "COUNT",
+      "chartType": "STACKED",
+      "columnGanttList": []
+    }
+  ],
+  "id": 1001,
+  "name": "Oracle ASH EE"
+}

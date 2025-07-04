@@ -1,0 +1,12 @@
+{
+  "userName": "",
+  "password": "",
+  "url": "http://localhost:8888/actuator/prometheus",
+  "jar": "",
+  "driver": "",
+  "type": "HTTP",
+  "httpMethod": "GET",
+  "parseType": "PROMETHEUS",
+  "id": 1007,
+  "name": "Prometheus"
+}

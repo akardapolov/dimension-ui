@@ -1,0 +1,9 @@
+{
+  "text": "",
+  "description": "",
+  "gatherDataMode": "BY_CLIENT_HTTP",
+  "loadDataMode": "JDBC_REAL_TIME",
+  "metricList": [],
+  "id": 1007,
+  "name": "Spring boot prometheus query"
+}

@@ -1,0 +1,10 @@
+{
+  "description": "Spring boot prometheus",
+  "pullTimeout": 3,
+  "connectionId": 1007,
+  "queryList": [
+    1007
+  ],
+  "id": 1007,
+  "name": "Spring boot prometheus task"
+}

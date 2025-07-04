@@ -1,0 +1,9 @@
+{
+  "text": "SELECT\n  sysdate as dt,\n  n.wait_class as WAIT_CLASS,\n  round(m.time_waited/m.INTSIZE_CSEC,3) as VALUE\nFROM\n  v$waitclassmetric  m, v$system_wait_class n\nWHERE\n  m.wait_class_id=n.wait_class_id AND n.wait_class != 'Idle'",
+  "description": "Time waited from v$waitclassmetric  m, v$system_wait_clas",
+  "gatherDataMode": "BY_CLIENT_JDBC",
+  "loadDataMode": "JDBC_REAL_TIME",
+  "metricList": [],
+  "id": 1002,
+  "name": "Oracle time waited by wait class"
+}

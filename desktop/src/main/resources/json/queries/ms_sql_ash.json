@@ -1,0 +1,9 @@
+{
+  "text": "SELECT getdate() as dt, s.session_id, s.login_time, s.host_name, s.program_name,\ns.login_name, s.nt_user_name, s.is_user_process,\ns.database_id, DB_NAME(s.database_id) AS [database], \ns.status,\ns.reads, s.writes, s.logical_reads, s.row_count,\nc.session_id, c.net_transport, c.protocol_type, \nc.client_net_address, c.client_tcp_port, \nc.num_writes AS DataPacketWrites \nFROM sys.dm_exec_sessions s\nINNER JOIN sys.dm_exec_connections c\nON s.session_id \u003d c.session_id \nINNER JOIN sys.dm_exec_requests r \nON s.session_id \u003d r.session_id",
+  "description": "",
+  "gatherDataMode": "BY_CLIENT_JDBC",
+  "loadDataMode": "JDBC_REAL_TIME",
+  "metricList": [],
+  "id": 1006,
+  "name": "MS SQL server"
+}

@@ -1,0 +1,10 @@
+{
+  "description": "Postgres active session history",
+  "pullTimeout": 3,
+  "connectionId": 1002,
+  "queryList": [
+    1004
+  ],
+  "id": 1002,
+  "name": "Postgres ASH"
+}

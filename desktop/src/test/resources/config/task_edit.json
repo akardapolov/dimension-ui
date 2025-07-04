@@ -1,0 +1,7 @@
+{
+  "id": 1,
+  "name": "Test",
+  "description": "Description Test",
+  "pullTimeout": "3",
+  "connectionId": "2"
+}

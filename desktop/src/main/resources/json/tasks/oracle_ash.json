@@ -1,0 +1,8 @@
+{
+  "description": "Oracle active session history",
+  "pullTimeout": 3,
+  "connectionId": 1001,
+  "queryList": [1001, 1002, 1003],
+  "id": 1001,
+  "name": "Oracle ASH"
+}

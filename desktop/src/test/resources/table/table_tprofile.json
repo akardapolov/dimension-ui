@@ -1,0 +1,293 @@
+{
+  "dimensionColumnList": [
+    "WAIT_CLASS",
+    "SQL_ID",
+    "SQL_OPNAME"
+  ],
+  "tableName": "Shared",
+  "tableType": "TIME_SERIES",
+  "indexType": "LOCAL",
+  "compression": true,
+  "cProfiles": [
+    {
+      "colId": 0,
+      "colIdSql": 1,
+      "colName": "DT",
+      "colDbTypeName": "DATE",
+      "colSizeDisplay": 7,
+      "colSizeSqlType": 93,
+      "csType": {
+        "isTimeStamp": true,
+        "sType": "RAW",
+        "cType": "LONG",
+        "dType": "DATE"
+      }
+    },
+    {
+      "colId": 1,
+      "colIdSql": 2,
+      "colName": "CIRCUIT",
+      "colDbTypeName": "RAW",
+      "colSizeDisplay": 8,
+      "colSizeSqlType": -3,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "HISTOGRAM",
+        "cType": "STRING",
+        "dType": "RAW"
+      }
+    },
+    {
+      "colId": 2,
+      "colIdSql": 3,
+      "colName": "DISPATCHER",
+      "colDbTypeName": "RAW",
+      "colSizeDisplay": 8,
+      "colSizeSqlType": -3,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "HISTOGRAM",
+        "cType": "STRING",
+        "dType": "RAW"
+      }
+    },
+    {
+      "colId": 3,
+      "colIdSql": 4,
+      "colName": "SERVER",
+      "colDbTypeName": "RAW",
+      "colSizeDisplay": 8,
+      "colSizeSqlType": -3,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "HISTOGRAM",
+        "cType": "STRING",
+        "dType": "RAW"
+      }
+    },
+    {
+      "colId": 4,
+      "colIdSql": 5,
+      "colName": "WAITER",
+      "colDbTypeName": "RAW",
+      "colSizeDisplay": 8,
+      "colSizeSqlType": -3,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "HISTOGRAM",
+        "cType": "STRING",
+        "dType": "RAW"
+      }
+    },
+    {
+      "colId": 5,
+      "colIdSql": 6,
+      "colName": "SADDR",
+      "colDbTypeName": "RAW",
+      "colSizeDisplay": 8,
+      "colSizeSqlType": -3,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "HISTOGRAM",
+        "cType": "STRING",
+        "dType": "RAW"
+      }
+    },
+    {
+      "colId": 6,
+      "colIdSql": 7,
+      "colName": "STATUS",
+      "colDbTypeName": "VARCHAR2",
+      "colSizeDisplay": 16,
+      "colSizeSqlType": 12,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "RAW",
+        "cType": "STRING",
+        "dType": "VARCHAR2"
+      }
+    },
+    {
+      "colId": 7,
+      "colIdSql": 8,
+      "colName": "QUEUE",
+      "colDbTypeName": "VARCHAR2",
+      "colSizeDisplay": 16,
+      "colSizeSqlType": 12,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "RAW",
+        "cType": "STRING",
+        "dType": "VARCHAR2"
+      }
+    },
+    {
+      "colId": 8,
+      "colIdSql": 9,
+      "colName": "MESSAGE0",
+      "colDbTypeName": "NUMBER",
+      "colSizeDisplay": 39,
+      "colSizeSqlType": 2,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "RAW",
+        "cType": "INT",
+        "dType": "NUMBER"
+      }
+    },
+    {
+      "colId": 9,
+      "colIdSql": 10,
+      "colName": "MESSAGE1",
+      "colDbTypeName": "NUMBER",
+      "colSizeDisplay": 39,
+      "colSizeSqlType": 2,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "RAW",
+        "cType": "INT",
+        "dType": "NUMBER"
+      }
+    },
+    {
+      "colId": 10,
+      "colIdSql": 11,
+      "colName": "MESSAGE2",
+      "colDbTypeName": "NUMBER",
+      "colSizeDisplay": 39,
+      "colSizeSqlType": 2,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "RAW",
+        "cType": "INT",
+        "dType": "NUMBER"
+      }
+    },
+    {
+      "colId": 11,
+      "colIdSql": 12,
+      "colName": "MESSAGE3",
+      "colDbTypeName": "NUMBER",
+      "colSizeDisplay": 39,
+      "colSizeSqlType": 2,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "RAW",
+        "cType": "INT",
+        "dType": "NUMBER"
+      }
+    },
+    {
+      "colId": 12,
+      "colIdSql": 13,
+      "colName": "MESSAGES",
+      "colDbTypeName": "NUMBER",
+      "colSizeDisplay": 39,
+      "colSizeSqlType": 2,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "RAW",
+        "cType": "INT",
+        "dType": "NUMBER"
+      }
+    },
+    {
+      "colId": 13,
+      "colIdSql": 14,
+      "colName": "BYTES",
+      "colDbTypeName": "NUMBER",
+      "colSizeDisplay": 39,
+      "colSizeSqlType": 2,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "RAW",
+        "cType": "INT",
+        "dType": "NUMBER"
+      }
+    },
+    {
+      "colId": 14,
+      "colIdSql": 15,
+      "colName": "BREAKS",
+      "colDbTypeName": "NUMBER",
+      "colSizeDisplay": 39,
+      "colSizeSqlType": 2,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "RAW",
+        "cType": "INT",
+        "dType": "NUMBER"
+      }
+    },
+    {
+      "colId": 15,
+      "colIdSql": 16,
+      "colName": "PRESENTATION",
+      "colDbTypeName": "VARCHAR2",
+      "colSizeDisplay": 257,
+      "colSizeSqlType": 12,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "RAW",
+        "cType": "STRING",
+        "dType": "VARCHAR2"
+      }
+    },
+    {
+      "colId": 16,
+      "colIdSql": 17,
+      "colName": "PCIRCUIT",
+      "colDbTypeName": "RAW",
+      "colSizeDisplay": 8,
+      "colSizeSqlType": -3,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "RAW",
+        "cType": "STRING",
+        "dType": "RAW"
+      }
+    },
+    {
+      "colId": 17,
+      "colIdSql": 18,
+      "colName": "BOUND_TIME",
+      "colDbTypeName": "NUMBER",
+      "colSizeDisplay": 39,
+      "colSizeSqlType": 2,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "RAW",
+        "cType": "INT",
+        "dType": "NUMBER"
+      }
+    },
+    {
+      "colId": 18,
+      "colIdSql": 19,
+      "colName": "BOUND_REASON",
+      "colDbTypeName": "VARCHAR2",
+      "colSizeDisplay": 32,
+      "colSizeSqlType": 12,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "RAW",
+        "cType": "STRING",
+        "dType": "VARCHAR2"
+      }
+    },
+    {
+      "colId": 19,
+      "colIdSql": 20,
+      "colName": "CON_ID",
+      "colDbTypeName": "NUMBER",
+      "colSizeDisplay": 39,
+      "colSizeSqlType": 2,
+      "csType": {
+        "isTimeStamp": false,
+        "sType": "RAW",
+        "cType": "INT",
+        "dType": "NUMBER"
+      }
+    }
+  ]
+}

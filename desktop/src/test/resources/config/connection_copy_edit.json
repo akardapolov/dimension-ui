@@ -1,0 +1,10 @@
+{
+  "id": 2,
+  "name": "Test_copy",
+  "userName": "test_copy",
+  "password": "sys",
+  "url": "jdbc:test_copy",
+  "jar": "C:\\Users\\.temp\\test.jar_copy",
+  "driver": "test.jdbc.driver_copy",
+  "type": "JDBC"
+}

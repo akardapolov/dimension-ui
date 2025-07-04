@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="http://maven.apache.org/POM/4.0.0"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <artifactId>dimension-ui</artifactId>
+  <version>${revision}</version>
+  <packaging>jar</packaging>
+
+  <name>dimension-ui</name>
+
+  <parent>
+    <groupId>ru.dimension</groupId>
+    <artifactId>ui</artifactId>
+    <version>${revision}</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <properties>
+    <project.build.outputEncoding>UTF-8</project.build.outputEncoding>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <lombok-version>1.18.30</lombok-version>
+    <slf4j.version>1.7.36</slf4j.version>
+    <log4j2.version>2.18.0</log4j2.version>
+
+    <dagger2.version>2.43.2</dagger2.version>
+
+    <bdb-version>5.0.73</bdb-version>
+    <dimension-db-version>25.7.1</dimension-db-version>
+    <gson-version>2.10.1</gson-version>
+    <painless-gridbag-version>1.0.6</painless-gridbag-version>
+    <LGoodDatePicker-version>11.2.1</LGoodDatePicker-version>
+    <commons-dbcp2-version>2.9.0</commons-dbcp2-version>
+    <junit-version>5.9.2</junit-version>
+    <mockito-version>4.6.1</mockito-version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.egantt</groupId>
+      <artifactId>egantt</artifactId>
+      <version>${revision}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jfree.chart</groupId>
+      <artifactId>jfreechart-fse</artifactId>
+      <version>${revision}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.ensozos</groupId>
+      <artifactId>matrix-profile</artifactId>
+      <version>${revision}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.workday</groupId>
+      <artifactId>timeseries-forecast</artifactId>
+      <version>1.1.1</version>
+    </dependency>
+
+    <!--Dagger2-->
+    <dependency>
+      <groupId>com.google.dagger</groupId>
+      <artifactId>dagger</artifactId>
+      <version>${dagger2.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.dagger</groupId>
+      <artifactId>dagger-compiler</artifactId>
+      <version>${dagger2.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!--Log4j2 logger-->
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-api</artifactId>
+      <version>${log4j2.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <version>${log4j2.version}</version>
+    </dependency>
+
+    <!--slf4j facade-->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>${lombok-version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>${gson-version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.github.tri-bao</groupId>
+      <artifactId>painless-gridbag</artifactId>
+      <version>${painless-gridbag-version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.github.lgooddatepicker</groupId>
+      <artifactId>LGoodDatePicker</artifactId>
+      <version>${LGoodDatePicker-version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.sleepycat</groupId>
+      <artifactId>je</artifactId>
+      <version>${bdb-version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>ru.dimension</groupId>
+      <artifactId>db</artifactId>
+      <version>${dimension-db-version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-dbcp2</artifactId>
+      <version>${commons-dbcp2-version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>${junit-version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>${mockito-version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!--Test create object integration-->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.15.1</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!--Report-->
+    <dependency>
+      <groupId>org.freemarker</groupId>
+      <artifactId>freemarker</artifactId>
+      <version>2.3.32</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.itextpdf</groupId>
+      <artifactId>itextpdf</artifactId>
+      <version>5.5.13.3</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.itextpdf.tool</groupId>
+      <artifactId>xmlworker</artifactId>
+      <version>5.5.13.3</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.pdfbox</groupId>
+      <artifactId>pdfbox</artifactId>
+      <version>2.0.29</version>
+    </dependency>
+
+    <!-- http -->
+    <dependency>
+      <groupId>org.apache.httpcomponents.client5</groupId>
+      <artifactId>httpclient5</artifactId>
+      <version>5.3.1</version>
+    </dependency>
+
+    <!-- parse json -->
+    <dependency>
+      <groupId>com.jayway.jsonpath</groupId>
+      <artifactId>json-path</artifactId>
+      <version>2.9.0</version>
+    </dependency>
+
+    <!-- LaF -->
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf</artifactId>
+      <version>3.2.5</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf-extras</artifactId>
+      <version>3.2.5</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf-swingx</artifactId>
+      <version>3.2.5</version>
+    </dependency>
+
+    <!-- rsyntaxtextarea -->
+    <dependency>
+      <groupId>com.fifesoft</groupId>
+      <artifactId>rsyntaxtextarea</artifactId>
+      <version>3.3.4</version>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <finalName>dimension-ui-${project.version}</finalName>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.2.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.1.2</version>
+        <configuration>
+          <!-- this is here to prevent exceptions being thrown with no message -->
+          <!-- or stack trace, which can happen on oracle JVMs after a while   -->
+          <argLine>-XX:-OmitStackTraceInFastThrow</argLine>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit-version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.1</version>
+        <configuration>
+          <encoding>UTF-8</encoding>
+          <source>21</source>
+          <target>21</target>
+          <release>21</release>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>com.google.dagger</groupId>
+              <artifactId>dagger-compiler</artifactId>
+              <version>${dagger2.version}</version>
+            </path>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>${lombok-version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.5.0</version>
+        <configuration>
+          <overview>src/main/java/overview.html</overview>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.1.1</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.1.1</version>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.0.2</version>
+        <configuration>
+          <encoding>UTF-8</encoding>
+          <nonFilteredFileExtensions>
+            <nonFilteredFileExtension>ttf</nonFilteredFileExtension>
+          </nonFilteredFileExtensions>
+        </configuration>
+      </plugin>
+
+    </plugins>
+
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>3.1.1</version>
+          <configuration>
+            <descriptorRefs>
+              <descriptorRef>jar-with-dependencies</descriptorRef>
+            </descriptorRefs>
+            <archive>
+              <manifest>
+                <mainClass>ru.dimension.ui.Application</mainClass>
+              </manifest>
+            </archive>
+            <appendAssemblyId>false</appendAssemblyId>
+            <finalName>${project.build.finalName}-app</finalName>
+          </configuration>
+          <executions>
+            <execution>
+              <id>make-assembly</id>
+              <phase>package</phase>
+              <goals>
+                <goal>single</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+</project>

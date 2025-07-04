@@ -1,0 +1,151 @@
+{
+  "text": "SELECT current_timestamp as SAMPLE_TIME, datid, datname, pid AS SESSION_ID, pid AS SESSION_SERIAL, usesysid AS USER_ID, coalesce(usename, \u0027unknown\u0027) as usename, concat(application_name,\u0027::\u0027, backend_type, \u0027::\u0027, coalesce(client_hostname, client_addr::text, \u0027localhost\u0027)) AS PROGRAM, wait_event_type AS WAIT_CLASS, wait_event AS EVENT, query, substring(md5(query) from 0 for 15) AS SQL_ID, left(query, strpos(query, \u0027 \u0027))  AS SQL_OPNAME, coalesce(query_start, xact_start, backend_start) as query_start, 1000 * EXTRACT(EPOCH FROM (clock_timestamp()-coalesce(query_start, xact_start, backend_start))) as duration from pg_stat_activity where state\u003d\u0027active\u0027",
+  "description": "Active session history",
+  "gatherDataMode": "BY_CLIENT_JDBC",
+  "loadDataMode": "JDBC_REAL_TIME",
+  "metricList": [
+    {
+      "id": 2,
+      "name": "Test",
+      "isDefault": true,
+      "xAxis": {
+        "colId": 0,
+        "colIdSql": 1,
+        "colName": "SAMPLE_TIME",
+        "colDbTypeName": "TIMESTAMPTZ",
+        "colSizeDisplay": 35,
+        "colSizeSqlType": 93,
+        "csType": {
+          "isTimeStamp": true,
+          "sType": "RAW",
+          "cType": "LONG"
+        }
+      },
+      "yAxis": {
+        "colId": 8,
+        "colIdSql": 9,
+        "colName": "WAIT_CLASS",
+        "colDbTypeName": "TEXT",
+        "colSizeDisplay": 2147483647,
+        "colSizeSqlType": 12,
+        "csType": {
+          "isTimeStamp": false,
+          "sType": "RAW",
+          "cType": "STRING"
+        }
+      },
+      "group": {
+        "colId": 8,
+        "colIdSql": 9,
+        "colName": "WAIT_CLASS",
+        "colDbTypeName": "TEXT",
+        "colSizeDisplay": 2147483647,
+        "colSizeSqlType": 12,
+        "csType": {
+          "isTimeStamp": false,
+          "sType": "RAW",
+          "cType": "STRING"
+        }
+      },
+      "metricFunction": "COUNT",
+      "chartType": "STACKED",
+      "columnGanttList": []
+    },
+    {
+      "id": 4,
+      "name": "SessionId",
+      "isDefault": false,
+      "xAxis": {
+        "colId": 0,
+        "colIdSql": 1,
+        "colName": "SAMPLE_TIME",
+        "colDbTypeName": "TIMESTAMPTZ",
+        "colSizeDisplay": 35,
+        "colSizeSqlType": 93,
+        "csType": {
+          "isTimeStamp": true,
+          "sType": "RAW",
+          "cType": "LONG"
+        }
+      },
+      "yAxis": {
+        "colId": 3,
+        "colIdSql": 4,
+        "colName": "SESSION_ID",
+        "colDbTypeName": "INT4",
+        "colSizeDisplay": 11,
+        "colSizeSqlType": 4,
+        "csType": {
+          "isTimeStamp": false,
+          "sType": "RAW",
+          "cType": "INT"
+        }
+      },
+      "group": {
+        "colId": 3,
+        "colIdSql": 4,
+        "colName": "SESSION_ID",
+        "colDbTypeName": "INT4",
+        "colSizeDisplay": 11,
+        "colSizeSqlType": 4,
+        "csType": {
+          "isTimeStamp": false,
+          "sType": "RAW",
+          "cType": "INT"
+        }
+      },
+      "metricFunction": "SUM",
+      "chartType": "LINEAR",
+      "columnGanttList": []
+    },
+    {
+      "id": 6,
+      "name": "SessionIdAvg",
+      "isDefault": false,
+      "xAxis": {
+        "colId": 0,
+        "colIdSql": 1,
+        "colName": "SAMPLE_TIME",
+        "colDbTypeName": "TIMESTAMPTZ",
+        "colSizeDisplay": 35,
+        "colSizeSqlType": 93,
+        "csType": {
+          "isTimeStamp": true,
+          "sType": "RAW",
+          "cType": "LONG"
+        }
+      },
+      "yAxis": {
+        "colId": 3,
+        "colIdSql": 4,
+        "colName": "SESSION_ID",
+        "colDbTypeName": "INT4",
+        "colSizeDisplay": 11,
+        "colSizeSqlType": 4,
+        "csType": {
+          "isTimeStamp": false,
+          "sType": "RAW",
+          "cType": "INT"
+        }
+      },
+      "group": {
+        "colId": 3,
+        "colIdSql": 4,
+        "colName": "SESSION_ID",
+        "colDbTypeName": "INT4",
+        "colSizeDisplay": 11,
+        "colSizeSqlType": 4,
+        "csType": {
+          "isTimeStamp": false,
+          "sType": "RAW",
+          "cType": "INT"
+        }
+      },
+      "metricFunction": "AVG",
+      "chartType": "LINEAR",
+      "columnGanttList": []
+    }
+  ],
+  "id": 1004,
+  "name": "Postgres ASH"
+}

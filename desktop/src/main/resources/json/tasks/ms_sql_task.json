@@ -1,0 +1,10 @@
+{
+  "description": "",
+  "pullTimeout": 1,
+  "connectionId": 1004,
+  "queryList": [
+    1006
+  ],
+  "id": 9,
+  "name": "MS SQL task"
+}

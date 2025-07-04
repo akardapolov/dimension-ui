@@ -1,0 +1,10 @@
+{
+  "userName": "test_user",
+  "password": "",
+  "url": "jdbc:clickhouse://localhost:8123",
+  "jar": "C:\\Users\\.temp\\clickhouse-jdbc-0.5.0.jar",
+  "driver": "com.clickhouse.jdbc.ClickHouseDriver",
+  "type": "JDBC",
+  "id": 1003,
+  "name": "ClickHouse"
+}

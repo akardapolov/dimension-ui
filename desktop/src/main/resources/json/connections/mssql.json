@@ -1,0 +1,10 @@
+{
+  "userName": "sa",
+  "password": "",
+  "url": "jdbc:sqlserver://;serverName\u003dlocalhost;databaseName\u003dmaster",
+  "jar": "C:\\Users\\.temp\\mssql-jdbc-12.3.1.jre11-preview.jar",
+  "driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver",
+  "type": "JDBC",
+  "id": 1004,
+  "name": "MSSQL"
+}

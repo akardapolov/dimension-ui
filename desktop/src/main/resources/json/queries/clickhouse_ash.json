@@ -1,0 +1,9 @@
+{
+  "text": "SELECT now() as dt, * from system.processes",
+  "description": "CREATE USER \u0027test_user\u0027 IDENTIFIED WITH sha256_password BY \u0027test_user\u0027;  GRANT SELECT ON system.* TO test_user;  SELECT * from system.processes;",
+  "gatherDataMode": "BY_CLIENT_JDBC",
+  "loadDataMode": "JDBC_REAL_TIME",
+  "metricList": [],
+  "id": 1005,
+  "name": "ClickHouse ASH"
+}

@@ -1,0 +1,10 @@
+{
+  "userName": "postgres",
+  "password": "",
+  "url": "jdbc:postgresql://localhost:5432/postgres",
+  "jar": "C:\\Users\\.temp\\postgresql-42.2.20.jar",
+  "driver": "org.postgresql.Driver",
+  "type": "JDBC",
+  "id": 1002,
+  "name": "Postgres"
+}
