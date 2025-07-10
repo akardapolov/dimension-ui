@@ -1,9 +1,9 @@
 package ru.dimension.ui.view.structure.adhoc;
 
-import static ru.dimension.ui.helper.GUIHelper.getIdByColumnName;
-import static ru.dimension.ui.helper.GUIHelper.getNameByColumnName;
 import static ru.dimension.ui.model.db.DBType.CLICKHOUSE;
+import static ru.dimension.ui.model.db.DBType.DUCKDB;
 import static ru.dimension.ui.model.db.DBType.MSSQL;
+import static ru.dimension.ui.model.db.DBType.MYSQL;
 import static ru.dimension.ui.model.db.DBType.ORACLE;
 import static ru.dimension.ui.model.db.DBType.POSTGRES;
 
@@ -27,6 +27,10 @@ import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTitledSeparator;
 import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.helper.GUIHelper;
+import ru.dimension.ui.manager.AdHocDatabaseManager;
+import ru.dimension.ui.manager.ConfigurationManager;
+import ru.dimension.ui.manager.ConnectionPoolManager;
+import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.column.ConnectionColumnNames;
 import ru.dimension.ui.model.config.ConfigClasses;
 import ru.dimension.ui.model.config.Connection;
@@ -38,10 +42,6 @@ import ru.dimension.ui.router.listener.AdHocListener;
 import ru.dimension.ui.view.analyze.handler.TableSelectionHandler;
 import ru.dimension.ui.view.panel.adhoc.AdHocPanel;
 import ru.dimension.ui.view.structure.AdHocView;
-import ru.dimension.ui.manager.AdHocDatabaseManager;
-import ru.dimension.ui.manager.ConfigurationManager;
-import ru.dimension.ui.manager.ConnectionPoolManager;
-import ru.dimension.ui.manager.ProfileManager;
 
 @Log4j2
 @Singleton
@@ -83,6 +83,13 @@ public class AdHocPresenter implements AdHocListener {
 
   private final Set<String> excludedSchemasOracle = Set.of(
       "MDSYS"
+  );
+
+  private final Set<String> excludedSchemasMySQL = Set.of(
+      "information_schema",
+      "mysql",
+      "performance_schema",
+      "sys"
   );
 
   @Inject
@@ -289,6 +296,10 @@ public class AdHocPresenter implements AdHocListener {
       processSchemaFilterDatabaseMetaDataOracle(metaData, selectedSchemaCatalog);
     } else if (MSSQL.equals(connectionInfo.getDbType())) {
       processSchemaDatabaseMetaDataMSSQL(metaData, selectedSchemaCatalog);
+    } else if (MYSQL.equals(connectionInfo.getDbType())) {
+      processSchemaDatabaseMetaDataMySQL(metaData, selectedSchemaCatalog);
+    } else if (DUCKDB.equals(connectionInfo.getDbType())) {
+      processCatalogDatabaseMetaDataDuckDB(metaData, selectedSchemaCatalog);
     }
 
     schemaCatalogCBox.setEnabled(true);
@@ -305,6 +316,10 @@ public class AdHocPresenter implements AdHocListener {
     } else if (MSSQL.equals(connectionInfo.getDbType())) {
       return getSchemas(metaData, excludedSchemasMSSQL);
     } else if (CLICKHOUSE.equals(connectionInfo.getDbType())) {
+      return getCatalogs(metaData);
+    } else if (MYSQL.equals(connectionInfo.getDbType())) {
+      return getCatalogs(metaData, excludedSchemasMySQL);
+    } else if (DUCKDB.equals(connectionInfo.getDbType())) {
       return getCatalogs(metaData);
     }
     return new ArrayList<>();
@@ -405,6 +420,18 @@ public class AdHocPresenter implements AdHocListener {
     processEntitiesMSSQL(metaData, selectedSchema, md -> getSchemas(md, excludedSchemasMSSQL), "VIEW", viewCase);
   }
 
+  public void processSchemaDatabaseMetaDataMySQL(DatabaseMetaData metaData,
+                                                 String selectedSchema) {
+    processEntities(metaData, selectedSchema, this::getCatalogs, "TABLE", tableCase);
+    processEntities(metaData, selectedSchema, this::getCatalogs, "VIEW", viewCase);
+  }
+
+  public void processCatalogDatabaseMetaDataDuckDB(DatabaseMetaData metaData,
+                                                   String selectedCatalog) {
+    processEntities(metaData, selectedCatalog, this::getCatalogs, "TABLE", tableCase);
+    processEntities(metaData, selectedCatalog, this::getCatalogs, "VIEW", viewCase);
+  }
+
   public void fillEntityTable(ResultSet resultSet,
                               JXTableCase entityCase) {
     try {
@@ -445,6 +472,11 @@ public class AdHocPresenter implements AdHocListener {
     return retrieveSchemas(metaData, excludedSchemas);
   }
 
+  public List<String> getCatalogs(DatabaseMetaData metaData,
+                                 Set<String> excludedSchemas) {
+    return retrieveCatalogs(metaData, excludedSchemas);
+  }
+
   public List<String> getSchemas(DatabaseMetaData metaData) {
     return retrieveSchemas(metaData, excludedSchemasOracle);
   }
@@ -457,6 +489,24 @@ public class AdHocPresenter implements AdHocListener {
       while (schemas.next()) {
         String schema = schemas.getString(1);
         if (excludedSchemas == null || !excludedSchemas.contains(schema)) {
+          schemasList.add(schema);
+        }
+      }
+    } catch (Exception e) {
+      log.catching(e);
+    }
+
+    return schemasList;
+  }
+
+  private List<String> retrieveCatalogs(DatabaseMetaData metaData,
+                                       Set<String> excludedCatalogs) {
+    List<String> schemasList = new ArrayList<>();
+
+    try (ResultSet schemas = metaData.getCatalogs()) {
+      while (schemas.next()) {
+        String schema = schemas.getString(1);
+        if (excludedCatalogs == null || !excludedCatalogs.contains(schema)) {
           schemasList.add(schema);
         }
       }

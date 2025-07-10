@@ -5,6 +5,8 @@ public enum DBType {
   POSTGRES("postgresql", "SELECT now()"),
   MSSQL("sqlserver", "SELECT getdate()"),
   CLICKHOUSE("clickhouse", "SELECT now()"),
+  MYSQL("mysql", "SELECT now()"),
+  DUCKDB("duckdb", "SELECT now()"),
   HTTP("https?://", ""),
   UNKNOWN("", "");
 
@@ -24,5 +26,4 @@ public enum DBType {
   public String getQuery() {
     return query;
   }
-
 }

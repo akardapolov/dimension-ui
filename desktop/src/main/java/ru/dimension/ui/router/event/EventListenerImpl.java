@@ -32,7 +32,6 @@ import ru.dimension.ui.model.view.ToolbarButtonState;
 public class EventListenerImpl implements EventListener {
 
   private List<ToolbarListener> profileButtonStateListenerList = new ArrayList<>();
-  private List<ToolbarListener> profileSelectOnNavigatorListenerList = new ArrayList<>();
   private List<ConfigListener> configListenerList = new ArrayList<>();
   private List<TemplateListener> templateListenerList = new ArrayList<>();
   private List<ReportListener> reportListenerList = new ArrayList<>();
@@ -44,7 +43,8 @@ public class EventListenerImpl implements EventListener {
   private Map<ProfileTaskQueryKey, CollectStartStopListener> collectStartStopListenerMap = new ConcurrentHashMap<>();
   private Map<ProfileTaskQueryKey, CollectStartStopListener> collectStartStopAnalyzeListenerMap = new ConcurrentHashMap<>();
   private Map<ProfileTaskQueryKey, CollectStartStopListener> collectStartStopDashboardListenerMap = new ConcurrentHashMap<>();
-  private List<AppCacheAddListener> appCacheAddListenerList = new ArrayList<>();
+  private Map<ProfileTaskQueryKey, AppCacheAddListener> appCacheAddListenerMap = new ConcurrentHashMap<>();
+
   private List<ProfileAddListener> profileAddListeners = new ArrayList<>();
 
   @Inject
@@ -115,8 +115,9 @@ public class EventListenerImpl implements EventListener {
   }
 
   @Override
-  public void addAppCacheAddListener(AppCacheAddListener appCacheAddListener) {
-    appCacheAddListenerList.add(appCacheAddListener);
+  public void addAppCacheAddListener(ProfileTaskQueryKey profileTaskQueryKey,
+                                     AppCacheAddListener appCacheAddListener) {
+    appCacheAddListenerMap.put(profileTaskQueryKey, appCacheAddListener);
   }
 
   @Override
@@ -129,13 +130,17 @@ public class EventListenerImpl implements EventListener {
     profileStartStopListenerList.removeIf(genericClass::isInstance);
     collectStartStopListenerMap.entrySet().removeIf(map -> genericClass.isInstance(map.getValue()));
     collectStartStopAnalyzeListenerMap.entrySet().removeIf(map -> genericClass.isInstance(map.getValue()));
-    appCacheAddListenerList.removeIf(genericClass::isInstance);
   }
 
   @Override
   public void clearListenerByKey(ProfileTaskQueryKey profileTaskQueryKey) {
     collectStartStopListenerMap.entrySet().removeIf(map -> profileTaskQueryKey.equals(map.getKey()));
     collectStartStopAnalyzeListenerMap.entrySet().removeIf(map -> profileTaskQueryKey.equals(map.getKey()));
+  }
+
+  @Override
+  public void clearListenerAppCacheByKey(ProfileTaskQueryKey profileTaskQueryKey) {
+    appCacheAddListenerMap.entrySet().removeIf(map -> profileTaskQueryKey.equals(map.getKey()));
   }
 
   @Override
@@ -191,7 +196,10 @@ public class EventListenerImpl implements EventListener {
 
   @Override
   public void fireOnAddToAppCache(ProfileTaskQueryKey profileTaskQueryKey) {
-    appCacheAddListenerList.forEach(l -> l.fireOnAddToAppCache(profileTaskQueryKey));
+    AppCacheAddListener listener = appCacheAddListenerMap.get(profileTaskQueryKey);
+    if (listener != null) {
+      listener.fireOnAddToAppCache(profileTaskQueryKey);
+    }
   }
 
   @Override

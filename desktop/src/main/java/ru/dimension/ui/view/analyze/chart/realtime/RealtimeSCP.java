@@ -16,8 +16,6 @@ import ru.dimension.ui.view.analyze.chart.SCP;
 import ru.dimension.ui.view.chart.FunctionDataHandler;
 
 public abstract class RealtimeSCP extends SCP {
-  protected static final int THRESHOLD_SERIES = 10;
-  protected static final int SHOW_SERIES = 5;
 
   protected FunctionDataHandler dataHandler;
   protected Map.Entry<CProfile, List<String>> filter;

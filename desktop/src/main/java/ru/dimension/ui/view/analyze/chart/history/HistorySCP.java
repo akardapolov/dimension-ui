@@ -182,15 +182,26 @@ public class HistorySCP extends SCP {
         Set<String> newSelection = new HashSet<>(getCheckBoxSelected());
 
         if (!newSelection.equals(series)) {
+          clearSeriesColor();
+
           series.clear();
           series.addAll(newSelection);
 
           ChartRange chartRange = getChartRangeExact(config.getChartInfo());
 
           loadDataHistory(chartRange);
+
+          if (detailAndAnalyzeHolder != null) {
+            detailAndAnalyzeHolder.detailAction().cleanMainPanel();
+            detailAndAnalyzeHolder.customAction()
+                .setCustomSeriesFilter(config.getMetric().getYAxis(),
+                                       List.copyOf(newSelection),
+                                       getSeriesColorMap());
+          }
         }
 
         showChart();
+
       } finally {
         seriesSelectable.setBlockRunAction(false);
         seriesSelectable.getJxTable().setEnabled(true);

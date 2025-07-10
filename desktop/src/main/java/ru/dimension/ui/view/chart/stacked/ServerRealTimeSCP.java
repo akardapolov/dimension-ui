@@ -1,7 +1,5 @@
 package ru.dimension.ui.view.chart.stacked;
 
-import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
-
 import java.awt.BorderLayout;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -32,12 +30,12 @@ import ru.dimension.ui.model.function.MetricFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.table.JXTableCase;
+import ru.dimension.ui.model.view.ProcessType;
+import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.view.analyze.handler.TableSelectionHandler;
 import ru.dimension.ui.view.chart.RangeUtils;
 import ru.dimension.ui.view.chart.RangeUtils.TimeRange;
 import ru.dimension.ui.view.chart.holder.DetailAndAnalyzeHolder;
-import ru.dimension.ui.model.view.ProcessType;
-import ru.dimension.ui.model.view.SeriesType;
 
 @Log4j2
 public class ServerRealTimeSCP extends StackChartPanel {
@@ -213,8 +211,8 @@ public class ServerRealTimeSCP extends StackChartPanel {
           clearSeriesColor();
 
           if (detailAndAnalyzeHolder != null) {
-            detailAndAnalyzeHolder.detailPanel().cleanMainPanel();
-            detailAndAnalyzeHolder.analyzePanel().setCustomSeriesFilter(metric.getYAxis(), List.copyOf(newSelection));
+            detailAndAnalyzeHolder.detailAction().cleanMainPanel();
+            detailAndAnalyzeHolder.customAction().setCustomSeriesFilter(metric.getYAxis(), List.copyOf(newSelection));
           }
 
           reloadDataForCurrentRange();

@@ -1,6 +1,5 @@
 package ru.dimension.ui.view.analyze.chart.realtime;
 
-import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 import static ru.dimension.ui.view.chart.RangeUtils.getSubRangeSize;
 
 import java.awt.BorderLayout;
@@ -214,7 +213,7 @@ public class ServerRealtimeSCP extends RealtimeSCP {
         Set<String> newSelection = new HashSet<>(getCheckBoxSelected());
 
         if (!newSelection.equals(series)) {
-          chartDataset.clear();
+          clearSeriesColor();
 
           series.clear();
           series.addAll(newSelection);
@@ -222,8 +221,15 @@ public class ServerRealtimeSCP extends RealtimeSCP {
           setCustomFilter();
 
           reloadDataForCurrentRange();
-        }
 
+          if (detailAndAnalyzeHolder != null) {
+            detailAndAnalyzeHolder.detailAction().cleanMainPanel();
+            detailAndAnalyzeHolder.customAction()
+                .setCustomSeriesFilter(config.getMetric().getYAxis(),
+                                       List.copyOf(newSelection),
+                                       getSeriesColorMap());
+          }
+        }
         showChart();
       } finally {
         seriesSelectable.setBlockRunAction(false);

@@ -1,7 +1,5 @@
 package ru.dimension.ui.view.analyze.chart.realtime;
 
-import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
-
 import java.awt.BorderLayout;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -11,13 +9,13 @@ import java.util.Set;
 import java.util.function.Consumer;
 import javax.swing.table.TableColumn;
 import lombok.extern.log4j.Log4j2;
+import org.jetbrains.annotations.NotNull;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.SqlColMetadataException;
 import ru.dimension.db.model.CompareFunction;
 import ru.dimension.db.model.OrderBy;
 import ru.dimension.db.model.profile.CProfile;
-import org.jetbrains.annotations.NotNull;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.ProgressBarHelper;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
@@ -241,7 +239,7 @@ public class ClientRealtimeSCP extends RealtimeSCP {
 
         Set<String> newSelection = new HashSet<>(getCheckBoxSelected());
         if (!newSelection.equals(series)) {
-          chartDataset.clear();
+          clearSeriesColor();
 
           series.clear();
           series.addAll(newSelection);
@@ -252,6 +250,14 @@ public class ClientRealtimeSCP extends RealtimeSCP {
           chartDataLoader.setFilter(filter);
 
           reloadDataForCurrentRange();
+
+          if (detailAndAnalyzeHolder != null) {
+            detailAndAnalyzeHolder.detailAction().cleanMainPanel();
+            detailAndAnalyzeHolder.customAction()
+                .setCustomSeriesFilter(config.getMetric().getYAxis(),
+                                       List.copyOf(newSelection),
+                                       getSeriesColorMap());
+          }
         }
         showChart();
       } finally {

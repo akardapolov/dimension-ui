@@ -46,13 +46,16 @@ public interface EventListener extends ToolbarListener, ConfigListener, Template
   void addCollectStartStopDashboardListener(ProfileTaskQueryKey profileTaskQueryKey,
                                             CollectStartStopListener collectStartStopListener);
 
-  void addAppCacheAddListener(AppCacheAddListener appCacheAddListener);
+  void addAppCacheAddListener(ProfileTaskQueryKey profileTaskQueryKey,
+                              AppCacheAddListener appCacheAddListener);
 
   void addProfileAddListener(ProfileAddListener profileAddListener);
 
   <T> void clearListener(Class<T> genericClass);
 
   void clearListenerByKey(ProfileTaskQueryKey profileTaskQueryKey);
+
+  void clearListenerAppCacheByKey(ProfileTaskQueryKey profileTaskQueryKey);
 
   void clearListenerDashboardByKey(ProfileTaskQueryKey profileTaskQueryKey);
 

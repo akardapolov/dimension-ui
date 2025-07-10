@@ -38,7 +38,7 @@ public class Resource extends ListResourceBundle {
           {"sysErrMsg", "System error, see application message log"},
 
           {"colorBlue", new Color(100, 185, 250)},
-          {"colorRed", new Color(218, 43, 43)}
+          {"colorRed", new Color(255, 107, 107)}
 
       };
 

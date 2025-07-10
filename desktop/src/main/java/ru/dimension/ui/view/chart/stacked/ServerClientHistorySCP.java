@@ -198,9 +198,9 @@ public class ServerClientHistorySCP extends StackChartPanel {
           clearSeriesColor();
 
           if (detailAndAnalyzeHolder != null) {
-            detailAndAnalyzeHolder.detailPanel().cleanMainPanel();
-            detailAndAnalyzeHolder.analyzePanel().setBeginEnd(chartRange.getBegin(), chartRange.getEnd());
-            detailAndAnalyzeHolder.analyzePanel().setCustomSeriesFilter(metric.getYAxis(), List.copyOf(newSelection));
+            detailAndAnalyzeHolder.detailAction().cleanMainPanel();
+            detailAndAnalyzeHolder.customAction().setBeginEnd(chartRange.getBegin(), chartRange.getEnd());
+            detailAndAnalyzeHolder.customAction().setCustomSeriesFilter(metric.getYAxis(), List.copyOf(newSelection));
           }
 
           loadDataHistory(chartRange);

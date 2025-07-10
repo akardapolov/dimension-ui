@@ -490,6 +490,10 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
       return DBType.MSSQL;
     } else if (url.contains(DBType.CLICKHOUSE.getUrlPattern())) {
       return DBType.CLICKHOUSE;
+    } else if (url.contains(DBType.MYSQL.getUrlPattern())) {
+      return DBType.MYSQL;
+    } else if (url.contains(DBType.DUCKDB.getUrlPattern())) {
+      return DBType.DUCKDB;
     } else {
       return DBType.UNKNOWN;
     }

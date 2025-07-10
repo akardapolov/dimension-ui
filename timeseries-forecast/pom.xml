@@ -12,7 +12,7 @@
   <!-- The Basics -->
   <groupId>com.workday</groupId>
   <artifactId>timeseries-forecast</artifactId>
-  <version>1.1.1</version>
+  <version>${revision}</version>
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -20,6 +20,14 @@
       <version>4.13.1</version>
     </dependency>
   </dependencies>
+
+  <parent>
+    <artifactId>ui</artifactId>
+    <groupId>ru.dimension</groupId>
+    <version>${revision}</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>21</maven.compiler.source>
@@ -97,27 +105,6 @@
   </distributionManagement>
 
   <profiles>
-    <profile>
-      <id>sign</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <version>1.6</version>
-            <executions>
-              <execution>
-                <id>sign-artifacts</id>
-                <phase>verify</phase>
-                <goals>
-                  <goal>sign</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
     <profile>
       <id>build-extras</id>
       <activation>

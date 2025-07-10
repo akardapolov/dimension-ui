@@ -18,7 +18,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <revision>25.7.1</revision>  <!-- Centralized version -->
+        <revision>25.7.2</revision>  <!-- Centralized version -->
     </properties>
 
 </project>

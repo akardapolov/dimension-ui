@@ -114,7 +114,7 @@ public class BaseFrame extends JFrame {
     this.eventListener = eventListener;
     this.dStore = dStore;
 
-    this.setTitle("Real-time-intelligence-desktop");
+    this.setTitle("Dimension UI");
     this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     this.setSize(new Dimension(400, 300));
     this.setExtendedState(JFrame.MAXIMIZED_BOTH); //todo window max size

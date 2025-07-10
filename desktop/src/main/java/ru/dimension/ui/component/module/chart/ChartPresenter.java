@@ -3,14 +3,18 @@ package ru.dimension.ui.component.module.chart;
 import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
+import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.cstype.CType;
-import ru.dimension.ui.view.analyze.chart.history.HistorySCP;
 import ru.dimension.ui.component.MessageBroker.Component;
 import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.helper.SwingTaskRunner;
@@ -29,13 +33,16 @@ import ru.dimension.ui.model.view.RangeRealTime;
 import ru.dimension.ui.state.ChartKey;
 import ru.dimension.ui.state.SqlQueryState;
 import ru.dimension.ui.state.UIState;
+import ru.dimension.ui.view.analyze.CustomAction;
 import ru.dimension.ui.view.analyze.chart.ChartConfig;
 import ru.dimension.ui.view.analyze.chart.SCP;
+import ru.dimension.ui.view.analyze.chart.history.HistorySCP;
 import ru.dimension.ui.view.analyze.chart.realtime.ClientRealtimeSCP;
 import ru.dimension.ui.view.analyze.chart.realtime.ServerRealtimeSCP;
 import ru.dimension.ui.view.analyze.model.ChartLegendState;
 import ru.dimension.ui.view.analyze.model.DetailState;
 import ru.dimension.ui.view.chart.HelperChart;
+import ru.dimension.ui.view.chart.holder.DetailAndAnalyzeHolder;
 import ru.dimension.ui.view.detail.DetailDashboardPanel;
 
 @Log4j2
@@ -187,6 +194,32 @@ public class ChartPresenter implements HelperChart {
                                  chart.getSeriesColorMap(),
                                  processType,
                                  chart.getSeriesType());
+
+    CustomAction customAction = new CustomAction() {
+
+      @Override
+      public void setCustomSeriesFilter(CProfile profile,
+                                        List<String> series) {
+      }
+
+      @Override
+      public void setCustomSeriesFilter(CProfile cProfileFilter,
+                                        List<String> filter,
+                                        Map<String, Color> seriesColorMap) {
+        Map<String, Color> newSeriesColorMap = new HashMap<>();
+        filter.forEach(key -> newSeriesColorMap.put(key, seriesColorMap.get(key)));
+
+        detailPanel.updateSeriesColor(newSeriesColorMap);
+      }
+
+      @Override
+      public void setBeginEnd(long begin,
+                              long end) {
+
+      }
+    };
+
+    chart.setHolderDetailsAndAnalyze(new DetailAndAnalyzeHolder(detailPanel, customAction));
 
     chart.addChartListenerReleaseMouse(detailPanel);
 

@@ -13,7 +13,7 @@ public class PathPdfInfo {
 
   public String getReportPdfPath() {
     return System.getProperty("user.dir") + System.getProperty("file.separator")
-        + "report" + System.getProperty("file.separator")
+        + "report-data" + System.getProperty("file.separator")
         + "design" + System.getProperty("file.separator") + dirDesignName
         + System.getProperty("file.separator") + "report_" + getDateTimeFolder() + ".pdf";
   }

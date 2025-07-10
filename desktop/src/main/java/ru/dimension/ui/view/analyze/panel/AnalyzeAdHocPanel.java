@@ -96,6 +96,13 @@ public class AnalyzeAdHocPanel extends JPanel implements IDetailPanel, CustomAct
   }
 
   @Override
+  public void setCustomSeriesFilter(CProfile cProfileFilter,
+                                    List<String> filter,
+                                    Map<String, Color> seriesColorMap) {
+
+  }
+
+  @Override
   public void setBeginEnd(long begin,
                           long end) {
     sendSetBeginEndMessage(begin, end);

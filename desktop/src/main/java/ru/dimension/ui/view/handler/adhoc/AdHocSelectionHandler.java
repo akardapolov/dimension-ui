@@ -420,6 +420,10 @@ public class AdHocSelectionHandler extends AdHocChartHandler implements ActionLi
       sProfile.setBackendType(BType.ORACLE);
     } else if (dbType.equals(DBType.MSSQL)) {
       sProfile.setBackendType(BType.MSSQL);
+    } else if (dbType.equals(DBType.MYSQL)) {
+      sProfile.setBackendType(BType.MYSQL);
+    } else if (dbType.equals(DBType.DUCKDB)) {
+      sProfile.setBackendType(BType.DUCKDB);
     }
 
     return sProfile;

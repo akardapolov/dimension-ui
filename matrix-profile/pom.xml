@@ -9,7 +9,6 @@
   <packaging>jar</packaging>
   <version>${revision}</version>
   <name>matrix-profile</name>
-  <url>https://ensozos.github.io/Matrix-Profile/</url>
 
   <parent>
     <artifactId>ui</artifactId>
@@ -42,7 +41,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-        <version>2.2.1</version>
+        <version>3.2.1</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -57,8 +56,6 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.1.2</version>
         <configuration>
-          <!-- this is here to prevent exceptions being thrown with no message -->
-          <!-- or stack trace, which can happen on oracle JVMs after a while   -->
           <argLine>-XX:-OmitStackTraceInFastThrow</argLine>
         </configuration>
         <dependencies>
@@ -71,23 +68,15 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.9</version>
-        <configuration>
-          <overview>src/main/java/overview.html</overview>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.8.1</version>
         <configuration>
           <encoding>UTF-8</encoding>
           <source>21</source>
           <target>21</target>
+          <release>21</release>
         </configuration>
       </plugin>
     </plugins>
-
   </build>
 </project>

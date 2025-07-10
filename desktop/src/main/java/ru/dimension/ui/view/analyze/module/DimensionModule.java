@@ -238,16 +238,16 @@ public class DimensionModule extends JPanel implements MessageAction {
   @Override
   public void receive(Message message) {
     switch (message.getAction()) {
-      case Action.CLEAR_ALL_CHECKBOX_CHART -> {
+      case CLEAR_ALL_CHECKBOX_CHART -> {
         setAllCheckboxes(false);
         log.info("Message action: " + message.getAction());
       }
-      case Action.SET_CHECKBOX_CHART -> {
+      case SET_CHECKBOX_CHART -> {
         CProfile cProfile = message.getParameters().get("cProfile");
         setCheckboxForColumn(cProfile.getColName(), true);
         log.info("Checkbox set for column: " + cProfile.getColName());
       }
-      case Action.SET_FILTER -> {
+      case SET_FILTER -> {
         CProfile cProfile = message.getParameters().get("cProfile");
         List<String> filter = message.getParameters().get("filter");
         filterMap.clear();

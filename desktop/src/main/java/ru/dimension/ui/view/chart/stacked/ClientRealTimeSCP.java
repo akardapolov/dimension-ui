@@ -1,7 +1,5 @@
 package ru.dimension.ui.view.chart.stacked;
 
-import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
-
 import java.awt.BorderLayout;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -13,12 +11,12 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import javax.swing.table.TableColumn;
 import lombok.extern.log4j.Log4j2;
+import org.jetbrains.annotations.NotNull;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.SqlColMetadataException;
 import ru.dimension.db.model.CompareFunction;
 import ru.dimension.db.model.OrderBy;
 import ru.dimension.db.model.profile.CProfile;
-import org.jetbrains.annotations.NotNull;
 import ru.dimension.ui.config.prototype.query.WorkspaceQueryComponent;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.ProgressBarHelper;
@@ -31,11 +29,11 @@ import ru.dimension.ui.model.function.MetricFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.table.JXTableCase;
+import ru.dimension.ui.model.view.ProcessType;
+import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.view.analyze.handler.TableSelectionHandler;
 import ru.dimension.ui.view.chart.ChartDataLoader;
 import ru.dimension.ui.view.chart.holder.DetailAndAnalyzeHolder;
-import ru.dimension.ui.model.view.ProcessType;
-import ru.dimension.ui.model.view.SeriesType;
 
 @Log4j2
 public class ClientRealTimeSCP extends StackChartPanel {
@@ -256,8 +254,8 @@ public class ClientRealTimeSCP extends StackChartPanel {
           clearSeriesColor();
 
           if (detailAndAnalyzeHolder != null) {
-            detailAndAnalyzeHolder.detailPanel().cleanMainPanel();
-            detailAndAnalyzeHolder.analyzePanel().setCustomSeriesFilter(metric.getYAxis(), List.copyOf(newSelection));
+            detailAndAnalyzeHolder.detailAction().cleanMainPanel();
+            detailAndAnalyzeHolder.customAction().setCustomSeriesFilter(metric.getYAxis(), List.copyOf(newSelection));
           }
 
           reloadDataForCurrentRange();

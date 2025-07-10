@@ -25,10 +25,15 @@ import ru.dimension.ui.view.analyze.timeseries.AnalyzeForecastPanel;
 @Data
 @Log4j2
 public class ChartView extends JPanel {
+  private static Dimension dimension = new Dimension(100, 500);
+
+  private int configDividerLocation = 30;
+  private int chartDividerLocation = 250;
+
   private int lastRealTimeConfigDividerLocation = 30;
-  private int lastRealTimeChartDividerLocation = 200;
+  private int lastRealTimeChartDividerLocation = 250;
   private int lastHistoryConfigDividerLocation = 30;
-  private int lastHistoryChartDividerLocation = 200;
+  private int lastHistoryChartDividerLocation = 250;
 
   private JTabbedPane tabbedPane;
 
@@ -108,8 +113,8 @@ public class ChartView extends JPanel {
     realTimeConfigChartDetail.setTopComponent(realTimeConfigBlock);
     realTimeConfigChartDetail.setBottomComponent(realTimeChartDetailSplitPane);
 
-    realTimeConfigChartDetail.setDividerLocation(30);
-    realTimeChartDetailSplitPane.setDividerLocation(200);
+    realTimeConfigChartDetail.setDividerLocation(configDividerLocation);
+    realTimeChartDetailSplitPane.setDividerLocation(chartDividerLocation);
 
     return realTimeConfigChartDetail;
   }
@@ -131,17 +136,17 @@ public class ChartView extends JPanel {
   }
 
   private JSplitPane createBaseSplitPane() {
-    JSplitPane splitPane = GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, 30);
-    splitPane.setDividerLocation(30);
+    JSplitPane splitPane = GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, configDividerLocation);
+    splitPane.setDividerLocation(configDividerLocation);
     splitPane.setResizeWeight(0.5);
-    splitPane.setPreferredSize(new Dimension(100, 400));
-    splitPane.setMaximumSize(new Dimension(100, 400));
+    splitPane.setPreferredSize(dimension);
+    splitPane.setMaximumSize(dimension);
     return splitPane;
   }
 
   private JSplitPane createChartDetailSplitPane() {
-    JSplitPane splitPane = GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, 200);
-    splitPane.setDividerLocation(200);
+    JSplitPane splitPane = GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, chartDividerLocation);
+    splitPane.setDividerLocation(chartDividerLocation);
     splitPane.setResizeWeight(0.5);
     return splitPane;
   }

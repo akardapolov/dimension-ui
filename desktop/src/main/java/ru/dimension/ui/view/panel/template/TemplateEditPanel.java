@@ -9,6 +9,7 @@ import java.util.ResourceBundle;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -113,16 +114,20 @@ public class TemplateEditPanel extends JDialog {
     this.profileName = new JXTextField();
     this.profileName.setPrompt("Profile name");
     this.profileDesc = profileDesc;
+
     this.statusProfile = new JLabel("Profile already exist");
-    this.statusProfile.setForeground(new Color(218, 43, 43));
+    this.statusProfile.setBorder(BorderFactory.createLineBorder(Color.RED, 2));
+    this.statusProfile.setOpaque(true);
     this.statusProfile.setVisible(false);
 
     this.taskName = new JXTextField();
     this.taskName.setPrompt("Task name");
     this.taskDesc = taskDesc;
+
     this.statusTask = new JLabel("Task already exist");
+    this.statusTask.setBorder(BorderFactory.createLineBorder(Color.RED, 2));
+    this.statusTask.setOpaque(true);
     this.statusTask.setVisible(false);
-    this.statusTask.setForeground(new Color(218, 43, 43));
 
     this.connTypeTab = new ConnTypeTab();
     this.jdbcPanel = new JPanel();
@@ -137,9 +142,11 @@ public class TemplateEditPanel extends JDialog {
     this.connJar.setPrompt("Path to JDBC jar file");
     this.connUrl = new JXTextField();
     this.connUrl.setPrompt("Hostname for data source");
+
     this.statusConn = new JLabel("Connection already exist");
+    this.statusConn.setBorder(BorderFactory.createLineBorder(Color.RED, 2));
+    this.statusConn.setOpaque(true);
     this.statusConn.setVisible(false);
-    this.statusConn.setForeground(new Color(218, 43, 43));
 
     this.jTextFieldHttpName = new JXTextField();
     this.jTextFieldHttpName.setPrompt(bundleDefault.getString("cName"));
@@ -154,10 +161,13 @@ public class TemplateEditPanel extends JDialog {
     this.queryName.setPrompt("Query name");
     this.queryDesc = new JXTextField();
     this.queryDesc.setPrompt("Query description");
+
     this.statusQuery = new JXLabel("Query already exist");
-    this.statusQuery.setForeground(new Color(218, 43, 43));
+    this.statusQuery.setBorder(BorderFactory.createLineBorder(Color.RED, 2));
+    this.statusQuery.setOpaque(true);
     this.statusQuery.setVisible(false);
     this.statusQuery.setAutoscrolls(true);
+    this.statusQuery.setLineWrap(true);
 
     this.statusQuery.setLineWrap(true);
 
@@ -215,7 +225,7 @@ public class TemplateEditPanel extends JDialog {
     this.setResizable(true);
     this.pack();
 
-    this.setSize(new Dimension(1200, 300));
+    this.setSize(new Dimension(1200, 500));
     this.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width) / 2 - getWidth() / 2,
                      (Toolkit.getDefaultToolkit().getScreenSize().height) / 2 - getHeight() / 2);
   }

@@ -201,7 +201,7 @@ public class TaskSelectionHandler extends MouseListenerImpl
               .forEach(queryId -> {
                 QueryInfo queryInfo = profileManager.getQueryInfoById(queryId);
                 if (Objects.isNull(queryInfo)) {
-                  throw new NotFoundException("Not found task: " + queryId);
+                  throw new NotFoundException("Not found query: " + queryId);
                 }
                 multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel()
                     .addRow(new Object[]{queryInfo.getId(),

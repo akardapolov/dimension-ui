@@ -1,6 +1,5 @@
 package ru.dimension.ui.view.structure.workspace.handler;
 
-import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 import static ru.dimension.ui.model.SourceConfig.COLUMNS;
 import static ru.dimension.ui.model.SourceConfig.METRICS;
 import static ru.dimension.ui.model.view.ProcessType.HISTORY;

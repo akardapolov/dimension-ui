@@ -1,0 +1,2 @@
+#!/bin/bash
+java -Xmx2024m -DLaF=dark -Dfile.encoding=UTF8 -jar ${project.build.finalName}-app.jar

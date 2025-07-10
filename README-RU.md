@@ -1,4 +1,4 @@
-# Real-time-intelligence-desktop
+# Dimension UI
 
 ## Оглавление
 

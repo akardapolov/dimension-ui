@@ -1,4 +1,4 @@
-name: Real-time-intelligence-desktop CI/CD pipeline
+name: Dimension UI CI/CD pipeline
 run-name: ${{ github.actor }} clean package
 on: [push]
 jobs:

@@ -106,6 +106,13 @@ public class AnalyzeRealtimePanel extends JPanel implements IDetailPanel, Custom
   }
 
   @Override
+  public void setCustomSeriesFilter(CProfile cProfileFilter,
+                                    List<String> filter,
+                                    Map<String, Color> seriesColorMap) {
+
+  }
+
+  @Override
   public void setBeginEnd(long begin,
                           long end) {
 

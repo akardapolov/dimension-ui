@@ -1,8 +1,5 @@
 package ru.dimension.ui.view.analyze.chart;
 
-
-import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
-
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.sql.Date;
@@ -16,27 +13,26 @@ import javax.swing.JPanel;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import ru.dimension.db.core.DStore;
-import ru.dimension.db.model.output.StackedColumn;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.plot.PlotOrientation;
+import ru.dimension.db.core.DStore;
+import ru.dimension.db.model.output.StackedColumn;
 import ru.dimension.ui.exception.NotFoundException;
-import ru.dimension.ui.helper.ProgressBarHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.CategoryTableXYDatasetRealTime;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.function.MetricFunction;
-import ru.dimension.ui.model.table.JXTableCase;
+import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.SqlQueryState;
 import ru.dimension.ui.view.chart.DetailChart;
 import ru.dimension.ui.view.chart.HelperChart;
 import ru.dimension.ui.view.chart.StackedChart;
-import ru.dimension.ui.model.view.SeriesType;
+import ru.dimension.ui.view.chart.holder.DetailAndAnalyzeHolder;
 
 @Log4j2
 public abstract class SCP extends JPanel implements HelperChart, DetailChart {
@@ -58,6 +54,8 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
   protected DStore dStore;
   @Getter
   protected SeriesType seriesType = SeriesType.COMMON;
+
+  protected DetailAndAnalyzeHolder detailAndAnalyzeHolder;
 
   public SCP(ChartConfig config,
              ProfileTaskQueryKey profileTaskQueryKey) {
@@ -127,38 +125,6 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
   protected void initializeGUI() {
     this.setLayout(new BorderLayout());
     this.add(stackedChart.getChartPanel(), BorderLayout.CENTER);
-  }
-
-  protected void initializeCustom() {
-    this.setLayout(new BorderLayout());
-    this.createStackedChart();
-  }
-
-  protected void initializeCustomGUI(JXTableCase jxTableCase) {
-    this.add(jxTableCase.getJScrollPane(), BorderLayout.EAST);
-    this.add(stackedChart.getChartPanel(), BorderLayout.CENTER);
-  }
-
-  protected void initializeCustomUpdate() {
-    BorderLayout layout = (BorderLayout) this.getLayout();
-    this.remove(layout.getLayoutComponent(BorderLayout.CENTER));
-
-    this.add(ProgressBarHelper.createProgressBar("Loading, please wait..."), BorderLayout.CENTER);
-    this.revalidate();
-    this.repaint();
-
-    this.chartDataset.clear();
-
-    createStackedChart();
-  }
-
-  protected void initializeCustomUpdateGUI() {
-    BorderLayout layout = (BorderLayout) this.getLayout();
-    this.remove(layout.getLayoutComponent(BorderLayout.CENTER));
-
-    this.add(stackedChart.getChartPanel(), BorderLayout.CENTER);
-    this.revalidate();
-    this.repaint();
   }
 
   protected void initializeDateAxis(long begin, long end ) {
@@ -232,5 +198,13 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
 
   protected void enablePlotUpdates() {
     stackedChart.setNotifyPlot(true);
+  }
+
+  public void clearSeriesColor() {
+    this.stackedChart.clearSeriesColor();
+  }
+
+  public void setHolderDetailsAndAnalyze(DetailAndAnalyzeHolder detailAndAnalyzeHolder) {
+    this.detailAndAnalyzeHolder = detailAndAnalyzeHolder;
   }
 }

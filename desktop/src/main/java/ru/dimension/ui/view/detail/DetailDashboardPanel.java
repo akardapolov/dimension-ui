@@ -1,7 +1,5 @@
 package ru.dimension.ui.view.detail;
 
-import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
-
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -21,9 +19,9 @@ import javax.swing.JTabbedPane;
 import javax.swing.SwingConstants;
 import javax.swing.border.EtchedBorder;
 import lombok.extern.log4j.Log4j2;
+import org.jfree.chart.util.IDetailPanel;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
-import org.jfree.chart.util.IDetailPanel;
 import ru.dimension.ui.helper.DateHelper;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.ProgressBarHelper;
@@ -34,18 +32,18 @@ import ru.dimension.ui.model.function.ChartType;
 import ru.dimension.ui.model.function.MetricFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
+import ru.dimension.ui.model.info.gui.ChartInfo;
+import ru.dimension.ui.model.view.ProcessType;
+import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.view.analyze.DetailAction;
+import ru.dimension.ui.view.analyze.chart.ChartConfig;
+import ru.dimension.ui.view.analyze.chart.SCP;
 import ru.dimension.ui.view.analyze.chart.history.HistorySCP;
 import ru.dimension.ui.view.analyze.timeseries.AnalyzeAnomalyPanel;
 import ru.dimension.ui.view.analyze.timeseries.AnalyzeForecastPanel;
 import ru.dimension.ui.view.detail.pivot.MainPivotDashboardPanel;
 import ru.dimension.ui.view.detail.raw.RawDataDashboardPanel;
 import ru.dimension.ui.view.detail.top.MainTopDashboardPanel;
-import ru.dimension.ui.model.info.gui.ChartInfo;
-import ru.dimension.ui.model.view.ProcessType;
-import ru.dimension.ui.model.view.SeriesType;
-import ru.dimension.ui.view.analyze.chart.ChartConfig;
-import ru.dimension.ui.view.analyze.chart.SCP;
 
 @Log4j2
 public class DetailDashboardPanel extends JPanel implements IDetailPanel, DetailAction {
@@ -113,7 +111,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
         JTabbedPane mainJTabbedPane = new JTabbedPane();
 
         if (!MetricFunction.COUNT.equals(metric.getMetricFunction())) {
-          this.seriesColorMap.put(metric.getYAxis().getColName(), new Color(255, 93, 93));
+          seriesColorMap.put(metric.getYAxis().getColName(), new Color(255, 93, 93));
         }
 
         MainTopDashboardPanel mainTopPanel = new MainTopDashboardPanel(
@@ -185,6 +183,11 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
         log.catching(exception);
       }
     });
+  }
+
+  public void updateSeriesColor(Map<String, Color> newSeriesColorMap) {
+    seriesColorMap.clear();
+    seriesColorMap.putAll(newSeriesColorMap);
   }
 
   private ChartConfig buildChartConfig(ChartInfo chartInfo) {

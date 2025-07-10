@@ -11,10 +11,10 @@ import javax.swing.table.TableColumn;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTitledSeparator;
 import org.painlessgridbag.PainlessGridBag;
-import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.config.prototype.query.WorkspaceQueryComponent;
 import ru.dimension.ui.config.prototype.query.WorkspaceQueryModule;
 import ru.dimension.ui.config.prototype.task.WorkspaceTaskComponent;
+import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
@@ -31,7 +31,6 @@ import ru.dimension.ui.model.sql.GatherDataMode;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.RangeRealTime;
 import ru.dimension.ui.router.event.EventListener;
-import ru.dimension.ui.router.listener.AppCacheAddListener;
 import ru.dimension.ui.view.panel.QuerySearchButtonPanel;
 import ru.dimension.ui.view.panel.RangeChartCustomPanel;
 import ru.dimension.ui.view.panel.RangeChartHistoryPanel;
@@ -208,12 +207,12 @@ public class WorkspaceQueryView extends JPanel {
                                                                  this.visualizeRealTime, this.visualizeHistory, this.analyzeRealTime, this.analyzeHistory,
                                                                  queryInfo, tableInfo, chartInfo, detailsControlPanel, workspaceQueryComponent);
 
-    this.eventListener.clearListener(AppCacheAddListener.class);
+    this.eventListener.clearListenerAppCacheByKey(profileTaskQueryKey);
     this.timeRangeRecentHandler = new TimeRangeRecentHandler(jxTableCaseMetrics, jxTableCaseColumns, jxTableCaseRecent,
                                                              profileTaskQueryKey, taskTab, realTimeTab, historyTab,
                                                              this.visualizeRealTime, this.visualizeHistory, this.analyzeRealTime, this.analyzeHistory,
                                                              chartInfo, queryInfo, tableInfo, detailsControlPanel, workspaceQueryComponent);
-    this.eventListener.addAppCacheAddListener(this.timeRangeRecentHandler);
+    this.eventListener.addAppCacheAddListener(profileTaskQueryKey, this.timeRangeRecentHandler);
 
     this.querySearchHandler = new QuerySearchHandler(analyzeSearch, querySearchButtonPanel,
                                                      profileTaskQueryKey, queryInfo, tableInfo, chartInfo, workspaceQueryComponent);

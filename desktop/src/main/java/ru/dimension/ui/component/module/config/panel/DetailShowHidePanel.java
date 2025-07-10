@@ -19,6 +19,7 @@ public class DetailShowHidePanel extends JPanel {
   public DetailShowHidePanel() {
     this.currentState = DetailState.SHOW;
     this.detailCheckBox = new JCheckBox(currentState.getName());
+    detailCheckBox.setSelected(currentState == DetailState.SHOW);
 
     LaF.setBackgroundConfigPanel(CHART_PANEL, this);
 
@@ -33,16 +34,11 @@ public class DetailShowHidePanel extends JPanel {
     detailCheckBox.addActionListener(e -> {
       currentState = currentState.toggle();
       detailCheckBox.setText(currentState.getName());
+      detailCheckBox.setSelected(currentState == DetailState.SHOW);
       if (stateChangeConsumer != null) {
         stateChangeConsumer.accept(currentState);
       }
     });
-  }
-
-  public void setState(DetailState state) {
-    this.currentState = state;
-    detailCheckBox.setText(state.getName());
-    detailCheckBox.setSelected(state == DetailState.SHOW);
   }
 
   public void setStateChangeConsumer(Consumer<DetailState> consumer) {

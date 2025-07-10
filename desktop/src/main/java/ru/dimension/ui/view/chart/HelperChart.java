@@ -28,8 +28,8 @@ public interface HelperChart {
 
   double GAP = 2; // if gap more than this value - then show one on chart
 
-  int THRESHOLD_SERIES = 10;
-  int SHOW_SERIES = 5;
+  int THRESHOLD_SERIES = 15;
+  int SHOW_SERIES = 10;
   int MAX_SERIES = 1000;
 
   default FunctionDataHandler initFunctionDataHandler(Metric metric,
