@@ -197,7 +197,7 @@ The application has functionality that allows you to create a profile using pre-
 
 ## Data collection
 
-The application collects data from remote systems via the JDBC protocol or directly from the application. All data sources for which an appropriate JDBC driver is developed.
+The application collects data from remote systems via the JDBC protocol, HTTP (Prometheus) or directly from the application. All data sources for which an appropriate JDBC driver is developed.
 
 The logic for obtaining time series data depends on where the data is collected.
 

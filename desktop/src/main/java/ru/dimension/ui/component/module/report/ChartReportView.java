@@ -4,16 +4,16 @@ import java.awt.BorderLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.border.EtchedBorder;
 import lombok.Data;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
-import ru.dimension.ui.component.module.config.panel.LegendPanel;
-import ru.dimension.ui.component.module.config.panel.MetricFunctionPanel;
-import ru.dimension.ui.component.module.config.panel.range.HistoryRangePanel;
+import ru.dimension.ui.component.panel.LegendPanel;
+import ru.dimension.ui.component.panel.MetricFunctionPanel;
+import ru.dimension.ui.component.panel.range.HistoryRangePanel;
+import ru.dimension.ui.helper.GUIHelper;
 
 @Log4j2
 @Data
@@ -35,9 +35,9 @@ public class ChartReportView extends JPanel {
     setLayout(new BorderLayout());
     setBorder(new EtchedBorder());
 
-    historyMetricFunctionPanel = new MetricFunctionPanel(getLabel("Group: "));
-    historyRangePanel = new HistoryRangePanel(getLabel("Range: "));
-    historyLegendPanel = new LegendPanel(getLabel("Legend: "));
+    historyMetricFunctionPanel = new MetricFunctionPanel(GUIHelper.getLabel("Group: "));
+    historyRangePanel = new HistoryRangePanel(GUIHelper.getLabel("Range: "));
+    historyLegendPanel = new LegendPanel(GUIHelper.getLabel("Legend: "));
 
     JPanel configPanel = new JPanel(new GridBagLayout());
     GridBagConstraints gbc = new GridBagConstraints();
@@ -72,12 +72,6 @@ public class ChartReportView extends JPanel {
     configChartSplitPane.setResizeWeight(0.1);
 
     add(configChartSplitPane, BorderLayout.CENTER);
-  }
-
-  private JLabel getLabel(String text) {
-    JLabel label = new JLabel(text);
-    label.setFont(label.getFont().deriveFont(java.awt.Font.BOLD));
-    return label;
   }
 
   public void setDetailVisible(boolean visible) {

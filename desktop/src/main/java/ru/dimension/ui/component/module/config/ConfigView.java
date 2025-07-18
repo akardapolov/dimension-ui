@@ -9,12 +9,12 @@ import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTitledSeparator;
 import org.painlessgridbag.PainlessGridBag;
-import ru.dimension.ui.component.module.config.panel.CollapseCardPanel;
-import ru.dimension.ui.component.module.config.panel.DetailShowHidePanel;
-import ru.dimension.ui.component.module.config.panel.LegendPanel;
-import ru.dimension.ui.component.module.config.panel.SwitchToTabPanel;
-import ru.dimension.ui.component.module.config.panel.range.HistoryRangePanel;
-import ru.dimension.ui.component.module.config.panel.range.RealTimeRangePanel;
+import ru.dimension.ui.component.panel.CollapseCardPanel;
+import ru.dimension.ui.component.panel.DetailShowHidePanel;
+import ru.dimension.ui.component.panel.LegendPanel;
+import ru.dimension.ui.component.panel.SwitchToTabPanel;
+import ru.dimension.ui.component.panel.range.HistoryRangePanel;
+import ru.dimension.ui.component.panel.range.RealTimeRangePanel;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
 

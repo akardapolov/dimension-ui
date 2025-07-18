@@ -20,9 +20,13 @@ import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
-import ru.dimension.ui.component.dashboard.DashboardComponent;
+import ru.dimension.ui.component.AdHocComponent;
+import ru.dimension.ui.component.DashboardComponent;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.executor.TaskExecutorPool;
+import ru.dimension.ui.manager.AdHocDatabaseManager;
+import ru.dimension.ui.manager.ConfigurationManager;
+import ru.dimension.ui.manager.ConnectionPoolManager;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.info.TaskInfo;
@@ -56,6 +60,9 @@ public class BaseFrame extends JFrame {
   private final ProfileManager profileManager;
   private final TaskExecutorPool taskExecutorPool;
   private final EventListener eventListener;
+  private final ConfigurationManager configurationManager;
+  private final ConnectionPoolManager connectionPoolManager;
+  private final AdHocDatabaseManager adHocDatabaseManager;
   private final SqlQueryState sqlQueryState;
   private final DStore dStore;
 
@@ -79,6 +86,9 @@ public class BaseFrame extends JFrame {
                    @Named("taskExecutorPool") TaskExecutorPool taskExecutorPool,
                    @Named("sqlQueryState") SqlQueryState sqlQueryState,
                    @Named("eventListener") EventListener eventListener,
+                   @Named("configurationManager") ConfigurationManager configurationManager,
+                   @Named("connectionPoolManager") ConnectionPoolManager connectionPoolManager,
+                   @Named("adHocDatabaseManager") AdHocDatabaseManager adHocDatabaseManager,
                    @Named("localDB") DStore dStore) throws HeadlessException {
     this.mainTabPane = mainTabPane;
     this.workspaceSplitPane = workspaceSplitPane;
@@ -112,6 +122,9 @@ public class BaseFrame extends JFrame {
 
     this.sqlQueryState = sqlQueryState;
     this.eventListener = eventListener;
+    this.configurationManager = configurationManager;
+    this.connectionPoolManager = connectionPoolManager;
+    this.adHocDatabaseManager = adHocDatabaseManager;
     this.dStore = dStore;
 
     this.setTitle("Dimension UI");
@@ -125,6 +138,7 @@ public class BaseFrame extends JFrame {
 
     this.fillJTabbedPane(this.workspaceSplitPane, 0);
 
+    /* ---------- DASHBOARD ---------- */
     DashboardComponent dashboardComponent = new DashboardComponent(profileManager, eventListener, sqlQueryState, dStore);
     this.eventListener.addProfileStartStopListener(dashboardComponent);
 
@@ -132,9 +146,21 @@ public class BaseFrame extends JFrame {
     PGHelper.cellXYRemainder(dashboardPanel, dashboardComponent.getMainSplitPane(), false);
 
     this.fillJTabbedPane(dashboardPanel, 1);
+    /* ---------- DASHBOARD ---------- */
 
     this.fillJTabbedPane((Container) reportView, 2);
-    this.fillJTabbedPane((Container) adHocView, 3);
+
+    /* ---------- AD-HOC ---------- */
+    AdHocComponent adHocComponent = new AdHocComponent(profileManager,
+                                                       configurationManager,
+                                                       eventListener,
+                                                       connectionPoolManager,
+                                                       adHocDatabaseManager);
+    JPanel adHocPanel = new JPanel();
+    PGHelper.cellXYRemainder(adHocPanel, adHocComponent.getMainSplitPane(), false);
+
+    this.fillJTabbedPane(adHocPanel, 3);
+    /* ---------- AD-HOC ---------- */
 
     this.addMainArea((Container) this.toolbarView, BorderLayout.NORTH);
     this.addMainArea(this.mainTabPane, BorderLayout.CENTER);

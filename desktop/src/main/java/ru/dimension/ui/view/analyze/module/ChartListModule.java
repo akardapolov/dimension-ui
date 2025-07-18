@@ -1,7 +1,5 @@
 package ru.dimension.ui.view.analyze.module;
 
-import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
-
 import java.awt.Color;
 import java.awt.Component;
 import java.util.ArrayList;
@@ -17,12 +15,12 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import lombok.extern.log4j.Log4j2;
-import ru.dimension.db.core.DStore;
-import ru.dimension.db.model.profile.CProfile;
 import org.jdesktop.swingx.JXTaskPane;
 import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.jdesktop.swingx.VerticalLayout;
 import org.painlessgridbag.PainlessGridBag;
+import ru.dimension.db.core.DStore;
+import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.helper.ProgressBarHelper;
@@ -34,6 +32,7 @@ import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
+import ru.dimension.ui.model.view.AnalyzeType;
 import ru.dimension.ui.router.listener.CollectStartStopListener;
 import ru.dimension.ui.state.SqlQueryState;
 import ru.dimension.ui.view.analyze.model.ChartCardState;
@@ -42,7 +41,6 @@ import ru.dimension.ui.view.analyze.router.Message;
 import ru.dimension.ui.view.analyze.router.MessageAction;
 import ru.dimension.ui.view.analyze.router.MessageRouter;
 import ru.dimension.ui.view.analyze.router.MessageRouter.Action;
-import ru.dimension.ui.model.view.AnalyzeType;
 
 @Log4j2
 public class ChartListModule extends JPanel implements MessageAction, CollectStartStopListener {
@@ -115,26 +113,26 @@ public class ChartListModule extends JPanel implements MessageAction, CollectSta
   @Override
   public void receive(Message message) {
     switch (message.getAction()) {
-      case Action.ADD_CHART -> {
+      case ADD_CHART -> {
         CProfile cProfile = message.getParameters().get("cProfile");
         Map<String, Color> seriesColorMap = message.getParameters().get("seriesColorMap");
         addChartCard(cProfile, seriesColorMap);
         logChartAction(message.getAction(), cProfile);
       }
 
-      case Action.REMOVE_CHART -> {
+      case REMOVE_CHART -> {
         CProfile cProfile = message.getParameters().get("cProfile");
         removeChartCard(cProfile);
         logChartAction(message.getAction(), cProfile);
       }
 
-      case Action.REMOVE_ALL_CHART -> {
+      case REMOVE_ALL_CHART -> {
         chartPanes.forEach((key, value) -> removeChartCard(key));
         chartPanesFilter.forEach((key, value) -> removeChartFilterCard(key));
         log.info("Message action: " + message.getAction());
       }
 
-      case Action.ADD_CHART_FILTER -> {
+      case ADD_CHART_FILTER -> {
         Metric metric = message.getParameters().get("metric");
         CProfile cProfileFilter = message.getParameters().get("cProfileFilter");
         List<String> filter = message.getParameters().get("filter");
@@ -143,7 +141,7 @@ public class ChartListModule extends JPanel implements MessageAction, CollectSta
         logChartFilterAction(message.getAction(), metric, cProfileFilter, filter);
       }
 
-      case Action.REMOVE_CHART_FILTER -> {
+      case REMOVE_CHART_FILTER -> {
         Metric metric = message.getParameters().get("metric");
         CProfile cProfileFilter = message.getParameters().get("cProfileFilter");
         List<String> filter = message.getParameters().get("filter");
@@ -151,19 +149,19 @@ public class ChartListModule extends JPanel implements MessageAction, CollectSta
         logChartFilterAction(message.getAction(), metric, cProfileFilter, filter);
       }
 
-      case Action.SET_CHART_LEGEND_STATE -> {
+      case SET_CHART_LEGEND_STATE -> {
         chartLegendState = message.getParameters().get("chartLegendState");
         updateLegendVisibility();
         log.info("Message action: " + message.getAction() + " for " + chartLegendState);
       }
 
-      case Action.SET_CHART_CARD_STATE -> {
+      case SET_CHART_CARD_STATE -> {
         chartCardState = message.getParameters().get("chartCardState");
         expandCollapseChartCard();
         log.info("Message action: " + message.getAction() + " for " + chartCardState);
       }
 
-      case Action.SET_BEGIN_END -> {
+      case SET_BEGIN_END -> {
         long begin = message.getParameters().get("begin");
         long end = message.getParameters().get("end");
         chartInfo.setCustomBegin(begin);

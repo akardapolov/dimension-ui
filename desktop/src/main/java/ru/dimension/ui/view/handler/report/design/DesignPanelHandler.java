@@ -44,6 +44,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import javax.imageio.ImageIO;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -315,7 +316,6 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
             }
           }
         }
-
       }
 
       Date beginDate = reportTabsPane.getDateTimePickerFrom().getDate();
@@ -387,15 +387,13 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
                 ChartCardPanel cardChart = new ChartCardPanel(m.getId(), chartInfo, key,
                                                               SourceConfig.METRICS, metric, profileManager, eventListener, fStore, reportHelper, mapReportData);
 
-                cardChart.getButtonGroupFunction().getCount().setEnabled(false);
-                cardChart.getButtonGroupFunction().getSum().setEnabled(false);
-                cardChart.getButtonGroupFunction().getAverage().setEnabled(false);
+                cardChart.getMetricFunctionPanel().getCount().setEnabled(false);
+                cardChart.getMetricFunctionPanel().getSum().setEnabled(false);
+                cardChart.getMetricFunctionPanel().getAvg().setEnabled(false);
 
                 cardChart.setBorder(new EtchedBorder());
                 cardChart.setSelectedRadioButton(m.getMetricFunction());
                 cardChart.getJtaDescription().setText(m.getComment());
-
-                // m.setComment(reportHelper.getCommentTxt());
 
                 cardChart.loadChart(m.getId(), chartInfo, key, cardChart, SourceConfig.METRICS);
                 containerChartCardDesign.add(cardChart);
@@ -406,20 +404,18 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
             }
 
             if (cProfileReportList.size() != 0) {
-              for (CProfileReport c : cProfileReportList) {
+              for (CProfileReport cProfileReport : cProfileReportList) {
 
-                Metric metric = getMetricByCProfileReport(c, tableInfo);
+                Metric metric = getMetricByCProfileReport(key, cProfileReport, tableInfo);
 
-                ChartCardPanel cardChart = new ChartCardPanel(c.getColId(), chartInfo, key,
+                ChartCardPanel cardChart = new ChartCardPanel(cProfileReport.getColId(), chartInfo, key,
                                                               SourceConfig.COLUMNS, metric, profileManager, eventListener, fStore, reportHelper, mapReportData);
 
                 cardChart.setBorder(new EtchedBorder());
                 cardChart.setSelectedRadioButton(metric.getMetricFunction());
-                cardChart.getJtaDescription().setText(c.getComment());
+                cardChart.getJtaDescription().setText(cProfileReport.getComment());
 
-                //  c.setComment(reportHelper.getCommentTxt());
-
-                cardChart.loadChart(c.getColId(), chartInfo, key, cardChart, SourceConfig.COLUMNS);
+                cardChart.loadChart(cProfileReport.getColId(), chartInfo, key, cardChart, SourceConfig.COLUMNS);
                 containerChartCardDesign.add(cardChart);
                 containerChartCardDesign.repaint();
                 containerChartCardDesign.revalidate();
@@ -604,7 +600,7 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
         JOptionPane.showMessageDialog(null, "Not selected design. Please select and try again!",
                                       "General Error", JOptionPane.ERROR_MESSAGE);
       } else {
-        JCheckBox checkbox = new JCheckBox("Delete together with the report.");
+        JCheckBox checkbox = new JCheckBox("Delete with the report data");
         String message =
             "Do you want to delete configuration: " + reportTabsPane.getDesignReportCase().getDefaultTableModel()
                 .getValueAt(selectedRow, 0) + "?";
@@ -735,7 +731,7 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
             String fileName = cardChart.getMetric().getName().trim().replace(" ", "_").toLowerCase();
             String description = cardChart.getJtaDescription().getText();
             String nameFunction = "";
-            for (AbstractButton button : Collections.list(cardChart.getButtonGroupFunction().getElements())) {
+            for (AbstractButton button : Collections.list(cardChart.getMetricFunctionPanel().getButtonGroup().getElements())) {
               if (button.isSelected()) {
                 nameFunction = " FUNCTION: " + button.getText();
               }
@@ -1288,9 +1284,9 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
                           new ChartCardPanel(m.getId(), chartInfo, key, SourceConfig.METRICS,
                                              metric, profileManager, eventListener, fStore, reportHelper, mapReportData);
 
-                      cardChart.getButtonGroupFunction().getCount().setEnabled(false);
-                      cardChart.getButtonGroupFunction().getSum().setEnabled(false);
-                      cardChart.getButtonGroupFunction().getAverage().setEnabled(false);
+                      cardChart.getMetricFunctionPanel().getCount().setEnabled(false);
+                      cardChart.getMetricFunctionPanel().getSum().setEnabled(false);
+                      cardChart.getMetricFunctionPanel().getAvg().setEnabled(false);
 
                       cardChart.setBorder(new EtchedBorder());
                       cardChart.setSelectedRadioButton(m.getMetricFunction());
@@ -1303,20 +1299,20 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
                     }
                   }
                   if (cProfileReportList.size() != 0) {
-                    for (CProfileReport c : cProfileReportList) {
+                    for (CProfileReport cProfileReport : cProfileReportList) {
 
                       TableInfo tableInfo = profileManager.getTableInfoByTableName(queryInfo.getName());
 
-                      Metric metric = getMetricByCProfileReport(c, tableInfo);
+                      Metric metric = getMetricByCProfileReport(key, cProfileReport, tableInfo);
 
-                      ChartCardPanel cardChart = new ChartCardPanel(c.getColId(), chartInfo, key,
+                      ChartCardPanel cardChart = new ChartCardPanel(cProfileReport.getColId(), chartInfo, key,
                                                                     SourceConfig.COLUMNS, metric, profileManager, eventListener, fStore, reportHelper, mapReportData);
 
                       cardChart.setBorder(new EtchedBorder());
                       cardChart.setSelectedRadioButton(metric.getMetricFunction());
-                      cardChart.getJtaDescription().setText(c.getComment());
+                      cardChart.getJtaDescription().setText(cProfileReport.getComment());
 
-                      cardChart.loadChart(c.getColId(), chartInfo, key, cardChart, SourceConfig.COLUMNS);
+                      cardChart.loadChart(cProfileReport.getColId(), chartInfo, key, cardChart, SourceConfig.COLUMNS);
                       containerChartCardDesign.add(cardChart);
                       containerChartCardDesign.repaint();
                       containerChartCardDesign.revalidate();
@@ -1377,7 +1373,8 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
     return metric;
   }
 
-  protected Metric getMetricByCProfileReport(CProfileReport cProfile,
+  protected Metric getMetricByCProfileReport(ProfileTaskQueryKey key,
+                                             CProfileReport cProfile,
                                              TableInfo tableInfo) {
     Metric metric = new Metric();
     metric.setName(cProfile.getColName());
@@ -1386,6 +1383,25 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
     metric.setGroup(cProfile);
 
     setMetricFunction(cProfile, metric);
+
+    if (mapReportData != null && mapReportData.get(key) != null) {
+      Optional<CProfileReport> value = mapReportData.get(key)
+          .getCProfileReportList()
+          .stream()
+          .filter(f -> f.getColId() == cProfile.getColId())
+          .findAny();
+
+      if (value.isPresent()) {
+        if (value.get().getMetricFunction() != null && value.get().getChartType() != null) {
+          metric.setMetricFunction(value.get().getMetricFunction());
+          metric.setChartType(value.get().getChartType());
+        } else {
+          setMetricFunction(cProfile, metric);
+        }
+      } else {
+        setMetricFunction(cProfile, metric);
+      }
+    }
 
     return metric;
   }

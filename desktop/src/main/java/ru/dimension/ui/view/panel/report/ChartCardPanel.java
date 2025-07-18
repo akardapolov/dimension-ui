@@ -9,14 +9,11 @@ import static ru.dimension.ui.model.function.ChartType.STACKED;
 
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.MouseAdapter;
@@ -24,28 +21,29 @@ import java.awt.event.MouseEvent;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
-import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.border.EtchedBorder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.log4j.Log4j2;
-import ru.dimension.db.core.DStore;
-import ru.dimension.db.model.profile.CProfile;
-import ru.dimension.db.model.profile.cstype.CType;
-import ru.dimension.db.model.profile.table.BType;
 import org.jdesktop.swingx.JXLabel;
 import org.jdesktop.swingx.JXTextArea;
 import org.jdesktop.swingx.JXTitledSeparator;
 import org.jetbrains.annotations.NotNull;
 import org.painlessgridbag.PainlessGridBag;
+import ru.dimension.db.core.DStore;
+import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.db.model.profile.cstype.CType;
+import ru.dimension.db.model.profile.table.BType;
+import ru.dimension.ui.component.panel.MetricFunctionPanel;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.exception.SeriesExceedException;
 import ru.dimension.ui.helper.GUIHelper;
@@ -62,6 +60,8 @@ import ru.dimension.ui.model.function.MetricFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
+import ru.dimension.ui.model.report.CProfileReport;
+import ru.dimension.ui.model.report.MetricReport;
 import ru.dimension.ui.model.report.QueryReportData;
 import ru.dimension.ui.model.view.ProcessType;
 import ru.dimension.ui.model.view.RangeHistory;
@@ -69,7 +69,6 @@ import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.prompt.Internationalization;
 import ru.dimension.ui.router.event.EventListener;
 import ru.dimension.ui.state.ChartKey;
-import ru.dimension.ui.view.action.RadioButtonActionExecutor;
 import ru.dimension.ui.view.analyze.chart.ChartConfig;
 import ru.dimension.ui.view.analyze.chart.SCP;
 import ru.dimension.ui.view.analyze.chart.history.HistorySCP;
@@ -80,6 +79,7 @@ import ru.dimension.ui.view.detail.DetailDashboardPanel;
 @Data
 @Log4j2
 public class ChartCardPanel extends JPanel implements HelperChart {
+  public static int DIVIDER_LOCATION = 250;
 
   @EqualsAndHashCode.Include
   private final ProfileTaskQueryKey key;
@@ -87,7 +87,6 @@ public class ChartCardPanel extends JPanel implements HelperChart {
   private final JXTextArea jtaDescription;
   private final JSplitPane jSplitPane;
 
-  private final ButtonGroupFunction buttonGroupFunction;
   private final JPanel jPanelFunction;
   protected MetricFunction metricFunctionOnEdit = MetricFunction.NONE;
   private final Metric metric;
@@ -105,6 +104,8 @@ public class ChartCardPanel extends JPanel implements HelperChart {
   private final Map<ProfileTaskQueryKey, QueryReportData> mapReportData;
   private String descriptionFrom;
   private String descriptionTo;
+
+  private final MetricFunctionPanel metricFunctionPanel;
 
   private final ResourceBundle bundleDefault;
 
@@ -142,52 +143,61 @@ public class ChartCardPanel extends JPanel implements HelperChart {
 
     this.setToolTipText(getTooltip());
 
-    buttonGroupFunction = new ButtonGroupFunction();
+    metricFunctionPanel = new MetricFunctionPanel(GUIHelper.getLabel("Group: "));
+    metricFunctionPanel.setRunAction((eventName, function) -> {
+      metricFunctionOnEdit = function;
 
-    buttonGroupFunction.getCount().addActionListener(new RadioListenerColumn());
-    buttonGroupFunction.getSum().addActionListener(new RadioListenerColumn());
-    buttonGroupFunction.getAverage().addActionListener(new RadioListenerColumn());
+      ChartType chartType = (function == MetricFunction.COUNT) ? ChartType.STACKED : ChartType.LINEAR;
+
+      metric.setMetricFunction(function);
+      metric.setChartType(chartType);
+
+      updateReportDataWithFunction(function, chartType);
+
+      this.setToolTipText(getTooltip());
+
+      loadChart(id, chartInfo, key, ChartCardPanel.this, sourceConfig);
+    });
 
     this.jtaDescription = GUIHelper.getJXTextArea(2, 1);
     this.jtaDescription.setPrompt("Enter a comment...");
 
-    this.jSplitPane = GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, 250);
-
-    JPanel bottom = new JPanel();
-    bottom.setBorder(new EtchedBorder());
-    LaF.setBackgroundConfigPanel(CHART_PANEL, bottom);
+    this.jSplitPane = GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, DIVIDER_LOCATION);
 
     JPanel top = new JPanel();
     top.setBorder(new EtchedBorder());
     LaF.setBackgroundConfigPanel(CHART_PANEL, top);
 
-    jSplitPane.setBottomComponent(bottom);
+    JPanel bottom = new JPanel();
+    bottom.setBorder(new EtchedBorder());
+    LaF.setBackgroundConfigPanel(CHART_PANEL, bottom);
+
     jSplitPane.setTopComponent(top);
-    jSplitPane.setDividerLocation(250);
+    jSplitPane.setBottomComponent(bottom);
+    jSplitPane.setDividerLocation(DIVIDER_LOCATION);
 
     jSplitPane.setResizeWeight(0.5);
     jSplitPane.setContinuousLayout(true);
-    bottom.setMaximumSize(new Dimension(680, 100));
-    bottom.setMinimumSize(new Dimension(680, 300));
-    bottom.setPreferredSize(new Dimension(680, 200));
 
     top.setMaximumSize(new Dimension(680, 100));
     top.setMinimumSize(new Dimension(680, 300));
-    top.setPreferredSize(new Dimension(680, 200));
+    top.setPreferredSize(new Dimension(680, DIVIDER_LOCATION));
+
+    bottom.setMaximumSize(new Dimension(680, 100));
+    bottom.setMinimumSize(new Dimension(680, 300));
+    bottom.setPreferredSize(new Dimension(680, DIVIDER_LOCATION));
 
     this.setBorder(new EtchedBorder());
 
     JPanel labelPanel = new JPanel();
     PainlessGridBag gblLabel = new PainlessGridBag(labelPanel, PGHelper.getPGConfig(0), false);
 
-    JPanel radioBtnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-    radioBtnPanel.add(buttonGroupFunction.getCount());
-    radioBtnPanel.add(buttonGroupFunction.getSum());
-    radioBtnPanel.add(buttonGroupFunction.getAverage());
+    LaF.setBackgroundConfigPanel(CHART_PANEL, labelPanel);
 
     gblLabel.row()
         .cell(jlTitle)
-        .cellXRemainder(radioBtnPanel).fillX();
+        .cell(metricFunctionPanel)
+        .fillX();
     gblLabel.done();
 
     this.jPanelFunction = new JPanel();
@@ -286,28 +296,11 @@ public class ChartCardPanel extends JPanel implements HelperChart {
   }
 
   public void setEnabled(boolean flag) {
-    buttonGroupFunction.getCount().setEnabled(flag);
-    buttonGroupFunction.getSum().setEnabled(flag);
-    buttonGroupFunction.getAverage().setEnabled(flag);
+    metricFunctionPanel.setEnabled(flag, flag, flag);
   }
 
   public void setSelectedRadioButton(MetricFunction metricFunction) {
-    buttonGroupFunction.setSelectedRadioButton(metricFunction);
-  }
-
-  public class RadioListenerColumn implements ActionListener {
-
-    public RadioListenerColumn() {
-    }
-
-    public void actionPerformed(ActionEvent e) {
-      JRadioButton button = (JRadioButton) e.getSource();
-
-      RadioButtonActionExecutor.execute(button, metricFunction -> {
-        metricFunctionOnEdit = metricFunction;
-        loadChart(id, chartInfo, key, ChartCardPanel.this, sourceConfig);
-      });
-    }
+    metricFunctionPanel.setSelected(metricFunction);
   }
 
   public void loadChart(int cId,
@@ -334,6 +327,37 @@ public class ChartCardPanel extends JPanel implements HelperChart {
     log.info("Query: " + key.getQueryId());
   }
 
+  private void updateReportDataWithFunction(MetricFunction function, ChartType chartType) {
+    if (mapReportData == null) {
+      return;
+    }
+
+    QueryReportData reportData = mapReportData.get(key);
+    if (reportData == null) {
+      return;
+    }
+
+    if (sourceConfig == SourceConfig.METRICS) {
+      for (MetricReport mr : reportData.getMetricReportList()) {
+        if (mr.getId() == id) {
+          mr.setMetricFunction(function);
+          mr.setChartType(chartType);
+          break;
+        }
+      }
+    } else if (sourceConfig == SourceConfig.COLUMNS) {
+      for (CProfileReport cr : reportData.getCProfileReportList()) {
+        if (cr.getColId() == id) {
+          cr.setMetricFunction(function);
+          cr.setChartType(chartType);
+          break;
+        }
+      }
+    }
+
+    reportHelper.setMadeChanges(true);
+  }
+
   private void loadChartMetric(int metricId,
                                ChartInfo chartInfo,
                                ProfileTaskQueryKey key,
@@ -354,7 +378,7 @@ public class ChartCardPanel extends JPanel implements HelperChart {
     executorService.submit(() -> {
       try {
         GUIHelper.addToJSplitPane(cardChart.getJSplitPane(),
-                                  createProgressBar("Loading, please wait..."), JSplitPane.TOP, 200);
+                                  createProgressBar("Loading, please wait..."), JSplitPane.TOP, DIVIDER_LOCATION);
 
         loadChartByMetric(metric, queryInfo, key, chartInfo, tableInfo, cardChart);
 
@@ -362,10 +386,10 @@ public class ChartCardPanel extends JPanel implements HelperChart {
         cardChart.revalidate();
       } catch (SeriesExceedException exceed) {
         log.catching(exceed);
-        GUIHelper.addToJSplitPaneProgressBar(cardChart.getJSplitPane(), exceed.getMessage(), JSplitPane.TOP, 200);
+        GUIHelper.addToJSplitPaneProgressBar(cardChart.getJSplitPane(), exceed.getMessage(), JSplitPane.TOP, DIVIDER_LOCATION);
       } catch (Exception exception) {
         log.catching(exception);
-        GUIHelper.addToJSplitPaneProgressBar(cardChart.getJSplitPane(), bundleDefault.getString("sysErrMsg"), JSplitPane.TOP, 200);
+        GUIHelper.addToJSplitPaneProgressBar(cardChart.getJSplitPane(), bundleDefault.getString("sysErrMsg"), JSplitPane.TOP, DIVIDER_LOCATION);
       }
     });
 
@@ -388,7 +412,7 @@ public class ChartCardPanel extends JPanel implements HelperChart {
       try {
 
         GUIHelper.addToJSplitPane(cardChart.getJSplitPane(),
-                                  createProgressBar("Loading, please wait..."), JSplitPane.TOP, 200);
+                                  createProgressBar("Loading, please wait..."), JSplitPane.TOP, DIVIDER_LOCATION);
 
         CProfile cProfile = tableInfo.getCProfiles()
             .stream()
@@ -408,30 +432,62 @@ public class ChartCardPanel extends JPanel implements HelperChart {
         cardChart.revalidate();
       } catch (SeriesExceedException exceed) {
         log.catching(exceed);
-        GUIHelper.addToJSplitPaneProgressBar(cardChart.getJSplitPane(), exceed.getMessage(), JSplitPane.TOP, 200);
+        GUIHelper.addToJSplitPaneProgressBar(cardChart.getJSplitPane(), exceed.getMessage(), JSplitPane.TOP, DIVIDER_LOCATION);
       } catch (Exception exception) {
         log.catching(exception);
-        GUIHelper.addToJSplitPaneProgressBar(cardChart.getJSplitPane(), bundleDefault.getString("sysErrMsg"), JSplitPane.TOP, 200);
+        GUIHelper.addToJSplitPaneProgressBar(cardChart.getJSplitPane(), bundleDefault.getString("sysErrMsg"), JSplitPane.TOP, DIVIDER_LOCATION);
       }
     });
 
     log.info("Column profile id: " + cProfileId);
   }
 
-  protected Metric getMetricByCProfile(CProfile cProfile,
-                                       TableInfo tableInfo) {
+  protected Metric getMetricByCProfile(CProfile cProfile, TableInfo tableInfo) {
     Metric metric = new Metric();
-    metric.setXAxis(tableInfo.getCProfiles().stream().filter(f -> f.getCsType().isTimeStamp()).findAny().orElseThrow());
+    metric.setXAxis(tableInfo.getCProfiles().stream()
+                        .filter(f -> f.getCsType().isTimeStamp())
+                        .findAny()
+                        .orElseThrow());
     metric.setYAxis(cProfile);
     metric.setGroup(cProfile);
 
-    if (MetricFunction.NONE.equals(metricFunctionOnEdit)) {
-      setMetricFunctionAndChartNotEdit(cProfile, metric);
-    } else {
+    boolean useEditFunction = !MetricFunction.NONE.equals(metricFunctionOnEdit);
+
+    if (useEditFunction) {
       setMetricFunctionAndChartType(metric);
+    } else {
+      setMetricFunctionAndChartNotEdit(cProfile, metric);
+    }
+
+    if (mapReportData != null && mapReportData.get(key) != null) {
+      Optional<CProfileReport> report = mapReportData.get(key)
+          .getCProfileReportList()
+          .stream()
+          .filter(f -> f.getColId() == id)
+          .findAny();
+
+      if (report.isPresent()) {
+        CProfileReport profileReport = report.get();
+        if (profileReport.getMetricFunction() != null && profileReport.getChartType() != null) {
+          metric.setMetricFunction(profileReport.getMetricFunction());
+          metric.setChartType(profileReport.getChartType());
+        } else {
+          setDefaultFunctionAndChart(metric, cProfile, useEditFunction);
+        }
+      } else {
+        setDefaultFunctionAndChart(metric, cProfile, useEditFunction);
+      }
     }
 
     return metric;
+  }
+
+  private void setDefaultFunctionAndChart(Metric metric, CProfile cProfile, boolean useEditFunction) {
+    if (useEditFunction) {
+      setMetricFunctionAndChartType(metric);
+    } else {
+      setMetricFunctionAndChartNotEdit(cProfile, metric);
+    }
   }
 
   private void setMetricFunctionAndChartType(Metric metric) {
@@ -476,8 +532,8 @@ public class ChartCardPanel extends JPanel implements HelperChart {
     DetailDashboardPanel detailPanel =
         getDetail(fStore, metric, queryInfo, tableInfo, chartPanel.getSeriesColorMap(), chartPanel, chartPanel.getSeriesType());
 
-    GUIHelper.addToJSplitPane(cardChart.getJSplitPane(), chartPanel, JSplitPane.TOP, 200);
-    GUIHelper.addToJSplitPane(cardChart.getJSplitPane(), detailPanel, JSplitPane.BOTTOM, 200);
+    GUIHelper.addToJSplitPane(cardChart.getJSplitPane(), chartPanel, JSplitPane.TOP, DIVIDER_LOCATION);
+    GUIHelper.addToJSplitPane(cardChart.getJSplitPane(), detailPanel, JSplitPane.BOTTOM, DIVIDER_LOCATION);
   }
 
   @NotNull

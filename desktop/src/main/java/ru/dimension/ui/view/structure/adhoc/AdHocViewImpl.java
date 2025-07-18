@@ -5,9 +5,9 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import javax.swing.JComboBox;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
 import javax.swing.border.EtchedBorder;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTitledSeparator;
@@ -23,7 +23,6 @@ import ru.dimension.ui.view.handler.adhoc.AdHocSelectionHandler;
 import ru.dimension.ui.view.panel.adhoc.AdHocPanel;
 import ru.dimension.ui.view.structure.AdHocView;
 
-
 @Log4j2
 @Singleton
 public class AdHocViewImpl extends JPanel implements AdHocView {
@@ -34,8 +33,13 @@ public class AdHocViewImpl extends JPanel implements AdHocView {
   private final JSplitPane adHocMain;
   private final JXTableCase connectionCase;
   private final JComboBox<String> schemaCatalogCBox;
+  private final JTabbedPane tableViewPane;
+  private final JTabbedPane timeStampColumnMetricPane;
   private final JXTableCase viewCase;
   private final JXTableCase tableCase;
+  private final JXTableCase timestampCase;
+  private final JXTableCase metricCase;
+  private final JXTableCase columnCase;
   private final AdHocSelectionHandler adHocSelectionHandler;
 
   @Inject
@@ -46,6 +50,9 @@ public class AdHocViewImpl extends JPanel implements AdHocView {
                        @Named("schemaCatalogAdHocCBox") JComboBox<String> schemaCatalogCBox,
                        @Named("tableAdHocCase") JXTableCase tableCase,
                        @Named("viewAdHocCase") JXTableCase viewCase,
+                       @Named("timestampAdHocCase") JXTableCase timestampCase,
+                       @Named("metricAdHocCase") JXTableCase metricCase,
+                       @Named("columnAdHocCase") JXTableCase columnCase,
                        @Named("adHocPanelHandler") AdHocSelectionHandler adHocSelectionHandler) {
 
     this.jFrame = jFrame;
@@ -56,10 +63,22 @@ public class AdHocViewImpl extends JPanel implements AdHocView {
     this.schemaCatalogCBox = schemaCatalogCBox;
     this.tableCase = tableCase;
     this.viewCase = viewCase;
+    this.timestampCase = timestampCase;
+    this.metricCase = metricCase;
+    this.columnCase = columnCase;
+
+    this.tableViewPane = new JTabbedPane();
+    this.tableViewPane.addTab("Table", this.tableCase.getJScrollPane());
+    this.tableViewPane.addTab("View", this.viewCase.getJScrollPane());
+
+    this.timeStampColumnMetricPane = new JTabbedPane();
+    this.timeStampColumnMetricPane.addTab("Timestamp", timestampCase.getJScrollPane());
+    this.timeStampColumnMetricPane.addTab("Column", columnCase.getJScrollPane());
+    this.timeStampColumnMetricPane.addTab("Metric", metricCase.getJScrollPane());
 
     this.adHocSelectionHandler = adHocSelectionHandler;
 
-    this.adHocMain = GUIHelper.getJSplitPane(JSplitPane.HORIZONTAL_SPLIT, 10, 225);
+    this.adHocMain = GUIHelper.getJSplitPane(JSplitPane.HORIZONTAL_SPLIT, 10, 240);
 
     this.adHocMain.setLeftComponent(fillEntitiesPane());
     this.adHocMain.setRightComponent(this.adHocPanel.get());
@@ -79,21 +98,15 @@ public class AdHocViewImpl extends JPanel implements AdHocView {
     gbl.row()
         .cell(new JXTitledSeparator("Connection")).fillX();
     gbl.row()
-        .cell(connectionCase.getJScrollPane()).fillXY();
+        .cell(connectionCase.getJScrollPane()).fillX();
     gbl.row()
         .cell(new JXTitledSeparator("Schema/Catalog")).fillX();
     gbl.row()
         .cell(schemaCatalogCBox).fillX();
     gbl.row()
-        .cell(new JXTitledSeparator("Table")).fillX();
+        .cell(tableViewPane).fillX();
     gbl.row()
-        .cell(tableCase.getJScrollPane()).fillXY();
-    gbl.row()
-        .cell(new JXTitledSeparator("View")).fillX();
-    gbl.row()
-        .cell(viewCase.getJScrollPane()).fillXY();
-    gbl.row()
-        .cellXYRemainder(new JLabel()).fillXY();
+        .cell(timeStampColumnMetricPane).fillXY();
 
     gbl.done();
 

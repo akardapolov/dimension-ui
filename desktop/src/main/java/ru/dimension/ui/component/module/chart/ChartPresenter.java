@@ -4,6 +4,7 @@ import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,8 +16,9 @@ import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.cstype.CType;
-import ru.dimension.ui.component.MessageBroker.Component;
+import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.model.PanelTabType;
+import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
@@ -83,13 +85,14 @@ public class ChartPresenter implements HelperChart {
 
     view.getHistoryLegendPanel().setVisibilityConsumer(showLegend ->
                                                            handleLegendChange(ChartLegendState.SHOW.equals(showLegend)));
+
+    view.getHistoryRangePanel().getButtonApplyRange().addActionListener(e -> applyCustomRange());
   }
 
   public void initializeCharts() {
     createRealTimeChart();
     createHistoryChart();
   }
-
 
   private void createRealTimeChart() {
     SwingTaskRunner.runWithProgress(
@@ -252,6 +255,23 @@ public class ChartPresenter implements HelperChart {
 
       RangeHistory rangeHistory = UIState.INSTANCE.getHistoryRange(chartKey);
       chartInfoCopy.setRangeHistory(Objects.requireNonNullElse(rangeHistory, RangeHistory.DAY));
+
+      if (chartInfoCopy.getRangeHistory() == RangeHistory.CUSTOM) {
+        ChartRange customRange = UIState.INSTANCE.getHistoryCustomRange(chartKey);
+        if (customRange != null) {
+          chartInfoCopy.setCustomBegin(customRange.getBegin());
+          chartInfoCopy.setCustomEnd(customRange.getEnd());
+
+          UIState.INSTANCE.putHistoryCustomRange(chartKey, customRange);
+        } else {
+          ChartRange chartRange = getChartRangeFromHistoryRangePanel();
+
+          chartInfoCopy.setCustomBegin(chartRange.getBegin());
+          chartInfoCopy.setCustomEnd(chartRange.getEnd());
+
+          UIState.INSTANCE.putHistoryCustomRange(chartKey, chartRange);
+        }
+      }
     }
 
     if (AnalyzeType.REAL_TIME.equals(analyzeType)) {
@@ -325,6 +345,14 @@ public class ChartPresenter implements HelperChart {
 
     if (effectiveHistoryRange != null) {
       view.getHistoryRangePanel().setSelectedRange(effectiveHistoryRange);
+    }
+
+    if (effectiveHistoryRange == RangeHistory.CUSTOM) {
+      ChartRange customRange = UIState.INSTANCE.getHistoryCustomRange(chartKey);
+      if (customRange != null) {
+        view.getHistoryRangePanel().getDateTimePickerFrom().setDate(new Date(customRange.getBegin()));
+        view.getHistoryRangePanel().getDateTimePickerTo().setDate(new Date(customRange.getEnd()));
+      }
     }
 
     // Legend Visibility
@@ -424,11 +452,11 @@ public class ChartPresenter implements HelperChart {
   public void handleHistoryRangeChange(String action,
                                        RangeHistory range) {
     UIState.INSTANCE.putHistoryRange(model.getChartKey(), range);
-
     model.getChartInfo().setRangeHistory(range);
 
-    setActiveTab(PanelTabType.HISTORY);
+    view.getHistoryRangePanel().setSelectedRange(range);
 
+    setActiveTab(PanelTabType.HISTORY);
     updateHistoryChart();
   }
 
@@ -444,6 +472,18 @@ public class ChartPresenter implements HelperChart {
   public void updateHistoryRange(RangeHistory range) {
     view.getHistoryRangePanel().setSelectedRange(range);
     handleHistoryRangeChange("configChange", range);
+  }
+
+  public void updateHistoryCustomRange(ChartRange range) {
+    UIState.INSTANCE.putHistoryCustomRange(model.getChartKey(), range);
+    UIState.INSTANCE.putHistoryRange(model.getChartKey(), RangeHistory.CUSTOM);
+    model.getChartInfo().setRangeHistory(RangeHistory.CUSTOM);
+
+    view.getHistoryRangePanel().setSelectedRange(RangeHistory.CUSTOM);
+    view.getHistoryRangePanel().getDateTimePickerFrom().setDate(new Date(range.getBegin()));
+    view.getHistoryRangePanel().getDateTimePickerTo().setDate(new Date(range.getEnd()));
+
+    updateHistoryChart();
   }
 
   public void setDetailState(DetailState detailState) {
@@ -487,6 +527,35 @@ public class ChartPresenter implements HelperChart {
 
     updateLegendVisibility(visibility);
     UIState.INSTANCE.putShowLegend(model.getChartKey(), visibility);
+  }
+
+  private void applyCustomRange() {
+    HistoryRangePanel rangePanel = view.getHistoryRangePanel();
+
+    rangePanel.getButtonGroup().clearSelection();
+    rangePanel.getCustom().setSelected(true);
+    rangePanel.colorButton(RangeHistory.CUSTOM);
+
+    Date from = rangePanel.getDateTimePickerFrom().getDate();
+    Date to = rangePanel.getDateTimePickerTo().getDate();
+    ChartRange chartRange = new ChartRange(from.getTime(), to.getTime());
+
+    UIState.INSTANCE.putHistoryCustomRange(model.getChartKey(), chartRange);
+
+    handleHistoryRangeChange("rangeChanged", RangeHistory.CUSTOM);
+  }
+
+  private ChartRange getChartRangeFromHistoryRangePanel() {
+    HistoryRangePanel rangePanel = view.getHistoryRangePanel();
+
+    rangePanel.getButtonGroup().clearSelection();
+    rangePanel.getCustom().setSelected(true);
+    rangePanel.colorButton(RangeHistory.CUSTOM);
+
+    Date from = rangePanel.getDateTimePickerFrom().getDate();
+    Date to = rangePanel.getDateTimePickerTo().getDate();
+
+    return new ChartRange(from.getTime(), to.getTime());
   }
 
   private void updateLegendVisibility(boolean visibility) {

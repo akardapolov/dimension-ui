@@ -776,7 +776,7 @@ public class ConfigurationConfig {
   @Singleton
   @Named("connectionAdHocCase")
   public JXTableCase getConnectionAdHocCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(10,
+    JXTableCase jxTableCase = GUIHelper.getJXTableCase(7,
                                                        new String[]{ConnectionColumnNames.ID.getColName(),
                                                            ConnectionColumnNames.NAME.getColName(),
                                                        });
@@ -796,7 +796,7 @@ public class ConfigurationConfig {
   @Singleton
   @Named("tableAdHocCase")
   public JXTableCase getTableAdHocCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(10,
+    JXTableCase jxTableCase = GUIHelper.getJXTableCase(7,
                                                        new String[]{ConnectionColumnNames.ID.getColName(),
                                                            ConnectionColumnNames.NAME.getColName(),});
     jxTableCase.getJxTable().getColumnExt(0).setVisible(false);
@@ -807,7 +807,7 @@ public class ConfigurationConfig {
   @Singleton
   @Named("viewAdHocCase")
   public JXTableCase getViewAdHocCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(10,
+    JXTableCase jxTableCase = GUIHelper.getJXTableCase(7,
                                                        new String[]{ConnectionColumnNames.ID.getColName(),
                                                            ConnectionColumnNames.NAME.getColName(),});
     jxTableCase.getJxTable().getColumnExt(0).setVisible(false);

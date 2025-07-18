@@ -5,8 +5,8 @@ import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.module.model.ModelModel;
 import ru.dimension.ui.component.module.model.ModelPresenter;
 import ru.dimension.ui.component.module.model.ModelView;
-import ru.dimension.ui.component.Message;
-import ru.dimension.ui.component.MessageAction;
+import ru.dimension.ui.component.broker.Message;
+import ru.dimension.ui.component.broker.MessageAction;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.column.ColumnNames;
 

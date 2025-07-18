@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.TimeZone;
@@ -108,13 +107,31 @@ public interface HelperChart {
 
     ChartRange chartRange = new ChartRange();
 
+    LocalDateTime startOfDay = LocalDate.now().plusDays(1).atStartOfDay();
+    long end = startOfDay.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() - 1;
+
     if (RangeHistory.CUSTOM.equals(chartInfo.getRangeHistory())) {
+      chartRange.setBegin(chartInfo.getCustomBegin());
       chartRange.setEnd(chartInfo.getCustomEnd());
     } else {
-      LocalDateTime startOfDay = LocalDate.now().plusDays(1).atStartOfDay();
-      chartRange.setEnd(startOfDay.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
+      chartRange.setEnd(end);
+      chartRange.setBegin(chartRange.getEnd() - getRangeHistory(chartInfo) + 1);
     }
-    chartRange.setBegin(chartRange.getEnd() - getRangeHistory(chartInfo));
+
+    return chartRange;
+  }
+
+  default ChartRange getChartRangeAdHoc(ChartInfo chartInfo) {
+
+    ChartRange chartRange = new ChartRange();
+
+    if (RangeHistory.CUSTOM.equals(chartInfo.getRangeHistory())) {
+      chartRange.setBegin(chartInfo.getCustomBegin());
+      chartRange.setEnd(chartInfo.getCustomEnd());
+    } else {
+      chartRange.setEnd(chartInfo.getCustomEnd());
+      chartRange.setBegin(chartRange.getEnd() - getRangeHistory(chartInfo) + 1);
+    }
 
     return chartRange;
   }
@@ -174,18 +191,17 @@ public interface HelperChart {
         throw new RuntimeException("No data found in table: " + tableName);
       }
 
-      long rangeHistory = getRangeHistory(chartInfo);
-      long beginTimestamp = last - rangeHistory;
-      long endTimestamp = last;
+      LocalDateTime dateTime = Instant.ofEpochMilli(last)
+          .atZone(ZoneId.systemDefault())
+          .toLocalDateTime()
+          .plusDays(1)
+          .truncatedTo(ChronoUnit.DAYS);
 
-      // Round to the first second of the day using java.time
-      Instant instant = Instant.ofEpochMilli(beginTimestamp);
-      ZonedDateTime zonedDateTime = instant.atZone(ZoneId.systemDefault());
-      ZonedDateTime startOfDay = zonedDateTime.truncatedTo(ChronoUnit.DAYS);
-      long roundedBegin = startOfDay.toInstant().toEpochMilli();
+      long end = dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() - 1;
+      long begin = end - getRangeHistory(chartInfo) + 1;
 
-      chartRange.setBegin(roundedBegin);
-      chartRange.setEnd(endTimestamp);
+      chartRange.setBegin(begin);
+      chartRange.setEnd(end);
     }
 
     return chartRange;

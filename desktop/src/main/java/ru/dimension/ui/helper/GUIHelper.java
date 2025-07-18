@@ -530,4 +530,10 @@ public class GUIHelper {
     }
     return null;
   }
+
+  public static JLabel getLabel(String text) {
+    JLabel label = new JLabel(text);
+    label.setFont(label.getFont().deriveFont(java.awt.Font.BOLD));
+    return label;
+  }
 }

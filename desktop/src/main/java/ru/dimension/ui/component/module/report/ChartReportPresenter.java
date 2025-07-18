@@ -8,7 +8,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
-import ru.dimension.ui.component.MessageBroker.Component;
+import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.module.chart.ChartModel;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.model.ProfileTaskQueryKey;

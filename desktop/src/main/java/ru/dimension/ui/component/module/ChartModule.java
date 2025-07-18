@@ -4,14 +4,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
-import ru.dimension.db.core.DStore;
 import org.jdesktop.swingx.JXTaskPane;
+import ru.dimension.db.core.DStore;
+import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.module.chart.ChartModel;
 import ru.dimension.ui.component.module.chart.ChartPresenter;
 import ru.dimension.ui.component.module.chart.ChartView;
-import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
+import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
@@ -76,6 +77,10 @@ public class ChartModule extends JXTaskPane {
 
   public void updateHistoryRange(RangeHistory range) {
     this.presenter.updateHistoryRange(range);
+  }
+
+  public void updateHistoryCustomRange(ChartRange range) {
+    this.presenter.updateHistoryCustomRange(range);
   }
 
   public boolean isReadyRealTimeUpdate() {

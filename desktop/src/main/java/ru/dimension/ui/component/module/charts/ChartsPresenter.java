@@ -4,14 +4,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
-import ru.dimension.ui.component.Message;
-import ru.dimension.ui.component.MessageAction;
-import ru.dimension.ui.component.MessageBroker.Action;
+import ru.dimension.ui.component.broker.Message;
+import ru.dimension.ui.component.broker.MessageAction;
+import ru.dimension.ui.component.broker.MessageBroker.Action;
 import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.module.ChartModule;
 import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
+import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
@@ -71,11 +72,20 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
 
   private void handleHistoryRangeChange(Message message) {
     RangeHistory historyRange = message.parameters().get("range");
-    model.getChartPanes().forEach((key, chartMap) ->
-                                      chartMap.values().forEach(chartModule ->
-                                                                    chartModule.updateHistoryRange(historyRange)
-                                      )
-    );
+    ChartRange chartRange = message.parameters().get("chartRange");
+
+    if (RangeHistory.CUSTOM.equals(historyRange)) {
+      model.getChartPanes().forEach((key, chartMap) ->
+                                        chartMap.values().forEach(chartModule ->
+                                                                      chartModule.updateHistoryCustomRange(chartRange)
+                                        )
+      );
+    } else {
+      model.getChartPanes().forEach((key, chartMap) ->
+                                        chartMap.values().forEach(chartModule ->
+                                                                      chartModule.updateHistoryRange(historyRange)
+                                        ));
+    }
   }
 
   private void handleDetailVisibilityChange(Message message) {

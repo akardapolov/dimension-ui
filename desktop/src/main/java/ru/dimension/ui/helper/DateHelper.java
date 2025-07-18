@@ -1,10 +1,11 @@
 package ru.dimension.ui.helper;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
@@ -13,6 +14,7 @@ import ru.dimension.ui.model.date.DateLocale;
 
 @Log4j2
 public class DateHelper {
+  public static String formatPattern = "dd-MM-yyyy HH:mm:ss";
 
   private DateHelper() {}
 
@@ -35,12 +37,14 @@ public class DateHelper {
    * @return Map.Entry<Date, Date>
    */
   public static Map.Entry<Date, Date> getRangeDate() {
-    Date now = new Date();
-    Instant nowInstant = now.toInstant();
-    Instant yesterdayInstant = nowInstant.minus(24, ChronoUnit.HOURS);
-    Date yesterday = Date.from(yesterdayInstant);
+    LocalDateTime startOfDay = LocalDate.now().plusDays(1).atStartOfDay();
+    long end = startOfDay.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() - 1;
+    long begin = end - (24L * 60 * 60 * 1000) + 1;
 
-    return Map.entry(yesterday, now);
+    Date beginDate = new Date(begin);
+    Date endDate = new Date(end);
+
+    return Map.entry(beginDate, endDate);
   }
 
   public static String getDateFormattedRange(DateLocale dateLocale, long begin, long end, boolean splitOn) {

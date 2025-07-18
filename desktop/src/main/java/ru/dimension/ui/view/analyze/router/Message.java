@@ -3,7 +3,7 @@ package ru.dimension.ui.view.analyze.router;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import ru.dimension.ui.component.ParameterStore;
+import ru.dimension.ui.component.broker.ParameterStore;
 import ru.dimension.ui.view.analyze.router.MessageRouter.Action;
 import ru.dimension.ui.view.analyze.router.MessageRouter.Destination;
 

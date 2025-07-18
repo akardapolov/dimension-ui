@@ -2,7 +2,6 @@ package ru.dimension.ui.model.table;
 
 import javax.swing.JScrollPane;
 import javax.swing.table.DefaultTableModel;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -26,5 +25,14 @@ public class JXTableCase {
   public void removeAllElements() {
     defaultTableModel.getDataVector().removeAllElements();
     defaultTableModel.fireTableDataChanged();
+  }
+
+  public void clearTable() {
+    defaultTableModel.getDataVector().removeAllElements();
+    defaultTableModel.fireTableDataChanged();
+  }
+
+  public void addRow(Object[] objects) {
+    defaultTableModel.addRow(objects);
   }
 }

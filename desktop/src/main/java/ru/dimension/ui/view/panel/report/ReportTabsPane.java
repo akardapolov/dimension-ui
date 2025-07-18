@@ -83,7 +83,7 @@ public class ReportTabsPane extends JTabbedPane {
     this.reportPdfPath = " ";
     this.showedFlag = false;
 
-    //Components of the design panel
+    // Design panel
     this.jspDesign = GUIHelper.getJSplitPane(JSplitPane.HORIZONTAL_SPLIT, 10, 230);
     this.rightPanel = new JPanel(new GridLayout(1, 1));
     this.rightPanel.setBorder(new EtchedBorder());
@@ -92,9 +92,8 @@ public class ReportTabsPane extends JTabbedPane {
     this.jspDesign.setResizeWeight(0);
     this.jspDesign.setResizeWeight(1);
 
-    //Components of the report panel
+    // Report panel
     this.jspReport = GUIHelper.getJSplitPane(JSplitPane.HORIZONTAL_SPLIT, 10, 200);
-
     this.jspOpenDesign = GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, 150);
 
     this.containerCardDesign = containerCardDesign;

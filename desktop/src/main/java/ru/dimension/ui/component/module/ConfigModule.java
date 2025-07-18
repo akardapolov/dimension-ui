@@ -4,8 +4,8 @@ import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.module.config.ConfigPresenter;
 import ru.dimension.ui.component.module.config.ConfigView;
-import ru.dimension.ui.component.Message;
-import ru.dimension.ui.component.MessageAction;
+import ru.dimension.ui.component.broker.Message;
+import ru.dimension.ui.component.broker.MessageAction;
 
 @Log4j2
 public class ConfigModule implements MessageAction {
@@ -20,7 +20,5 @@ public class ConfigModule implements MessageAction {
   }
 
   @Override
-  public void receive(Message message) {
-    // Handle incoming messages if needed
-  }
+  public void receive(Message message) {}
 }

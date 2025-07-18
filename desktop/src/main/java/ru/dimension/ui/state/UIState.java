@@ -2,11 +2,13 @@ package ru.dimension.ui.state;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import ru.dimension.ui.component.ParameterStore;
+import ru.dimension.ui.component.broker.ParameterStore;
+import ru.dimension.ui.model.AdHocKey;
+import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.function.MetricFunction;
-import ru.dimension.ui.view.analyze.model.DetailState;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.RangeRealTime;
+import ru.dimension.ui.view.analyze.model.DetailState;
 
 public enum UIState {
   INSTANCE;
@@ -20,9 +22,13 @@ public enum UIState {
   private static final String SHOW_LEGEND = "SHOW_LEGEND";
   private static final String SHOW_LEGEND_ALL = "SHOW_LEGEND_ALL";
   private static final String SHOW_DETAIL_ALL = "SHOW_DETAIL_ALL";
+  private static final String HISTORY_CUSTOM_RANGE = "HISTORY_CUSTOM_RANGE";
+  private static final String HISTORY_CUSTOM_RANGE_ALL = "HISTORY_CUSTOM_RANGE_ALL";
 
   private final ConcurrentMap<String, ParameterStore> globalStateMap = new ConcurrentHashMap<>();
   private final ConcurrentMap<ChartKey, ParameterStore> stateMap = new ConcurrentHashMap<>();
+
+  private final ConcurrentMap<AdHocKey, ParameterStore> adHocStateMap = new ConcurrentHashMap<>();
 
   public void putRealtimeMetricFunction(ChartKey key, MetricFunction function) {
     getOrCreateParameterStore(key).put(REAL_TIME_METRIC_FUNCTION, function);
@@ -105,6 +111,24 @@ public enum UIState {
     return store != null ? store.get(SHOW_DETAIL_ALL, DetailState.class) : null;
   }
 
+  public void putHistoryCustomRange(ChartKey key, ChartRange range) {
+    getOrCreateParameterStore(key).put(HISTORY_CUSTOM_RANGE, range);
+  }
+
+  public ChartRange getHistoryCustomRange(ChartKey key) {
+    ParameterStore store = stateMap.get(key);
+    return store != null ? store.get(HISTORY_CUSTOM_RANGE, ChartRange.class) : null;
+  }
+
+  public void putHistoryCustomRangeAll(String key, ChartRange range) {
+    getOrCreateParameterGlobalStore(key).put(HISTORY_CUSTOM_RANGE_ALL, range);
+  }
+
+  public ChartRange getHistoryCustomRangeAll(String key) {
+    ParameterStore store = globalStateMap.get(key);
+    return store != null ? store.get(HISTORY_CUSTOM_RANGE_ALL, ChartRange.class) : null;
+  }
+
   public void removeChartState(ChartKey key) {
     stateMap.remove(key);
   }
@@ -115,5 +139,45 @@ public enum UIState {
 
   private ParameterStore getOrCreateParameterGlobalStore(String key) {
     return globalStateMap.computeIfAbsent(key, k -> new ParameterStore());
+  }
+
+  public void putHistoryMetricFunction(AdHocKey key, MetricFunction function) {
+    getOrCreateParameterStore(key).put(HISTORY_METRIC_FUNCTION, function);
+  }
+
+  public MetricFunction getHistoryMetricFunction(AdHocKey key) {
+    ParameterStore store = adHocStateMap.get(key);
+    return store != null ? store.get(HISTORY_METRIC_FUNCTION, MetricFunction.class) : null;
+  }
+
+  public void putHistoryRange(AdHocKey key, RangeHistory range) {
+    getOrCreateParameterStore(key).put(HISTORY_RANGE, range);
+  }
+
+  public RangeHistory getHistoryRange(AdHocKey key) {
+    ParameterStore store = adHocStateMap.get(key);
+    return store != null ? store.get(HISTORY_RANGE, RangeHistory.class) : null;
+  }
+
+  public void putShowLegend(AdHocKey key, Boolean showLegend) {
+    getOrCreateParameterStore(key).put(SHOW_LEGEND, showLegend);
+  }
+
+  public Boolean getShowLegend(AdHocKey key) {
+    ParameterStore store = adHocStateMap.get(key);
+    return store != null ? store.get(SHOW_LEGEND, Boolean.class) : null;
+  }
+
+  public void putHistoryCustomRange(AdHocKey key, ChartRange range) {
+    getOrCreateParameterStore(key).put(HISTORY_CUSTOM_RANGE, range);
+  }
+
+  public ChartRange getHistoryCustomRange(AdHocKey key) {
+    ParameterStore store = adHocStateMap.get(key);
+    return store != null ? store.get(HISTORY_CUSTOM_RANGE, ChartRange.class) : null;
+  }
+
+  private ParameterStore getOrCreateParameterStore(AdHocKey key) {
+    return adHocStateMap.computeIfAbsent(key, k -> new ParameterStore());
   }
 }

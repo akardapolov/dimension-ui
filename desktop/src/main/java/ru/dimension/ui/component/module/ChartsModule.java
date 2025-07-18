@@ -6,10 +6,10 @@ import ru.dimension.db.core.DStore;
 import ru.dimension.ui.component.module.charts.ChartsModel;
 import ru.dimension.ui.component.module.charts.ChartsPresenter;
 import ru.dimension.ui.component.module.charts.ChartsView;
-import ru.dimension.ui.component.Destination;
-import ru.dimension.ui.component.MessageBroker;
-import ru.dimension.ui.component.MessageBroker.Component;
-import ru.dimension.ui.component.MessageBroker.Module;
+import ru.dimension.ui.component.broker.Destination;
+import ru.dimension.ui.component.broker.MessageBroker;
+import ru.dimension.ui.component.broker.MessageBroker.Component;
+import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.state.SqlQueryState;
 

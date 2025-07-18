@@ -228,7 +228,7 @@ public class AdHocSelectionHandler extends AdHocChartHandler implements ActionLi
 
     if (tsColumnName.isBlank()) {
       DialogHelper.showMessageDialog(null,
-                                     "Timestamp column not selected, please select it",
+                                     "Timestamp column not selected, please pick it",
                                      "Warning");
       return true;
     }
@@ -437,6 +437,19 @@ public class AdHocSelectionHandler extends AdHocChartHandler implements ActionLi
     Stream.of(RangeHistory.values())
         .filter(v -> v.getName().equals(name))
         .forEach(this.chartInfo::setRangeHistory);
+
+    String columnName = GUIHelper.getNameByColumnName(columnCase.getJxTable(),
+                                                      columnCase.getDefaultTableModel(),
+                                                      columnCase.getJxTable().getSelectionModel(),
+                                                      QueryMetadataColumnNames.NAME.getColName());
+
+    if (columnName.isBlank()) {
+      DialogHelper.showMessageDialog(null,
+                                     "Please select a column to continue",
+                                     "Warning");
+
+      return;
+    }
 
     if (Stream.of(RangeHistory.values()).anyMatch(v -> v.getName().equals(name))) {
       adHocPanel.getAdHocTab().setSelectedTab(VISUALIZE);
