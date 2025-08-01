@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import javax.swing.table.TableColumn;
+import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
@@ -36,6 +37,7 @@ import ru.dimension.ui.view.chart.FunctionDataHandler;
 public class HistorySCP extends SCP {
 
   protected FunctionDataHandler dataHandler;
+  @Getter
   protected Map.Entry<CProfile, List<String>> filter;
 
   private JXTableCase seriesSelectable;
@@ -188,6 +190,10 @@ public class HistorySCP extends SCP {
           series.addAll(newSelection);
 
           ChartRange chartRange = getChartRangeExact(config.getChartInfo());
+
+          if (detailAndAnalyzeHolder != null) {
+            detailAndAnalyzeHolder.detailAction().cleanMainPanel();
+          }
 
           loadDataHistory(chartRange);
 

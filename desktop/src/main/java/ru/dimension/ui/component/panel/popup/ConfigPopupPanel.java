@@ -26,7 +26,7 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
   private JPanel contentPanel;
   private Instant lastPopupCloseTime = Instant.now();
   private final JButton button;
-  private final Supplier<JPanel> contentSupplier;
+  private Supplier<JPanel> contentSupplier;
 
   private final String buttonTextClosed;
   private final String buttonTextOpen;
@@ -62,6 +62,10 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
         togglePopup();
       }
     });
+  }
+
+  public void updateContent(Supplier<JPanel> newSupplier) {
+    this.contentSupplier = newSupplier;
   }
 
   private void togglePopup() {

@@ -10,6 +10,7 @@ import java.util.function.BiConsumer;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.border.EtchedBorder;
+import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTaskPane;
 import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.jdesktop.swingx.VerticalLayout;
@@ -21,6 +22,7 @@ import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.view.analyze.module.ChartAnalyzeModule;
 
+@Log4j2
 public class ChartsView extends JPanel {
 
   private final JXTaskPaneContainer cardContainer;
@@ -72,6 +74,12 @@ public class ChartsView extends JPanel {
       cardContainer.remove(taskPane);
       cardContainer.revalidate();
       cardContainer.repaint();
+    }
+
+    for (Component comp : cardContainer.getComponents()) {
+      if (comp instanceof ChartModule chartModule) {
+        log.info("Task pane: " + chartModule.getTitle());
+      }
     }
   }
 

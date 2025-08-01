@@ -23,14 +23,13 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.table.TableColumn;
-import ru.dimension.db.model.profile.table.IType;
-import ru.dimension.db.model.profile.table.TType;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.jdesktop.swingx.JXTextArea;
-import org.jdesktop.swingx.JXTitledSeparator;
 import org.jetbrains.annotations.NotNull;
+import ru.dimension.db.model.profile.table.IType;
+import ru.dimension.db.model.profile.table.TType;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
@@ -42,9 +41,9 @@ import ru.dimension.ui.model.column.ProfileColumnNames;
 import ru.dimension.ui.model.column.QueryColumnNames;
 import ru.dimension.ui.model.column.ReportColumnNames;
 import ru.dimension.ui.model.column.TaskColumnNames;
-import ru.dimension.ui.model.column.TimestampColumnNames;
 import ru.dimension.ui.model.function.ChartType;
 import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.report.QueryReportData;
 import ru.dimension.ui.model.sql.GatherDataMode;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.prompt.Internationalization;
@@ -60,7 +59,6 @@ import ru.dimension.ui.view.panel.config.task.MultiSelectQueryPanel;
 import ru.dimension.ui.view.panel.report.pdf.PathPdfInfo;
 import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.view.tab.ConnTypeTab;
-import ru.dimension.ui.model.report.QueryReportData;
 
 @Module
 public class ConfigurationConfig {
@@ -769,87 +767,6 @@ public class ConfigurationConfig {
     JXTableCase jxTableCase = GUIHelper.getJXTableCase(7,
                                                        new String[]{"Design name",});
 
-    return jxTableCase;
-  }
-
-  @Provides
-  @Singleton
-  @Named("connectionAdHocCase")
-  public JXTableCase getConnectionAdHocCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(7,
-                                                       new String[]{ConnectionColumnNames.ID.getColName(),
-                                                           ConnectionColumnNames.NAME.getColName(),
-                                                       });
-    jxTableCase.getJxTable().getColumnExt(0).setVisible(false);
-    return jxTableCase;
-  }
-
-  @Provides
-  @Singleton
-  @Named("schemaCatalogAdHocCBox")
-  public JComboBox<String> getSchemaCatalogAdHocCase() {
-    JComboBox<String> jComboBox = new JComboBox<>();
-    return jComboBox;
-  }
-
-  @Provides
-  @Singleton
-  @Named("tableAdHocCase")
-  public JXTableCase getTableAdHocCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(7,
-                                                       new String[]{ConnectionColumnNames.ID.getColName(),
-                                                           ConnectionColumnNames.NAME.getColName(),});
-    jxTableCase.getJxTable().getColumnExt(0).setVisible(false);
-    return jxTableCase;
-  }
-
-  @Provides
-  @Singleton
-  @Named("viewAdHocCase")
-  public JXTableCase getViewAdHocCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(7,
-                                                       new String[]{ConnectionColumnNames.ID.getColName(),
-                                                           ConnectionColumnNames.NAME.getColName(),});
-    jxTableCase.getJxTable().getColumnExt(0).setVisible(false);
-    return jxTableCase;
-  }
-
-  @Provides
-  @Singleton
-  @Named("tableNameAdHocTitle")
-  public JXTitledSeparator getTableNameAdHocTitle() {
-    return new JXTitledSeparator("Table/view name: not selected");
-  }
-
-  @Provides
-  @Singleton
-  @Named("timestampAdHocCase")
-  public JXTableCase getTimestampAdHocCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(10,
-                                                       new String[]{TimestampColumnNames.NAME.getColName(),});
-    jxTableCase.getJxTable().getTableHeader().setVisible(true);
-    return jxTableCase;
-  }
-
-  @Provides
-  @Singleton
-  @Named("metricAdHocCase")
-  public JXTableCase getMetricAdHocCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(10,
-                                                       new String[]{MetricsColumnNames.ID.getColName(),
-                                                           MetricsColumnNames.NAME.getColName(),});
-    jxTableCase.getJxTable().getColumnExt(0).setVisible(false);
-    return jxTableCase;
-  }
-
-  @Provides
-  @Singleton
-  @Named("columnAdHocCase")
-  public JXTableCase getColumnAdHocCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(10,
-                                                       new String[]{MetricsColumnNames.ID.getColName(),
-                                                           MetricsColumnNames.NAME.getColName(),});
-    jxTableCase.getJxTable().getColumnExt(0).setVisible(false);
     return jxTableCase;
   }
 }

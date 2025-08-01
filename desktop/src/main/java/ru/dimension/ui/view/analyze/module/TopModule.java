@@ -1,6 +1,6 @@
 package ru.dimension.ui.view.analyze.module;
 
-import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
+import static ru.dimension.ui.helper.GUIHelper.getJScrollPane;
 
 import ext.egantt.swing.GanttDrawingPartHelper;
 import ext.egantt.swing.GanttTable;
@@ -25,6 +25,9 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableColumn;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
+import org.jdesktop.swingx.JXTitledSeparator;
+import org.jdesktop.swingx.VerticalLayout;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.GanttColumnNotSupportedException;
@@ -34,9 +37,6 @@ import ru.dimension.db.model.output.GanttColumnCount;
 import ru.dimension.db.model.output.GanttColumnSum;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.table.BType;
-import org.jdesktop.swingx.JXTable;
-import org.jdesktop.swingx.JXTitledSeparator;
-import org.jdesktop.swingx.VerticalLayout;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.helper.ProgressBarHelper;
@@ -49,13 +49,13 @@ import ru.dimension.ui.model.function.MetricFunction;
 import ru.dimension.ui.model.gantt.DrawingScale;
 import ru.dimension.ui.model.gantt.GanttColumn;
 import ru.dimension.ui.model.info.TableInfo;
+import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.view.analyze.router.Message;
 import ru.dimension.ui.view.analyze.router.MessageAction;
 import ru.dimension.ui.view.analyze.router.MessageRouter;
 import ru.dimension.ui.view.analyze.router.MessageRouter.Action;
 import ru.dimension.ui.view.analyze.router.MessageRouter.Destination;
 import ru.dimension.ui.view.detail.GanttCommon;
-import ru.dimension.ui.model.view.SeriesType;
 
 @Log4j2
 public class TopModule extends GanttCommon implements MessageAction {
@@ -119,7 +119,7 @@ public class TopModule extends GanttCommon implements MessageAction {
         () -> {
           if (BType.BERKLEYDB.equals(tableInfo.getBackendType())) {
             JPanel topPanel = loadTopPanel(begin, end, dStore);
-            JScrollPane scrollPane = GUIHelper.getJScrollPane(topPanel, 15);
+            JScrollPane scrollPane = getJScrollPane(topPanel, 15);
             return () -> PGHelper.cellXYRemainder(this, scrollPane, false);
           } else {
             return () -> PGHelper.cellXYRemainder(this, new JPanel(), false);
@@ -147,14 +147,14 @@ public class TopModule extends GanttCommon implements MessageAction {
 
     try {
       topPanelAll.add(new JXTitledSeparator(cProfile.getColName()));
-      topPanelAll.add(getJScrollPane(getTopJXTable(cProfile, begin, end, dStore)));
+      topPanelAll.add(GUIHelper.getJScrollPane(getTopJXTable(cProfile, begin, end, dStore)));
 
       tableInfo.getCProfiles().forEach(cProfile -> {
         try {
           if (!cProfile.getColName().equals(this.cProfile.getColName())
               && !cProfile.getCsType().isTimeStamp()) {
             topPanelAll.add(new JXTitledSeparator(cProfile.getColName()));
-            topPanelAll.add(getJScrollPane(getTopJXTable(cProfile, begin, end, dStore)));
+            topPanelAll.add(GUIHelper.getJScrollPane(getTopJXTable(cProfile, begin, end, dStore)));
           }
         } catch (Exception exception) {
           log.catching(exception);

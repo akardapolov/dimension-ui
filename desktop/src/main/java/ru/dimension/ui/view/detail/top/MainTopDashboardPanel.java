@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
@@ -51,6 +52,8 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
   private final Metric metric;
   private final SeriesType seriesType;
 
+  private final Entry<CProfile, List<String>> filter;
+
   public MainTopDashboardPanel(DStore dStore,
                                ScheduledExecutorService executorService,
                                TableInfo tableInfo,
@@ -59,13 +62,15 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
                                long begin,
                                long end,
                                Map<String, Color> seriesColorMap,
-                               SeriesType seriesType) {
+                               SeriesType seriesType,
+                               Entry<CProfile, List<String>> filter) {
     super(tableInfo, cProfile, begin, end, seriesColorMap);
 
     this.dStore = dStore;
     this.executorService = executorService;
     this.metric = metric;
     this.seriesType = seriesType;
+    this.filter = filter;
 
     super.jxTableCase.getJxTable().getSelectionModel().addListSelectionListener(this);
 
@@ -111,7 +116,7 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
               DrawingScale drawingScale = new DrawingScale();
 
               JXTable jxTable = loadGantt(firstLevelGroupBy, ganttColumnList, seriesColorMap, drawingScale, 5, 20);
-              jScrollPaneList.add(getJScrollPane(jxTable));
+              jScrollPaneList.add(GUIHelper.getJScrollPane(jxTable));
 
             } catch (Exception exception) {
               log.catching(exception);
@@ -170,7 +175,7 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
 
             JXTable jxTable = loadGantt(firstLevelGroupBy, ganttColumnList, seriesColorMap, drawingScale, 100, 23);
 
-            GUIHelper.addToJSplitPane(jSplitPane, getJScrollPane(jxTable), JSplitPane.RIGHT, 200);
+            GUIHelper.addToJSplitPane(jSplitPane, GUIHelper.getJScrollPane(jxTable), JSplitPane.RIGHT, 200);
 
           } catch (Exception exception) {
             log.catching(exception);
@@ -191,16 +196,26 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
         return convertGanttColumns(dStore.getGantt(tableInfo.getTableName(),
                                                    firstLevelGroupBy,
                                                    cProfile,
-                                                   cProfile,
-                                                   seriesColorMap.keySet().toArray(String[]::new),
+                                                   filter.getKey(),
+                                                   filter.getValue().toArray(new String[0]),
                                                    CompareFunction.EQUAL,
                                                    begin,
                                                    end));
       }
     } else {
-      return convertSumToGanttColumns(dStore.getGanttSum(tableInfo.getTableName(), firstLevelGroupBy, cProfile, begin, end));
+      if (SeriesType.CUSTOM.equals(seriesType)) {
+        return convertSumToGanttColumns(dStore.getGanttSum(tableInfo.getTableName(),
+                                                           firstLevelGroupBy,
+                                                           cProfile,
+                                                           filter.getKey(),
+                                                           filter.getValue().toArray(new String[0]),
+                                                           CompareFunction.EQUAL,
+                                                           begin,
+                                                           end));
+      } else {
+        return convertSumToGanttColumns(dStore.getGanttSum(tableInfo.getTableName(), firstLevelGroupBy, cProfile, begin, end));
+      }
     }
-
     return Collections.emptyList();
   }
 

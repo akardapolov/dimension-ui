@@ -249,6 +249,10 @@ public class ClientRealtimeSCP extends RealtimeSCP {
           chartDataLoader.setSeries(series);
           chartDataLoader.setFilter(filter);
 
+          if (detailAndAnalyzeHolder != null) {
+            detailAndAnalyzeHolder.detailAction().cleanMainPanel();
+          }
+
           reloadDataForCurrentRange();
 
           if (detailAndAnalyzeHolder != null) {

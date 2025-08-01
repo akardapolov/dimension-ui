@@ -39,8 +39,11 @@
 
 ![Workspace Stacked](docs/guides/user/media/workspace/workspace-stacked.png)
 ![Dashboard Short](docs/guides/user/media/dashboard/dashboard-short.png)
+![Dashboard realtime filter](docs/guides/user/media/dashboard/dashboard-realtime-filter.png)
+![Dashboard history filter](docs/guides/user/media/dashboard/dashboard-history-filter.png)
 ![Report](docs/guides/user/media/report/report.png)
 ![Ad-hoc Analyze](docs/guides/user/media/adhoc/ad-hoc-analyze.png)
+![Ad-hoc Filter](docs/guides/user/media/adhoc/ad-hoc-filter.png)
 
 ### Общие сведения
 
@@ -129,9 +132,10 @@
     cd dimension-ui
     ```
 
-4. Выполнить компиляцию проекта с помощью Maven
+4. Выполнить компиляцию и установку модулей проекта с помощью Maven
    ```shell
     mvn clean compile
+    mvn clean install -U
    ```
 
 5. Выполнить команду Maven для сборки исполняемого jar-файла с запуском тестов
@@ -327,13 +331,16 @@ sequenceDiagram
 
 ## Screencast
 
-|               | Screencast                                                          |
-|:--------------|:--------------------------------------------------------------------|
-| Configuration | [🔍 Configuration](docs/guides/user/media/config/configuration.gif) |
-| Workspace     | [🔍 Workspace](docs/guides/user/media/workspace/workspace.gif)      |
-| Dashboard     | [🔍 Dashboard](docs/guides/user/media/dashboard/dashboard.gif)      |
-| Report        | [🔍 Report](docs/guides/user/media/report/report.gif)               |
-| Ad-hoc        | [🔍 Ad-hoc](docs/guides/user/media/adhoc/adhoc.gif)                 |
+|               | Screencast                                                                                     |
+|:--------------|:-----------------------------------------------------------------------------------------------|
+| Configuration | [🔍 Configuration](docs/guides/user/media/config/configuration.gif)                            |
+| Workspace     | [🔍 Workspace](docs/guides/user/media/workspace/workspace.gif)                                 |
+| Dashboard     | [🔍 Dashboard](docs/guides/user/media/dashboard/dashboard.gif)                                 |
+| Dashboard     | [🔍 Dashboard Realtime Filter](docs/guides/user/media/dashboard/dashboard-realtime-filter.gif) |
+| Dashboard     | [🔍 Dashboard History Filter](docs/guides/user/media/dashboard/dashboard-history-filter.gif)   |
+| Report        | [🔍 Report](docs/guides/user/media/report/report.gif)                                          |
+| Ad-hoc        | [🔍 Ad-hoc](docs/guides/user/media/adhoc/adhoc.gif)                                            |
+| Ad-hoc        | [🔍 Ad-hoc filter](docs/guides/user/media/adhoc/adhoc-filter.gif)                              |
 
 [Вернуться в Оглавление](#Оглавление)
 

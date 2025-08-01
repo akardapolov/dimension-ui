@@ -3,7 +3,9 @@ package ru.dimension.ui.config;
 import dagger.Binds;
 import dagger.Module;
 import javax.inject.Named;
-import ru.dimension.ui.view.handler.adhoc.AdHocSelectionHandler;
+import ru.dimension.ui.view.handler.connection.ConnectionButtonPanelHandler;
+import ru.dimension.ui.view.handler.connection.ConnectionSelectionHandler;
+import ru.dimension.ui.view.handler.connection.ConnectionTemplateTableHandler;
 import ru.dimension.ui.view.handler.profile.MultiSelectTaskHandler;
 import ru.dimension.ui.view.handler.profile.ProfileButtonPanelHandler;
 import ru.dimension.ui.view.handler.profile.ProfileSelectionHandler;
@@ -12,14 +14,11 @@ import ru.dimension.ui.view.handler.query.QueryMetadataHandler;
 import ru.dimension.ui.view.handler.query.QueryMetricButtonPanelHandler;
 import ru.dimension.ui.view.handler.query.QueryMetricHandler;
 import ru.dimension.ui.view.handler.query.QuerySelectionHandler;
+import ru.dimension.ui.view.handler.report.design.DesignPanelHandler;
+import ru.dimension.ui.view.handler.report.report.ReportPanelHandler;
 import ru.dimension.ui.view.handler.task.MultiSelectQueryHandler;
 import ru.dimension.ui.view.handler.task.TaskButtonPanelHandler;
 import ru.dimension.ui.view.handler.task.TaskSelectionHandler;
-import ru.dimension.ui.view.handler.connection.ConnectionButtonPanelHandler;
-import ru.dimension.ui.view.handler.connection.ConnectionSelectionHandler;
-import ru.dimension.ui.view.handler.connection.ConnectionTemplateTableHandler;
-import ru.dimension.ui.view.handler.report.design.DesignPanelHandler;
-import ru.dimension.ui.view.handler.report.report.ReportPanelHandler;
 
 @Module
 public abstract class HandlerConfig {
@@ -104,10 +103,5 @@ public abstract class HandlerConfig {
   @Named("reportPanelHandler")
   public abstract ReportPanelHandler bindReportPanelHandler(
       ReportPanelHandler reportPanelHandler);
-
-  @Binds
-  @Named("adHocPanelHandler")
-  public abstract AdHocSelectionHandler bindAdHocSelectionHandler(
-      AdHocSelectionHandler adHocSelectionHandler);
 }
 

@@ -5,7 +5,6 @@ import dagger.Module;
 import javax.inject.Named;
 import ru.dimension.ui.view.structure.navigator.NavigatorPresenter;
 import ru.dimension.ui.view.structure.progressbar.ProgressbarPresenter;
-import ru.dimension.ui.view.structure.adhoc.AdHocPresenter;
 import ru.dimension.ui.view.structure.config.ConfigPresenter;
 import ru.dimension.ui.view.structure.report.ReportPresenter;
 import ru.dimension.ui.view.structure.toolbar.ToolbarPresenter;
@@ -37,8 +36,4 @@ public abstract class PresenterConfig {
   @Binds
   @Named("reportPresenter")
   public abstract ReportPresenter bindReportPresenter(ReportPresenter reportPresenter);
-
-  @Binds
-  @Named("adHocPresenter")
-  public abstract AdHocPresenter bindAdHocPresenter(AdHocPresenter adHocPresenter);
 }

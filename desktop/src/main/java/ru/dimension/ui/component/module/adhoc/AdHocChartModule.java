@@ -23,6 +23,7 @@ public class AdHocChartModule extends JXTaskPane {
   @Getter
   private final AdHocChartView view;
   private final AdHocChartModel model;
+  @Getter
   private final AdHocChartPresenter presenter;
 
   public AdHocChartModule(AdHocKey adHocKey,

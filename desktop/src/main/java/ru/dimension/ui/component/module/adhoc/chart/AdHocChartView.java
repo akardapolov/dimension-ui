@@ -43,6 +43,7 @@ public class AdHocChartView extends JPanel {
   private JPanel historyChartPanel;
   private JPanel historyDetailPanel;
 
+  @Getter
   private JSplitPane historyChartDetailSplitPane;
   private JSplitPane historyConfigChartDetail;
 

@@ -19,16 +19,14 @@ import java.math.RoundingMode;
 import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JViewport;
-import javax.swing.ScrollPaneConstants;
 import lombok.extern.log4j.Log4j2;
-import ru.dimension.db.model.profile.CProfile;
 import org.jdesktop.swingx.JXTable;
+import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.model.gantt.DrawingScale;
 import ru.dimension.ui.model.gantt.GanttColumn;
 import ru.dimension.ui.model.info.TableInfo;
@@ -44,6 +42,13 @@ public abstract class GanttCommon extends JPanel {
   protected long begin;
   protected long end;
   protected final Map<String, Color> seriesColorMap;
+
+  public GanttCommon() {
+    super();
+    tableInfo = new TableInfo();
+    cProfile = new CProfile();
+    seriesColorMap = new HashMap<>();
+  }
 
   public GanttCommon(TableInfo tableInfo,
                      CProfile cProfile,
@@ -65,15 +70,6 @@ public abstract class GanttCommon extends JPanel {
                                        int rowHeightForJTable);
 
   protected abstract void initUI();
-
-  protected JScrollPane getJScrollPane(JXTable jxTable) {
-    JScrollPane jScrollPane = new JScrollPane(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-    jScrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
-    jScrollPane.setViewportView(jxTable);
-    jScrollPane.setVerticalScrollBar(jScrollPane.getVerticalScrollBar());
-
-    return jScrollPane;
-  }
 
   protected DrawingState createDrawingState(DrawingScale drawingScale,
                                             GanttDrawingPartHelper helper,

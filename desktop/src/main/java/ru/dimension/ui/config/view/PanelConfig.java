@@ -3,7 +3,6 @@ package ru.dimension.ui.config.view;
 import dagger.Binds;
 import dagger.Module;
 import javax.inject.Named;
-import ru.dimension.ui.view.panel.adhoc.AdHocPanel;
 import ru.dimension.ui.view.panel.config.connection.ConnectionPanel;
 import ru.dimension.ui.view.panel.config.profile.ProfilePanel;
 import ru.dimension.ui.view.panel.config.query.QueryPanel;
@@ -47,8 +46,4 @@ public abstract class PanelConfig {
   @Binds
   @Named("reportTaskPanel")
   public abstract ReportTabsPane bindReportTabsPane(ReportTabsPane reportTabsPane);
-
-  @Binds
-  @Named("adHocPanel")
-  public abstract AdHocPanel bindAdHocPanel(AdHocPanel adHocPanel);
 }

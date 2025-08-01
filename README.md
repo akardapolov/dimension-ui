@@ -39,8 +39,11 @@
 
 ![Workspace Stacked](docs/guides/user/media/workspace/workspace-stacked.png)
 ![Dashboard Short](docs/guides/user/media/dashboard/dashboard-short.png)
+![Dashboard realtime filter](docs/guides/user/media/dashboard/dashboard-realtime-filter.png)
+![Dashboard history filter](docs/guides/user/media/dashboard/dashboard-history-filter.png)
 ![Report](docs/guides/user/media/report/report.png)
 ![Ad-hoc Analyze](docs/guides/user/media/adhoc/ad-hoc-analyze.png)
+![Ad-hoc Filter](docs/guides/user/media/adhoc/ad-hoc-filter.png)
 
 ### General Information
 
@@ -120,9 +123,10 @@ To compile the application into an executable jar file, do the following:
     cd dimension-ui
     ```
 
-3. Compile the project using Maven:
+3. Compile and install modules for project using Maven:
     ```shell
     mvn clean compile
+    mvn clean install -U
    ```
 
 4. Execute the Maven command to build an executable jar file with tests running:
@@ -312,13 +316,16 @@ sequenceDiagram
 
 ## Screencast
 
-|               | Screencast                                                          |
-|:--------------|:--------------------------------------------------------------------|
-| Configuration | [🔍 Configuration](docs/guides/user/media/config/configuration.gif) |
-| Workspace     | [🔍 Workspace](docs/guides/user/media/workspace/workspace.gif)      |
-| Dashboard     | [🔍 Dashboard](docs/guides/user/media/dashboard/dashboard.gif)      |
-| Report        | [🔍 Report](docs/guides/user/media/report/report.gif)               |
-| Ad-hoc        | [🔍 Ad-hoc](docs/guides/user/media/adhoc/adhoc.gif)                 |
+|               | Screencast                                                                                     |
+|:--------------|:-----------------------------------------------------------------------------------------------|
+| Configuration | [🔍 Configuration](docs/guides/user/media/config/configuration.gif)                            |
+| Workspace     | [🔍 Workspace](docs/guides/user/media/workspace/workspace.gif)                                 |
+| Dashboard     | [🔍 Dashboard](docs/guides/user/media/dashboard/dashboard.gif)                                 |
+| Dashboard     | [🔍 Dashboard Realtime Filter](docs/guides/user/media/dashboard/dashboard-realtime-filter.gif) |
+| Dashboard     | [🔍 Dashboard History Filter](docs/guides/user/media/dashboard/dashboard-history-filter.gif)   |
+| Report        | [🔍 Report](docs/guides/user/media/report/report.gif)                                          |
+| Ad-hoc        | [🔍 Ad-hoc](docs/guides/user/media/adhoc/adhoc.gif)                                            |
+| Ad-hoc        | [🔍 Ad-hoc filter](docs/guides/user/media/adhoc/adhoc-filter.gif)                              |
 
 [Back to Contents](#Contents)
 

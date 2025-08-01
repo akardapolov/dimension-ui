@@ -32,7 +32,6 @@ import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.info.TaskInfo;
 import ru.dimension.ui.router.event.EventListener;
 import ru.dimension.ui.state.SqlQueryState;
-import ru.dimension.ui.view.structure.AdHocView;
 import ru.dimension.ui.view.structure.ConfigView;
 import ru.dimension.ui.view.structure.NavigatorView;
 import ru.dimension.ui.view.structure.ProgressbarView;
@@ -50,7 +49,6 @@ public class BaseFrame extends JFrame {
 
   private final NavigatorView navigatorView;
   private final WorkspaceView workspaceView;
-  private final AdHocView adHocView;
   private final ToolbarView toolbarView;
   private final ConfigView configView;
   private final TemplateView templateView;
@@ -75,7 +73,6 @@ public class BaseFrame extends JFrame {
   public BaseFrame(@Named("mainTabPane") JTabbedPane mainTabPane,
                    @Named("workspaceSplitPane") JSplitPane workspaceSplitPane,
                    @Named("reportView") ReportView reportView,
-                   @Named("adHocView") AdHocView adHocView,
                    @Named("navigatorView") NavigatorView navigatorView,
                    @Named("workspaceView") WorkspaceView workspaceView,
                    @Named("toolbarView") ToolbarView toolbarView,
@@ -95,9 +92,6 @@ public class BaseFrame extends JFrame {
 
     this.reportView = reportView;
     this.reportView.bindPresenter();
-
-    this.adHocView = adHocView;
-    this.adHocView.bindPresenter();
 
     this.navigatorView = navigatorView;
     this.navigatorView.bindPresenter();

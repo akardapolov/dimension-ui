@@ -6,6 +6,7 @@ import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -60,6 +61,9 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
   private final Map<String, Color> seriesColorMap;
   private final SeriesType seriesType;
   private final DStore dStore;
+
+  private Entry<CProfile, List<String>> filter;
+
   private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(10);;
 
   public DetailDashboardPanel(DStore dStore,
@@ -68,7 +72,8 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
                               Metric metric,
                               Map<String, Color> seriesColorMap,
                               ProcessType processType,
-                              SeriesType seriesType) {
+                              SeriesType seriesType,
+                              Entry<CProfile, List<String>> filter) {
     this.dStore = dStore;
     this.queryInfo = queryInfo;
     this.tableInfo = tableInfo;
@@ -78,6 +83,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
     this.seriesColorMap = seriesColorMap;
     this.processType = processType;
     this.seriesType = seriesType;
+    this.filter = filter;
 
     this.executorService = Executors.newSingleThreadExecutor();
 
@@ -116,7 +122,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
 
         MainTopDashboardPanel mainTopPanel = new MainTopDashboardPanel(
             dStore, scheduledExecutorService, tableInfo, metric, cProfile,
-            begin, end, seriesColorMap, seriesType);
+            begin, end, seriesColorMap, seriesType, filter);
         mainJTabbedPane.add("Top", mainTopPanel);
 
         if (MetricFunction.COUNT.equals(metric.getMetricFunction())) {
@@ -185,7 +191,9 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
     });
   }
 
-  public void updateSeriesColor(Map<String, Color> newSeriesColorMap) {
+  public void updateSeriesColor(Entry<CProfile, List<String>> filter, Map<String, Color> newSeriesColorMap) {
+    this.filter = filter;
+
     seriesColorMap.clear();
     seriesColorMap.putAll(newSeriesColorMap);
   }

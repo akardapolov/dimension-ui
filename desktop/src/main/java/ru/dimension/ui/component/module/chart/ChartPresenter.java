@@ -4,10 +4,12 @@ import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -16,7 +18,10 @@ import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.cstype.CType;
+import ru.dimension.ui.component.broker.Message;
+import ru.dimension.ui.component.broker.MessageAction;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
+import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.helper.SwingTaskRunner;
@@ -32,6 +37,7 @@ import ru.dimension.ui.model.view.AnalyzeType;
 import ru.dimension.ui.model.view.ProcessType;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.RangeRealTime;
+import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.ChartKey;
 import ru.dimension.ui.state.SqlQueryState;
 import ru.dimension.ui.state.UIState;
@@ -40,6 +46,7 @@ import ru.dimension.ui.view.analyze.chart.ChartConfig;
 import ru.dimension.ui.view.analyze.chart.SCP;
 import ru.dimension.ui.view.analyze.chart.history.HistorySCP;
 import ru.dimension.ui.view.analyze.chart.realtime.ClientRealtimeSCP;
+import ru.dimension.ui.view.analyze.chart.realtime.RealtimeSCP;
 import ru.dimension.ui.view.analyze.chart.realtime.ServerRealtimeSCP;
 import ru.dimension.ui.view.analyze.model.ChartLegendState;
 import ru.dimension.ui.view.analyze.model.DetailState;
@@ -48,9 +55,11 @@ import ru.dimension.ui.view.chart.holder.DetailAndAnalyzeHolder;
 import ru.dimension.ui.view.detail.DetailDashboardPanel;
 
 @Log4j2
-public class ChartPresenter implements HelperChart {
+public class ChartPresenter implements HelperChart, MessageAction {
   private final ChartModel model;
   private final ChartView view;
+  private final Metric realTimeMetric;
+  private final Metric historyMetric;
 
   @Getter
   private boolean isReadyRealTimeUpdate = false;
@@ -67,6 +76,8 @@ public class ChartPresenter implements HelperChart {
   public ChartPresenter(ChartModel model, ChartView view) {
     this.model = model;
     this.view = view;
+    this.realTimeMetric = model.getMetric().copy();
+    this.historyMetric = model.getMetric().copy();
 
     initializePresenter();
   }
@@ -87,6 +98,8 @@ public class ChartPresenter implements HelperChart {
                                                            handleLegendChange(ChartLegendState.SHOW.equals(showLegend)));
 
     view.getHistoryRangePanel().getButtonApplyRange().addActionListener(e -> applyCustomRange());
+
+    initializeFilterPanels();
   }
 
   public void initializeCharts() {
@@ -101,13 +114,29 @@ public class ChartPresenter implements HelperChart {
         () -> {
           isReadyRealTimeUpdate = false;
 
-          realTimeChart = createChart(AnalyzeType.REAL_TIME);
+          realTimeChart = createChart(AnalyzeType.REAL_TIME, null);
           realTimeChart.initialize();
 
           handleLegendChange(UIState.INSTANCE.getShowLegend(model.getChartKey()));
 
-          realTimeDetail = getDetail(AnalyzeType.REAL_TIME, realTimeChart);
+          SeriesType seriesTypeChart = realTimeChart.getSeriesType();
 
+          if (SeriesType.COMMON.equals(seriesTypeChart)) {
+            realTimeDetail = getDetail(AnalyzeType.REAL_TIME, realTimeChart, null, SeriesType.COMMON, null);
+          } else {
+            RealtimeSCP realtimeSCP = (RealtimeSCP) realTimeChart;
+            realTimeDetail = getDetail(AnalyzeType.REAL_TIME, realTimeChart, realTimeChart.getSeriesColorMap(), SeriesType.CUSTOM, realtimeSCP.getFilter());
+          }
+
+          ChartKey chartKey = model.getChartKey();
+          long end = model.getSqlQueryState().getLastTimestamp(chartKey.getProfileTaskQueryKey());
+          long begin = end - getRangeRealTime(model.getChartInfo());
+
+          view.getRealTimeFilterPanel().setDataSource(model.getDStore(), realTimeMetric, begin, end);
+
+          view.getRealTimeFilterPanel().clearFilterPanel();
+          view.getRealTimeFilterPanel().setSeriesColorMap(realTimeChart.getSeriesColorMap());
+          view.getRealTimeFilterPanel().getMetric().setMetricFunction(realTimeChart.getConfig().getMetric().getMetricFunction());
           return () -> {
             view.getRealTimeChartPanel().removeAll();
             view.getRealTimeDetailPanel().removeAll();
@@ -116,6 +145,9 @@ public class ChartPresenter implements HelperChart {
             view.getRealTimeDetailPanel().add(realTimeDetail, BorderLayout.CENTER);
 
             isReadyRealTimeUpdate = true;
+
+            boolean isCustom = realTimeChart.getSeriesType() == SeriesType.CUSTOM;
+            view.getRealTimeFilterPanel().setEnabled(!isCustom);
           };
         },
         e -> {
@@ -135,16 +167,32 @@ public class ChartPresenter implements HelperChart {
           view.getHistoryChartPanel().removeAll();
           view.getHistoryDetailPanel().removeAll();
 
-          historyChart = createChart(AnalyzeType.HISTORY);
+          historyChart = createChart(AnalyzeType.HISTORY, null);
           historyChart.initialize();
 
           handleLegendChange(UIState.INSTANCE.getShowLegend(model.getChartKey()));
 
-          historyDetail = getDetail(AnalyzeType.HISTORY, historyChart);
+          SeriesType seriesTypeChart = historyChart.getSeriesType();
 
+          if (SeriesType.COMMON.equals(seriesTypeChart)) {
+            historyDetail = getDetail(AnalyzeType.HISTORY, historyChart, null, SeriesType.COMMON, null);
+          } else {
+            HistorySCP historySCP = (HistorySCP) historyChart;
+            historyDetail = getDetail(AnalyzeType.HISTORY, historyChart, historyChart.getSeriesColorMap(), SeriesType.CUSTOM, historySCP.getFilter());
+          }
+
+          ChartRange chartRange = getChartRange(historyChart.getConfig().getChartInfo());
+          view.getHistoryFilterPanel().setDataSource(model.getDStore(), historyMetric, chartRange.getBegin(), chartRange.getEnd());
+
+          view.getHistoryFilterPanel().clearFilterPanel();
+          view.getHistoryFilterPanel().setSeriesColorMap(historyChart.getSeriesColorMap());
+          view.getHistoryFilterPanel().getMetric().setMetricFunction(historyChart.getConfig().getMetric().getMetricFunction());
           return () -> {
             view.getHistoryChartPanel().add(historyChart, BorderLayout.CENTER);
             view.getHistoryDetailPanel().add(historyDetail, BorderLayout.CENTER);
+
+            boolean isCustom = historyChart.getSeriesType() == SeriesType.CUSTOM;
+            view.getHistoryFilterPanel().setEnabled(!isCustom);
           };
         },
         e -> log.error("Error creating history chart", e),
@@ -153,7 +201,7 @@ public class ChartPresenter implements HelperChart {
     );
   }
 
-  private SCP createChart(AnalyzeType analyzeType) {
+  private SCP createChart(AnalyzeType analyzeType, Entry<CProfile, List<String>> filter) {
     ChartConfig config = buildChartConfig(analyzeType);
     ProfileTaskQueryKey key = model.getKey();
     SqlQueryState sqlQueryState = model.getSqlQueryState();
@@ -162,9 +210,9 @@ public class ChartPresenter implements HelperChart {
 
     if (analyzeType == AnalyzeType.REAL_TIME) {
       if (GatherDataMode.BY_CLIENT_JDBC.equals(queryInfo.getGatherDataMode())) {
-        return new ClientRealtimeSCP(sqlQueryState, dStore, config, key, null);
+        return new ClientRealtimeSCP(sqlQueryState, dStore, config, key, filter);
       } else {
-        return new ServerRealtimeSCP(sqlQueryState, dStore, config, key, null);
+        return new ServerRealtimeSCP(sqlQueryState, dStore, config, key, filter);
       }
     } else if (analyzeType == AnalyzeType.HISTORY) {
       ChartRange chartRange = getChartRange(config.getChartInfo());
@@ -172,19 +220,31 @@ public class ChartPresenter implements HelperChart {
       config.getChartInfo().setCustomBegin(chartRange.getBegin());
       config.getChartInfo().setCustomEnd(chartRange.getEnd());
 
-      return new HistorySCP(dStore, config, key, null);
+      return new HistorySCP(dStore, config, key, filter);
     } else {
       throw new RuntimeException("Not supported");
     }
   }
 
-  protected DetailDashboardPanel getDetail(AnalyzeType analyzeType, SCP chart) {
+  protected DetailDashboardPanel getDetail(AnalyzeType analyzeType,
+                                           SCP chart,
+                                           Map<String, Color> initialSeriesColorMap,
+                                           SeriesType seriesType,
+                                           Entry<CProfile, List<String>> filter) {
     ProcessType processType = null;
 
     if (AnalyzeType.REAL_TIME.equals(analyzeType)) {
       processType = ProcessType.REAL_TIME;
     } else if (AnalyzeType.HISTORY.equals(analyzeType)) {
       processType = ProcessType.HISTORY;
+    }
+
+    Map<String, Color> seriesColorMapToUse = initialSeriesColorMap != null ?
+        initialSeriesColorMap :
+        chart.getSeriesColorMap();
+
+    if (SeriesType.CUSTOM.equals(seriesType)) {
+      seriesColorMapToUse = chart.getSeriesColorMap();
     }
 
     Metric chartMetric = chart.getConfig().getMetric();
@@ -194,9 +254,10 @@ public class ChartPresenter implements HelperChart {
                                  model.getQueryInfo(),
                                  model.getTableInfo(),
                                  chartMetric,
-                                 chart.getSeriesColorMap(),
+                                 seriesColorMapToUse,
                                  processType,
-                                 chart.getSeriesType());
+                                 seriesType,
+                                 filter);
 
     CustomAction customAction = new CustomAction() {
 
@@ -212,7 +273,7 @@ public class ChartPresenter implements HelperChart {
         Map<String, Color> newSeriesColorMap = new HashMap<>();
         filter.forEach(key -> newSeriesColorMap.put(key, seriesColorMap.get(key)));
 
-        detailPanel.updateSeriesColor(newSeriesColorMap);
+        detailPanel.updateSeriesColor(Map.entry(cProfileFilter, filter), newSeriesColorMap);
       }
 
       @Override
@@ -233,7 +294,8 @@ public class ChartPresenter implements HelperChart {
     ChartConfig config = new ChartConfig();
 
     ChartKey chartKey = new ChartKey(model.getKey(), model.getMetric().getYAxis());
-    Metric metricCopy = model.getMetric().copy();
+    Metric baseMetric = analyzeType == AnalyzeType.REAL_TIME ? realTimeMetric : historyMetric;
+    Metric metricCopy = baseMetric.copy();
     ChartInfo chartInfoCopy = model.getChartInfo().copy();
 
     if (AnalyzeType.REAL_TIME.equals(analyzeType)) {
@@ -301,35 +363,30 @@ public class ChartPresenter implements HelperChart {
   private void initializeFromState() {
     ChartKey chartKey = model.getChartKey();
 
-    // Real-time metric function
     MetricFunction realTimeMetricFunction = UIState.INSTANCE.getRealtimeMetricFunction(chartKey);
-    if (realTimeMetricFunction == null) {
-      if (CType.STRING.equals(model.getMetric().getYAxis().getCsType().getCType())) {
-        view.getRealTimeMetricFunctionPanel().setEnabled(true, false, false);
-      } else {
-        view.getRealTimeMetricFunctionPanel().setEnabled(true, true, true);
-      }
-
-      view.getRealTimeMetricFunctionPanel().setSelected(model.getMetric().getMetricFunction());
-    } else {
-      view.getRealTimeMetricFunctionPanel().setSelected(realTimeMetricFunction);
+    if (realTimeMetricFunction != null) {
+      realTimeMetric.setMetricFunction(realTimeMetricFunction);
+      realTimeMetric.setChartType(MetricFunction.COUNT.equals(realTimeMetricFunction) ? ChartType.STACKED : ChartType.LINEAR);
     }
-
-    // History metric function
-    MetricFunction metricFunction = UIState.INSTANCE.getHistoryMetricFunction(chartKey);
-    if (metricFunction == null) {
-      if (CType.STRING.equals(model.getMetric().getYAxis().getCsType().getCType())) {
-        view.getRealTimeMetricFunctionPanel().setEnabled(true, false, false);
-      } else {
-        view.getRealTimeMetricFunctionPanel().setEnabled(true, true, true);
-      }
-
-      view.getHistoryMetricFunctionPanel().setSelected(model.getMetric().getMetricFunction());
+    if (CType.STRING.equals(model.getMetric().getYAxis().getCsType().getCType())) {
+      view.getRealTimeMetricFunctionPanel().setEnabled(true, false, false);
     } else {
-      view.getHistoryMetricFunctionPanel().setSelected(metricFunction);
+      view.getRealTimeMetricFunctionPanel().setEnabled(true, true, true);
     }
+    view.getRealTimeMetricFunctionPanel().setSelected(realTimeMetric.getMetricFunction());
 
-    // Real-time Range (local state first, then global)
+    MetricFunction historyMetricFunction = UIState.INSTANCE.getHistoryMetricFunction(chartKey);
+    if (historyMetricFunction != null) {
+      historyMetric.setMetricFunction(historyMetricFunction);
+      historyMetric.setChartType(MetricFunction.COUNT.equals(historyMetricFunction) ? ChartType.STACKED : ChartType.LINEAR);
+    }
+    if (CType.STRING.equals(model.getMetric().getYAxis().getCsType().getCType())) {
+      view.getHistoryMetricFunctionPanel().setEnabled(true, false, false);
+    } else {
+      view.getHistoryMetricFunctionPanel().setEnabled(true, true, true);
+    }
+    view.getHistoryMetricFunctionPanel().setSelected(historyMetric.getMetricFunction());
+
     RangeRealTime localRealTimeRange = UIState.INSTANCE.getRealTimeRange(chartKey);
     RangeRealTime globalRealTimeRange = UIState.INSTANCE.getRealTimeRangeAll(Component.DASHBOARD.name());
     RangeRealTime effectiveRealTimeRange = localRealTimeRange != null ? localRealTimeRange : globalRealTimeRange;
@@ -338,7 +395,6 @@ public class ChartPresenter implements HelperChart {
       view.getRealTimeRangePanel().setSelectedRange(effectiveRealTimeRange);
     }
 
-    // History Range (local state first, then global)
     RangeHistory localHistoryRange = UIState.INSTANCE.getHistoryRange(chartKey);
     RangeHistory globalHistoryRange = UIState.INSTANCE.getHistoryRangeAll(Component.DASHBOARD.name());
     RangeHistory effectiveHistoryRange = localHistoryRange != null ? localHistoryRange : globalHistoryRange;
@@ -355,7 +411,6 @@ public class ChartPresenter implements HelperChart {
       }
     }
 
-    // Legend Visibility
     Boolean showLegend = UIState.INSTANCE.getShowLegend(chartKey);
     if (showLegend != null) {
       view.getRealTimeLegendPanel().setSelected(showLegend);
@@ -364,78 +419,21 @@ public class ChartPresenter implements HelperChart {
   }
 
   private void handleRealtimeMetricFunctionChange(String action, MetricFunction function) {
+    realTimeMetric.setMetricFunction(function);
+    realTimeMetric.setChartType(MetricFunction.COUNT.equals(function) ? ChartType.STACKED : ChartType.LINEAR);
     UIState.INSTANCE.putRealtimeMetricFunction(model.getChartKey(), function);
+
+    view.getRealTimeFilterPanel().clearFilterPanel();
     updateRealTimeChart();
   }
 
   private void handleHistoryMetricFunctionChange(String action, MetricFunction function) {
+    historyMetric.setMetricFunction(function);
+    historyMetric.setChartType(MetricFunction.COUNT.equals(function) ? ChartType.STACKED : ChartType.LINEAR);
     UIState.INSTANCE.putHistoryMetricFunction(model.getChartKey(), function);
+
+    view.getHistoryFilterPanel().clearFilterPanel();
     updateHistoryChart();
-  }
-
-  private void updateRealTimeChart() {
-    SwingTaskRunner.runWithProgress(
-        view.getRealTimeChartPanel(),
-        executor,
-        () -> {
-          isReadyRealTimeUpdate = false;
-
-          view.getRealTimeChartPanel().removeAll();
-          view.getRealTimeDetailPanel().removeAll();
-
-          realTimeChart = null;
-          realTimeDetail = null;
-
-          realTimeChart = createChart(AnalyzeType.REAL_TIME);
-          realTimeChart.initialize();
-
-          handleLegendChangeAll(UIState.INSTANCE.getShowLegend(model.getChartKey()));
-
-          realTimeDetail = getDetail(AnalyzeType.REAL_TIME, realTimeChart);
-
-          return () -> {
-            view.getRealTimeChartPanel().add(realTimeChart, BorderLayout.CENTER);
-            view.getRealTimeDetailPanel().add(realTimeDetail, BorderLayout.CENTER);
-
-            isReadyRealTimeUpdate = true;
-          };
-        },
-        e -> {
-          isReadyRealTimeUpdate = false;
-          log.error("Error updating real-time chart", e);
-        },
-        () -> createProgressBar("Updating real-time chart..."),
-        () -> setDetailState(PanelTabType.REALTIME, UIState.INSTANCE.getShowDetailAll(Component.DASHBOARD.name()))
-    );
-  }
-
-  private void updateHistoryChart() {
-    SwingTaskRunner.runWithProgress(
-        view.getHistoryChartPanel(),
-        executor,
-        () -> {
-          view.getHistoryChartPanel().removeAll();
-          view.getHistoryDetailPanel().removeAll();
-
-          historyChart = null;
-          historyDetail = null;
-
-          historyChart = createChart(AnalyzeType.HISTORY);
-          historyChart.initialize();
-
-          handleLegendChangeAll(UIState.INSTANCE.getShowLegend(model.getChartKey()));
-
-          historyDetail = getDetail(AnalyzeType.HISTORY, historyChart);
-
-          return () -> {
-            view.getHistoryChartPanel().add(historyChart, BorderLayout.CENTER);
-            view.getHistoryDetailPanel().add(historyDetail, BorderLayout.CENTER);
-          };
-        },
-        e -> log.error("Error updating history chart", e),
-        () -> createProgressBar("Updating history chart..."),
-        () -> setDetailState(PanelTabType.HISTORY, UIState.INSTANCE.getShowDetailAll(Component.DASHBOARD.name()))
-    );
   }
 
   public void handleRealTimeRangeChange(String action,
@@ -569,5 +567,198 @@ public class ChartPresenter implements HelperChart {
       historyChart.getjFreeChart().getLegend().setVisible(visibility);
       historyChart.repaint();
     }
+  }
+
+  public void initializeFilterPanels() {
+    view.getRealTimeFilterPanel().initializeChartPanel(model.getChartKey(), model.getTableInfo(), Panel.REALTIME);
+    view.getHistoryFilterPanel().initializeChartPanel(model.getChartKey(), model.getTableInfo(), Panel.HISTORY);
+  }
+
+  @Override
+  public void receive(Message message) {
+    log.info("Message received: " + message.action());
+    PanelTabType panelTabType = PanelTabType.valueOf(message.destination().panel().name());
+    CProfile cProfileFilter = message.parameters().get("cProfileFilter");
+    List<String> filter = message.parameters().get("filter");
+    Map<String, Color> seriesColorMap = message.parameters().get("seriesColorMap");
+
+    switch (message.action()) {
+      case ADD_CHART_FILTER, REMOVE_CHART_FILTER ->
+          handleFilterChange(panelTabType, cProfileFilter, filter, seriesColorMap);
+    }
+  }
+
+  private Map<String, Color> getFilterSeriesColorMap(Map<String, Color> seriesColorMap, List<String> filterKeys) {
+    if (filterKeys == null || filterKeys.isEmpty()) {
+      return seriesColorMap;
+    }
+
+    Map<String, Color> filteredMap = new HashMap<>();
+    for (String key : filterKeys) {
+      if (seriesColorMap.containsKey(key)) {
+        filteredMap.put(key, seriesColorMap.get(key));
+      }
+    }
+    return filteredMap;
+  }
+
+  private void handleFilterChange(PanelTabType panelTabType,
+                                  CProfile cProfileFilter,
+                                  List<String> filter,
+                                  Map<String, Color> seriesColorMap) {
+    Map<String, Color> preservedColorMap = new HashMap<>(seriesColorMap);
+    Entry<CProfile, List<String>> filterEntry =
+        (filter == null || filter.isEmpty()) ? null : Map.entry(cProfileFilter, filter);
+
+    if (panelTabType == PanelTabType.REALTIME) {
+      updateRealTimeChart(preservedColorMap, filterEntry);
+    } else if (panelTabType == PanelTabType.HISTORY) {
+      updateHistoryChart(preservedColorMap, filterEntry);
+    }
+
+    if (panelTabType == PanelTabType.REALTIME && realTimeDetail != null) {
+      realTimeDetail.updateSeriesColor(Map.entry(cProfileFilter, filter != null ? filter : Collections.emptyList()), preservedColorMap);
+    } else if (panelTabType == PanelTabType.HISTORY && historyDetail != null) {
+      historyDetail.updateSeriesColor(Map.entry(cProfileFilter, filter != null ? filter : Collections.emptyList()), preservedColorMap);
+    }
+  }
+
+  private void updateRealTimeChart() {
+    updateRealTimeChart(null, null);
+  }
+
+  private void updateRealTimeChart(Map<String, Color> seriesColorMap, Entry<CProfile, List<String>> filter) {
+    SwingTaskRunner.runWithProgress(
+        view.getRealTimeChartPanel(),
+        executor,
+        () -> {
+          isReadyRealTimeUpdate = false;
+
+          view.getRealTimeChartPanel().removeAll();
+          view.getRealTimeDetailPanel().removeAll();
+
+          view.getRealTimeConfigChartDetail().revalidate();
+          view.getRealTimeConfigChartDetail().repaint();
+
+          view.getRealTimeChartDetailSplitPane().revalidate();
+          view.getRealTimeChartDetailSplitPane().repaint();
+
+          realTimeChart = null;
+          realTimeDetail = null;
+
+          realTimeChart = createChart(AnalyzeType.REAL_TIME, filter);
+
+          if (seriesColorMap != null) {
+            realTimeChart.loadSeriesColor(realTimeMetric, seriesColorMap);
+          }
+          realTimeChart.initialize();
+
+          handleLegendChangeAll(UIState.INSTANCE.getShowLegend(model.getChartKey()));
+
+          if (seriesColorMap != null && filter != null) {
+            Map<String, Color> filterSeriesColorMap = getFilterSeriesColorMap(seriesColorMap, filter.getValue());
+            realTimeDetail = getDetail(AnalyzeType.REAL_TIME, realTimeChart, filterSeriesColorMap, SeriesType.CUSTOM, filter);
+          } else {
+            SeriesType seriesTypeChart = realTimeChart.getSeriesType();
+            if (SeriesType.COMMON.equals(seriesTypeChart)) {
+              realTimeDetail = getDetail(AnalyzeType.REAL_TIME, realTimeChart, null, SeriesType.COMMON, null);
+            } else {
+              RealtimeSCP realtimeSCP = (RealtimeSCP) realTimeChart;
+              realTimeDetail = getDetail(AnalyzeType.REAL_TIME, realTimeChart, realTimeChart.getSeriesColorMap(), SeriesType.CUSTOM, realtimeSCP.getFilter());
+            }
+          }
+
+          ChartKey chartKey = model.getChartKey();
+          long end = model.getSqlQueryState().getLastTimestamp(chartKey.getProfileTaskQueryKey());
+          long begin = end - getRangeRealTime(model.getChartInfo());
+          view.getRealTimeFilterPanel().setDataSource(model.getDStore(), realTimeMetric, begin, end);
+
+          if (seriesColorMap == null) {
+            view.getRealTimeFilterPanel().clearFilterPanel();
+          }
+          view.getRealTimeFilterPanel().setSeriesColorMap(realTimeChart.getSeriesColorMap());
+          view.getRealTimeFilterPanel().getMetric().setMetricFunction(realTimeChart.getConfig().getMetric().getMetricFunction());
+          return () -> {
+            view.getRealTimeChartPanel().add(realTimeChart, BorderLayout.CENTER);
+            view.getRealTimeDetailPanel().add(realTimeDetail, BorderLayout.CENTER);
+
+            isReadyRealTimeUpdate = true;
+
+            boolean isCustom = realTimeChart.getSeriesType() == SeriesType.CUSTOM;
+            view.getRealTimeFilterPanel().setEnabled(!isCustom);
+          };
+        },
+        e -> {
+          isReadyRealTimeUpdate = false;
+          log.error("Error updating real-time chart", e);
+        },
+        () -> createProgressBar("Updating real-time chart..."),
+        () -> setDetailState(PanelTabType.REALTIME, UIState.INSTANCE.getShowDetailAll(Component.DASHBOARD.name()))
+    );
+  }
+
+  private void updateHistoryChart() {
+    updateHistoryChart(null, null);
+  }
+
+  private void updateHistoryChart(Map<String, Color> seriesColorMap, Entry<CProfile, List<String>> filter) {
+    SwingTaskRunner.runWithProgress(
+        view.getHistoryChartPanel(),
+        executor,
+        () -> {
+          view.getHistoryChartPanel().removeAll();
+          view.getHistoryDetailPanel().removeAll();
+
+          view.getHistoryConfigChartDetail().revalidate();
+          view.getHistoryConfigChartDetail().repaint();
+
+          view.getHistoryChartDetailSplitPane().revalidate();
+          view.getHistoryChartDetailSplitPane().repaint();
+
+          historyChart = null;
+          historyDetail = null;
+
+          historyChart = createChart(AnalyzeType.HISTORY, filter);
+
+          if (seriesColorMap != null) {
+            historyChart.loadSeriesColor(historyMetric, seriesColorMap);
+          }
+          historyChart.initialize();
+
+          handleLegendChangeAll(UIState.INSTANCE.getShowLegend(model.getChartKey()));
+
+          if (seriesColorMap != null && filter != null) {
+            Map<String, Color> filterSeriesColorMap = getFilterSeriesColorMap(seriesColorMap, filter.getValue());
+            historyDetail = getDetail(AnalyzeType.HISTORY, historyChart, filterSeriesColorMap, SeriesType.CUSTOM, filter);
+          } else {
+            SeriesType seriesTypeChart = historyChart.getSeriesType();
+            if (SeriesType.COMMON.equals(seriesTypeChart)) {
+              historyDetail = getDetail(AnalyzeType.HISTORY, historyChart, null, SeriesType.COMMON, null);
+            } else {
+              HistorySCP historySCP = (HistorySCP) historyChart;
+              historyDetail = getDetail(AnalyzeType.HISTORY, historyChart, historyChart.getSeriesColorMap(), SeriesType.CUSTOM, historySCP.getFilter());
+            }
+          }
+
+          ChartRange chartRange = getChartRange(historyChart.getConfig().getChartInfo());
+          view.getHistoryFilterPanel().setDataSource(model.getDStore(), historyMetric, chartRange.getBegin(), chartRange.getEnd());
+
+          if (seriesColorMap == null) {
+            view.getHistoryFilterPanel().clearFilterPanel();
+          }
+          view.getHistoryFilterPanel().setSeriesColorMap(historyChart.getSeriesColorMap());
+          view.getHistoryFilterPanel().getMetric().setMetricFunction(historyChart.getConfig().getMetric().getMetricFunction());
+          return () -> {
+            view.getHistoryChartPanel().add(historyChart, BorderLayout.CENTER);
+            view.getHistoryDetailPanel().add(historyDetail, BorderLayout.CENTER);
+
+            boolean isCustom = historyChart.getSeriesType() == SeriesType.CUSTOM;
+            view.getHistoryFilterPanel().setEnabled(!isCustom);
+          };
+        },
+        e -> log.error("Error updating history chart", e),
+        () -> createProgressBar("Updating history chart..."),
+        () -> setDetailState(PanelTabType.HISTORY, UIState.INSTANCE.getShowDetailAll(Component.DASHBOARD.name()))
+    );
   }
 }

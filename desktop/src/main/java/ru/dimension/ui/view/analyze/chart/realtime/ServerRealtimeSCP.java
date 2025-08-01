@@ -220,6 +220,10 @@ public class ServerRealtimeSCP extends RealtimeSCP {
 
           setCustomFilter();
 
+          if (detailAndAnalyzeHolder != null) {
+            detailAndAnalyzeHolder.detailAction().cleanMainPanel();
+          }
+
           reloadDataForCurrentRange();
 
           if (detailAndAnalyzeHolder != null) {

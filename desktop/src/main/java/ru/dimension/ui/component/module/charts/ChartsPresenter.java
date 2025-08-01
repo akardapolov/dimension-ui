@@ -4,9 +4,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageAction;
+import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Action;
+import ru.dimension.ui.component.broker.MessageBroker.Block;
+import ru.dimension.ui.component.broker.MessageBroker.Component;
+import ru.dimension.ui.component.broker.MessageBroker.Module;
+import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.module.ChartModule;
 import ru.dimension.ui.helper.DialogHelper;
@@ -31,6 +37,8 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
 
   private final ChartsModel model;
   private final ChartsView view;
+
+  private final MessageBroker broker = MessageBroker.getInstance();
 
   public ChartsPresenter(ChartsModel model,
                          ChartsView view) {
@@ -139,6 +147,8 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
     String keyValue = getKey(key, cProfile);
     taskPane.setTitle(keyValue);
 
+    log.info("Add task pane: " + keyValue);
+
     view.addChartCard(
         taskPane,
         (module, error) -> {
@@ -149,6 +159,12 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
           model.getChartPanes()
               .computeIfAbsent(key, k -> new ConcurrentHashMap<>())
               .put(cProfile, taskPane);
+
+          Destination destinationRealtime = getDestination(Panel.REALTIME, chartKey);
+          Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+
+          broker.addReceiver(destinationRealtime, taskPane.getPresenter());
+          broker.addReceiver(destinationHistory, taskPane.getPresenter());
 
           taskPane.revalidate();
           taskPane.repaint();
@@ -161,12 +177,34 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
     Metric metric = message.parameters().get("metric");
     CProfile cProfile = metric.getYAxis();
 
-    logChartAction(message.action(), cProfile);
-
     ChartModule taskPane = model.getChartPanes().get(key).get(cProfile);
-    model.getChartPanes().get(key).remove(cProfile);
 
-    view.removeChartCard(taskPane);
+    try {
+      logChartAction(message.action(), cProfile);
+
+      ChartKey chartKey = new ChartKey(key, cProfile);
+
+      Destination destinationRealtime = getDestination(Panel.REALTIME, chartKey);
+      Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+
+      broker.deleteReceiver(destinationRealtime, taskPane.getPresenter());
+      broker.deleteReceiver(destinationHistory, taskPane.getPresenter());
+    } finally {
+      log.info("Remove task pane: " + taskPane.getTitle());
+      view.removeChartCard(taskPane);
+      model.getChartPanes().get(key).remove(cProfile);
+    }
+  }
+
+  private static Destination getDestination(Panel realtime,
+                                            ChartKey chartKey) {
+    return Destination.builder()
+        .component(Component.DASHBOARD)
+        .module(Module.CHART)
+        .panel(realtime)
+        .block(Block.CHART)
+        .chartKey(chartKey)
+        .build();
   }
 
   public String getKey(ProfileTaskQueryKey key, CProfile cProfile) {

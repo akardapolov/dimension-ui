@@ -207,6 +207,12 @@ public class AdHocPresenter implements HelperChart {
   }
 
   private void handleColumnSelection(boolean selected, int row) {
+    if (tProfile == null) {
+      DialogHelper.showMessageDialog(null, "Table metadata not loaded", "Error");
+      view.getColumnCase().getDefaultTableModel().setValueAt(false, row, ColumnNames.PICK.ordinal());
+      return;
+    }
+
     int columnId = (int) view.getColumnCase()
         .getDefaultTableModel()
         .getValueAt(row, ColumnNames.ID.ordinal());
@@ -273,6 +279,9 @@ public class AdHocPresenter implements HelperChart {
 
     timestampCase.clearTable();
     columnCase.clearTable();
+
+    tProfile = null;
+    dStore = null;
 
     if (activeCase == null) {
       return;
@@ -370,10 +379,12 @@ public class AdHocPresenter implements HelperChart {
   private void setTimestampColumn(String timestampName) {
     log.info("Timestamp column: {}", timestampName);
     try {
-      dStore.setTimestampColumn(tProfile.getTableName(), timestampName);
-      tProfile = dStore.getTProfile(tProfile.getTableName());
+      if (tProfile != null) {
+        dStore.setTimestampColumn(tProfile.getTableName(), timestampName);
+        tProfile = dStore.getTProfile(tProfile.getTableName());
+      }
     } catch (TableNameEmptyException e) {
-      throw new RuntimeException(e);
+      log.error("Error setting timestamp", e);
     }
   }
 

@@ -106,7 +106,8 @@ public class ChartReportPresenter implements HelperChart {
         chart.getConfig().getMetric(),
         chart.getSeriesColorMap(),
         ProcessType.HISTORY,
-        chart.getSeriesType()
+        chart.getSeriesType(),
+        null
     );
     chart.addChartListenerReleaseMouse(detailPanel);
     return detailPanel;

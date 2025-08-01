@@ -30,6 +30,7 @@ public class ChartModule extends JXTaskPane {
   @Getter
   private final ChartView view;
   private final ChartModel model;
+  @Getter
   private final ChartPresenter presenter;
 
   private final ExecutorService executor = Executors.newSingleThreadExecutor();

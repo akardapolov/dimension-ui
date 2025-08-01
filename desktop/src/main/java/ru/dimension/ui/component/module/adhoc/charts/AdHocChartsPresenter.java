@@ -4,10 +4,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageAction;
+import ru.dimension.ui.component.broker.MessageBroker;
+import ru.dimension.ui.component.broker.MessageBroker.Block;
+import ru.dimension.ui.component.broker.MessageBroker.Component;
+import ru.dimension.ui.component.broker.MessageBroker.Module;
+import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.module.adhoc.AdHocChartModule;
 import ru.dimension.ui.helper.DialogHelper;
+import ru.dimension.ui.model.AdHocChartKey;
 import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.config.Metric;
@@ -25,6 +32,8 @@ public class AdHocChartsPresenter implements MessageAction {
 
   private final AdHocChartsModel model;
   private final AdHocChartsView view;
+
+  private final MessageBroker broker = MessageBroker.getInstance();
 
   public AdHocChartsPresenter(AdHocChartsModel model,
                               AdHocChartsView view) {
@@ -130,6 +139,9 @@ public class AdHocChartsPresenter implements MessageAction {
               .computeIfAbsent(adHocKey, k -> new ConcurrentHashMap<>())
               .put(cProfile, taskPane);
 
+          Destination destination = getDestination(adHocKey);
+          broker.addReceiver(destination, taskPane.getPresenter());
+
           taskPane.revalidate();
           taskPane.repaint();
         }
@@ -146,9 +158,15 @@ public class AdHocChartsPresenter implements MessageAction {
     AdHocKey adHocKey = new AdHocKey(connectionInfo.getId(), tableName, cProfile.getColId());
 
     AdHocChartModule taskPane = model.getChartPanes().get(adHocKey).get(cProfile);
-    model.getChartPanes().get(adHocKey).remove(cProfile);
 
-    view.removeChartCard(taskPane);
+    try {
+      Destination destination = getDestination(adHocKey);
+      broker.deleteReceiver(destination, taskPane.getPresenter());
+    } finally {
+      log.info("Remove task pane: " + taskPane.getTitle());
+      view.removeChartCard(taskPane);
+      model.getChartPanes().get(adHocKey).remove(cProfile);
+    }
   }
 
   public String getKey(ConnectionInfo connectionInfo, String tableName, CProfile cProfile) {
@@ -158,6 +176,16 @@ public class AdHocChartsPresenter implements MessageAction {
     String keyValue = String.format("Connection: %s >>> Table: %s >>> Column: %s", connName, tableName, columnName);
 
     return keyValue.length() > 300 ? keyValue.substring(0, 300) + " ... " : keyValue;
+  }
+
+  private static Destination getDestination(AdHocKey adHocKey) {
+    return Destination.builder()
+        .component(Component.ADHOC)
+        .module(Module.CHART)
+        .panel(Panel.HISTORY)
+        .block(Block.CHART)
+        .chartKey(new AdHocChartKey(adHocKey))
+        .build();
   }
 
   private void logChartAction(Message message) {

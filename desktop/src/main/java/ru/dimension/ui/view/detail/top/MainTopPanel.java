@@ -1,7 +1,5 @@
 package ru.dimension.ui.view.detail.top;
 
-import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
-
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.GridLayout;
@@ -25,6 +23,9 @@ import javax.swing.ScrollPaneConstants;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
+import org.jdesktop.swingx.JXTitledSeparator;
+import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.GanttColumnNotSupportedException;
@@ -33,19 +34,16 @@ import ru.dimension.db.model.CompareFunction;
 import ru.dimension.db.model.output.GanttColumnCount;
 import ru.dimension.db.model.output.GanttColumnSum;
 import ru.dimension.db.model.profile.CProfile;
-import org.jdesktop.swingx.JXTable;
-import org.jdesktop.swingx.JXTitledSeparator;
-import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.ui.config.prototype.detail.WorkspaceGanttModule;
 import ru.dimension.ui.config.prototype.query.WorkspaceQueryComponent;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.helper.ProgressBarHelper;
+import ru.dimension.ui.model.column.TaskColumnNames;
+import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.function.MetricFunction;
 import ru.dimension.ui.model.gantt.DrawingScale;
 import ru.dimension.ui.model.gantt.GanttColumn;
-import ru.dimension.ui.model.column.TaskColumnNames;
-import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.view.SeriesType;
 
@@ -126,7 +124,7 @@ public class MainTopPanel extends GanttPanel implements ListSelectionListener {
               DrawingScale drawingScale = new DrawingScale();
 
               JXTable jxTable = loadGantt(firstLevelGroupBy, ganttColumnList, seriesColorMap, drawingScale, 5, 20);
-              jScrollPaneList.add(getJScrollPane(jxTable));
+              jScrollPaneList.add(GUIHelper.getJScrollPane(jxTable));
 
             } catch (Exception exception) {
               log.catching(exception);
@@ -187,7 +185,7 @@ public class MainTopPanel extends GanttPanel implements ListSelectionListener {
 
             JXTable jxTable = loadGantt(firstLevelGroupBy, ganttColumnList, seriesColorMap, drawingScale, 100, 23);
 
-            GUIHelper.addToJSplitPane(jSplitPane, getJScrollPane(jxTable), JSplitPane.RIGHT, 200);
+            GUIHelper.addToJSplitPane(jSplitPane, GUIHelper.getJScrollPane(jxTable), JSplitPane.RIGHT, 200);
 
           } catch (Exception exception) {
             log.catching(exception);

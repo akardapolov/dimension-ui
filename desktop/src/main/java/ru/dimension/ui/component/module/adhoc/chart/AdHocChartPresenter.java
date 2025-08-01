@@ -4,21 +4,28 @@ import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.cstype.CType;
+import ru.dimension.ui.component.broker.Message;
+import ru.dimension.ui.component.broker.MessageAction;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
+import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.helper.SwingTaskRunner;
+import ru.dimension.ui.model.AdHocChartKey;
 import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.config.Metric;
@@ -27,6 +34,7 @@ import ru.dimension.ui.model.function.MetricFunction;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.ProcessType;
 import ru.dimension.ui.model.view.RangeHistory;
+import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.UIState;
 import ru.dimension.ui.view.analyze.CustomAction;
 import ru.dimension.ui.view.analyze.chart.ChartConfig;
@@ -39,7 +47,7 @@ import ru.dimension.ui.view.chart.holder.DetailAndAnalyzeHolder;
 import ru.dimension.ui.view.detail.DetailDashboardPanel;
 
 @Log4j2
-public class AdHocChartPresenter implements HelperChart {
+public class AdHocChartPresenter implements HelperChart, MessageAction {
 
   private final AdHocChartModel model;
   private final AdHocChartView view;
@@ -47,12 +55,16 @@ public class AdHocChartPresenter implements HelperChart {
   private SCP historyChart;
   private DetailDashboardPanel historyDetail;
 
+  @Getter
+  private final Metric historyMetric;
+
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
   public AdHocChartPresenter(AdHocChartModel model,
                              AdHocChartView view) {
     this.model = model;
     this.view = view;
+    this.historyMetric = model.getMetric().copy();
 
     initializePresenter();
   }
@@ -67,6 +79,9 @@ public class AdHocChartPresenter implements HelperChart {
                                                            handleLegendChange(ChartLegendState.SHOW.equals(showLegend)));
 
     view.getHistoryRangePanel().getButtonApplyRange().addActionListener(e -> applyCustomRange());
+
+    // Add filter panel initialization
+    initializeFilterPanel();
   }
 
   public void initializeChart() {
@@ -81,14 +96,39 @@ public class AdHocChartPresenter implements HelperChart {
           view.getHistoryChartPanel().removeAll();
           view.getHistoryDetailPanel().removeAll();
 
-          historyChart = createChart();
+          historyChart = createChart(null);
           historyChart.initialize();
 
-          historyDetail = getDetail(historyChart);
+          // Add filter panel data source setup
+          ChartRange chartRange = getChartRangeAdHoc(historyChart.getConfig().getChartInfo());
+          view.getHistoryFilterPanel().setDataSource(
+              model.getDStore(),
+              model.getMetric(),
+              chartRange.getBegin(),
+              chartRange.getEnd()
+          );
+
+          view.getHistoryFilterPanel().clearFilterPanel();
+          view.getHistoryFilterPanel().setSeriesColorMap(historyChart.getSeriesColorMap());
+          view.getHistoryFilterPanel().getMetric().setMetricFunction(
+              historyChart.getConfig().getMetric().getMetricFunction()
+          );
+
+          SeriesType seriesTypeChart = historyChart.getSeriesType();
+
+          if (SeriesType.COMMON.equals(seriesTypeChart)) {
+            historyDetail = getDetail(historyChart, null, SeriesType.COMMON, null);
+          } else {
+            HistorySCP historySCP = (HistorySCP) historyChart;
+            historyDetail = getDetail(historyChart, historyChart.getSeriesColorMap(), SeriesType.CUSTOM, historySCP.getFilter());
+          }
 
           return () -> {
             view.getHistoryChartPanel().add(historyChart, BorderLayout.CENTER);
             view.getHistoryDetailPanel().add(historyDetail, BorderLayout.CENTER);
+
+            boolean isCustom = historyChart.getSeriesType() == SeriesType.CUSTOM;
+            view.getHistoryFilterPanel().setEnabled(!isCustom);
           };
         },
         e -> log.error("Error creating history chart", e),
@@ -97,7 +137,7 @@ public class AdHocChartPresenter implements HelperChart {
     );
   }
 
-  private SCP createChart() {
+  private SCP createChart(Entry<CProfile, List<String>> filter) {
     ChartConfig config = buildChartConfig();
     DStore dStore = model.getDStore();
 
@@ -105,22 +145,33 @@ public class AdHocChartPresenter implements HelperChart {
     config.getChartInfo().setCustomBegin(chartRange.getBegin());
     config.getChartInfo().setCustomEnd(chartRange.getEnd());
 
-    return new HistorySCP(dStore, config, null, null);
+    return new HistorySCP(dStore, config, null, filter);
   }
 
-  protected DetailDashboardPanel getDetail(SCP chart) {
+  protected DetailDashboardPanel getDetail(SCP chart,
+                                           Map<String, Color> initialSeriesColorMap,
+                                           SeriesType seriesType,
+                                           Entry<CProfile, List<String>> filter) {
     ProcessType processType = ProcessType.HISTORY;
     Metric chartMetric = chart.getConfig().getMetric();
 
-    DetailDashboardPanel detailPanel = new DetailDashboardPanel(
-        model.getDStore(),
-        model.getQueryInfo(),
-        model.getTableInfo(),
-        chartMetric,
-        chart.getSeriesColorMap(),
-        processType,
-        chart.getSeriesType()
-    );
+    Map<String, Color> seriesColorMapToUse = initialSeriesColorMap != null ?
+        initialSeriesColorMap : chart.getSeriesColorMap();
+
+    if (SeriesType.CUSTOM.equals(seriesType) && seriesColorMapToUse.isEmpty()) {
+      seriesColorMapToUse = chart.getSeriesColorMap();
+    }
+
+    DetailDashboardPanel detailPanel =
+        new DetailDashboardPanel(model.getDStore(),
+                                 model.getQueryInfo(),
+                                 model.getTableInfo(),
+                                 chartMetric,
+                                 seriesColorMapToUse,
+                                 processType,
+                                 seriesType,
+                                 filter
+        );
 
     CustomAction customAction = new CustomAction() {
       @Override
@@ -134,7 +185,7 @@ public class AdHocChartPresenter implements HelperChart {
                                         Map<String, Color> seriesColorMap) {
         Map<String, Color> newSeriesColorMap = new HashMap<>();
         filter.forEach(key -> newSeriesColorMap.put(key, seriesColorMap.get(key)));
-        detailPanel.updateSeriesColor(newSeriesColorMap);
+        detailPanel.updateSeriesColor(Map.entry(cProfileFilter, filter), newSeriesColorMap);
       }
 
       @Override
@@ -193,16 +244,18 @@ public class AdHocChartPresenter implements HelperChart {
     AdHocKey key = model.getAdHocKey();
 
     MetricFunction metricFunction = UIState.INSTANCE.getHistoryMetricFunction(key);
-    if (metricFunction == null) {
-      if (CType.STRING.equals(model.getMetric().getYAxis().getCsType().getCType())) {
-        view.getHistoryMetricFunctionPanel().setEnabled(true, false, false);
-      } else {
-        view.getHistoryMetricFunctionPanel().setEnabled(true, true, true);
-      }
-      view.getHistoryMetricFunctionPanel().setSelected(model.getMetric().getMetricFunction());
-    } else {
-      view.getHistoryMetricFunctionPanel().setSelected(metricFunction);
+    if (metricFunction != null) {
+      historyMetric.setMetricFunction(metricFunction);
+      historyMetric.setChartType(MetricFunction.COUNT.equals(metricFunction) ?
+                                     ChartType.STACKED : ChartType.LINEAR);
     }
+
+    if (CType.STRING.equals(model.getMetric().getYAxis().getCsType().getCType())) {
+      view.getHistoryMetricFunctionPanel().setEnabled(true, false, false);
+    } else {
+      view.getHistoryMetricFunctionPanel().setEnabled(true, true, true);
+    }
+    view.getHistoryMetricFunctionPanel().setSelected(historyMetric.getMetricFunction());
 
     RangeHistory localRange = UIState.INSTANCE.getHistoryRange(key);
     RangeHistory globalRange = UIState.INSTANCE.getHistoryRangeAll(Component.ADHOC.name());
@@ -226,10 +279,10 @@ public class AdHocChartPresenter implements HelperChart {
 
   private void handleHistoryMetricFunctionChange(String action, MetricFunction function) {
     UIState.INSTANCE.putHistoryMetricFunction(model.getAdHocKey(), function);
-    updateHistoryChart();
+    updateHistoryChart(null, null);
   }
 
-  private void updateHistoryChart() {
+  private void updateHistoryChart(Map<String, Color> seriesColorMap, Entry<CProfile, List<String>> filter) {
     SwingTaskRunner.runWithProgress(
         view.getHistoryChartPanel(),
         executor,
@@ -237,17 +290,57 @@ public class AdHocChartPresenter implements HelperChart {
           view.getHistoryChartPanel().removeAll();
           view.getHistoryDetailPanel().removeAll();
 
+          view.getHistoryConfigChartDetail().revalidate();
+          view.getHistoryConfigChartDetail().repaint();
+
+          view.getHistoryChartDetailSplitPane().revalidate();
+          view.getHistoryChartDetailSplitPane().repaint();
+
           historyChart = null;
           historyDetail = null;
 
-          historyChart = createChart();
+          historyChart = createChart(filter);
+
+          if (seriesColorMap != null) {
+            historyChart.loadSeriesColor(model.getMetric(), seriesColorMap);
+          }
           historyChart.initialize();
 
-          historyDetail = getDetail(historyChart);
+          if (seriesColorMap != null && filter != null) {
+            Map<String, Color> filterSeriesColorMap = getFilterSeriesColorMap(seriesColorMap, filter.getValue());
+            historyDetail = getDetail(historyChart, filterSeriesColorMap, SeriesType.CUSTOM, filter);
+          } else {
+            SeriesType seriesTypeChart = historyChart.getSeriesType();
+            if (SeriesType.COMMON.equals(seriesTypeChart)) {
+              historyDetail = getDetail(historyChart, null, SeriesType.COMMON, null);
+            } else {
+              HistorySCP historySCP = (HistorySCP) historyChart;
+              historyDetail = getDetail(historyChart, historyChart.getSeriesColorMap(), SeriesType.CUSTOM, historySCP.getFilter());
+            }
+          }
+
+          ChartRange chartRange = getChartRangeAdHoc(historyChart.getConfig().getChartInfo());
+          view.getHistoryFilterPanel().setDataSource(
+              model.getDStore(),
+              model.getMetric(),
+              chartRange.getBegin(),
+              chartRange.getEnd()
+          );
+
+          if (seriesColorMap == null) {
+            view.getHistoryFilterPanel().clearFilterPanel();
+          }
+          view.getHistoryFilterPanel().setSeriesColorMap(historyChart.getSeriesColorMap());
+          view.getHistoryFilterPanel().getMetric().setMetricFunction(
+              historyChart.getConfig().getMetric().getMetricFunction()
+          );
 
           return () -> {
             view.getHistoryChartPanel().add(historyChart, BorderLayout.CENTER);
             view.getHistoryDetailPanel().add(historyDetail, BorderLayout.CENTER);
+
+            boolean isCustom = historyChart.getSeriesType() == SeriesType.CUSTOM;
+            view.getHistoryFilterPanel().setEnabled(!isCustom);
           };
         },
         e -> log.error("Error updating history chart", e),
@@ -260,7 +353,7 @@ public class AdHocChartPresenter implements HelperChart {
     UIState.INSTANCE.putHistoryRange(model.getAdHocKey(), range);
     model.getChartInfo().setRangeHistory(range);
     view.getHistoryRangePanel().setSelectedRange(range);
-    updateHistoryChart();
+    updateHistoryChart(null, null);
   }
 
   public void updateHistoryRange(RangeHistory range) {
@@ -277,7 +370,7 @@ public class AdHocChartPresenter implements HelperChart {
     view.getHistoryRangePanel().setSelectedRange(RangeHistory.CUSTOM);
     view.getHistoryRangePanel().getDateTimePickerFrom().setDate(new Date(range.getBegin()));
     view.getHistoryRangePanel().getDateTimePickerTo().setDate(new Date(range.getEnd()));
-    updateHistoryChart();
+    updateHistoryChart(null, null);
   }
 
   public void setDetailState(DetailState detailState) {
@@ -335,6 +428,59 @@ public class AdHocChartPresenter implements HelperChart {
       view.getHistoryLegendPanel().setSelected(visibility);
       historyChart.getjFreeChart().getLegend().setVisible(visibility);
       historyChart.repaint();
+    }
+  }
+
+  private void initializeFilterPanel() {
+    view.getHistoryFilterPanel().initializeChartPanel(
+        new AdHocChartKey(model.getAdHocKey()),
+        model.getTableInfo(),
+        Panel.HISTORY
+    );
+  }
+
+  @Override
+  public void receive(Message message) {
+    log.info("Message received: " + message.action());
+    PanelTabType panelTabType = PanelTabType.HISTORY;
+    CProfile cProfileFilter = message.parameters().get("cProfileFilter");
+    List<String> filter = message.parameters().get("filter");
+    Map<String, Color> seriesColorMap = message.parameters().get("seriesColorMap");
+
+    switch (message.action()) {
+      case ADD_CHART_FILTER, REMOVE_CHART_FILTER ->
+          handleFilterChange(panelTabType, cProfileFilter, filter, seriesColorMap);
+    }
+  }
+
+  private Map<String, Color> getFilterSeriesColorMap(Map<String, Color> seriesColorMap, List<String> filterKeys) {
+    if (filterKeys == null || filterKeys.isEmpty()) {
+      return seriesColorMap;
+    }
+
+    Map<String, Color> filteredMap = new HashMap<>();
+    for (String key : filterKeys) {
+      if (seriesColorMap.containsKey(key)) {
+        filteredMap.put(key, seriesColorMap.get(key));
+      }
+    }
+    return filteredMap;
+  }
+
+  private void handleFilterChange(PanelTabType panelTabType,
+                                  CProfile cProfileFilter,
+                                  List<String> filter,
+                                  Map<String, Color> seriesColorMap) {
+    Map<String, Color> preservedColorMap = new HashMap<>(seriesColorMap);
+    Entry<CProfile, List<String>> filterEntry =
+        (filter == null || filter.isEmpty()) ? null : Map.entry(cProfileFilter, filter);
+
+    if (panelTabType == PanelTabType.HISTORY) {
+      updateHistoryChart(preservedColorMap, filterEntry);
+    }
+
+    if (panelTabType == PanelTabType.HISTORY && historyDetail != null) {
+      historyDetail.updateSeriesColor(Map.entry(cProfileFilter, filter != null ? filter : Collections.emptyList()), preservedColorMap);
     }
   }
 }

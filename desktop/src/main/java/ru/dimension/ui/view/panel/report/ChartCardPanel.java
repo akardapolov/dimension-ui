@@ -557,7 +557,7 @@ public class ChartCardPanel extends JPanel implements HelperChart {
                                          DetailChart dynamicChart,
                                          SeriesType seriesType) {
     DetailDashboardPanel detailPanel =
-        new DetailDashboardPanel(fStore, queryInfo, tableInfo, metric, seriesColorMap, ProcessType.HISTORY, seriesType);
+        new DetailDashboardPanel(fStore, queryInfo, tableInfo, metric, seriesColorMap, ProcessType.HISTORY, seriesType, null);
 
     dynamicChart.addChartListenerReleaseMouse(detailPanel);
     return detailPanel;
