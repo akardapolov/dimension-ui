@@ -23,6 +23,7 @@ import lombok.extern.log4j.Log4j2;
 import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
@@ -37,11 +38,12 @@ import ru.dimension.ui.state.ChartKey;
 @Log4j2
 @Data
 public class FilterPanel extends ConfigPopupPanel {
+  private final MessageBroker.Component component;
 
   private final JTextField columnsSearch;
   private final JTextField filterSearch;
   private final JXTableCase columns;
-  private final GanttPanel filtersPanel;
+  private final GanttPopupPanel filtersPanel;
 
   private TableInfo tableInfo;
   private Metric metric;
@@ -60,8 +62,10 @@ public class FilterPanel extends ConfigPopupPanel {
 
   private boolean columnsEnabled = true;
 
-  public FilterPanel() {
+  public FilterPanel(MessageBroker.Component component) {
     super(JPanel::new, "Filter >>", "Filter <<");
+
+    this.component = component;
 
     columnsSearch = new JTextField();
     filterSearch = new JTextField();
@@ -69,7 +73,7 @@ public class FilterPanel extends ConfigPopupPanel {
     String[] colNames = {MetricsColumnNames.ID.getColName(), MetricsColumnNames.COLUMN_NAME.getColName()};
 
     columns = GUIHelper.getJXTableCase(10, colNames);
-    filtersPanel = new GanttPanel();
+    filtersPanel = new GanttPopupPanel(component);
 
     filtersPanel.setSelectionChangeListener(hasSelection -> setColumnsEnabled(!hasSelection));
 
@@ -144,10 +148,9 @@ public class FilterPanel extends ConfigPopupPanel {
 
           loadFiltersForColumn(selectedColumn);
 
-          boolean hasSelection = !filtersPanel.getFilterSelectedMap()
-              .getOrDefault(selectedColumn, new LinkedHashSet<>())
-              .isEmpty();
-          setColumnsEnabled(!hasSelection);
+          LinkedHashSet<String> selectedSet = filtersPanel.getFilterSelectedMap()
+              .getOrDefault(selectedColumn, new LinkedHashSet<>());
+          setColumnsEnabled(selectedSet.isEmpty());
         } else {
           clearFilters();
           setColumnsEnabled(true);

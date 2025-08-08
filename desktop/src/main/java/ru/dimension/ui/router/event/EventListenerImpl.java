@@ -9,7 +9,6 @@ import javax.inject.Singleton;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.module.charts.ChartsPresenter;
 import ru.dimension.ui.router.listener.AdHocListener;
-import ru.dimension.ui.router.listener.AppCacheAddListener;
 import ru.dimension.ui.router.listener.CollectStartStopListener;
 import ru.dimension.ui.router.listener.ConfigListener;
 import ru.dimension.ui.router.listener.DashboardListener;
@@ -41,9 +40,8 @@ public class EventListenerImpl implements EventListener {
   private List<WorkspaceListener> workspaceListenerList = new ArrayList<>();
   private List<ProfileStartStopListener> profileStartStopListenerList = new ArrayList<>();
   private Map<ProfileTaskQueryKey, CollectStartStopListener> collectStartStopListenerMap = new ConcurrentHashMap<>();
-  private Map<ProfileTaskQueryKey, CollectStartStopListener> collectStartStopAnalyzeListenerMap = new ConcurrentHashMap<>();
+  private Map<ProfileTaskQueryKey, CollectStartStopListener> collectStartStopPreviewListenerMap = new ConcurrentHashMap<>();
   private Map<ProfileTaskQueryKey, CollectStartStopListener> collectStartStopDashboardListenerMap = new ConcurrentHashMap<>();
-  private Map<ProfileTaskQueryKey, AppCacheAddListener> appCacheAddListenerMap = new ConcurrentHashMap<>();
 
   private List<ProfileAddListener> profileAddListeners = new ArrayList<>();
 
@@ -97,27 +95,21 @@ public class EventListenerImpl implements EventListener {
   }
 
   @Override
-  public void addCollectStartStopListener(ProfileTaskQueryKey profileTaskQueryKey,
-                                          CollectStartStopListener collectStartStopListener) {
+  public void addCollectStartStopWorkspaceListener(ProfileTaskQueryKey profileTaskQueryKey,
+                                                   CollectStartStopListener collectStartStopListener) {
     collectStartStopListenerMap.put(profileTaskQueryKey, collectStartStopListener);
   }
 
   @Override
-  public void addCollectStartStopAnalyzeListener(ProfileTaskQueryKey profileTaskQueryKey,
+  public void addCollectStartStopPreviewListener(ProfileTaskQueryKey profileTaskQueryKey,
                                                  CollectStartStopListener collectStartStopListener) {
-    collectStartStopAnalyzeListenerMap.put(profileTaskQueryKey, collectStartStopListener);
+    collectStartStopPreviewListenerMap.put(profileTaskQueryKey, collectStartStopListener);
   }
 
   @Override
   public void addCollectStartStopDashboardListener(ProfileTaskQueryKey profileTaskQueryKey,
                                                    CollectStartStopListener collectStartStopListener) {
     collectStartStopDashboardListenerMap.put(profileTaskQueryKey, collectStartStopListener);
-  }
-
-  @Override
-  public void addAppCacheAddListener(ProfileTaskQueryKey profileTaskQueryKey,
-                                     AppCacheAddListener appCacheAddListener) {
-    appCacheAddListenerMap.put(profileTaskQueryKey, appCacheAddListener);
   }
 
   @Override
@@ -129,18 +121,17 @@ public class EventListenerImpl implements EventListener {
   public <T> void clearListener(Class<T> genericClass) {
     profileStartStopListenerList.removeIf(genericClass::isInstance);
     collectStartStopListenerMap.entrySet().removeIf(map -> genericClass.isInstance(map.getValue()));
-    collectStartStopAnalyzeListenerMap.entrySet().removeIf(map -> genericClass.isInstance(map.getValue()));
+    collectStartStopPreviewListenerMap.entrySet().removeIf(map -> genericClass.isInstance(map.getValue()));
   }
 
   @Override
-  public void clearListenerByKey(ProfileTaskQueryKey profileTaskQueryKey) {
+  public void clearListenerWorkspaceByKey(ProfileTaskQueryKey profileTaskQueryKey) {
     collectStartStopListenerMap.entrySet().removeIf(map -> profileTaskQueryKey.equals(map.getKey()));
-    collectStartStopAnalyzeListenerMap.entrySet().removeIf(map -> profileTaskQueryKey.equals(map.getKey()));
   }
 
   @Override
-  public void clearListenerAppCacheByKey(ProfileTaskQueryKey profileTaskQueryKey) {
-    appCacheAddListenerMap.entrySet().removeIf(map -> profileTaskQueryKey.equals(map.getKey()));
+  public <T> void clearListenerPreviewByClass(Class<T> genericClass) {
+    collectStartStopPreviewListenerMap.entrySet().removeIf(map -> genericClass.isInstance(map.getValue()));
   }
 
   @Override
@@ -173,7 +164,7 @@ public class EventListenerImpl implements EventListener {
     collectStartStopListenerMap.entrySet().stream()
         .filter(f -> f.getKey().equals(profileTaskQueryKey))
         .forEach(l -> l.getValue().fireOnStartCollect(profileTaskQueryKey));
-    collectStartStopAnalyzeListenerMap.entrySet().stream()
+    collectStartStopPreviewListenerMap.entrySet().stream()
         .filter(f -> f.getKey().equals(profileTaskQueryKey))
         .forEach(l -> l.getValue().fireOnStartCollect(profileTaskQueryKey));
     collectStartStopDashboardListenerMap.entrySet().stream()
@@ -186,20 +177,12 @@ public class EventListenerImpl implements EventListener {
     collectStartStopListenerMap.entrySet().stream()
         .filter(f -> f.getKey().equals(profileTaskQueryKey))
         .forEach(l -> l.getValue().fireOnStopCollect(profileTaskQueryKey));
-    collectStartStopAnalyzeListenerMap.entrySet().stream()
+    collectStartStopPreviewListenerMap.entrySet().stream()
         .filter(f -> f.getKey().equals(profileTaskQueryKey))
         .forEach(l -> l.getValue().fireOnStopCollect(profileTaskQueryKey));
     collectStartStopDashboardListenerMap.entrySet().stream()
         .filter(f -> f.getKey().equals(profileTaskQueryKey))
         .forEach(l -> l.getValue().fireOnStopCollect(profileTaskQueryKey));
-  }
-
-  @Override
-  public void fireOnAddToAppCache(ProfileTaskQueryKey profileTaskQueryKey) {
-    AppCacheAddListener listener = appCacheAddListenerMap.get(profileTaskQueryKey);
-    if (listener != null) {
-      listener.fireOnAddToAppCache(profileTaskQueryKey);
-    }
   }
 
   @Override

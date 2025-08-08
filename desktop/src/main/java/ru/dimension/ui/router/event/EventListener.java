@@ -1,7 +1,7 @@
 package ru.dimension.ui.router.event;
 
+import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.router.listener.AdHocListener;
-import ru.dimension.ui.router.listener.AppCacheAddListener;
 import ru.dimension.ui.router.listener.CollectStartStopListener;
 import ru.dimension.ui.router.listener.ConfigListener;
 import ru.dimension.ui.router.listener.DashboardListener;
@@ -12,12 +12,11 @@ import ru.dimension.ui.router.listener.ReportListener;
 import ru.dimension.ui.router.listener.TemplateListener;
 import ru.dimension.ui.router.listener.ToolbarListener;
 import ru.dimension.ui.router.listener.WorkspaceListener;
-import ru.dimension.ui.model.ProfileTaskQueryKey;
 
 public interface EventListener extends ToolbarListener, ConfigListener, TemplateListener, ReportListener,
     DashboardListener, AdHocListener,
     ProgressbarListener, WorkspaceListener, ProfileStartStopListener, CollectStartStopListener,
-    AppCacheAddListener, ProfileAddListener {
+    ProfileAddListener {
 
   void addProfileButtonStateListener(ToolbarListener toolbarListener);
 
@@ -37,25 +36,20 @@ public interface EventListener extends ToolbarListener, ConfigListener, Template
 
   void addProfileStartStopListener(ProfileStartStopListener profileStartStopListener);
 
-  void addCollectStartStopListener(ProfileTaskQueryKey profileTaskQueryKey,
-                                   CollectStartStopListener collectStartStopListener);
+  void addCollectStartStopWorkspaceListener(ProfileTaskQueryKey profileTaskQueryKey,
+                                            CollectStartStopListener collectStartStopListener);
 
-  void addCollectStartStopAnalyzeListener(ProfileTaskQueryKey profileTaskQueryKey,
+  void addCollectStartStopPreviewListener(ProfileTaskQueryKey profileTaskQueryKey,
                                           CollectStartStopListener collectStartStopListener);
 
   void addCollectStartStopDashboardListener(ProfileTaskQueryKey profileTaskQueryKey,
                                             CollectStartStopListener collectStartStopListener);
-
-  void addAppCacheAddListener(ProfileTaskQueryKey profileTaskQueryKey,
-                              AppCacheAddListener appCacheAddListener);
-
   void addProfileAddListener(ProfileAddListener profileAddListener);
 
   <T> void clearListener(Class<T> genericClass);
 
-  void clearListenerByKey(ProfileTaskQueryKey profileTaskQueryKey);
-
-  void clearListenerAppCacheByKey(ProfileTaskQueryKey profileTaskQueryKey);
+  void clearListenerWorkspaceByKey(ProfileTaskQueryKey profileTaskQueryKey);
+  <T> void clearListenerPreviewByClass(Class<T> genericClass);
 
   void clearListenerDashboardByKey(ProfileTaskQueryKey profileTaskQueryKey);
 

@@ -8,7 +8,7 @@ import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.function.MetricFunction;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.RangeRealTime;
-import ru.dimension.ui.view.analyze.model.DetailState;
+import ru.dimension.ui.component.model.DetailState;
 
 public enum UIState {
   INSTANCE;
@@ -24,6 +24,9 @@ public enum UIState {
   private static final String SHOW_DETAIL_ALL = "SHOW_DETAIL_ALL";
   private static final String HISTORY_CUSTOM_RANGE = "HISTORY_CUSTOM_RANGE";
   private static final String HISTORY_CUSTOM_RANGE_ALL = "HISTORY_CUSTOM_RANGE_ALL";
+
+  private static final String SHOW_CONFIG = "SHOW_CONFIG";
+  private static final String SHOW_CONFIG_ALL = "SHOW_CONFIG_ALL";
 
   private final ConcurrentMap<String, ParameterStore> globalStateMap = new ConcurrentHashMap<>();
   private final ConcurrentMap<ChartKey, ParameterStore> stateMap = new ConcurrentHashMap<>();
@@ -175,6 +178,24 @@ public enum UIState {
   public ChartRange getHistoryCustomRange(AdHocKey key) {
     ParameterStore store = adHocStateMap.get(key);
     return store != null ? store.get(HISTORY_CUSTOM_RANGE, ChartRange.class) : null;
+  }
+
+  public void putShowConfig(ChartKey key, Boolean showConfig) {
+    getOrCreateParameterStore(key).put(SHOW_CONFIG, showConfig);
+  }
+
+  public Boolean getShowConfig(ChartKey key) {
+    ParameterStore store = stateMap.get(key);
+    return store != null ? store.get(SHOW_CONFIG, Boolean.class) : null;
+  }
+
+  public void putShowConfigAll(String key, Boolean showConfig) {
+    getOrCreateParameterGlobalStore(key).put(SHOW_CONFIG_ALL, showConfig);
+  }
+
+  public Boolean getShowConfigAll(String key) {
+    ParameterStore store = globalStateMap.get(key);
+    return store != null ? store.get(SHOW_CONFIG_ALL, Boolean.class) : null;
   }
 
   private ParameterStore getOrCreateParameterStore(AdHocKey key) {

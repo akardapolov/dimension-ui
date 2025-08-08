@@ -146,15 +146,15 @@ The configuration of **Dimension UI** application consists of several main entit
 
 - A **Profile** is a repository of information about a particular profile, including its name, a brief description and list of tasks to be performed when you start this profile. <a href="media/config/profile.gif" target="_blank"> Screencast</a>
 
-![Profile](media/config/profile.png#center)
+![Profile](media/config/profile.png)
 
 - **Task**, in turn, is an entity that contains a list of queries that must be executed within this task. Each task also contains the name of the request, a brief description, the connection and the frequency of queries to the remote system. <a href="media/config/task.gif" target="_blank">Screencast </a>
 
-![Task](media/config/task.png#center)
+![Task](media/config/task.png)
 
 - **Connection** is an entity that contains all the necessary information about the details of the connection to the remote JDBC system. Connection attributes: name, URL, username, password, as well as file location information and class name JDBC Driver class. <a href="media/config/connection.gif"  target="_blank">Screencast</a>
 
-![Connection](media/config/connection.png#center)
+![Connection](media/config/connection.png)
 
 - **Queries** are textual descriptions of SQL queries that are sent to the server to retrieve data.
   Each query also contains information about the name of the query, a short description, the way of filling the data (locally or on the server)  and data loading mode (direct, JDBC in real time, batch data loading from JDBC source).<a href="media/config/query.gif"  target="_blank">Screencast </a>
@@ -173,23 +173,23 @@ Inside the query interface there are also metadata entities for the local databa
   (local or global), data compression, table column for time tracking, metadata of table columns.  The interface also displays the connection to the job data source in which the query is executed.
   This is needed in order to load metadata on the query into the local storage.
 
-![Query metadata](media/config/query-metadata.png#center)
+![Query metadata](media/config/query-metadata.png)
 
 - **Metrics** is an entity for displaying specially prepared statistics.
   Attributes of metrics: name, X axis (column name), Y axis (column name), grouping of data (by column), function (way of processing of displayed data), way of graphical data displaying (linear, stacked graphs), default value (when displaying detail data for stacked plots). At the bottom there is a list of all the metrics for the given query are displayed at the bottom.
 
-![Query metrics](media/config/query-metrics.png#center)
+![Query metrics](media/config/query-metrics.png)
 
 There are two modes available in the application interface: **View** and **Edit** data.
 
 - In the **View** mode the data is displayed taking into account the hierarchical structure that is formed on the basis of the profiles.
   Each profile can contain several tasks, each of which can include several queries.  Each job is linked to a single connection, which allows you to perform multiple queries to the same data source. <a href="media/config/view.gif"  target="_blank">Screencast </a>
 
-![View](media/config/view-panel.png#center)
+![View](media/config/view-panel.png)
 
 - In the **Edit** mode the user has the ability to create new objects, copy, delete and modify existing ones. <a href="media/config/edit.gif"  target="_blank">Screencast</a>
 
-![Edit](media/config/edit-panel.png#center)
+![Edit](media/config/edit-panel.png)
 
 The application has functionality that allows you to create a profile using pre-created job templates, connections and requests, which are available in the interface **Settings** and **Templates**.
 
@@ -240,27 +240,25 @@ The application supports four data display options, which are located in the **W
 
 In the **Workspace** interface:
 
-1. Real-time mode, when the data are visualized as they arrive. To display data in this mode, you need to select the appropriate metric or query column in the **Real-time** interface. In the **Details** interface, it is possible to choose **Count**, **Sum** and **Average** functions. For numeric values it is possible any of these functions can be selected, for string data it is not possible to call the sum and average calculation. <a href="media/view/real-time.gif"  target="_blank">Screencast </a>
+1. Real-time mode, when the data are visualized as they arrive. To display data in this mode, you need to select the appropriate metric or query column in the **Real-time** interface. In the **Details** interface, it is possible to choose **Count**, **Sum** and **Average** functions. For numeric values it is possible any of these functions can be selected, for string data it is not possible to call the sum and average calculation. 
 
-![Real-time](media/view/real-time.png#center)
+    <a href="media/view/real-time.gif"  target="_blank">Screencast </a>
+
+![Real-time](media/view/real-time.png)
 
 2. In the historical section, when the data is displayed for the previous observation period. To do this you need to select a metric or query column and specify the range in **History** interface. The **Custom** field allows for more detailed range selection using the **Relative** and **Absolute** interfaces.
 
    <a href="media/view/history.gif"  target="_blank"> Screencast</a>
 
-![History](media/view/history.png#center)
+![History](media/view/history.png)
 
-3. Ad-hoc queries, when the data is displayed for a particular keyword. To do this, you need to go to the Search interface, specify a substring to search for and click the Go button. <a href="media/view/search.gif"  target="_blank"> Screencast</a>
-
-![Ad hoc query](media/view/search.png#center)
-
-4. Display multidimensional data as a **Pivot** summary report with support for row and column totals.
+3. Display multidimensional data as a **Pivot** summary report with support for row and column totals.
    
-![Stacked pivot](media/view/pivot.png#center)
+![Stacked pivot](media/view/pivot.png)
 
 In the **Dashboard** interface, you can display real-time data while simultaneously tracking multiple selected metrics and columns from running profiles.
 
-![Dashboard](media/view/dashboard.png#center)
+![Dashboard](media/view/dashboard.png)
 
 [Return to Table of Contents](#contents)
 
@@ -268,11 +266,11 @@ In the **Dashboard** interface, you can display real-time data while simultaneou
 
 Data analysis functionality is available in the **Analyze** interface. By selecting a certain range, get the top indicators associated with the selected measurement in the **Visualize** block for all other measurements (for numerical data) and then get a real-time updated graph on them, but with the selected filter:
 
-![Analyze real time](media/analyze/analyze_real_time.png#center)
+![Analyze real time](media/analyze/analyze_real_time.png)
 
 For history, the display logic is similar, except that the data is not updated, but only the ranges selected in the **Visualize** block are displayed.
 
-![Analyze history](media/analyze/analyze_history.png#center)
+![Analyze history](media/analyze/analyze_history.png)
 
 It is possible to hide data on indicators in the legend, it is convenient in case of long names of measurement indicators.
 
@@ -280,13 +278,14 @@ To analyse the data, the graph of each selected measurement is divided into bloc
 
 For the **Anomaly** block, the top part of the interface displays the available algorithms (in the screenshot it is **STAMP**), the left part displays all the available measurement metrics, selecting a value from the list gives the user a **Matrix Profile** calculation graph, where *maximums* at the top of the graph are *anomalies in the data*, *minimums* at the bottom are *repeated values in the metrics*.
 
-For the **Forecast** block, the top part of the interface also shows the available algorithms (in the screenshot it is **ARMA**), the left part shows all available measurement indicators, selecting a value from the list gives the user a graph with data and continued forecast values (dashed line).
+For the **Forecast** block, the top part of the interface also shows the available algorithms (in the screenshot it is **ARIMA**), the left part shows all available measurement indicators, selecting a value from the list gives the user a graph with data and continued forecast values (dashed line).
 
-![Anomaly](media/analyze/anomaly-forecast.png#center)
+![Anomaly](media/analyze/anomaly-data.png)
+![Forecast](media/analyze/forecast-data.png)
 
 For each selected algorithm (for **Anomaly** and for **Forecast**), there is an option to manage its settings through the **Settings** form.
 
-![Settings anomaly](media/analyze/settings_anomaly.png#center) ![Settings forecast](media/analyze/settings_forecast.png#center)
+![Settings anomaly](media/analyze/settings_anomaly.png) ![Settings forecast](media/analyze/settings_forecast.png)
 
 [Return to Table of Contents](#contents)
 
@@ -302,7 +301,7 @@ After displaying the design of the future report, you can edit the description, 
 **Average**. For numeric values any of these functions can be selected, for string data it is not possible to call **Count**, **Sum** and **Average** functions.
 calculation of the average value.
 
-![Design](media/report/design.png#center)
+![Design](media/report/design.png)
 
 
 ### Report generation
@@ -315,7 +314,7 @@ the button **Report** <a href="media/report/report.gif"  target="_blank">Screenc
 
 The created PDF report is displayed on the **Report** tab, designed for viewing reports. The report contains all the data from the design: graphs, tables and comments.
 
-![Report](media/report/report.png#center)
+![Report](media/report/report.png)
 
 ### Exporting a report
 
@@ -329,7 +328,7 @@ In the **Ad-Hoc** interface in the left part the list of **JDBC** connections is
 
 By selecting the data range on the **Stacked** graph, the detail is displayed in the form of **Gantt** and **Pivot** graphs for the selected dependent main metric
 
-![Ad-Hoc](media/adhoc/adhoc.png#center)
+![Ad-Hoc](media/adhoc/adhoc.png)
 
 [Return to Table of Contents](#contents)
 

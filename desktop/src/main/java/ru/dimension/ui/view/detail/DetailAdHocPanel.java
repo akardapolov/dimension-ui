@@ -17,7 +17,7 @@ import ru.dimension.ui.helper.ProgressBarHelper;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.function.ChartType;
 import ru.dimension.ui.model.info.TableInfo;
-import ru.dimension.ui.view.analyze.DetailAction;
+import ru.dimension.ui.component.module.analyze.DetailAction;
 import ru.dimension.ui.view.detail.pivot.ReportPivotPanel;
 import ru.dimension.ui.view.detail.raw.RawDataAdHocPanel;
 import ru.dimension.ui.view.detail.top.ReportTopPanel;

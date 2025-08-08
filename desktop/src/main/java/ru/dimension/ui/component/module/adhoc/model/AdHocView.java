@@ -116,7 +116,7 @@ public class AdHocView extends JPanel {
   }
 
   private JXTableCase createCheckBoxTableCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCaseCheckBox(
+    JXTableCase jxTableCase = GUIHelper.getJXTableCaseCheckBoxAdHoc(
         DEFAULT_TABLE_ROW_COUNT,
         new String[]{
             ColumnNames.ID.getColName(),

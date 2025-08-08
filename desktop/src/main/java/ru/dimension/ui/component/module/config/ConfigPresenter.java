@@ -6,29 +6,31 @@ import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Action;
-import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.RangeRealTime;
 import ru.dimension.ui.state.UIState;
-import ru.dimension.ui.view.analyze.model.ChartCardState;
-import ru.dimension.ui.view.analyze.model.ChartLegendState;
-import ru.dimension.ui.view.analyze.model.DetailState;
+import ru.dimension.ui.component.model.ChartCardState;
+import ru.dimension.ui.component.model.ChartLegendState;
+import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.view.panel.DateTimePicker;
 
 @Log4j2
 public class ConfigPresenter {
+  private final MessageBroker.Component component;
 
   private final ConfigView view;
 
   private final MessageBroker broker = MessageBroker.getInstance();
 
-  public ConfigPresenter(ConfigView view) {
+  public ConfigPresenter(MessageBroker.Component component,
+                         ConfigView view) {
+    this.component = component;
     this.view = view;
 
-    UIState.INSTANCE.putShowDetailAll(Component.DASHBOARD.name(), DetailState.SHOW);
+    UIState.INSTANCE.putShowDetailAll(component.name(), DetailState.SHOW);
 
     setupListeners();
   }
@@ -51,7 +53,7 @@ public class ConfigPresenter {
     view.getHistoryPanel().getCustom().addActionListener(e -> handleHistoryRangeChange(RangeHistory.CUSTOM));
     view.getHistoryPanel().getButtonApplyRange().addActionListener(e -> handleCustomHistoryRangeChange());
 
-    view.getLegendPanel().setVisibilityConsumer(this::handleLegendVisibilityChange);
+    view.getLegendPanel().setStateChangeConsumer(this::handleLegendVisibilityChange);
     view.getDetailShowHidePanel().setStateChangeConsumer(this::handleDetailVisibilityChange);
     view.getCollapseCardPanel().setStateChangeConsumer(this::handleCollapseCardChange);
   }
@@ -59,10 +61,10 @@ public class ConfigPresenter {
   private void handleLegendVisibilityChange(ChartLegendState chartLegendState) {
     log.info("Legend visibility changed to: {}", chartLegendState);
 
-    UIState.INSTANCE.putShowLegendAll(Component.DASHBOARD.name(), ChartLegendState.SHOW.equals(chartLegendState));
+    UIState.INSTANCE.putShowLegendAll(component.name(), ChartLegendState.SHOW.equals(chartLegendState));
 
     broker.sendMessage(Message.builder()
-                           .destination(Destination.withDefault(Component.DASHBOARD, Module.CHARTS))
+                           .destination(Destination.withDefault(component, Module.CHARTS))
                            .action(Action.CHART_LEGEND_STATE_ALL)
                            .parameter("chartLegendState", chartLegendState)
                            .build());
@@ -71,20 +73,20 @@ public class ConfigPresenter {
   private void handleDetailVisibilityChange(DetailState detailState) {
     log.info("Detail visibility changed to: {}", detailState);
 
-    UIState.INSTANCE.putShowDetailAll(Component.DASHBOARD.name(), detailState);
+    UIState.INSTANCE.putShowDetailAll(component.name(), detailState);
 
     broker.sendMessage(Message.builder()
-                           .destination(Destination.withDefault(Component.DASHBOARD, Module.CHARTS))
+                           .destination(Destination.withDefault(component, Module.CHARTS))
                            .action(Action.SHOW_HIDE_DETAIL_ALL)
                            .parameter("detailState", detailState)
                            .build());
   }
 
   private void handleCollapseCardChange(ChartCardState cardState) {
-    log.info("Set card state in dashboard to: {}", cardState);
+    log.info("Set card state in " + component.name() + " to: {}", cardState);
 
     broker.sendMessage(Message.builder()
-                           .destination(Destination.withDefault(Component.DASHBOARD, Module.CHARTS))
+                           .destination(Destination.withDefault(component, Module.CHARTS))
                            .action(Action.EXPAND_COLLAPSE_ALL)
                            .parameter("cardState", cardState)
                            .build());
@@ -94,7 +96,7 @@ public class ConfigPresenter {
     log.info("Tab changed to: {}", panelTabType);
 
     broker.sendMessage(Message.builder()
-                           .destination(Destination.withDefault(Component.DASHBOARD, Module.CHARTS))
+                           .destination(Destination.withDefault(component, Module.CHARTS))
                            .action(Action.CHANGE_TAB)
                            .parameter("panelTabType", panelTabType)
                            .build());
@@ -103,10 +105,10 @@ public class ConfigPresenter {
   private void handleRealTimeRangeChange(RangeRealTime range) {
     log.info("Real-time range changed to: {}", range);
 
-    UIState.INSTANCE.putRealTimeRangeAll(Component.DASHBOARD.name(), range);
+    UIState.INSTANCE.putRealTimeRangeAll(component.name(), range);
 
     broker.sendMessage(Message.builder()
-                           .destination(Destination.withDefault(Component.DASHBOARD, Module.CHARTS))
+                           .destination(Destination.withDefault(component, Module.CHARTS))
                            .action(Action.REALTIME_RANGE_CHANGE)
                            .parameter("range", range)
                            .build());
@@ -141,12 +143,12 @@ public class ConfigPresenter {
   }
 
   private void updateHistoryRange(RangeHistory range, ChartRange chartRange) {
-    String componentName = Component.DASHBOARD.name();
+    String componentName = component.name();
     UIState.INSTANCE.putHistoryCustomRangeAll(componentName, chartRange);
     UIState.INSTANCE.putHistoryRangeAll(componentName, range);
 
     broker.sendMessage(Message.builder()
-                           .destination(Destination.withDefault(Component.DASHBOARD, Module.CHARTS))
+                           .destination(Destination.withDefault(component, Module.CHARTS))
                            .action(Action.HISTORY_RANGE_CHANGE)
                            .parameter("range", range)
                            .parameter("chartRange", chartRange)

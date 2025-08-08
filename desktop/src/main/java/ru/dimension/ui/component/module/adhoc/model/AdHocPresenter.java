@@ -56,8 +56,8 @@ import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.state.UIState;
-import ru.dimension.ui.view.analyze.handler.TableSelectionHandler;
-import ru.dimension.ui.view.chart.HelperChart;
+import ru.dimension.ui.component.module.analyze.handler.TableSelectionHandler;
+import ru.dimension.ui.component.chart.HelperChart;
 
 @Log4j2
 public class AdHocPresenter implements HelperChart {

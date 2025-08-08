@@ -9,8 +9,8 @@ import ru.dimension.ui.component.module.ChartModule;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.state.SqlQueryState;
-import ru.dimension.ui.view.analyze.model.ChartCardState;
-import ru.dimension.ui.view.analyze.model.ChartLegendState;
+import ru.dimension.ui.component.model.ChartCardState;
+import ru.dimension.ui.component.model.ChartLegendState;
 
 @Data
 public class ChartsModel {

@@ -69,11 +69,11 @@ import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.prompt.Internationalization;
 import ru.dimension.ui.router.event.EventListener;
 import ru.dimension.ui.state.ChartKey;
-import ru.dimension.ui.view.analyze.chart.ChartConfig;
-import ru.dimension.ui.view.analyze.chart.SCP;
-import ru.dimension.ui.view.analyze.chart.history.HistorySCP;
-import ru.dimension.ui.view.chart.DetailChart;
-import ru.dimension.ui.view.chart.HelperChart;
+import ru.dimension.ui.component.chart.ChartConfig;
+import ru.dimension.ui.component.chart.SCP;
+import ru.dimension.ui.component.chart.history.HistorySCP;
+import ru.dimension.ui.component.chart.DetailChart;
+import ru.dimension.ui.component.chart.HelperChart;
 import ru.dimension.ui.view.detail.DetailDashboardPanel;
 
 @Data

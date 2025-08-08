@@ -3,14 +3,12 @@ package ru.dimension.ui.component.module.adhoc.charts;
 import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 import static ru.dimension.ui.laf.LafColorGroup.REPORT;
 
-import java.awt.Component;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.border.EtchedBorder;
-import org.jdesktop.swingx.JXTaskPane;
 import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.jdesktop.swingx.VerticalLayout;
 import org.painlessgridbag.PainlessGridBag;
@@ -19,7 +17,6 @@ import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.laf.LaF;
-import ru.dimension.ui.view.analyze.module.ChartAnalyzeModule;
 
 public class AdHocChartsView extends JPanel {
 
@@ -72,22 +69,6 @@ public class AdHocChartsView extends JPanel {
       cardContainer.remove(taskPane);
       cardContainer.revalidate();
       cardContainer.repaint();
-    }
-  }
-
-  public void updateLegendVisibility(boolean isVisible) {
-    for (Component comp : cardContainer.getComponents()) {
-      if (comp instanceof ChartAnalyzeModule) {
-        ((ChartAnalyzeModule) comp).getScp().getjFreeChart().getLegend().setVisible(isVisible);
-      }
-    }
-  }
-
-  public void expandCollapseChartCard(boolean collapseAll) {
-    for (Component comp : cardContainer.getComponents()) {
-      if (comp instanceof JXTaskPane) {
-        ((JXTaskPane) comp).setCollapsed(collapseAll);
-      }
     }
   }
 

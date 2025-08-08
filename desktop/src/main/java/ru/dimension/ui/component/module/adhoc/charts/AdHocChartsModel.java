@@ -9,8 +9,8 @@ import ru.dimension.ui.manager.AdHocDatabaseManager;
 import ru.dimension.ui.manager.ConnectionPoolManager;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.AdHocKey;
-import ru.dimension.ui.view.analyze.model.ChartCardState;
-import ru.dimension.ui.view.analyze.model.ChartLegendState;
+import ru.dimension.ui.component.model.ChartCardState;
+import ru.dimension.ui.component.model.ChartLegendState;
 
 @Data
 public class AdHocChartsModel {

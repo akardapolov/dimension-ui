@@ -1,10 +1,12 @@
 package ru.dimension.ui.state;
 
 import lombok.Getter;
+import lombok.ToString;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.db.model.profile.CProfile;
 import java.util.Objects;
 
+@ToString
 public class ChartKey {
   @Getter
   private final ProfileTaskQueryKey profileTaskQueryKey;

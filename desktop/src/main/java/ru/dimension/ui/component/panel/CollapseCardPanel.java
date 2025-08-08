@@ -9,7 +9,7 @@ import javax.swing.JPanel;
 import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
-import ru.dimension.ui.view.analyze.model.ChartCardState;
+import ru.dimension.ui.component.model.ChartCardState;
 
 public class CollapseCardPanel extends JPanel {
   private final JCheckBox collapseCheckBox;
@@ -17,15 +17,27 @@ public class CollapseCardPanel extends JPanel {
   private Consumer<ChartCardState> stateChangeConsumer;
 
   public CollapseCardPanel() {
+    this(null);
+  }
+
+  public CollapseCardPanel(JLabel label) {
     this.currentState = ChartCardState.COLLAPSE_ALL;
     this.collapseCheckBox = new JCheckBox(currentState.getName());
 
     LaF.setBackgroundConfigPanel(CHART_PANEL, this);
 
     PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(1), false);
-    gbl.row()
-        .cell(collapseCheckBox)
-        .cellXRemainder(new JLabel()).fillX();
+
+    if (label != null) {
+      gbl.row()
+          .cell(label).cell(collapseCheckBox)
+          .cellXRemainder(new JLabel()).fillX();
+      PGHelper.setConstrainsInsets(gbl, label, 0, 10);
+    } else {
+      gbl.row()
+          .cell(collapseCheckBox)
+          .cellXRemainder(new JLabel()).fillX();
+    }
 
     PGHelper.setConstrainsInsets(gbl, collapseCheckBox, 0);
     gbl.done();

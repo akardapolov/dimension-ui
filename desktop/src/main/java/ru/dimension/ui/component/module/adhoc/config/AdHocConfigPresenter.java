@@ -12,9 +12,9 @@ import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.state.UIState;
-import ru.dimension.ui.view.analyze.model.ChartCardState;
-import ru.dimension.ui.view.analyze.model.ChartLegendState;
-import ru.dimension.ui.view.analyze.model.DetailState;
+import ru.dimension.ui.component.model.ChartCardState;
+import ru.dimension.ui.component.model.ChartLegendState;
+import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.view.panel.DateTimePicker;
 
 @Log4j2
@@ -39,7 +39,7 @@ public class AdHocConfigPresenter implements MessageAction {
     view.getHistoryPanel().getCustom().addActionListener(e -> handleHistoryRangeChange(RangeHistory.CUSTOM));
     view.getHistoryPanel().getButtonApplyRange().addActionListener(e -> handleCustomHistoryRangeChange());
 
-    view.getLegendPanel().setVisibilityConsumer(this::handleLegendVisibilityChange);
+    view.getLegendPanel().setStateChangeConsumer(this::handleLegendVisibilityChange);
     view.getDetailShowHidePanel().setStateChangeConsumer(this::handleDetailVisibilityChange);
     view.getCollapseCardPanel().setStateChangeConsumer(this::handleCollapseCardChange);
   }

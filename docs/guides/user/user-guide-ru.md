@@ -261,24 +261,24 @@
    Для отображения данных в этом режиме необходима выбрать соответствующую метрику или столбец запроса в интерфейсе **Real-time**.
    В интерфейсе **Details** есть возможность выбора функций **Count**, **Sum** и **Average**. Для числовых значений возможен выбор любой из этих функций, для строковых данных нельзя вызвать подсчет суммы и расчет среднего значения. <a href="media/view/real-time.gif"  target="_blank">Screencast </a>
 
-![Real-time](media/view/real-time.png#center)
+![Real-time](media/view/real-time.png)
 
 2. В историческом разрезе, когда данные отображаются за предыдущий период наблюдения.
    Для этого необходимо выбрать метрику или столбец запроса и указать диапазон в интерфейсе **History**, при выборе поля **Custom** есть возможность более детального выбора диапазона при помощи интерфейсов **Relative** и **Absolute**.<a href="media/view/history.gif"  target="_blank"> Screencast</a>
 
-![History](media/view/history.png#center)
+![History](media/view/history.png)
 
 3. Ad-hoc запросы, когда данные отображаются по определенному ключевому слову. Для этого необходимо перейти в интерфейс Search, указать подстроку для поиска и нажать кнопку Go.<a href="media/view/search.gif"  target="_blank"> Screencast</a>
 
-![Ad hoc query](media/view/search.png#center)
+![Ad hoc query](media/view/search.png)
 
 4. Отображение многомерных данных в виде сводного отчета **Pivot** с поддержкой расчёта итогов по строкам и столбцам.
 
-![Stacked pivot](media/view/pivot.png#center)
+![Stacked pivot](media/view/pivot.png)
 
 В интерфейсе **Dashboard** можно отображать данные в режиме реального времени, одновременно отслеживая несколько выбранных метрик и столбцов из запущенных профилей.
 
-![Dashboard](media/view/dashboard.png#center)
+![Dashboard](media/view/dashboard.png)
 
 [Вернуться в оглавление](#содержание)
 
@@ -286,11 +286,11 @@
 
  Доступна функциональность анализа данных в интерфейсе **Analyze**. По выбору определенного диапазона получить топ связанных с выбранным измерением в блоке **Visualize** показателей для всех остальных измерений (для числовых данных) и затем по ним получить также обновляемый в режиме реального времени график, но уже с выбранным фильтром:
 
-![Analyze real time](media/analyze/analyze_real_time.png#center)
+![Analyze real time](media/analyze/analyze_real_time.png)
 
 Для истории логика отображения похожа, за исключением того что данные не обновляются, а выводятся только те диапазоны, которые выбраны в блоке **Visualize**. 
 
-![Analyze history](media/analyze/analyze_history.png#center)
+![Analyze history](media/analyze/analyze_history.png)
 
 Eсть возможность скрывать данные по показателям в легенде, это удобно в случае длинных наименований показателей измерений.
 
@@ -300,11 +300,12 @@ Eсть возможность скрывать данные по показат
 
 Для блока **Forecast** в верхней части интерфейса также отображаются доступные алгоритмы (на скриншоте это **ARMA**), в левой части отображаются все доступные показатели измерений, при выборе значения из списка пользователь получает график с данными и продолженные значения прогноза (штриховой линией).
 
-![Anomaly](media/analyze/anomaly-forecast.png#center)
+![Anomaly](media/analyze/anomaly-data.png)
+![Forecast](media/analyze/forecast-data.png)
 
 Для каждого выбранного (для **Anomaly** и для **Forecast**) алгоритма есть возможность управлять его настройками через форму настроек **Settings**. 
 
-![Settings anomaly](media/analyze/settings_anomaly.png#center) ![Settings forecast](media/analyze/settings_forecast.png#center)
+![Settings anomaly](media/analyze/settings_anomaly.png) ![Settings forecast](media/analyze/settings_forecast.png)
 
 [Вернуться в оглавление](#содержание)
 
@@ -320,7 +321,7 @@ Eсть возможность скрывать данные по показат
 **Average**. Для числовых значений возможен выбор любой из этих функций, для строковых данных нельзя вызвать подсчет суммы и
 расчет среднего значения.
 
-![Design](media/report/design.png#center)
+![Design](media/report/design.png)
 
 ### Генерация отчета
 
@@ -332,7 +333,7 @@ Eсть возможность скрывать данные по показат
 
 Созданный отчет в формате PDF отображается на вкладке **Report**, предназначенной для просмотра отчетов. В отчете все данные из дизайна: графики, таблицы и комментарии.
 
-![Report](media/report/report.png#center)
+![Report](media/report/report.png)
 
 ### Экспорт отчета
 
@@ -346,7 +347,7 @@ Eсть возможность скрывать данные по показат
 
 Выбирая диапазон данных на **Stacked** графике отображается детализация в виде **Gantt** и **Pivot** графиков по выбранной зависимой от основной метрики
 
-![Ad-Hoc](media/adhoc/adhoc.png#center)
+![Ad-Hoc](media/adhoc/adhoc.png)
 
 
 [Вернуться в оглавление](#содержание)

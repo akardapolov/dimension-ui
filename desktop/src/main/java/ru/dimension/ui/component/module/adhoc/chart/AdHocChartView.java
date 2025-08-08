@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.block.HistoryConfigBlock;
+import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.panel.LegendPanel;
 import ru.dimension.ui.component.panel.MetricFunctionPanel;
 import ru.dimension.ui.component.panel.popup.ActionPanel;
@@ -54,8 +55,8 @@ public class AdHocChartView extends JPanel {
     historyMetricFunctionPanel = new MetricFunctionPanel(getLabel("Group: "));
     historyRangePanel = new HistoryRangePanel(getLabel("Range: "));
     historyLegendPanel = new LegendPanel(getLabel("Legend: "));
-    historyFilterPanel = new FilterPanel();
-    historyActionPanel = new ActionPanel();
+    historyFilterPanel = new FilterPanel(Component.ADHOC);
+    historyActionPanel = new ActionPanel(Component.ADHOC);
 
     historyConfigBlock = new HistoryConfigBlock(
         historyMetricFunctionPanel,

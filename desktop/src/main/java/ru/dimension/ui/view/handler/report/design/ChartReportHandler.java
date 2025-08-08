@@ -6,7 +6,7 @@ import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.router.event.EventListener;
-import ru.dimension.ui.view.chart.HelperChart;
+import ru.dimension.ui.component.chart.HelperChart;
 
 
 @Log4j2

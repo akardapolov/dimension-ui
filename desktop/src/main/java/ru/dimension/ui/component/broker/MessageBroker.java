@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 public class MessageBroker {
-  public enum Component { WORKSPACE, DASHBOARD, REPORT, ADHOC}
-  public enum Module { NONE, MODEL, CONFIG, CHARTS, CHART}
+  public enum Component { WORKSPACE, PREVIEW, DASHBOARD, REPORT, ADHOC}
+  public enum Module { NONE, MANAGE, MODEL, CONFIG, CHARTS, CHART}
   public enum Panel { NONE, REALTIME, HISTORY}
   public enum Block { NONE, CONFIG, CHART, DETAIL}
 
@@ -20,7 +20,8 @@ public class MessageBroker {
     HISTORY_RANGE_CHANGE,
     HISTORY_CUSTOM_UI_RANGE_CHANGE,
     SHOW_HIDE_DETAIL_ALL,
-    ADD_CHART_FILTER, REMOVE_CHART_FILTER
+    ADD_CHART_FILTER, REMOVE_CHART_FILTER,
+    SET_PROFILE_TASK_QUERY_KEY
   }
 
   private final Map<Destination, List<MessageAction>> receivers = new HashMap<>();

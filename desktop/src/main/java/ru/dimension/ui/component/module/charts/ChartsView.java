@@ -11,7 +11,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.border.EtchedBorder;
 import lombok.extern.log4j.Log4j2;
-import org.jdesktop.swingx.JXTaskPane;
 import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.jdesktop.swingx.VerticalLayout;
 import org.painlessgridbag.PainlessGridBag;
@@ -20,7 +19,6 @@ import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.laf.LaF;
-import ru.dimension.ui.view.analyze.module.ChartAnalyzeModule;
 
 @Log4j2
 public class ChartsView extends JPanel {
@@ -79,22 +77,6 @@ public class ChartsView extends JPanel {
     for (Component comp : cardContainer.getComponents()) {
       if (comp instanceof ChartModule chartModule) {
         log.info("Task pane: " + chartModule.getTitle());
-      }
-    }
-  }
-
-  public void updateLegendVisibility(boolean isVisible) {
-    for (Component comp : cardContainer.getComponents()) {
-      if (comp instanceof ChartAnalyzeModule) {
-        ((ChartAnalyzeModule) comp).getScp().getjFreeChart().getLegend().setVisible(isVisible);
-      }
-    }
-  }
-
-  public void expandCollapseChartCard(boolean collapseAll) {
-    for (Component comp : cardContainer.getComponents()) {
-      if (comp instanceof JXTaskPane) {
-        ((JXTaskPane) comp).setCollapsed(collapseAll);
       }
     }
   }

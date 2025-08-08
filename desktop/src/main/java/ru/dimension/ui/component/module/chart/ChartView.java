@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.block.HistoryConfigBlock;
 import ru.dimension.ui.component.block.RealTimeConfigBlock;
+import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.model.AnalyzeTabType;
 import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.panel.LegendPanel;
@@ -21,12 +22,14 @@ import ru.dimension.ui.component.panel.popup.FilterPanel;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.component.panel.range.RealTimeRangePanel;
 import ru.dimension.ui.helper.GUIHelper;
-import ru.dimension.ui.view.analyze.timeseries.AnalyzeAnomalyPanel;
-import ru.dimension.ui.view.analyze.timeseries.AnalyzeForecastPanel;
+import ru.dimension.ui.component.module.analyze.timeseries.AnalyzeAnomalyPanel;
+import ru.dimension.ui.component.module.analyze.timeseries.AnalyzeForecastPanel;
 
 @Data
 @Log4j2
 public class ChartView extends JPanel {
+  private final MessageBroker.Component component;
+
   private static Dimension dimension = new Dimension(100, 500);
 
   private int configDividerLocation = 32;
@@ -72,15 +75,17 @@ public class ChartView extends JPanel {
   private JSplitPane realTimeConfigChartDetail;
   private JSplitPane historyConfigChartDetail;
 
-  public ChartView() {
+  public ChartView(MessageBroker.Component component) {
+    this.component = component;
+
     tabbedPane = new JTabbedPane();
     tabbedPane.setBorder(new EtchedBorder());
 
     realTimeMetricFunctionPanel = new MetricFunctionPanel(getLabel("Group: "));
     realTimeRangePanel = new RealTimeRangePanel(getLabel("Range: "));
     realTimeLegendPanel = new LegendPanel(getLabel("Legend: "));
-    realTimeFilterPanel = new FilterPanel();
-    realTimeActionPanel = new ActionPanel();
+    realTimeFilterPanel = new FilterPanel(component);
+    realTimeActionPanel = new ActionPanel(component);
 
     realTimeConfigBlock = new RealTimeConfigBlock(realTimeMetricFunctionPanel,
                                                   realTimeRangePanel,
@@ -91,8 +96,8 @@ public class ChartView extends JPanel {
     historyMetricFunctionPanel = new MetricFunctionPanel(getLabel("Group: "));
     historyRangePanel = new HistoryRangePanel(getLabel("Range: "));
     historyLegendPanel = new LegendPanel(getLabel("Legend: "));
-    historyFilterPanel = new FilterPanel();
-    historyActionPanel = new ActionPanel();
+    historyFilterPanel = new FilterPanel(component);
+    historyActionPanel = new ActionPanel(component);
 
     historyConfigBlock = new HistoryConfigBlock(historyMetricFunctionPanel,
                                                 historyRangePanel,

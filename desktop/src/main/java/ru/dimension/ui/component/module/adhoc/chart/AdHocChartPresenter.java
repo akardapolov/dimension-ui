@@ -36,14 +36,14 @@ import ru.dimension.ui.model.view.ProcessType;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.UIState;
-import ru.dimension.ui.view.analyze.CustomAction;
-import ru.dimension.ui.view.analyze.chart.ChartConfig;
-import ru.dimension.ui.view.analyze.chart.SCP;
-import ru.dimension.ui.view.analyze.chart.history.HistorySCP;
-import ru.dimension.ui.view.analyze.model.ChartLegendState;
-import ru.dimension.ui.view.analyze.model.DetailState;
-import ru.dimension.ui.view.chart.HelperChart;
-import ru.dimension.ui.view.chart.holder.DetailAndAnalyzeHolder;
+import ru.dimension.ui.component.module.analyze.CustomAction;
+import ru.dimension.ui.component.chart.ChartConfig;
+import ru.dimension.ui.component.chart.SCP;
+import ru.dimension.ui.component.chart.history.HistorySCP;
+import ru.dimension.ui.component.model.ChartLegendState;
+import ru.dimension.ui.component.model.DetailState;
+import ru.dimension.ui.component.chart.HelperChart;
+import ru.dimension.ui.component.chart.holder.DetailAndAnalyzeHolder;
 import ru.dimension.ui.view.detail.DetailDashboardPanel;
 
 @Log4j2
@@ -75,7 +75,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
     view.getHistoryMetricFunctionPanel().setRunAction(this::handleHistoryMetricFunctionChange);
     view.getHistoryRangePanel().setRunAction(this::handleHistoryRangeChange);
 
-    view.getHistoryLegendPanel().setVisibilityConsumer(showLegend ->
+    view.getHistoryLegendPanel().setStateChangeConsumer(showLegend ->
                                                            handleLegendChange(ChartLegendState.SHOW.equals(showLegend)));
 
     view.getHistoryRangePanel().getButtonApplyRange().addActionListener(e -> applyCustomRange());

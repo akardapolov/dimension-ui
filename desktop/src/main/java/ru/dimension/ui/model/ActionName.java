@@ -2,7 +2,8 @@ package ru.dimension.ui.model;
 
 public enum ActionName {
   START("Start"),
-  STOP("Stop");
+  STOP("Stop"),
+  PREVIEW("Preview");
 
   private final String description;
 

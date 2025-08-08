@@ -21,12 +21,12 @@ import ru.dimension.ui.model.view.ProcessType;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.state.ChartKey;
 import ru.dimension.ui.state.UIState;
-import ru.dimension.ui.view.analyze.chart.ChartConfig;
-import ru.dimension.ui.view.analyze.chart.SCP;
-import ru.dimension.ui.view.analyze.chart.history.HistorySCP;
-import ru.dimension.ui.view.analyze.model.ChartLegendState;
-import ru.dimension.ui.view.analyze.model.DetailState;
-import ru.dimension.ui.view.chart.HelperChart;
+import ru.dimension.ui.component.chart.ChartConfig;
+import ru.dimension.ui.component.chart.SCP;
+import ru.dimension.ui.component.chart.history.HistorySCP;
+import ru.dimension.ui.component.model.ChartLegendState;
+import ru.dimension.ui.component.model.DetailState;
+import ru.dimension.ui.component.chart.HelperChart;
 import ru.dimension.ui.view.detail.DetailDashboardPanel;
 
 @Log4j2
@@ -51,7 +51,7 @@ public class ChartReportPresenter implements HelperChart {
     initializeFromState();
     view.getHistoryMetricFunctionPanel().setRunAction(this::handleHistoryMetricFunctionChange);
     view.getHistoryRangePanel().setRunAction(this::handleHistoryRangeChange);
-    view.getHistoryLegendPanel().setVisibilityConsumer(
+    view.getHistoryLegendPanel().setStateChangeConsumer(
         showLegend -> handleLegendChange(ChartLegendState.SHOW.equals(showLegend))
     );
   }

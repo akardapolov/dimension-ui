@@ -4,6 +4,7 @@ import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -20,10 +21,11 @@ import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.cstype.CType;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageAction;
-import ru.dimension.ui.component.broker.MessageBroker.Component;
+import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
+import ru.dimension.ui.helper.DateHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
@@ -41,21 +43,22 @@ import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.ChartKey;
 import ru.dimension.ui.state.SqlQueryState;
 import ru.dimension.ui.state.UIState;
-import ru.dimension.ui.view.analyze.CustomAction;
-import ru.dimension.ui.view.analyze.chart.ChartConfig;
-import ru.dimension.ui.view.analyze.chart.SCP;
-import ru.dimension.ui.view.analyze.chart.history.HistorySCP;
-import ru.dimension.ui.view.analyze.chart.realtime.ClientRealtimeSCP;
-import ru.dimension.ui.view.analyze.chart.realtime.RealtimeSCP;
-import ru.dimension.ui.view.analyze.chart.realtime.ServerRealtimeSCP;
-import ru.dimension.ui.view.analyze.model.ChartLegendState;
-import ru.dimension.ui.view.analyze.model.DetailState;
-import ru.dimension.ui.view.chart.HelperChart;
-import ru.dimension.ui.view.chart.holder.DetailAndAnalyzeHolder;
+import ru.dimension.ui.component.module.analyze.CustomAction;
+import ru.dimension.ui.component.chart.ChartConfig;
+import ru.dimension.ui.component.chart.SCP;
+import ru.dimension.ui.component.chart.history.HistorySCP;
+import ru.dimension.ui.component.chart.realtime.ClientRealtimeSCP;
+import ru.dimension.ui.component.chart.realtime.RealtimeSCP;
+import ru.dimension.ui.component.chart.realtime.ServerRealtimeSCP;
+import ru.dimension.ui.component.model.ChartLegendState;
+import ru.dimension.ui.component.model.DetailState;
+import ru.dimension.ui.component.chart.HelperChart;
+import ru.dimension.ui.component.chart.holder.DetailAndAnalyzeHolder;
 import ru.dimension.ui.view.detail.DetailDashboardPanel;
 
 @Log4j2
 public class ChartPresenter implements HelperChart, MessageAction {
+  private final MessageBroker.Component component;
   private final ChartModel model;
   private final ChartView view;
   private final Metric realTimeMetric;
@@ -73,7 +76,10 @@ public class ChartPresenter implements HelperChart, MessageAction {
 
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-  public ChartPresenter(ChartModel model, ChartView view) {
+  public ChartPresenter(MessageBroker.Component component,
+                        ChartModel model, 
+                        ChartView view) {
+    this.component = component;
     this.model = model;
     this.view = view;
     this.realTimeMetric = model.getMetric().copy();
@@ -88,13 +94,13 @@ public class ChartPresenter implements HelperChart, MessageAction {
     view.getRealTimeMetricFunctionPanel().setRunAction(this::handleRealtimeMetricFunctionChange);
     view.getRealTimeRangePanel().setRunAction(this::handleRealTimeRangeChange);
 
-    view.getRealTimeLegendPanel().setVisibilityConsumer(showLegend ->
+    view.getRealTimeLegendPanel().setStateChangeConsumer(showLegend ->
                                                             handleLegendChange(ChartLegendState.SHOW.equals(showLegend)));
 
     view.getHistoryMetricFunctionPanel().setRunAction(this::handleHistoryMetricFunctionChange);
     view.getHistoryRangePanel().setRunAction(this::handleHistoryRangeChange);
 
-    view.getHistoryLegendPanel().setVisibilityConsumer(showLegend ->
+    view.getHistoryLegendPanel().setStateChangeConsumer(showLegend ->
                                                            handleLegendChange(ChartLegendState.SHOW.equals(showLegend)));
 
     view.getHistoryRangePanel().getButtonApplyRange().addActionListener(e -> applyCustomRange());
@@ -130,6 +136,9 @@ public class ChartPresenter implements HelperChart, MessageAction {
 
           ChartKey chartKey = model.getChartKey();
           long end = model.getSqlQueryState().getLastTimestamp(chartKey.getProfileTaskQueryKey());
+          if (end == 0L) {
+            end = DateHelper.getNowMilli(ZoneId.systemDefault());
+          }
           long begin = end - getRangeRealTime(model.getChartInfo());
 
           view.getRealTimeFilterPanel().setDataSource(model.getDStore(), realTimeMetric, begin, end);
@@ -155,7 +164,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
           log.error("Error creating real-time chart", e);
         },
         () -> createProgressBar("Creating real-time chart..."),
-        () -> setDetailState(PanelTabType.REALTIME, UIState.INSTANCE.getShowDetailAll(Component.DASHBOARD.name()))
+        () -> setDetailState(PanelTabType.REALTIME, UIState.INSTANCE.getShowDetailAll(component.name()))
     );
   }
 
@@ -197,7 +206,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
         },
         e -> log.error("Error creating history chart", e),
         () -> createProgressBar("Creating history chart..."),
-        () -> setDetailState(PanelTabType.HISTORY, UIState.INSTANCE.getShowDetailAll(Component.DASHBOARD.name()))
+        () -> setDetailState(PanelTabType.HISTORY, UIState.INSTANCE.getShowDetailAll(component.name()))
     );
   }
 
@@ -338,12 +347,12 @@ public class ChartPresenter implements HelperChart, MessageAction {
 
     if (AnalyzeType.REAL_TIME.equals(analyzeType)) {
       RangeRealTime localRange = UIState.INSTANCE.getRealTimeRange(chartKey);
-      RangeRealTime globalRange = UIState.INSTANCE.getRealTimeRangeAll(Component.DASHBOARD.name());
+      RangeRealTime globalRange = UIState.INSTANCE.getRealTimeRangeAll(component.name());
       chartInfoCopy.setRangeRealtime(Objects.requireNonNullElse(localRange,
                                                                 Objects.requireNonNullElse(globalRange, RangeRealTime.TEN_MIN)));
     } else if (AnalyzeType.HISTORY.equals(analyzeType)) {
       RangeHistory localRange = UIState.INSTANCE.getHistoryRange(chartKey);
-      RangeHistory globalRange = UIState.INSTANCE.getHistoryRangeAll(Component.DASHBOARD.name());
+      RangeHistory globalRange = UIState.INSTANCE.getHistoryRangeAll(component.name());
       chartInfoCopy.setRangeHistory(Objects.requireNonNullElse(localRange,
                                                                Objects.requireNonNullElse(globalRange, RangeHistory.DAY)));
     }
@@ -388,7 +397,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
     view.getHistoryMetricFunctionPanel().setSelected(historyMetric.getMetricFunction());
 
     RangeRealTime localRealTimeRange = UIState.INSTANCE.getRealTimeRange(chartKey);
-    RangeRealTime globalRealTimeRange = UIState.INSTANCE.getRealTimeRangeAll(Component.DASHBOARD.name());
+    RangeRealTime globalRealTimeRange = UIState.INSTANCE.getRealTimeRangeAll(component.name());
     RangeRealTime effectiveRealTimeRange = localRealTimeRange != null ? localRealTimeRange : globalRealTimeRange;
 
     if (effectiveRealTimeRange != null) {
@@ -396,7 +405,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
     }
 
     RangeHistory localHistoryRange = UIState.INSTANCE.getHistoryRange(chartKey);
-    RangeHistory globalHistoryRange = UIState.INSTANCE.getHistoryRangeAll(Component.DASHBOARD.name());
+    RangeHistory globalHistoryRange = UIState.INSTANCE.getHistoryRangeAll(component.name());
     RangeHistory effectiveHistoryRange = localHistoryRange != null ? localHistoryRange : globalHistoryRange;
 
     if (effectiveHistoryRange != null) {
@@ -512,7 +521,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
     }
   }
   public void handleLegendChangeAll(Boolean showLegend) {
-    Boolean showLegendAll = UIState.INSTANCE.getShowLegendAll(Component.DASHBOARD.name());
+    Boolean showLegendAll = UIState.INSTANCE.getShowLegendAll(component.name());
     boolean effectiveVisibility = (showLegendAll != null && showLegendAll) ||
         (showLegend != null ? showLegend : false);
 
@@ -670,6 +679,9 @@ public class ChartPresenter implements HelperChart, MessageAction {
 
           ChartKey chartKey = model.getChartKey();
           long end = model.getSqlQueryState().getLastTimestamp(chartKey.getProfileTaskQueryKey());
+          if (end == 0L) {
+            end = DateHelper.getNowMilli(ZoneId.systemDefault());
+          }
           long begin = end - getRangeRealTime(model.getChartInfo());
           view.getRealTimeFilterPanel().setDataSource(model.getDStore(), realTimeMetric, begin, end);
 
@@ -693,7 +705,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
           log.error("Error updating real-time chart", e);
         },
         () -> createProgressBar("Updating real-time chart..."),
-        () -> setDetailState(PanelTabType.REALTIME, UIState.INSTANCE.getShowDetailAll(Component.DASHBOARD.name()))
+        () -> setDetailState(PanelTabType.REALTIME, UIState.INSTANCE.getShowDetailAll(component.name()))
     );
   }
 
@@ -758,7 +770,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
         },
         e -> log.error("Error updating history chart", e),
         () -> createProgressBar("Updating history chart..."),
-        () -> setDetailState(PanelTabType.HISTORY, UIState.INSTANCE.getShowDetailAll(Component.DASHBOARD.name()))
+        () -> setDetailState(PanelTabType.HISTORY, UIState.INSTANCE.getShowDetailAll(component.name()))
     );
   }
 }

@@ -14,7 +14,7 @@ import lombok.Setter;
 import lombok.experimental.UtilityClass;
 import lombok.extern.log4j.Log4j2;
 import org.jfree.chart.ChartPanel;
-import ru.dimension.ui.view.chart.StackedChart;
+import ru.dimension.ui.component.chart.StackedChart;
 
 @UtilityClass
 @Log4j2

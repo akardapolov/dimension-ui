@@ -22,7 +22,6 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.stream.IntStream;
 import javax.swing.JPopupMenu;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellEditor;
@@ -86,39 +85,60 @@ public class GanttTable extends SplitLayeredHolder {
 
 	private void setComparatorActivityAndOthers(Boolean isColumnSortable) {
 		TableRowSorter<TableModel> rowSorter = new TableRowSorter<>(getJXTable().getModel());
-		rowSorter.setSortable(0, isColumnSortable);
 		getJXTable().setRowSorter(rowSorter);
 
-		// Comparator for Activity
+		for (int i = 0; i < getJXTable().getModel().getColumnCount(); i++) {
+			if (i == 0) {
+				rowSorter.setSortable(i, isColumnSortable);
+			} else {
+				rowSorter.setSortable(i, true);
+			}
+		}
+
 		rowSorter.setComparator(0, (Comparator<BasicDrawingState>) (o1, o2) -> {
-			StringBuilder values1 = extractValues(o1);
-			StringBuilder values2 = extractValues(o2);
-
-			double value1 = Double.parseDouble(values1.toString().replace("%",""));
-			double value2 = Double.parseDouble(values2.toString().replace("%",""));
-
-			return Double.compare(value1,value2);
+			try {
+				Double value1 = extractPercentageFromState(o1);
+				Double value2 = extractPercentageFromState(o2);
+				return Double.compare(value1, value2);
+			} catch (Exception e) {
+				return 0;
+			}
 		});
 
-		// Comparator for other columns
-		IntStream.range(1, getJXTable().getModel().getColumnCount())
-						.forEach(colId -> setComparatorForColumn(rowSorter, colId, isColumnSortable));
+		for (int colId = 1; colId < getJXTable().getModel().getColumnCount(); colId++) {
+			rowSorter.setComparator(colId, (o1, o2) -> {
+				if (o1 == null && o2 == null) return 0;
+				if (o1 == null) return -1;
+				if (o2 == null) return 1;
+				return o1.toString().compareToIgnoreCase(o2.toString());
+			});
+		}
 	}
 
-	private StringBuilder extractValues(BasicDrawingState state) {
-		StringBuilder values = new StringBuilder();
-		for (Iterator<DrawingPart> iterator = state.parts(); iterator.hasNext();) {
-			DrawingPart part = iterator.next();
+	private Double extractPercentageFromState(BasicDrawingState state) {
+		for (Iterator<DrawingPart> it = state.parts(); it.hasNext();) {
+			DrawingPart part = it.next();
 			if (part.getInterval() != null) {
-				for (Iterator<?> iteratorInter = part.values(part.getInterval()); iteratorInter.hasNext();) {
-					Object obj = iteratorInter.next();
-					if (obj instanceof String val) {
-						values.append(val.substring(val.lastIndexOf(" ") + 1));
+				for (Iterator<?> valueIt = part.values(part.getInterval()); valueIt.hasNext();) {
+					Object value = valueIt.next();
+					if (value instanceof String) {
+						String strValue = (String) value;
+						if (strValue.contains("%")) {
+							String[] tokens = strValue.split("\\s+");
+							for (String token : tokens) {
+								if (token.contains("%")) {
+									String clean = token.replaceAll("[^\\d.]", "");
+									if (!clean.isEmpty()) {
+										return Double.parseDouble(clean);
+									}
+								}
+							}
+						}
 					}
 				}
 			}
 		}
-		return values;
+		return 0.0;
 	}
 
 	private void setComparatorForColumn(TableRowSorter tableRowSorter, int column, Boolean isColumnSortable){

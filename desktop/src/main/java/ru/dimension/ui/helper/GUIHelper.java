@@ -8,11 +8,13 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.net.URL;
 import java.util.Enumeration;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultCellEditor;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -36,15 +38,14 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableCellRenderer;
 import lombok.extern.log4j.Log4j2;
-import ru.dimension.db.model.profile.cstype.CType;
-import ru.dimension.db.model.profile.cstype.SType;
 import org.jdesktop.swingx.JXTable;
-import org.jdesktop.swingx.JXTaskPane;
 import org.jdesktop.swingx.JXTextArea;
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import org.painlessgridbag.PainlessGridBag;
-import ru.dimension.ui.model.table.JXTableCase;
+import ru.dimension.db.model.profile.cstype.CType;
+import ru.dimension.db.model.profile.cstype.SType;
 import ru.dimension.ui.laf.LaF;
+import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.textfield.JTextFieldCase;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 
@@ -424,14 +425,6 @@ public class GUIHelper {
     jSplitPane.revalidate();
   }
 
-
-  public static void addToJXTaskPane(JXTaskPane jxTaskPane,
-                                     Component component) {
-    jxTaskPane.add(component);
-    jxTaskPane.repaint();
-    jxTaskPane.revalidate();
-  }
-
   public static void addToJSplitPane(JSplitPane jSplitPane,
                                      Component component,
                                      Object constraints) {
@@ -535,5 +528,14 @@ public class GUIHelper {
     JLabel label = new JLabel(text);
     label.setFont(label.getFont().deriveFont(java.awt.Font.BOLD));
     return label;
+  }
+
+  public static ImageIcon loadIcon(String path) {
+    URL url = GUIHelper.class.getResource(path);
+    if (url != null) {
+      return new ImageIcon(url);
+    }
+    log.warn("Icon not found: " + path);
+    return null;
   }
 }

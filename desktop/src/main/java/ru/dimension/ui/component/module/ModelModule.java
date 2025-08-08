@@ -2,11 +2,12 @@ package ru.dimension.ui.component.module;
 
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
+import ru.dimension.ui.component.broker.Message;
+import ru.dimension.ui.component.broker.MessageAction;
+import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.module.model.ModelModel;
 import ru.dimension.ui.component.module.model.ModelPresenter;
 import ru.dimension.ui.component.module.model.ModelView;
-import ru.dimension.ui.component.broker.Message;
-import ru.dimension.ui.component.broker.MessageAction;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.column.ColumnNames;
 
@@ -18,10 +19,11 @@ public class ModelModule implements MessageAction {
   private final ModelView view;
   private final ModelPresenter presenter;
 
-  public ModelModule(ProfileManager profileManager) {
+  public ModelModule(MessageBroker.Component component,
+                     ProfileManager profileManager) {
     model = new ModelModel(profileManager);
     view = new ModelView();
-    presenter = new ModelPresenter(model, view);
+    presenter = new ModelPresenter(component, model, view);
 
     setupSelectionListeners();
     presenter.initializeModel();

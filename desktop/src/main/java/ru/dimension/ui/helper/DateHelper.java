@@ -31,6 +31,11 @@ public class DateHelper {
     };
   }
 
+  public static long getNowMilli(ZoneId zoneId) {
+    LocalDateTime now = LocalDateTime.now();
+    return now.atZone(zoneId).toInstant().toEpochMilli();
+  }
+
   /**
    * Key - begin date
    * Value - end date

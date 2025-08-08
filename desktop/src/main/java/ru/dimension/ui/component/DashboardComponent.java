@@ -10,7 +10,7 @@ import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.module.ChartsModule;
-import ru.dimension.ui.component.module.ConfigModule;
+import ru.dimension.ui.component.module.ConfigureModule;
 import ru.dimension.ui.component.module.ModelModule;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.manager.ProfileManager;
@@ -19,10 +19,11 @@ import ru.dimension.ui.model.info.ProfileInfo;
 import ru.dimension.ui.router.event.EventListener;
 import ru.dimension.ui.router.listener.ProfileStartStopListener;
 import ru.dimension.ui.state.SqlQueryState;
-import ru.dimension.ui.view.chart.HelperChart;
+import ru.dimension.ui.component.chart.HelperChart;
 
 @Log4j2
 public class DashboardComponent implements HelperChart, ProfileStartStopListener {
+  private final MessageBroker.Component component = Component.DASHBOARD;
 
   @Getter
   private JSplitPane mainSplitPane;
@@ -33,7 +34,7 @@ public class DashboardComponent implements HelperChart, ProfileStartStopListener
   private final DStore dStore;
 
   private ModelModule modelModule;
-  private ConfigModule configModule;
+  private ConfigureModule configureModule;
   private ChartsModule chartsModule;
 
   private final MessageBroker broker = MessageBroker.getInstance();
@@ -57,17 +58,17 @@ public class DashboardComponent implements HelperChart, ProfileStartStopListener
     verticalSplitPane.setDividerLocation(60);
     verticalSplitPane.setResizeWeight(0.5);
 
-    modelModule = new ModelModule(profileManager);
-    configModule = new ConfigModule();
-    chartsModule = new ChartsModule(profileManager, sqlQueryState, dStore);
+    modelModule = new ModelModule(component, profileManager);
+    configureModule = new ConfigureModule(component);
+    chartsModule = new ChartsModule(component, profileManager, sqlQueryState, dStore);
 
-    verticalSplitPane.setTopComponent(configModule.getView());
+    verticalSplitPane.setTopComponent(configureModule.getView());
     verticalSplitPane.setBottomComponent(chartsModule.getView());
 
     mainSplitPane.setLeftComponent(modelModule.getView());
     mainSplitPane.setRightComponent(verticalSplitPane);
 
-    broker.addReceiver(Destination.withDefault(Component.DASHBOARD, Module.MODEL), modelModule);
+    broker.addReceiver(Destination.withDefault(component, Module.MODEL), modelModule);
   }
 
   @Override

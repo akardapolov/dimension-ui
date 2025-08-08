@@ -10,7 +10,6 @@ import ru.dimension.ui.component.broker.MessageAction;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Action;
 import ru.dimension.ui.component.broker.MessageBroker.Block;
-import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.model.PanelTabType;
@@ -28,20 +27,22 @@ import ru.dimension.ui.model.view.RangeRealTime;
 import ru.dimension.ui.router.listener.CollectStartStopListener;
 import ru.dimension.ui.state.ChartKey;
 import ru.dimension.ui.state.SqlQueryState;
-import ru.dimension.ui.view.analyze.model.ChartCardState;
-import ru.dimension.ui.view.analyze.model.ChartLegendState;
-import ru.dimension.ui.view.analyze.model.DetailState;
+import ru.dimension.ui.component.model.ChartCardState;
+import ru.dimension.ui.component.model.ChartLegendState;
+import ru.dimension.ui.component.model.DetailState;
 
 @Log4j2
 public class ChartsPresenter implements MessageAction, CollectStartStopListener {
-
+  private final MessageBroker.Component component;
   private final ChartsModel model;
   private final ChartsView view;
 
   private final MessageBroker broker = MessageBroker.getInstance();
 
-  public ChartsPresenter(ChartsModel model,
+  public ChartsPresenter(MessageBroker.Component component,
+                         ChartsModel model,
                          ChartsView view) {
+    this.component = component;
     this.model = model;
     this.view = view;
   }
@@ -62,20 +63,14 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
 
   private void handleTabChange(Message message) {
     PanelTabType panelTabType = message.parameters().get("panelTabType");
-    model.getChartPanes().forEach((key, chartMap) ->
-                                      chartMap.values().forEach(chartModule ->
-                                                                    chartModule.setActiveTab(panelTabType)
-                                      )
-    );
+    model.getChartPanes()
+        .forEach((key, chartMap) -> chartMap.values().forEach(chartModule -> chartModule.setActiveTab(panelTabType)));
   }
 
   private void handleRealTimeRangeChange(Message message) {
     RangeRealTime realTimeRange = message.parameters().get("range");
-    model.getChartPanes().forEach((key, chartMap) ->
-                                      chartMap.values().forEach(chartModule ->
-                                                                    chartModule.updateRealTimeRange(realTimeRange)
-                                      )
-    );
+    model.getChartPanes().forEach((key, chartMap) -> chartMap.values()
+        .forEach(chartModule -> chartModule.updateRealTimeRange(realTimeRange)));
   }
 
   private void handleHistoryRangeChange(Message message) {
@@ -83,26 +78,22 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
     ChartRange chartRange = message.parameters().get("chartRange");
 
     if (RangeHistory.CUSTOM.equals(historyRange)) {
-      model.getChartPanes().forEach((key, chartMap) ->
-                                        chartMap.values().forEach(chartModule ->
-                                                                      chartModule.updateHistoryCustomRange(chartRange)
-                                        )
-      );
+      model.getChartPanes().forEach((key, chartMap) -> chartMap.values()
+          .forEach(chartModule -> chartModule.updateHistoryCustomRange(chartRange)));
     } else {
-      model.getChartPanes().forEach((key, chartMap) ->
-                                        chartMap.values().forEach(chartModule ->
-                                                                      chartModule.updateHistoryRange(historyRange)
-                                        ));
+      model.getChartPanes().forEach((key, chartMap) -> chartMap.values()
+          .forEach(chartModule -> chartModule.updateHistoryRange(historyRange)));
     }
   }
 
   private void handleDetailVisibilityChange(Message message) {
     DetailState detailState = message.parameters().get("detailState");
-    if (model == null || model.getChartPanes() == null) return;
+    if (model == null || model.getChartPanes() == null) {
+      return;
+    }
 
     model.getChartPanes().forEach((key, value) -> {
-      value.values().forEach(chartModule -> chartModule.setDetailState(detailState)
-      );
+      value.values().forEach(chartModule -> chartModule.setDetailState(detailState));
     });
   }
 
@@ -142,34 +133,29 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
     SqlQueryState sqlQueryState = model.getSqlQueryState();
     DStore dStore = model.getDStore();
 
-    ChartModule taskPane = new ChartModule(chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
+    ChartModule taskPane = new ChartModule(component, chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
 
     String keyValue = getKey(key, cProfile);
     taskPane.setTitle(keyValue);
 
     log.info("Add task pane: " + keyValue);
 
-    view.addChartCard(
-        taskPane,
-        (module, error) -> {
-          if (error != null) {
-            DialogHelper.showErrorDialog("Failed to load chart: " + error.getMessage(), "Error", error);
-            return;
-          }
-          model.getChartPanes()
-              .computeIfAbsent(key, k -> new ConcurrentHashMap<>())
-              .put(cProfile, taskPane);
+    view.addChartCard(taskPane, (module, error) -> {
+      if (error != null) {
+        DialogHelper.showErrorDialog("Failed to load chart: " + error.getMessage(), "Error", error);
+        return;
+      }
+      model.getChartPanes().computeIfAbsent(key, k -> new ConcurrentHashMap<>()).put(cProfile, taskPane);
 
-          Destination destinationRealtime = getDestination(Panel.REALTIME, chartKey);
-          Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+      Destination destinationRealtime = getDestination(Panel.REALTIME, chartKey);
+      Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
 
-          broker.addReceiver(destinationRealtime, taskPane.getPresenter());
-          broker.addReceiver(destinationHistory, taskPane.getPresenter());
+      broker.addReceiver(destinationRealtime, taskPane.getPresenter());
+      broker.addReceiver(destinationHistory, taskPane.getPresenter());
 
-          taskPane.revalidate();
-          taskPane.repaint();
-        }
-    );
+      taskPane.revalidate();
+      taskPane.repaint();
+    });
   }
 
   private void handleRemoveChart(Message message) {
@@ -196,18 +182,14 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
     }
   }
 
-  private static Destination getDestination(Panel realtime,
+  private Destination getDestination(Panel realtime,
                                             ChartKey chartKey) {
-    return Destination.builder()
-        .component(Component.DASHBOARD)
-        .module(Module.CHART)
-        .panel(realtime)
-        .block(Block.CHART)
-        .chartKey(chartKey)
-        .build();
+    return Destination.builder().component(component).module(Module.CHART).panel(realtime).block(Block.CHART)
+        .chartKey(chartKey).build();
   }
 
-  public String getKey(ProfileTaskQueryKey key, CProfile cProfile) {
+  public String getKey(ProfileTaskQueryKey key,
+                       CProfile cProfile) {
     ProfileManager profileManager = model.getProfileManager();
 
     String profileName = profileManager.getProfileInfoById(key.getProfileId()).getName();
@@ -233,24 +215,24 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
       return;
     }
 
-    if (model.getChartPanes().get(profileTaskQueryKey) == null ||
-        model.getChartPanes().get(profileTaskQueryKey).isEmpty()) {
+    if (model.getChartPanes().get(profileTaskQueryKey) == null || model.getChartPanes().get(profileTaskQueryKey)
+        .isEmpty()) {
       return;
     }
 
-    model.getChartPanes().get(profileTaskQueryKey)
-        .forEach((key, value) -> {
-          if (value.isReadyRealTimeUpdate()) {
-            value.loadData();
-          }
-        });
+    model.getChartPanes().get(profileTaskQueryKey).forEach((key, value) -> {
+      if (value.isReadyRealTimeUpdate()) {
+        value.loadData();
+      }
+    });
   }
 
   public boolean isRunning(int profileId) {
     return model.getChartPanes().entrySet().stream().anyMatch(f -> f.getKey().getProfileId() == profileId);
   }
 
-  private void logChartAction(Action action, CProfile cProfile) {
+  private void logChartAction(Action action,
+                              CProfile cProfile) {
     log.info("Message action: " + action + " for " + cProfile);
   }
 }

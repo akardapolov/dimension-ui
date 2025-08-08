@@ -18,8 +18,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import ru.dimension.ui.laf.LaF;
-import ru.dimension.ui.view.analyze.timeseries.popup.CustomPopup;
-import ru.dimension.ui.view.analyze.timeseries.popup.CustomPopup.CustomPopupCloseListener;
+import ru.dimension.ui.component.module.analyze.timeseries.popup.CustomPopup;
+import ru.dimension.ui.component.module.analyze.timeseries.popup.CustomPopup.CustomPopupCloseListener;
 
 public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener {
   private CustomPopup popup = null;

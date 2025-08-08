@@ -7,17 +7,15 @@ import java.util.function.Supplier;
 import javax.swing.DefaultCellEditor;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
-import javax.swing.SwingUtilities;
 import javax.swing.border.EtchedBorder;
 import javax.swing.table.TableColumn;
 import lombok.extern.log4j.Log4j2;
-import ru.dimension.db.model.profile.CProfile;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTitledSeparator;
 import org.painlessgridbag.PainlessGridBag;
+import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
@@ -76,7 +74,7 @@ public class ModelView extends JPanel {
   }
 
   private JXTableCase createCheckboxTableCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCaseCheckBox(10,
+    JXTableCase jxTableCase = GUIHelper.getJXTableCaseCheckBoxAdHoc(10,
                                                                new String[]{
                                                                    ColumnNames.ID.getColName(),
                                                                    ColumnNames.NAME.getColName(),
@@ -238,9 +236,7 @@ public class ModelView extends JPanel {
   }
 
   public void showNotRunningMessage(String profileName) {
-    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null,
-                                                               "Profile: " + profileName + " not started",
-                                                               "Information", JOptionPane.INFORMATION_MESSAGE));
+    log.warn("Profile: " + profileName + " not started");
   }
 
   public JXTableCase getProfileTableCase() {

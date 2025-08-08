@@ -20,13 +20,6 @@ public class BaseFrameConfig {
 
   @Provides
   @Singleton
-  @Named("workspaceSplitPane")
-  public JSplitPane getJSplitPane() {
-    return GUIHelper.getJSplitPane(JSplitPane.HORIZONTAL_SPLIT, 10, 170);
-  }
-
-  @Provides
-  @Singleton
   @Named("splitProfileListButtonsAndStatus")
   public JSplitPane getJSplitPaneProfileListButtonsAndStatus() {
     return GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, 200);

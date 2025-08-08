@@ -15,8 +15,8 @@ import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.RangeHistory;
-import ru.dimension.ui.view.analyze.model.ChartLegendState;
-import ru.dimension.ui.view.analyze.model.DetailState;
+import ru.dimension.ui.component.model.ChartLegendState;
+import ru.dimension.ui.component.model.DetailState;
 
 @Log4j2
 public class AdHocChartModule extends JXTaskPane {

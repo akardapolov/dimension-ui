@@ -7,6 +7,7 @@ import dagger.Module;
 import dagger.Provides;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.laf.LaF;
@@ -21,10 +22,13 @@ public class ToolbarConfig {
   @Singleton
   @Named("toolbarConfigButton")
   public JButton getConfigButton() {
-    JButton jButton = new JButton();
+    ImageIcon configIcon = GUIHelper.loadIcon("/icons/config.png");
+
+    JButton jButton = new JButton(configIcon);
     jButton.setActionCommand(CONFIGURATION.name());
     jButton.setMnemonic('C');
     jButton.setText("Configuration");
+    jButton.setToolTipText("Application configuration, model and data loading pipelines");
     jButton.setBorder(GUIHelper.getBorderForButton(LaF.getColorBorder(LafColorGroup.BORDER)));
     return jButton;
   }
@@ -33,10 +37,13 @@ public class ToolbarConfig {
   @Singleton
   @Named("toolbarTemplateButton")
   public JButton getTemplateButton() {
-    JButton jButton = new JButton();
+    ImageIcon templateIcon = GUIHelper.loadIcon("/icons/template.png");
+
+    JButton jButton = new JButton(templateIcon);
     jButton.setActionCommand(TEMPLATE.name());
     jButton.setMnemonic('T');
     jButton.setText("Templates");
+    jButton.setToolTipText("List of templates");
     jButton.setBorder(GUIHelper.getBorderForButton(LaF.getColorBorder(LafColorGroup.BORDER)));
     return jButton;
   }

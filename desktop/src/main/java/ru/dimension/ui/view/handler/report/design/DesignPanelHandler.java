@@ -97,7 +97,7 @@ import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.tab.ReportTabPane;
 import ru.dimension.ui.router.event.EventListener;
-import ru.dimension.ui.view.analyze.chart.history.HistorySCP;
+import ru.dimension.ui.component.chart.history.HistorySCP;
 import ru.dimension.ui.view.panel.report.ChartCardPanel;
 import ru.dimension.ui.view.panel.report.MetricColumnPanel;
 import ru.dimension.ui.view.panel.report.ReportTabsPane;

@@ -9,7 +9,7 @@ import javax.swing.JPanel;
 import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
-import ru.dimension.ui.view.analyze.model.ChartLegendState;
+import ru.dimension.ui.component.model.ChartLegendState;
 
 public class LegendPanel extends JPanel {
   private final JCheckBox legendCheckBox;
@@ -64,7 +64,7 @@ public class LegendPanel extends JPanel {
     return currentState;
   }
 
-  public void setVisibilityConsumer(Consumer<ChartLegendState> visibilityConsumer) {
+  public void setStateChangeConsumer(Consumer<ChartLegendState> visibilityConsumer) {
     this.visibilityConsumer = visibilityConsumer;
   }
 }

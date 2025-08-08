@@ -11,7 +11,6 @@ import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Action;
-import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.RunStatus;
@@ -22,14 +21,16 @@ import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.TaskInfo;
 
 public class ModelPresenter {
-
+  private final MessageBroker.Component component;
   private final ModelModel model;
   private final ModelView view;
 
   private final MessageBroker broker = MessageBroker.getInstance();
 
-  public ModelPresenter(ModelModel model,
+  public ModelPresenter(MessageBroker.Component component,
+                        ModelModel model,
                         ModelView view) {
+    this.component = component;
     this.model = model;
     this.view = view;
   }
@@ -82,6 +83,12 @@ public class ModelPresenter {
         queryInfo::getMetricList
     );
     view.selectFirstRows();
+
+    broker.sendMessage(Message.builder()
+                           .destination(Destination.withDefault(component, Module.MANAGE))
+                           .action(Action.SET_PROFILE_TASK_QUERY_KEY)
+                           .parameter("key", key)
+                           .build());
   }
 
   private Supplier<ModelHandler<CProfile>> getColumnStackChartPanelHandler(ProfileTaskQueryKey key) {
@@ -99,14 +106,14 @@ public class ModelPresenter {
 
       if (add) {
         broker.sendMessage(Message.builder()
-                               .destination(Destination.withDefault(Component.DASHBOARD, Module.CHARTS))
+                               .destination(Destination.withDefault(component, Module.CHARTS))
                                .action(Action.ADD_CHART)
                                .parameter("key", key)
                                .parameter("metric", metric)
                                .build());
       } else {
         broker.sendMessage(Message.builder()
-                               .destination(Destination.withDefault(Component.DASHBOARD, Module.CHARTS))
+                               .destination(Destination.withDefault(component, Module.CHARTS))
                                .action(Action.REMOVE_CHART)
                                .parameter("key", key)
                                .parameter("metric", metric)

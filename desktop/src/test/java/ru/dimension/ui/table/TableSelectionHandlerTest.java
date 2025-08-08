@@ -12,7 +12,7 @@ import lombok.extern.log4j.Log4j2;
 import org.jfree.chart.ui.ApplicationFrame;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.model.table.JXTableCase;
-import ru.dimension.ui.view.analyze.handler.TableSelectionHandler;
+import ru.dimension.ui.component.module.analyze.handler.TableSelectionHandler;
 
 @Log4j2
 public class TableSelectionHandlerTest extends ApplicationFrame {

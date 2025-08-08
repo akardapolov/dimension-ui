@@ -9,7 +9,7 @@ import javax.swing.JPanel;
 import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
-import ru.dimension.ui.view.analyze.model.DetailState;
+import ru.dimension.ui.component.model.DetailState;
 
 public class DetailShowHidePanel extends JPanel {
   private final JCheckBox detailCheckBox;
