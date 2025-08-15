@@ -45,6 +45,16 @@
 
 package org.jfree.chart.renderer.category;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+
+import java.text.NumberFormat;
+import java.util.List;
+import org.jfree.chart.LegendItem;
 import org.jfree.chart.labels.IntervalCategoryItemLabelGenerator;
 import org.jfree.chart.labels.StandardCategoryItemLabelGenerator;
 import org.jfree.chart.labels.StandardCategorySeriesLabelGenerator;
@@ -53,18 +63,9 @@ import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.urls.StandardCategoryURLGenerator;
 import org.jfree.data.Range;
 import org.jfree.data.category.DefaultCategoryDataset;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import java.text.NumberFormat;
-import java.util.List;
-import org.jfree.chart.LegendItem;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
+;
 
 /**
  * Tests for the {@link AbstractCategoryItemRenderer} class.

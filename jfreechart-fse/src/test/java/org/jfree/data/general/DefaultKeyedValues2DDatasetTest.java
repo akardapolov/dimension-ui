@@ -40,7 +40,7 @@
 
 package org.jfree.data.general;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -50,9 +50,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 
 
@@ -87,10 +87,10 @@ public class DefaultKeyedValues2DDatasetTest  {
     public void testSerialization() throws IOException, ClassNotFoundException {
 
         DefaultKeyedValues2DDataset d1 = new DefaultKeyedValues2DDataset();
-        d1.addValue(new Double(234.2), "Row1", "Col1");
+        d1.addValue(Double.valueOf(234.2), "Row1", "Col1");
         d1.addValue(null, "Row1", "Col2");
-        d1.addValue(new Double(345.9), "Row2", "Col1");
-        d1.addValue(new Double(452.7), "Row2", "Col2");
+        d1.addValue(Double.valueOf(345.9), "Row2", "Col1");
+        d1.addValue(Double.valueOf(452.7), "Row2", "Col2");
 
 
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();

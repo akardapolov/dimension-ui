@@ -170,10 +170,16 @@ public class GanttPopupPanel extends GanttCommon {
 
     JXTable jxTable = loadGantt(cProfile, ganttColumnList, seriesColorMap, drawingScale, 5, 20);
     if (jxTable != null) {
-      jxTable.getColumnExt(ColumnNames.NAME.ordinal()).setVisible(false);
+      jxTable.getColumnExt(ColumnNames.NAME.ordinal()).setVisible(true);
 
       DefaultCellEditor topPickEditor = new DefaultCellEditor(new JCheckBox());
-      jxTable.getColumnModel().getColumn(1).setCellEditor(topPickEditor);
+      for (int i = 0; i < jxTable.getColumnCount(); i++) {
+        TableColumn column = jxTable.getColumnModel().getColumn(i);
+        if (column.getModelIndex() == 2) {
+          column.setCellEditor(topPickEditor);
+          break;
+        }
+      }
 
       topPickEditor.addCellEditorListener(new TopCheckboxListener(jxTable, cProfile, filterSelectedMap));
     }

@@ -85,7 +85,7 @@ public class TimePeriodValue implements Cloneable, Serializable {
      *     <code>null</code>.
      */
     public TimePeriodValue(TimePeriod period, double value) {
-        this(period, new Double(value));
+        this(period, Double.valueOf(value));
     }
 
     /**

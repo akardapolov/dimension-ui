@@ -215,7 +215,7 @@ public class DefaultPieDataset extends AbstractDataset
      *     <code>null</code>.
      */
     public void setValue(Comparable key, double value) {
-        setValue(key, new Double(value));
+        setValue(key, Double.valueOf(value));
     }
 
     /**
@@ -232,7 +232,7 @@ public class DefaultPieDataset extends AbstractDataset
      * @since 1.0.6
      */
     public void insertValue(int position, Comparable key, double value) {
-        insertValue(position, key, new Double(value));
+        insertValue(position, key, Double.valueOf(value));
     }
 
     /**

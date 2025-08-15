@@ -107,14 +107,17 @@ public class AdHocPresenter implements HelperChart {
 
     schemaCatalogCBox.addActionListener(e -> reloadTables());
 
-    Consumer<String> runActionTable = this::runAction;
-    new TableSelectionHandler(tableCase, ConnectionColumnNames.NAME.getColName(), runActionTable, schemaCatalogCBox);
+    tableCase.getJxTable().getSelectionModel().addListSelectionListener(e -> {
+      if (!e.getValueIsAdjusting() && !tableCase.isBlockRunAction()) {
+        runActionForSelectedEntity(tableCase, "Table");
+      }
+    });
 
-    Consumer<String> runActionView = this::runAction;
-    new TableSelectionHandler(viewCase, ConnectionColumnNames.NAME.getColName(), runActionView, schemaCatalogCBox);
-
-    Consumer<String> runActionColumn = this::runActionColumn;
-    new TableSelectionHandler(columnCase, ConnectionColumnNames.NAME.getColName(), runActionColumn);
+    viewCase.getJxTable().getSelectionModel().addListSelectionListener(e -> {
+      if (!e.getValueIsAdjusting() && !viewCase.isBlockRunAction()) {
+        runActionForSelectedEntity(viewCase, "View");
+      }
+    });
 
     Consumer<String> runActionTimestamp = this::runActionTimestamp;
     new TableSelectionHandler(timestampCase, ConnectionColumnNames.NAME.getColName(), runActionTimestamp);
@@ -142,15 +145,29 @@ public class AdHocPresenter implements HelperChart {
         TableCellEditor editor = (TableCellEditor) e.getSource();
         Boolean cValue = (Boolean) editor.getCellEditorValue();
 
-        int selectedRow = tableCase.getJxTable().getSelectedRow();
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) return;
 
-        handler.handleSelection(cValue, selectedRow);
+        int modelRow = table.convertRowIndexToModel(viewRow);
+        handler.handleSelection(cValue, modelRow);
       }
 
       @Override
       public void editingCanceled(ChangeEvent e) {
       }
     });
+  }
+
+  private void runActionForSelectedEntity(JXTableCase entityCase, String entityType) {
+    int viewRow = entityCase.getJxTable().getSelectedRow();
+    if (viewRow < 0) return;
+
+    int modelRow = entityCase.getJxTable().convertRowIndexToModel(viewRow);
+    String name = (String) entityCase.getDefaultTableModel().getValueAt(modelRow, ColumnNames.NAME.ordinal());
+    String schema = (String) schemaCatalogCBox.getSelectedItem();
+    String fullName = (schema == null || schema.isBlank()) ? name : schema + "." + name;
+
+    runAction(fullName);
   }
 
   private void handleTableSelection(boolean selected,
@@ -207,6 +224,9 @@ public class AdHocPresenter implements HelperChart {
   }
 
   private void handleColumnSelection(boolean selected, int row) {
+    /*JXTable columnTable = view.getColumnCase().getJxTable();
+    int modelRow = columnTable.convertRowIndexToModel(row); // Convert view row to model row*/
+
     if (tProfile == null) {
       DialogHelper.showMessageDialog(null, "Table metadata not loaded", "Error");
       view.getColumnCase().getDefaultTableModel().setValueAt(false, row, ColumnNames.PICK.ordinal());
@@ -228,8 +248,6 @@ public class AdHocPresenter implements HelperChart {
       default      -> null;
     };
 
-    int cProfileId = GUIHelper.getIdByColumnName(columnCase, ColumnNames.ID.getColName());
-
     if (selected) {
       boolean wasSelected = model.isTableOrViewSelected(currentConnectionId, tableName);
       if (!wasSelected) {
@@ -237,7 +255,7 @@ public class AdHocPresenter implements HelperChart {
       }
       updateTableCheckboxState(activeCase, tableName, true);
 
-      addChart(tableName, cProfileId);
+      addChart(tableName, columnId);
     } else {
       Set<Integer> selectedColumns = model.getSelectedColumns(currentConnectionId, tableName);
       if (selectedColumns.isEmpty()) {
@@ -245,7 +263,7 @@ public class AdHocPresenter implements HelperChart {
         updateTableCheckboxState(activeCase, tableName, false);
       }
 
-      removeChart(tableName, cProfileId);
+      removeChart(tableName, columnId);
     }
   }
 
@@ -361,10 +379,6 @@ public class AdHocPresenter implements HelperChart {
     cleanAllPanels();
 
     loadTableView(schemaDotTableOrViewName);
-  }
-
-  private void runActionColumn(String columnName) {
-    log.info("Run action for column: {}", columnName);
   }
 
   private void runActionTimestamp(String timestampName) {

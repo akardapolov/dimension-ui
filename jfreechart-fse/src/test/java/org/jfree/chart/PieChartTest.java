@@ -45,11 +45,11 @@ import org.jfree.chart.event.ChartChangeEvent;
 import org.jfree.chart.event.ChartChangeListener;
 import org.jfree.chart.plot.PiePlot;
 import org.jfree.data.general.DefaultPieDataset;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Tests for a pie chart.
@@ -67,7 +67,7 @@ public class PieChartTest  {
     /**
      * Common test setup.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
 
         this.pieChart = createPieChart();
@@ -96,9 +96,9 @@ public class PieChartTest  {
      */
     private static JFreeChart createPieChart() {
         DefaultPieDataset data = new DefaultPieDataset();
-        data.setValue("Java", new Double(43.2));
-        data.setValue("Visual Basic", new Double(0.0));
-        data.setValue("C/C++", new Double(17.5));
+        data.setValue("Java", Double.valueOf(43.2));
+        data.setValue("Visual Basic", Double.valueOf(0.0));
+        data.setValue("C/C++", Double.valueOf(17.5));
         return ChartFactory.createPieChart("Pie Chart", data);
     }
 

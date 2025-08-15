@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -23,6 +24,12 @@ import lombok.extern.log4j.Log4j2;
 import org.jfree.chart.util.IDetailPanel;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.ui.component.chart.ChartConfig;
+import ru.dimension.ui.component.chart.SCP;
+import ru.dimension.ui.component.chart.history.HistorySCP;
+import ru.dimension.ui.component.module.analyze.DetailAction;
+import ru.dimension.ui.component.module.analyze.timeseries.AnalyzeAnomalyPanel;
+import ru.dimension.ui.component.module.analyze.timeseries.AnalyzeForecastPanel;
 import ru.dimension.ui.helper.DateHelper;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.ProgressBarHelper;
@@ -36,12 +43,6 @@ import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.ProcessType;
 import ru.dimension.ui.model.view.SeriesType;
-import ru.dimension.ui.component.module.analyze.DetailAction;
-import ru.dimension.ui.component.chart.ChartConfig;
-import ru.dimension.ui.component.chart.SCP;
-import ru.dimension.ui.component.chart.history.HistorySCP;
-import ru.dimension.ui.component.module.analyze.timeseries.AnalyzeAnomalyPanel;
-import ru.dimension.ui.component.module.analyze.timeseries.AnalyzeForecastPanel;
 import ru.dimension.ui.view.detail.pivot.MainPivotDashboardPanel;
 import ru.dimension.ui.view.detail.raw.RawDataDashboardPanel;
 import ru.dimension.ui.view.detail.top.MainTopDashboardPanel;
@@ -59,7 +60,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
   private final ChartType chartType;
   private final ExecutorService executorService;
   private final Map<String, Color> seriesColorMap;
-  private final SeriesType seriesType;
+  private SeriesType seriesType;
   private final DStore dStore;
 
   private Entry<CProfile, List<String>> filter;
@@ -120,9 +121,14 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
           seriesColorMap.put(metric.getYAxis().getColName(), new Color(255, 93, 93));
         }
 
+        Map.Entry<CProfile, List<String>> actualFilter = filter;
+        if (SeriesType.CUSTOM.equals(seriesType) && filter == null) {
+          actualFilter = Map.entry(cProfile, new ArrayList<>(seriesColorMap.keySet()));
+        }
+
         MainTopDashboardPanel mainTopPanel = new MainTopDashboardPanel(
             dStore, scheduledExecutorService, tableInfo, metric, cProfile,
-            begin, end, seriesColorMap, seriesType, filter);
+            begin, end, seriesColorMap, seriesType, actualFilter);
         mainJTabbedPane.add("Top", mainTopPanel);
 
         if (MetricFunction.COUNT.equals(metric.getMetricFunction())) {
@@ -196,6 +202,10 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
 
     seriesColorMap.clear();
     seriesColorMap.putAll(newSeriesColorMap);
+  }
+
+  public void setSeriesType(SeriesType seriesType) {
+    this.seriesType = seriesType;
   }
 
   private ChartConfig buildChartConfig(ChartInfo chartInfo) {

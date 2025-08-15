@@ -7,11 +7,14 @@ import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTaskPane;
 import ru.dimension.db.core.DStore;
 import ru.dimension.ui.component.broker.MessageBroker;
+import ru.dimension.ui.component.chart.realtime.ClientRealtimeSCP;
+import ru.dimension.ui.component.chart.realtime.ServerRealtimeSCP;
 import ru.dimension.ui.component.model.ChartConfigState;
 import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.module.preview.chart.PreviewChartModel;
 import ru.dimension.ui.component.module.preview.chart.PreviewChartPresenter;
 import ru.dimension.ui.component.module.preview.chart.PreviewChartView;
+import ru.dimension.ui.exception.SeriesExceedException;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.config.Metric;
@@ -52,11 +55,20 @@ public class PreviewChartModule extends JXTaskPane {
   }
 
   public Runnable initializeUI() {
-    return () -> PGHelper.cellXYRemainder(this, view.getRealTimeConfigChart(), false);
+    return () -> PGHelper.cellXYRemainder(this, view.getRealTimeConfigChart(), 1, false);
   }
 
   public void loadData() {
-    this.presenter.getRealTimeChart().loadData();
+    try {
+      this.presenter.getRealTimeChart().loadData();
+    } catch (SeriesExceedException e) {
+      log.info("Series count exceeded threshold, reinitializing chart in custom mode for " + model.getMetric().getYAxis());
+      if (this.presenter.getRealTimeChart() instanceof ClientRealtimeSCP clientRealtimeSCP) {
+        clientRealtimeSCP.reinitializeChartInCustomMode();
+      } else if (this.presenter.getRealTimeChart() instanceof ServerRealtimeSCP serverRealtimeSCP) {
+        serverRealtimeSCP.reinitializeChartInCustomMode();
+      }
+    }
   }
 
   public void handleLegendChange(ChartLegendState chartLegendState) {

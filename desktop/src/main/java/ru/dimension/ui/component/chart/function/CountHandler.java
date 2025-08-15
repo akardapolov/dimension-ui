@@ -16,7 +16,6 @@ import ru.dimension.db.model.CompareFunction;
 import ru.dimension.db.model.GroupFunction;
 import ru.dimension.db.model.output.StackedColumn;
 import ru.dimension.db.model.profile.CProfile;
-import ru.dimension.ui.exception.SeriesExceedException;
 import ru.dimension.ui.component.chart.StackedChart;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.QueryInfo;
@@ -75,9 +74,7 @@ public class CountHandler extends FunctionHandler {
         x = finalX;
       }
 
-      checkSeriesCount(series);
       fillSeries(sColumnList, series);
-      checkSeriesCount(series);
 
       Map<String, IntSummaryStatistics> batchData = sColumnList.stream()
           .toList()
@@ -155,12 +152,6 @@ public class CountHandler extends FunctionHandler {
 
     } catch (SqlColMetadataException | BeginEndWrongOrderException e) {
       throw new RuntimeException(e);
-    }
-  }
-
-  private void checkSeriesCount(Set<String> series) {
-    if (series.size() > 50) {
-      throw new SeriesExceedException("Column data series exceeds 50. Not supported to show stacked data..");
     }
   }
 

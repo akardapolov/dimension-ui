@@ -45,7 +45,7 @@ package org.jfree.data.category;
 
 import org.jfree.chart.util.PublicCloneable;
 import org.jfree.data.UnknownKeyException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -55,13 +55,13 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for the {@link DefaultCategoryDataset} class.
@@ -246,12 +246,12 @@ public class DefaultCategoryDatasetTest  {
         DefaultCategoryDataset d1 = new DefaultCategoryDataset();
         d1.addValue(null, "R1", "C1");
         assertNull(d1.getValue("R1", "C1"));
-        d1.addValue(new Double(1.0), "R2", "C1");
+        d1.addValue(Double.valueOf(1.0), "R2", "C1");
         assertEquals(1.0, d1.getValue("R2", "C1"));
 
 
         try {
-            d1.addValue(new Double(1.1), null, "C2");
+            d1.addValue(Double.valueOf(1.1), null, "C2");
             fail("UnknownKeyException should have been thrown on unknown row");
         }
         catch (IllegalArgumentException e) {
@@ -266,13 +266,13 @@ public class DefaultCategoryDatasetTest  {
     public void testRemoveValue() {
         DefaultCategoryDataset d = new DefaultCategoryDataset();
         d.removeValue("R1", "C1");
-        d.addValue(new Double(1.0), "R1", "C1");
+        d.addValue(Double.valueOf(1.0), "R1", "C1");
         d.removeValue("R1", "C1");
         assertEquals(0, d.getRowCount());
         assertEquals(0, d.getColumnCount());
 
-        d.addValue(new Double(1.0), "R1", "C1");
-        d.addValue(new Double(2.0), "R2", "C1");
+        d.addValue(Double.valueOf(1.0), "R1", "C1");
+        d.addValue(Double.valueOf(2.0), "R2", "C1");
         d.removeValue("R1", "C1");
         assertEquals(2.0, d.getValue(0, 0));
 

@@ -44,8 +44,10 @@
 
 package org.jfree.chart.axis;
 
-import org.jfree.chart.ui.RectangleInsets;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -54,9 +56,8 @@ import java.awt.GradientPaint;
 import java.awt.font.TextAttribute;
 import java.text.AttributedString;
 import org.jfree.chart.TestUtilities;
-
-import static org.junit.Assert.*;
-import static org.hamcrest.CoreMatchers.*;
+import org.jfree.chart.ui.RectangleInsets;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the {@link Axis} class.
@@ -88,33 +89,33 @@ public class AxisTest  {
 
         // visible flag...
         a1.setVisible(false);
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setVisible(false);
         assertEquals(a1, a2);
 
         // label...
         a1.setLabel("New Label");
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setLabel("New Label");
         assertEquals(a1, a2);
 
         // label font...
         a1.setLabelFont(new Font("Dialog", Font.PLAIN, 8));
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setLabelFont(new Font("Dialog", Font.PLAIN, 8));
         assertEquals(a1, a2);
 
         // label paint...
         a1.setLabelPaint(new GradientPaint(1.0f, 2.0f, Color.WHITE,
                 3.0f, 4.0f, Color.BLACK));
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setLabelPaint(new GradientPaint(1.0f, 2.0f, Color.WHITE,
                 3.0f, 4.0f, Color.BLACK));
         assertEquals(a1, a2);
 
         // attributed label...
         a1.setLabel(new AttributedString("Hello World!"));
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setLabel(new AttributedString("Hello World!"));
         assertEquals(a1, a2);
         
@@ -122,7 +123,7 @@ public class AxisTest  {
         l1.addAttribute(TextAttribute.SUPERSCRIPT, 
                 TextAttribute.SUPERSCRIPT_SUB, 1, 2);
         a1.setLabel(l1);
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         AttributedString l2 = a2.getLabel();
         l2.addAttribute(TextAttribute.SUPERSCRIPT, 
                 TextAttribute.SUPERSCRIPT_SUB, 1, 2);
@@ -131,119 +132,119 @@ public class AxisTest  {
         
         // label insets...
         a1.setLabelInsets(new RectangleInsets(10.0, 10.0, 10.0, 10.0));
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setLabelInsets(new RectangleInsets(10.0, 10.0, 10.0, 10.0));
         assertEquals(a1, a2);
 
         // label angle...
         a1.setLabelAngle(1.23);
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setLabelAngle(1.23);
         assertEquals(a1, a2);
 
         // label location...
         a1.setLabelLocation(AxisLabelLocation.HIGH_END);
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setLabelLocation(AxisLabelLocation.HIGH_END);
         assertEquals(a1, a2);
         
         // axis line visible...
         a1.setAxisLineVisible(false);
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setAxisLineVisible(false);
         assertEquals(a1, a2);
 
         // axis line stroke...
         BasicStroke s = new BasicStroke(1.1f);
         a1.setAxisLineStroke(s);
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setAxisLineStroke(s);
         assertEquals(a1, a2);
 
         // axis line paint...
         a1.setAxisLinePaint(new GradientPaint(1.0f, 2.0f, Color.RED,
                 3.0f, 4.0f, Color.BLACK));
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setAxisLinePaint(new GradientPaint(1.0f, 2.0f, Color.RED,
                 3.0f, 4.0f, Color.BLACK));
         assertEquals(a1, a2);
 
         // tick labels visible flag...
         a1.setTickLabelsVisible(false);
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setTickLabelsVisible(false);
         assertEquals(a1, a2);
 
         // tick label font...
         a1.setTickLabelFont(new Font("Dialog", Font.PLAIN, 12));
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setTickLabelFont(new Font("Dialog", Font.PLAIN, 12));
         assertEquals(a1, a2);
 
         // tick label paint...
         a1.setTickLabelPaint(new GradientPaint(1.0f, 2.0f, Color.yellow,
                 3.0f, 4.0f, Color.BLACK));
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setTickLabelPaint(new GradientPaint(1.0f, 2.0f, Color.yellow,
                 3.0f, 4.0f, Color.BLACK));
         assertEquals(a1, a2);
 
         // tick label insets...
         a1.setTickLabelInsets(new RectangleInsets(10.0, 10.0, 10.0, 10.0));
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setTickLabelInsets(new RectangleInsets(10.0, 10.0, 10.0, 10.0));
         assertEquals(a1, a2);
 
         // tick marks visible flag...
         a1.setTickMarksVisible(false);
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setTickMarksVisible(false);
         assertEquals(a1, a2);
 
         // tick mark inside length...
         a1.setTickMarkInsideLength(1.23f);
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setTickMarkInsideLength(1.23f);
         assertEquals(a1, a2);
 
         // tick mark outside length...
         a1.setTickMarkOutsideLength(1.23f);
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setTickMarkOutsideLength(1.23f);
         assertEquals(a1, a2);
 
         // tick mark stroke...
         a1.setTickMarkStroke(new BasicStroke(2.0f));
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setTickMarkStroke(new BasicStroke(2.0f));
         assertEquals(a1, a2);
 
         // tick mark paint...
         a1.setTickMarkPaint(new GradientPaint(1.0f, 2.0f, Color.cyan,
                 3.0f, 4.0f, Color.BLACK));
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setTickMarkPaint(new GradientPaint(1.0f, 2.0f, Color.cyan,
                 3.0f, 4.0f, Color.BLACK));
         assertEquals(a1, a2);
 
         // fixed dimension...
         a1.setFixedDimension(3.21f);
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setFixedDimension(3.21f);
         assertEquals(a1, a2);
 
         a1.setMinorTickMarksVisible(true);
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setMinorTickMarksVisible(true);
         assertEquals(a1, a2);
 
         a1.setMinorTickMarkInsideLength(1.23f);
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setMinorTickMarkInsideLength(1.23f);
         assertEquals(a1, a2);
 
         a1.setMinorTickMarkOutsideLength(3.21f);
-        assertThat(a1, not(a2));
+        assertNotEquals(a2, a1);
         a2.setMinorTickMarkOutsideLength(3.21f);
         assertEquals(a1, a2);
     }

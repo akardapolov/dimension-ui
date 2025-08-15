@@ -244,6 +244,9 @@ public class ClientRealtimeSCP extends RealtimeSCP {
     eastPanel.add(seriesSelectable.getJScrollPane(), BorderLayout.CENTER);
 
     this.add(eastPanel, BorderLayout.EAST);
+
+    this.revalidate();
+    this.repaint();
   }
 
   private void updateSeriesFilter() {
@@ -289,6 +292,99 @@ public class ClientRealtimeSCP extends RealtimeSCP {
     }
   }
 
+  public void reinitializeChartInCustomMode() {
+    this.removeAll();
+
+    series.clear();
+
+    clearSeriesColor();
+
+    seriesType = SeriesType.CUSTOM;
+
+    disablePlotUpdates();
+    initializeSeriesComponents();
+
+    if (detailAndAnalyzeHolder != null) {
+      detailAndAnalyzeHolder.detailAction().cleanMainPanel();
+    }
+
+    reloadDataForCurrentRange();
+
+    if (detailAndAnalyzeHolder != null) {
+      Set<String> newSelection = new HashSet<>(getCheckBoxSelected());
+
+      detailAndAnalyzeHolder.detailAction().cleanMainPanel();
+      detailAndAnalyzeHolder.customAction().setCustomSeriesFilter(config.getMetric().getYAxis(),
+                                 List.copyOf(newSelection),
+                                 getSeriesColorMap());
+    }
+
+    enablePlotUpdates();
+  }
+
+  private void initializeSeriesComponents() {
+    try {
+      ChartRange chartRange = getBeginEndRange();
+      List<String> distinct = fetchDistinctSeries(chartRange);
+
+      boolean useCustom = distinct.size() > THRESHOLD_SERIES;
+      if (useCustom) {
+        seriesType = SeriesType.CUSTOM;
+        int showSeries = SHOW_SERIES;
+
+        if (filter != null && filter.getKey().equals(config.getMetric().getYAxis())) {
+          List<String> combined = new ArrayList<>(filter.getValue());
+          for (String value : distinct) {
+            if (!combined.contains(value)) {
+              combined.add(value);
+            }
+          }
+          distinct = combined;
+          showSeries = filter.getValue().size();
+        }
+
+        initializeSeriesSelectableTable(distinct, showSeries);
+
+        filter = Map.entry(config.getMetric().getYAxis(), getCheckBoxSelected());
+        series.addAll(getCheckBoxSelected());
+      }
+
+      setCustomFilter();
+      chartDataLoader.setSeries(series);
+      chartDataLoader.setFilter(filter);
+
+      initializeWithSeriesTable();
+
+    } catch (BeginEndWrongOrderException e) {
+      log.error("Error reinitializing chart", e);
+    }
+  }
+
+  private List<String> fetchDistinctSeries(ChartRange chartRange) throws BeginEndWrongOrderException {
+    if (filter != null && !filter.getKey().equals(config.getMetric().getYAxis())) {
+      return dStore.getDistinct(
+          config.getQueryInfo().getName(),
+          config.getMetric().getYAxis(),
+          OrderBy.DESC,
+          MAX_SERIES,
+          chartRange.getBegin(),
+          chartRange.getEnd(),
+          filter.getKey(),
+          filter.getValue().toArray(new String[0]),
+          CompareFunction.EQUAL
+      );
+    } else {
+      return dStore.getDistinct(
+          config.getQueryInfo().getName(),
+          config.getMetric().getYAxis(),
+          OrderBy.DESC,
+          MAX_SERIES,
+          chartRange.getBegin(),
+          chartRange.getEnd()
+      );
+    }
+  }
+
   protected void runAction(String seriesName) {
     if (seriesSelectable.isBlockRunAction()) {
       return;
@@ -323,8 +419,7 @@ public class ClientRealtimeSCP extends RealtimeSCP {
 
           if (detailAndAnalyzeHolder != null) {
             detailAndAnalyzeHolder.detailAction().cleanMainPanel();
-            detailAndAnalyzeHolder.customAction()
-                .setCustomSeriesFilter(config.getMetric().getYAxis(),
+            detailAndAnalyzeHolder.customAction().setCustomSeriesFilter(config.getMetric().getYAxis(),
                                        List.copyOf(newSelection),
                                        getSeriesColorMap());
           }

@@ -53,8 +53,8 @@ import org.jfree.data.gantt.Task;
 import org.jfree.data.gantt.TaskSeries;
 import org.jfree.data.gantt.TaskSeriesCollection;
 import org.jfree.data.time.SimpleTimePeriod;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;
@@ -62,8 +62,8 @@ import java.awt.image.BufferedImage;
 import java.util.Calendar;
 import java.util.Date;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * Some tests for a Gantt chart.
@@ -80,7 +80,7 @@ public class GanttChartTest  {
     /**
      * Common test setup.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         this.chart = createGanttChart();
     }

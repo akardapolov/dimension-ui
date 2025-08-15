@@ -365,7 +365,7 @@ public final class DatasetUtilities {
             String rowKey = rowKeyPrefix + (r + 1);
             for (int c = 0; c < data[r].length; c++) {
                 String columnKey = columnKeyPrefix + (c + 1);
-                result.addValue(new Double(data[r][c]), rowKey, columnKey);
+                result.addValue(Double.valueOf(data[r][c]), rowKey, columnKey);
             }
         }
         return result;
@@ -446,7 +446,7 @@ public final class DatasetUtilities {
             Comparable rowKey = rowKeys[r];
             for (int c = 0; c < data[r].length; c++) {
                 Comparable columnKey = columnKeys[c];
-                result.addValue(new Double(data[r][c]), rowKey, columnKey);
+                result.addValue(Double.valueOf(data[r][c]), rowKey, columnKey);
             }
         }
         return result;
@@ -1675,7 +1675,7 @@ public final class DatasetUtilities {
 
         if (dataset instanceof RangeInfo) {
             RangeInfo info = (RangeInfo) dataset;
-            return new Double(info.getRangeLowerBound(true));
+            return Double.valueOf(info.getRangeLowerBound(true));
         }
 
         // hasn't implemented RangeInfo, so we'll have to iterate...

@@ -40,15 +40,15 @@
 
 package org.jfree.data.extension;
 
-import org.jfree.data.UnknownKeyException;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
+import org.jfree.data.UnknownKeyException;
 import org.jfree.data.extension.impl.PieCursor;
 import org.jfree.data.extension.impl.PieDatasetSelectionExtension;
 import org.jfree.data.general.DefaultPieDataset;
-import static org.junit.Assert.fail;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Some tests for the {@link PieDatasetSelectionExtension} class.

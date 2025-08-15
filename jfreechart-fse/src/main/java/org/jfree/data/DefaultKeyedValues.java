@@ -202,7 +202,7 @@ public class DefaultKeyedValues implements KeyedValues, Cloneable,
      * @see #addValue(Comparable, Number)
      */
     public void addValue(Comparable key, double value) {
-        addValue(key, new Double(value));
+        addValue(key, Double.valueOf(value));
     }
 
     /**
@@ -224,7 +224,7 @@ public class DefaultKeyedValues implements KeyedValues, Cloneable,
      * @param value  the value.
      */
     public void setValue(Comparable key, double value) {
-        setValue(key, new Double(value));
+        setValue(key, Double.valueOf(value));
     }
 
     /**
@@ -261,7 +261,7 @@ public class DefaultKeyedValues implements KeyedValues, Cloneable,
      * @since 1.0.6
      */
     public void insertValue(int position, Comparable key, double value) {
-        insertValue(position, key, new Double(value));
+        insertValue(position, key, Double.valueOf(value));
     }
 
     /**

@@ -44,15 +44,15 @@
 package org.jfree.chart.annotations;
 
 import org.jfree.chart.ui.TextAnchor;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.GradientPaint;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for the {@link TextAnnotation} class.

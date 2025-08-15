@@ -48,16 +48,16 @@ package org.jfree.data.xy;
 
 import org.jfree.chart.TestUtilities;
 import org.jfree.data.general.SeriesException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for the {@link XYSeries} class.
@@ -354,8 +354,8 @@ public class XYSeriesTest {
         series.add(4.0, 4.4);
         series.add(2.0, 2.2);
         series.add(1.0, 1.1);
-        series.addOrUpdate(new Double(3.0), new Double(33.3));
-        series.addOrUpdate(new Double(2.0), new Double(22.2));
+        series.addOrUpdate(Double.valueOf(3.0), Double.valueOf(33.3));
+        series.addOrUpdate(Double.valueOf(2.0), Double.valueOf(22.2));
         assertEquals(33.3, series.getY(2).doubleValue(), EPSILON);
         assertEquals(22.2, series.getY(4).doubleValue(), EPSILON);
     }

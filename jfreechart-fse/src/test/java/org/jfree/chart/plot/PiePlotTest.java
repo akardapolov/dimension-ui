@@ -47,18 +47,12 @@
 
 package org.jfree.chart.plot;
 
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.JFreeChart;
-import org.jfree.chart.labels.PieSectionLabelGenerator;
-import org.jfree.chart.labels.StandardPieSectionLabelGenerator;
-import org.jfree.chart.labels.StandardPieToolTipGenerator;
-import org.jfree.chart.urls.CustomPieURLGenerator;
-import org.jfree.chart.urls.StandardPieURLGenerator;
-import org.jfree.chart.util.DefaultShadowGenerator;
-import org.jfree.chart.util.Rotation;
-import org.jfree.data.general.DefaultPieDataset;
-import org.jfree.data.general.PieDataset;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -78,14 +72,21 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.text.AttributedString;
 import java.util.List;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.JFreeChart;
 import org.jfree.chart.LegendItem;
+import org.jfree.chart.labels.PieSectionLabelGenerator;
+import org.jfree.chart.labels.StandardPieSectionLabelGenerator;
+import org.jfree.chart.labels.StandardPieToolTipGenerator;
+import org.jfree.chart.urls.CustomPieURLGenerator;
+import org.jfree.chart.urls.StandardPieURLGenerator;
+import org.jfree.chart.util.DefaultShadowGenerator;
+import org.jfree.chart.util.Rotation;
+import org.jfree.data.general.DefaultPieDataset;
+import org.jfree.data.general.PieDataset;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.fail;
+;
 
 /**
  * Some tests for the {@link PiePlot} class.

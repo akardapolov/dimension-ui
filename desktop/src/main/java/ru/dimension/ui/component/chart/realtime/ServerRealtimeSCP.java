@@ -242,8 +242,7 @@ public class ServerRealtimeSCP extends RealtimeSCP {
 
           if (detailAndAnalyzeHolder != null) {
             detailAndAnalyzeHolder.detailAction().cleanMainPanel();
-            detailAndAnalyzeHolder.customAction()
-                .setCustomSeriesFilter(config.getMetric().getYAxis(),
+            detailAndAnalyzeHolder.customAction().setCustomSeriesFilter(config.getMetric().getYAxis(),
                                        List.copyOf(newSelection),
                                        getSeriesColorMap());
           }
@@ -300,6 +299,9 @@ public class ServerRealtimeSCP extends RealtimeSCP {
     eastPanel.add(seriesSelectable.getJScrollPane(), BorderLayout.CENTER);
 
     this.add(eastPanel, BorderLayout.EAST);
+
+    this.revalidate();
+    this.repaint();
   }
 
   private void updateSeriesFilter() {
@@ -340,6 +342,95 @@ public class ServerRealtimeSCP extends RealtimeSCP {
     } catch (Exception e) {
       log.error("Error reloading data", e);
     }
+  }
+
+  public void reinitializeChartInCustomMode() {
+    this.removeAll();
+
+    series.clear();
+    clearSeriesColor();
+
+    seriesType = SeriesType.CUSTOM;
+
+    disablePlotUpdates();
+
+    try {
+      long serverTimeMillis = System.currentTimeMillis() - queryInfo.getDeltaLocalServerTime();
+      long rangeStart = serverTimeMillis - (chartInfo.getRangeRealtime().getMinutes() * 60 * 1000L);
+      ChartRange chartRange = new ChartRange(rangeStart, serverTimeMillis);
+
+      List<String> distinct = fetchDistinctSeries(chartRange);
+
+      int showSeries = SHOW_SERIES;
+      if (filter != null && filter.getKey().equals(metric.getYAxis())) {
+        List<String> combined = new ArrayList<>(filter.getValue());
+        for (String value : distinct) {
+          if (!combined.contains(value)) {
+            combined.add(value);
+          }
+        }
+        distinct = combined;
+        showSeries = filter.getValue().size();
+      }
+
+      initializeSeriesSelectableTable(distinct, showSeries);
+      filter = Map.entry(metric.getYAxis(), getCheckBoxSelected());
+      series.addAll(getCheckBoxSelected());
+      setCustomFilter();
+
+      initializeWithSeriesTable();
+
+      if (detailAndAnalyzeHolder != null) {
+        detailAndAnalyzeHolder.detailAction().cleanMainPanel();
+      }
+
+      reloadDataForCurrentRange();
+
+      if (detailAndAnalyzeHolder != null) {
+        Set<String> newSelection = new HashSet<>(getCheckBoxSelected());
+        detailAndAnalyzeHolder.customAction().setCustomSeriesFilter(metric.getYAxis(),
+            List.copyOf(newSelection),
+            getSeriesColorMap()
+        );
+      }
+    } catch (BeginEndWrongOrderException e) {
+      log.error("Error reinitializing chart", e);
+    } finally {
+      enablePlotUpdates();
+    }
+  }
+
+  private List<String> fetchDistinctSeries(ChartRange chartRange) throws BeginEndWrongOrderException {
+    if (filter != null && !filter.getKey().equals(metric.getYAxis())) {
+      return dStore.getDistinct(
+          queryInfo.getName(),
+          metric.getYAxis(),
+          OrderBy.DESC,
+          MAX_SERIES,
+          chartRange.getBegin(),
+          chartRange.getEnd(),
+          filter.getKey(),
+          filter.getValue().toArray(new String[0]),
+          CompareFunction.EQUAL
+      );
+    } else {
+      return dStore.getDistinct(
+          queryInfo.getName(),
+          metric.getYAxis(),
+          OrderBy.DESC,
+          MAX_SERIES,
+          chartRange.getBegin(),
+          chartRange.getEnd()
+      );
+    }
+  }
+
+  public SeriesType getSeriesType() {
+    return seriesType;
+  }
+
+  public JTextField getSeriesSearch() {
+    return seriesSearch;
   }
 
   private void initializeChartData(long rangeStart, long serverTimeMillis)

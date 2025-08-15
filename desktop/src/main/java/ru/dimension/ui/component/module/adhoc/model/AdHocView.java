@@ -2,9 +2,19 @@ package ru.dimension.ui.component.module.adhoc.model;
 
 import static ru.dimension.ui.laf.LafColorGroup.CONFIG_PANEL;
 
-import javax.swing.*;
+import java.awt.BorderLayout;
+import java.util.regex.PatternSyntaxException;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextField;
+import javax.swing.RowFilter;
 import javax.swing.border.EtchedBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.TableColumn;
+import javax.swing.table.TableRowSorter;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTitledSeparator;
@@ -34,6 +44,10 @@ public class AdHocView extends JPanel {
   private final JXTableCase columnCase;
   private final JLabel statusLabel;
 
+  private final JTextField tableSearchField;
+  private final JTextField viewSearchField;
+  private final JTextField columnSearchField;
+
   public AdHocView() {
     this.connectionCase = createConnectionCase();
     this.schemaCatalogCBox = createSchemaCatalogComboBox();
@@ -43,7 +57,12 @@ public class AdHocView extends JPanel {
     this.columnCase = createColumnCase();
     this.statusLabel = new JLabel();
 
+    this.tableSearchField = new JTextField();
+    this.viewSearchField = new JTextField();
+    this.columnSearchField = new JTextField();
+
     setupLayout();
+    setupTableFilter();
   }
 
   private void setupLayout() {
@@ -66,12 +85,84 @@ public class AdHocView extends JPanel {
 
   private void initTabbedPanes() {
     this.tableViewPane = new JTabbedPane();
-    this.tableViewPane.addTab("Table", tableCase.getJScrollPane());
-    this.tableViewPane.addTab("View", viewCase.getJScrollPane());
+
+    JPanel tablePanel = new JPanel(new BorderLayout());
+    tablePanel.add(tableSearchField, BorderLayout.NORTH);
+    tablePanel.add(tableCase.getJScrollPane(), BorderLayout.CENTER);
+
+    JPanel viewPanel = new JPanel(new BorderLayout());
+    viewPanel.add(viewSearchField, BorderLayout.NORTH);
+    viewPanel.add(viewCase.getJScrollPane(), BorderLayout.CENTER);
+
+    this.tableViewPane.addTab("Table", tablePanel);
+    this.tableViewPane.addTab("View", viewPanel);
+
+    tableViewPane.addChangeListener(e -> {
+      tableCase.setBlockRunAction(true);
+      viewCase.setBlockRunAction(true);
+
+      tableCase.getJxTable().clearSelection();
+      viewCase.getJxTable().clearSelection();
+
+      tableCase.setBlockRunAction(false);
+      viewCase.setBlockRunAction(false);
+    });
+
+    JPanel columnPanel = new JPanel(new BorderLayout());
+    columnPanel.add(columnSearchField, BorderLayout.NORTH);
+    columnPanel.add(columnCase.getJScrollPane(), BorderLayout.CENTER);
 
     this.timeStampColumnMetricPane = new JTabbedPane();
     this.timeStampColumnMetricPane.addTab("Timestamp", timestampCase.getJScrollPane());
-    this.timeStampColumnMetricPane.addTab("Column", columnCase.getJScrollPane());
+    this.timeStampColumnMetricPane.addTab("Column", columnPanel);
+  }
+
+  private void setupTableFilter() {
+    addSearchListener(tableSearchField, tableCase);
+    addSearchListener(viewSearchField, viewCase);
+    addSearchListener(columnSearchField, columnCase);
+  }
+
+  private void addSearchListener(JTextField textField, JXTableCase tableCase) {
+    textField.getDocument().addDocumentListener(new DocumentListener() {
+      @Override
+      public void insertUpdate(DocumentEvent e) {
+        filterTable(tableCase, textField.getText());
+      }
+
+      @Override
+      public void removeUpdate(DocumentEvent e) {
+        filterTable(tableCase, textField.getText());
+      }
+
+      @Override
+      public void changedUpdate(DocumentEvent e) {
+        filterTable(tableCase, textField.getText());
+      }
+    });
+  }
+
+  private void filterTable(JXTableCase tableCase, String pattern) {
+    if (tableCase.getJxTable().isEditing()) {
+      tableCase.getJxTable().getCellEditor().cancelCellEditing();
+    }
+
+    tableCase.setBlockRunAction(true);
+    TableRowSorter<?> sorter = new TableRowSorter<>(tableCase.getDefaultTableModel());
+    tableCase.getJxTable().setRowSorter(sorter);
+
+    if (pattern == null || pattern.isEmpty()) {
+      sorter.setRowFilter(null);
+    } else {
+      try {
+        sorter.setRowFilter(RowFilter.regexFilter("(?iu)" + pattern, ColumnNames.NAME.ordinal()));
+      } catch (PatternSyntaxException e) {
+        sorter.setRowFilter(RowFilter.regexFilter("$^", 1));
+      }
+    }
+
+    tableCase.getJxTable().clearSelection();
+    tableCase.setBlockRunAction(false);
   }
 
   private JXTableCase createConnectionCase() {

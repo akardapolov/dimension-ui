@@ -46,7 +46,7 @@ package org.jfree.chart.plot;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.ui.Align;
 import org.jfree.chart.ui.RectangleInsets;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -60,8 +60,8 @@ import java.awt.Stroke;
 import java.net.URL;
 import javax.swing.ImageIcon;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Some tests for the {@link Plot} class.

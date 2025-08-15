@@ -42,17 +42,19 @@
 
 package org.jfree.data.general;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
-import org.junit.Test;
 import org.jfree.chart.TestUtilities;
 import org.jfree.data.UnknownKeyException;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.fail;
+;
 
 /**
  * Tests for the {@link org.jfree.data.general.PieDataset} class.
@@ -177,10 +179,10 @@ public class DefaultPieDatasetTest implements DatasetChangeListener {
     @Test
     public void testSerialization() throws IOException, ClassNotFoundException {
         DefaultPieDataset d1 = new DefaultPieDataset();
-        d1.setValue("C1", new Double(234.2));
+        d1.setValue("C1", Double.valueOf(234.2));
         d1.setValue("C2", null);
-        d1.setValue("C3", new Double(345.9));
-        d1.setValue("C4", new Double(452.7));
+        d1.setValue("C3", Double.valueOf(345.9));
+        d1.setValue("C4", Double.valueOf(452.7));
         DefaultPieDataset d2 = (DefaultPieDataset) TestUtilities.serialised(d1);
         assertEquals(d1, d2);
     }

@@ -44,7 +44,7 @@ package org.jfree.chart.block;
 
 import org.jfree.chart.ui.RectangleInsets;
 import org.jfree.chart.util.UnitType;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.awt.Color;
 import java.awt.GradientPaint;
@@ -56,8 +56,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Tests for the {@link BlockBorder} class.

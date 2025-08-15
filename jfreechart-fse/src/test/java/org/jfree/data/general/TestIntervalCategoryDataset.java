@@ -242,7 +242,7 @@ public class TestIntervalCategoryDataset extends AbstractDataset
      */
     public void addItem(double value, double lower, double upper,
             Comparable rowKey, Comparable columnKey) {
-        addItem(new Double(value), new Double(lower), new Double(upper),
+        addItem(Double.valueOf(value), Double.valueOf(lower), Double.valueOf(upper),
                 rowKey, columnKey);
     }
 
@@ -275,7 +275,7 @@ public class TestIntervalCategoryDataset extends AbstractDataset
      */
     public void setItem(double value, double lower, double upper,
             Comparable rowKey, Comparable columnKey) {
-        setItem(new Double(value), new Double(lower), new Double(upper),
+        setItem(Double.valueOf(value), Double.valueOf(lower), Double.valueOf(upper),
                 rowKey, columnKey);
     }
 

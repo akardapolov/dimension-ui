@@ -48,7 +48,7 @@
 package org.jfree.data;
 
 import org.jfree.chart.util.SortOrder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -59,13 +59,13 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for the {@link DefaultKeyedValues} class.
@@ -308,9 +308,9 @@ public class DefaultKeyedValuesTest  {
     public void testInsertAndRetrieve() {
 
         DefaultKeyedValues data = new DefaultKeyedValues();
-        data.addValue("A", new Double(1.0));
-        data.addValue("B", new Double(2.0));
-        data.addValue("C", new Double(3.0));
+        data.addValue("A", Double.valueOf(1.0));
+        data.addValue("B", Double.valueOf(2.0));
+        data.addValue("C", Double.valueOf(3.0));
         data.addValue("D", null);
 
         // check key order
@@ -339,10 +339,10 @@ public class DefaultKeyedValuesTest  {
     @Test
     public void testRemoveValue() {
         DefaultKeyedValues data = new DefaultKeyedValues();
-        data.addValue("A", new Double(1.0));
+        data.addValue("A", Double.valueOf(1.0));
         data.addValue("B", null);
-        data.addValue("C", new Double(3.0));
-        data.addValue("D", new Double(2.0));
+        data.addValue("C", Double.valueOf(3.0));
+        data.addValue("D", Double.valueOf(2.0));
         assertEquals(1, data.getIndex("B"));
         data.removeValue("B");
         assertEquals(-1, data.getIndex("B"));
@@ -363,10 +363,10 @@ public class DefaultKeyedValuesTest  {
     public void testSortByKeyAscending() {
 
         DefaultKeyedValues data = new DefaultKeyedValues();
-        data.addValue("C", new Double(1.0));
+        data.addValue("C", Double.valueOf(1.0));
         data.addValue("B", null);
-        data.addValue("D", new Double(3.0));
-        data.addValue("A", new Double(2.0));
+        data.addValue("D", Double.valueOf(3.0));
+        data.addValue("A", Double.valueOf(2.0));
 
         data.sortByKeys(SortOrder.ASCENDING);
 
@@ -397,10 +397,10 @@ public class DefaultKeyedValuesTest  {
     public void testSortByKeyDescending() {
 
         DefaultKeyedValues data = new DefaultKeyedValues();
-        data.addValue("C", new Double(1.0));
+        data.addValue("C", Double.valueOf(1.0));
         data.addValue("B", null);
-        data.addValue("D", new Double(3.0));
-        data.addValue("A", new Double(2.0));
+        data.addValue("D", Double.valueOf(3.0));
+        data.addValue("A", Double.valueOf(2.0));
 
         data.sortByKeys(SortOrder.DESCENDING);
 
@@ -431,10 +431,10 @@ public class DefaultKeyedValuesTest  {
     public void testSortByValueAscending() {
 
         DefaultKeyedValues data = new DefaultKeyedValues();
-        data.addValue("C", new Double(1.0));
+        data.addValue("C", Double.valueOf(1.0));
         data.addValue("B", null);
-        data.addValue("D", new Double(3.0));
-        data.addValue("A", new Double(2.0));
+        data.addValue("D", Double.valueOf(3.0));
+        data.addValue("A", Double.valueOf(2.0));
 
         data.sortByValues(SortOrder.ASCENDING);
 
@@ -465,10 +465,10 @@ public class DefaultKeyedValuesTest  {
     public void testSortByValueDescending() {
 
         DefaultKeyedValues data = new DefaultKeyedValues();
-        data.addValue("C", new Double(1.0));
+        data.addValue("C", Double.valueOf(1.0));
         data.addValue("B", null);
-        data.addValue("D", new Double(3.0));
-        data.addValue("A", new Double(2.0));
+        data.addValue("D", Double.valueOf(3.0));
+        data.addValue("A", Double.valueOf(2.0));
 
         data.sortByValues(SortOrder.DESCENDING);
 
@@ -499,9 +499,9 @@ public class DefaultKeyedValuesTest  {
     public void testSerialization() throws IOException, ClassNotFoundException {
 
         DefaultKeyedValues v1 = new DefaultKeyedValues();
-        v1.addValue("Key 1", new Double(23));
+        v1.addValue("Key 1", Double.valueOf(23));
         v1.addValue("Key 2", null);
-        v1.addValue("Key 3", new Double(42));
+        v1.addValue("Key 3", Double.valueOf(42));
 
 
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();

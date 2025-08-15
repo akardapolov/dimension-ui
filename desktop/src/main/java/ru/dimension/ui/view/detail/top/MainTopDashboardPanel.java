@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
@@ -189,10 +188,9 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
 
   private List<GanttColumn> loadGanttData(CProfile firstLevelGroupBy)
       throws BeginEndWrongOrderException, GanttColumnNotSupportedException, SqlColMetadataException {
+
     if (MetricFunction.COUNT.equals(metric.getMetricFunction())) {
-      if (Objects.isNull(seriesType) || SeriesType.COMMON.equals(seriesType)) {
-        return convertGanttColumns(dStore.getGantt(tableInfo.getTableName(), firstLevelGroupBy, cProfile, begin, end));
-      } else if (SeriesType.CUSTOM.equals(seriesType)) {
+      if (SeriesType.CUSTOM.equals(seriesType) && filter != null) {
         return convertGanttColumns(dStore.getGantt(tableInfo.getTableName(),
                                                    firstLevelGroupBy,
                                                    cProfile,
@@ -201,9 +199,12 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
                                                    CompareFunction.EQUAL,
                                                    begin,
                                                    end));
+      } else {
+        return convertGanttColumns(dStore.getGantt(tableInfo.getTableName(),
+                                                   firstLevelGroupBy, cProfile, begin, end));
       }
     } else {
-      if (SeriesType.CUSTOM.equals(seriesType)) {
+      if (SeriesType.CUSTOM.equals(seriesType) && filter != null) {
         return convertSumToGanttColumns(dStore.getGanttSum(tableInfo.getTableName(),
                                                            firstLevelGroupBy,
                                                            cProfile,
@@ -213,10 +214,10 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
                                                            begin,
                                                            end));
       } else {
-        return convertSumToGanttColumns(dStore.getGanttSum(tableInfo.getTableName(), firstLevelGroupBy, cProfile, begin, end));
+        return convertSumToGanttColumns(dStore.getGanttSum(tableInfo.getTableName(),
+                                                           firstLevelGroupBy, cProfile, begin, end));
       }
     }
-    return Collections.emptyList();
   }
 
   private List<GanttColumn> convertSumToGanttColumns(List<GanttColumnSum> sumColumns) {

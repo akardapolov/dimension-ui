@@ -40,7 +40,7 @@
 
 package org.jfree.data.xy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -50,10 +50,10 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 
 
@@ -77,10 +77,10 @@ public class XYDataItemTest  {
         assertEquals(i1, i2);
         assertEquals(i2, i1);
 
-        i1.setY(new Double(9.9));
+        i1.setY(Double.valueOf(9.9));
         assertFalse(i1.equals(i2));
 
-        i2.setY(new Double(9.9));
+        i2.setY(Double.valueOf(9.9));
         assertEquals(i1, i2);
 
     }

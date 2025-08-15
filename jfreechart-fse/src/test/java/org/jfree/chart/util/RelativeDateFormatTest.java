@@ -43,19 +43,18 @@
 
 package org.jfree.chart.util;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Date;
 import java.util.Locale;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 
 
@@ -73,7 +72,7 @@ public class RelativeDateFormatTest  {
     /**
      * Set a known locale for the tests.
      */
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         this.savedLocale = Locale.getDefault();
         Locale.setDefault(Locale.UK);
@@ -82,7 +81,7 @@ public class RelativeDateFormatTest  {
     /**
      * Restore the default locale after the tests complete.
      */
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         Locale.setDefault(this.savedLocale);
     }

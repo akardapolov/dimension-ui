@@ -44,7 +44,7 @@ import org.jfree.chart.plot.MeterInterval;
 import org.jfree.chart.plot.MeterPlot;
 import org.jfree.data.Range;
 import org.jfree.data.general.DefaultValueDataset;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;

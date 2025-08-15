@@ -206,6 +206,9 @@ public class HistorySCP extends SCP {
     eastPanel.add(seriesSelectable.getJScrollPane(), BorderLayout.CENTER);
 
     this.add(eastPanel, BorderLayout.EAST);
+
+    this.revalidate();
+    this.repaint();
   }
 
   private void updateSeriesFilter() {
@@ -260,8 +263,7 @@ public class HistorySCP extends SCP {
 
           if (detailAndAnalyzeHolder != null) {
             detailAndAnalyzeHolder.detailAction().cleanMainPanel();
-            detailAndAnalyzeHolder.customAction()
-                .setCustomSeriesFilter(config.getMetric().getYAxis(),
+            detailAndAnalyzeHolder.customAction().setCustomSeriesFilter(config.getMetric().getYAxis(),
                                        List.copyOf(newSelection),
                                        getSeriesColorMap());
           }

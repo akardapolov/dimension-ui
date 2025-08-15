@@ -1,11 +1,12 @@
 package ru.dimension.ui.component.chart.function;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
@@ -13,10 +14,11 @@ import ru.dimension.db.exception.TableNameEmptyException;
 import ru.dimension.db.model.GroupFunction;
 import ru.dimension.db.model.output.StackedColumn;
 import ru.dimension.db.model.profile.TProfile;
-import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.component.chart.FunctionDataHandler;
 import ru.dimension.ui.component.chart.StackedChart;
+import ru.dimension.ui.exception.SeriesExceedException;
+import ru.dimension.ui.model.config.Metric;
+import ru.dimension.ui.model.info.QueryInfo;
 
 @Log4j2
 public abstract class FunctionHandler implements FunctionDataHandler {
@@ -49,11 +51,18 @@ public abstract class FunctionHandler implements FunctionDataHandler {
 
   protected void fillSeries(List<StackedColumn> sColumnList,
                             Set<String> series) {
-    sColumnList.stream()
+    Set<String> newSeries = sColumnList.stream()
         .map(StackedColumn::getKeyCount)
-        .map(Map::keySet)
-        .flatMap(Collection::stream)
-        .forEach(series::add);
+        .flatMap(map -> map.keySet().stream())
+        .filter(Objects::nonNull)
+        .collect(Collectors.toSet());
+
+    series.addAll(newSeries);
+
+    if (series.size() > THRESHOLD_SERIES) {
+      throw new SeriesExceedException("Column data series exceeds " + THRESHOLD_SERIES + ". " +
+                                          "Not supported to show stacked data.");
+    }
   }
 
   protected void handleFunction(long begin,

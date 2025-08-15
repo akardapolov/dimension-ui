@@ -7,12 +7,16 @@
 
 package com.workday.insights.timeseries.arima;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import com.workday.insights.timeseries.arima.struct.ArimaParams;
 import com.workday.insights.timeseries.arima.struct.ForecastResult;
 import com.workday.insights.timeseries.timeseriesutil.ForecastUtil;
 import java.text.DecimalFormat;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 /**
  * ARIMA Tests
@@ -185,11 +189,12 @@ public class ArimaTest {
     return rmse;
   }
 
+
   private void commonAssertionLogic(double[] dataSet,
                                     double actualValue,
                                     double delta) {
     double lastTrueValue = dataSet[dataSet.length - 1];
-    Assert.assertEquals(lastTrueValue, actualValue, delta);
+    assertEquals(lastTrueValue, actualValue, delta, "Last value mismatch");
   }
 
   @Test
@@ -201,17 +206,21 @@ public class ArimaTest {
     double[] true_coeff = {1.0, 2.0, 3.75, 3.25, 2.3125, 1.5, 0.921875, 0.546875, 0.31640625,
         0.1796875};
 
-    Assert.assertArrayEquals(ma_coeff, true_coeff, 1e-6);
+    assertArrayEquals(true_coeff, ma_coeff, 1e-6, "MA coefficients mismatch");
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   public void common_logic_fail_test() {
-    commonTestLogic("simple12345", Datasets.simple12345, 0.1, 0, 0, 0, 0, 0, 0, 0);
+    Executable testCode = () ->
+        commonTestLogic("simple12345", Datasets.simple12345, 0.1, 0, 0, 0, 0, 0, 0, 0);
+    assertThrows(RuntimeException.class, testCode, "Expected RuntimeException not thrown");
   }
 
-  @Test(expected = RuntimeException.class)
-  public void one_piont_fail_test() {
-    forecastSinglePointLogic("simple12345", Datasets.simple12345, 0, 0, 0, 0, 0, 0, 0);
+  @Test
+  public void one_point_fail_test() {
+    Executable testCode = () ->
+        forecastSinglePointLogic("simple12345", Datasets.simple12345, 0, 0, 0, 0, 0, 0, 0);
+    assertThrows(RuntimeException.class, testCode, "Expected RuntimeException not thrown");
   }
 
   @Test

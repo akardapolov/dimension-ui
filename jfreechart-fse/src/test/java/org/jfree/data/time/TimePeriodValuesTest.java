@@ -42,11 +42,10 @@
 
 package org.jfree.data.time;
 
-import org.jfree.chart.date.MonthConstants;
-import org.jfree.data.general.SeriesChangeEvent;
-import org.jfree.data.general.SeriesChangeListener;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -56,11 +55,11 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.util.Date;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.jfree.chart.date.MonthConstants;
+import org.jfree.data.general.SeriesChangeEvent;
+import org.jfree.data.general.SeriesChangeListener;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * A collection of test cases for the {@link TimePeriodValues} class.
@@ -83,27 +82,27 @@ public class TimePeriodValuesTest  {
     /**
      * Common test setup.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
 
         this.seriesA = new TimePeriodValues("Series A");
-        this.seriesA.add(new Year(2000), new Integer(102000));
-        this.seriesA.add(new Year(2001), new Integer(102001));
-        this.seriesA.add(new Year(2002), new Integer(102002));
-        this.seriesA.add(new Year(2003), new Integer(102003));
-        this.seriesA.add(new Year(2004), new Integer(102004));
-        this.seriesA.add(new Year(2005), new Integer(102005));
+        this.seriesA.add(new Year(2000), 102000);
+        this.seriesA.add(new Year(2001), 102001);
+        this.seriesA.add(new Year(2002), 102002);
+        this.seriesA.add(new Year(2003), 102003);
+        this.seriesA.add(new Year(2004), 102004);
+        this.seriesA.add(new Year(2005), 102005);
 
 
         this.seriesB = new TimePeriodValues("Series B");
-        this.seriesB.add(new Year(2006), new Integer(202006));
-        this.seriesB.add(new Year(2007), new Integer(202007));
-        this.seriesB.add(new Year(2008), new Integer(202008));
+        this.seriesB.add(new Year(2006), 202006);
+        this.seriesB.add(new Year(2007), 202007);
+        this.seriesB.add(new Year(2008), 202008);
 
         this.seriesC = new TimePeriodValues("Series C");
-        this.seriesC.add(new Year(1999), new Integer(301999));
-        this.seriesC.add(new Year(2000), new Integer(302000));
-        this.seriesC.add(new Year(2002), new Integer(302002));
+        this.seriesC.add(new Year(1999), 301999);
+        this.seriesC.add(new Year(2000), 302000);
+        this.seriesC.add(new Year(2002), 302002);
 
     }
 
@@ -117,7 +116,7 @@ public class TimePeriodValuesTest  {
         TimePeriodValues series = new TimePeriodValues("Test Series");
 
         RegularTimePeriod jan1st2002 = new Day(1, MonthConstants.JANUARY, 2002);
-        series.add(jan1st2002, new Integer(42));
+        series.add(jan1st2002, 42);
 
         TimePeriodValues clone = (TimePeriodValues) series.clone();
         clone.setKey("Clone Series");
@@ -140,7 +139,7 @@ public class TimePeriodValuesTest  {
     public void testAddValue() {
 
         TimePeriodValues tpvs = new TimePeriodValues("Test");
-        tpvs.add(new Year(1999), new Integer(1));
+        tpvs.add(new Year(1999), 1);
 
         int value = tpvs.getValue(0).intValue();
         assertEquals(1, value);
@@ -173,19 +172,15 @@ public class TimePeriodValuesTest  {
 
     }
 
-    /**
-     * Tests the equals method.
-     */
     @Test
     public void testEquals() {
         TimePeriodValues s1 = new TimePeriodValues("Time Series 1");
         TimePeriodValues s2 = new TimePeriodValues("Time Series 2");
-        boolean b1 = s1.equals(s2);
-        assertFalse("b1", b1);
+
+        assertFalse(s1.equals(s2), "b1");
 
         s2.setKey("Time Series 1");
-        boolean b2 = s1.equals(s2);
-        assertTrue("b2", b2);
+        assertTrue(s1.equals(s2), "b2");
 
         // domain description
         s1.setDomainDescription("XYZ");
@@ -215,14 +210,11 @@ public class TimePeriodValuesTest  {
         RegularTimePeriod p2 = p1.next();
         s1.add(p1, 100.0);
         s1.add(p2, 200.0);
-        boolean b3 = s1.equals(s2);
-        assertFalse("b3", b3);
+        assertFalse(s1.equals(s2), "b3");
 
         s2.add(p1, 100.0);
         s2.add(p2, 200.0);
-        boolean b4 = s1.equals(s2);
-        assertTrue("b4", b4);
-
+        assertTrue(s1.equals(s2), "b4");
     }
 
     /**

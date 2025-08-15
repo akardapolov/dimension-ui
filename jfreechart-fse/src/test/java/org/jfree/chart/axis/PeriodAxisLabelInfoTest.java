@@ -44,7 +44,7 @@ package org.jfree.chart.axis;
 import org.jfree.chart.ui.RectangleInsets;
 import org.jfree.data.time.Day;
 import org.jfree.data.time.Month;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -64,10 +64,10 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * Tests for the {@link PeriodAxisLabelInfo} class.

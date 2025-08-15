@@ -40,12 +40,13 @@
 
 package org.jfree.data.extension;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.data.extension.impl.CategoryCursor;
 import org.jfree.data.extension.impl.CategoryDatasetSelectionExtension;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Some tests for the {@link CategoryDatasetSelectionExtension} class.

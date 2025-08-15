@@ -46,7 +46,7 @@ package org.jfree.chart.urls;
 
 import org.jfree.chart.util.PublicCloneable;
 import org.jfree.data.general.DefaultPieDataset;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -56,8 +56,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Tests for the {@link StandardPieURLGenerator} class.
@@ -143,8 +143,8 @@ public class StandardPieURLGeneratorTest  {
     @Test
     public void testURL() {
         DefaultPieDataset dataset = new DefaultPieDataset();
-        dataset.setValue("Alpha '1'", new Double(5.0));
-        dataset.setValue("Beta", new Double(5.5));
+        dataset.setValue("Alpha '1'", Double.valueOf(5.0));
+        dataset.setValue("Beta", Double.valueOf(5.5));
         StandardPieURLGenerator g1 = new StandardPieURLGenerator(
                 "chart.jsp", "category");
         String url = g1.generateURL(dataset, "Beta", 0);

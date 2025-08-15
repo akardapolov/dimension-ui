@@ -283,6 +283,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
         filter.forEach(key -> newSeriesColorMap.put(key, seriesColorMap.get(key)));
 
         detailPanel.updateSeriesColor(Map.entry(cProfileFilter, filter), newSeriesColorMap);
+        detailPanel.setSeriesType(SeriesType.CUSTOM);
       }
 
       @Override

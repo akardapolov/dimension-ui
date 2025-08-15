@@ -49,15 +49,27 @@
 
 package org.jfree.data.time;
 
-import org.jfree.chart.date.MonthConstants;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.io.*;
-import java.util.*;
-
 import static org.jfree.chart.date.SerialDate.DATE_FORMAT_SYMBOLS;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.Locale;
+import java.util.TimeZone;
+import org.jfree.chart.date.MonthConstants;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the {@link Month} class.
@@ -83,7 +95,7 @@ public class MonthTest  {
     /**
      * Common test setup.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         this.jan1900 = new Month(MonthConstants.JANUARY, 1900);
         this.feb1900 = new Month(MonthConstants.FEBRUARY, 1900);

@@ -58,7 +58,7 @@ public class SelectionDemo7ScatterRenderer extends ApplicationFrame {
     private static List<Number> listOfValues(double[] values) {
         List<Number> result = new ArrayList<Number>();
         for (int i = 0; i < values.length; i++) {
-            result.add(new Double(values[i]));
+            result.add(Double.valueOf(values[i]));
         }
         return result;
     }

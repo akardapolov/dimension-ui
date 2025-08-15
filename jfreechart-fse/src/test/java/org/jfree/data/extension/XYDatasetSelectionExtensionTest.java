@@ -44,9 +44,10 @@ import org.jfree.data.extension.impl.XYCursor;
 import org.jfree.data.extension.impl.XYDatasetSelectionExtension;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * Some tests for the {@link XYDatasetSelectionExtension} class.

@@ -7,12 +7,15 @@ import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTaskPane;
 import ru.dimension.db.core.DStore;
 import ru.dimension.ui.component.broker.MessageBroker;
+import ru.dimension.ui.component.chart.realtime.ClientRealtimeSCP;
+import ru.dimension.ui.component.chart.realtime.ServerRealtimeSCP;
 import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.module.chart.ChartModel;
 import ru.dimension.ui.component.module.chart.ChartPresenter;
 import ru.dimension.ui.component.module.chart.ChartView;
+import ru.dimension.ui.exception.SeriesExceedException;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
@@ -61,7 +64,16 @@ public class ChartModule extends JXTaskPane {
   }
 
   public void loadData() {
-    this.presenter.getRealTimeChart().loadData();
+    try {
+      this.presenter.getRealTimeChart().loadData();
+    } catch (SeriesExceedException e) {
+      log.info("Series count exceeded threshold, reinitializing chart in custom mode for " + model.getMetric().getYAxis());
+      if (this.presenter.getRealTimeChart() instanceof ClientRealtimeSCP clientRealtimeSCP) {
+        clientRealtimeSCP.reinitializeChartInCustomMode();
+      } else if (this.presenter.getRealTimeChart() instanceof ServerRealtimeSCP serverRealtimeSCP) {
+        serverRealtimeSCP.reinitializeChartInCustomMode();
+      }
+    }
   }
 
   public void handleLegendChange(ChartLegendState chartLegendState) {

@@ -45,15 +45,15 @@ import org.jfree.chart.event.ChartChangeListener;
 import org.jfree.chart.plot.PiePlot;
 import org.jfree.data.general.DefaultPieDataset;
 import org.jfree.data.general.PieDataset;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Tests for a pie chart with a 3D effect.
@@ -70,13 +70,13 @@ public class PieChart3DTest  {
     /**
      * Common test setup.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         // create a dataset...
         DefaultPieDataset dataset = new DefaultPieDataset();
-        dataset.setValue("Java", new Double(43.2));
-        dataset.setValue("Visual Basic", new Double(0.0));
-        dataset.setValue("C/C++", new Double(17.5));
+        dataset.setValue("Java", Double.valueOf(43.2));
+        dataset.setValue("Visual Basic", Double.valueOf(0.0));
+        dataset.setValue("C/C++", Double.valueOf(17.5));
         this.pieChart = createPieChart3D(dataset);
     }
 

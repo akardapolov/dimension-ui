@@ -781,7 +781,7 @@ public class TimeSeries extends Series implements Cloneable, Serializable {
      * @since 1.0.14
      */
     public void update(RegularTimePeriod period, double value) {
-      update(period, new Double(value));
+      update(period, Double.valueOf(value));
     }
 
     /**
@@ -864,7 +864,7 @@ public class TimeSeries extends Series implements Cloneable, Serializable {
      */
     public TimeSeriesDataItem addOrUpdate(RegularTimePeriod period,
                                           double value) {
-        return addOrUpdate(period, new Double(value));
+        return addOrUpdate(period, Double.valueOf(value));
     }
 
     /**

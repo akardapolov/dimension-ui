@@ -44,7 +44,7 @@ package org.jfree.chart.block;
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.ui.Size2D;
 import org.jfree.data.Range;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -56,8 +56,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Tests for the {@link BorderArrangement} class.

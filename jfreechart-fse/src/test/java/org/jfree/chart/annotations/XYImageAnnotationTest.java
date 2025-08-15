@@ -43,11 +43,11 @@
 
 package org.jfree.chart.annotations;
 
-import org.jfree.chart.JFreeChart;
-import org.jfree.chart.ui.RectangleAnchor;
-import org.jfree.chart.util.PublicCloneable;
-import org.junit.Ignore;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.awt.Image;
 import java.io.ByteArrayInputStream;
@@ -59,12 +59,10 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.net.URL;
 import javax.swing.ImageIcon;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import org.jfree.chart.ui.RectangleAnchor;
+import org.jfree.chart.util.PublicCloneable;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the {@link XYImageAnnotation} class.
@@ -143,7 +141,7 @@ public class XYImageAnnotationTest  {
     /**
      * Serialize an instance, restore it, and check for equality.
      */
-    @Ignore("Previously commented out, marking as ignore so it's picked up")
+    @Disabled("Previously commented out, marking as ignore so it's picked up")
     @Test
     public void testSerialization() throws IOException, ClassNotFoundException {
         XYImageAnnotation a1 = new XYImageAnnotation(10.0, 20.0,

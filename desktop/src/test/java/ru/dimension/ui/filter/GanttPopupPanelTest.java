@@ -5,15 +5,15 @@ import static org.mockito.Mockito.when;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import org.jdesktop.swingx.JXTable;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.panel.popup.GanttPopupPanel;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class GanttPopupPanelTest {
 
   private GanttPopupPanel ganttPopupPanel;
@@ -22,7 +22,7 @@ public class GanttPopupPanelTest {
   private DefaultTableModel tableModel;
   private TableRowSorter<DefaultTableModel> sorter;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     ganttPopupPanel = new GanttPopupPanel(Component.DASHBOARD);
     ganttPopupPanel.setCurrentTable(mockTable);
