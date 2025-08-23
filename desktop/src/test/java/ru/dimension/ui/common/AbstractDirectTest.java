@@ -104,7 +104,7 @@ public abstract class AbstractDirectTest {
                                                               long begin,
                                                               long end)
       throws BeginEndWrongOrderException, GanttColumnNotSupportedException, SqlColMetadataException {
-    return dStore.getGantt(tProfile.getTableName(), firstLevelGroupBy, secondLevelGroupBy, begin, end);
+    return dStore.getGanttCount(tProfile.getTableName(), firstLevelGroupBy, secondLevelGroupBy, null, begin, end);
   }
 
   protected void compareKeySetForMapDataType(Map<String, Integer> expectedMap,
@@ -126,7 +126,7 @@ public abstract class AbstractDirectTest {
                                                         int end)
       throws BeginEndWrongOrderException, SqlColMetadataException {
     return dStore.getStacked(tProfile.getTableName(), cProfiles.stream()
-        .filter(k -> k.getColName().equalsIgnoreCase(colName)).findAny().orElseThrow(), GroupFunction.COUNT, begin, end);
+        .filter(k -> k.getColName().equalsIgnoreCase(colName)).findAny().orElseThrow(), GroupFunction.COUNT, null, begin, end);
   }
 
   public Object findListStackedKey(List<StackedColumn> list,

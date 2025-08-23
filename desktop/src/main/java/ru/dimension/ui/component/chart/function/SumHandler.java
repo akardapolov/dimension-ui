@@ -1,24 +1,26 @@
 package ru.dimension.ui.component.chart.function;
 
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Set;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.SqlColMetadataException;
-import ru.dimension.db.model.CompareFunction;
 import ru.dimension.db.model.GroupFunction;
+import ru.dimension.db.model.filter.CompositeFilter;
 import ru.dimension.db.model.output.StackedColumn;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.chart.StackedChart;
+import ru.dimension.ui.helper.FilterHelper;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.QueryInfo;
 
 @Log4j2
 public class SumHandler extends FunctionHandler {
 
-  private Entry<CProfile, List<String>> filter;
+  private Map<CProfile, LinkedHashSet<String>> topMapSelected;
 
   public SumHandler(Metric metric,
                     QueryInfo queryInfo,
@@ -34,8 +36,8 @@ public class SumHandler extends FunctionHandler {
   }
 
   @Override
-  public void setFilter(Entry<CProfile, List<String>> filter) {
-    this.filter = filter;
+  public void setFilter(Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+    this.topMapSelected = topMapSelected;
   }
 
   @Override
@@ -55,16 +57,14 @@ public class SumHandler extends FunctionHandler {
                              long end,
                              double yK,
                              Set<String> series,
-                             CProfile cProfileFilter,
-                             String[] filterData,
-                             CompareFunction compareFunction,
+                             Map<CProfile, LinkedHashSet<String>> topMapSelected,
                              StackedChart stackedChart) {
     GroupFunction groupFunction = GroupFunction.SUM;
     try {
+      CompositeFilter compositeFilter = FilterHelper.toCompositeFilter(topMapSelected);
+
       List<StackedColumn> stackedColumns
-          = dStore.getStacked(queryInfo.getName(), metric.getYAxis(), groupFunction,
-                              cProfileFilter, filterData, compareFunction,
-                              begin, end);
+          = dStore.getStacked(queryInfo.getName(), metric.getYAxis(), groupFunction, compositeFilter, begin, end);
 
       long x;
       double y = getY(groupFunction, stackedColumns);
@@ -83,15 +83,15 @@ public class SumHandler extends FunctionHandler {
                                                    long end)
       throws BeginEndWrongOrderException, SqlColMetadataException {
 
-    if (filter == null) {
-      return dStore.getStacked(queryInfo.getName(), metric.getYAxis(), GroupFunction.SUM, begin, end);
+    if (topMapSelected == null) {
+      return dStore.getStacked(queryInfo.getName(), metric.getYAxis(), GroupFunction.SUM, null, begin, end);
     } else {
+      CompositeFilter compositeFilter = FilterHelper.toCompositeFilter(topMapSelected);
+
       return dStore.getStacked(queryInfo.getName(),
                                metric.getYAxis(),
                                GroupFunction.SUM,
-                               filter.getKey(),
-                               filter.getValue().toArray(new String[0]),
-                               CompareFunction.EQUAL,
+                               compositeFilter,
                                begin,
                                end);
     }

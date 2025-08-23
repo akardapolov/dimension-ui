@@ -1,11 +1,11 @@
 package ru.dimension.ui.component.chart;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.SqlColMetadataException;
-import ru.dimension.db.model.CompareFunction;
 import ru.dimension.db.model.output.StackedColumn;
 import ru.dimension.db.model.profile.CProfile;
 
@@ -15,7 +15,7 @@ public interface FunctionDataHandler extends HelperChart {
                       long end,
                       Set<String> series);
 
-  void setFilter(Map.Entry<CProfile, List<String>> filter);
+  void setFilter(Map<CProfile, LinkedHashSet<String>> topMapSelected);
 
   void handleFunction(long begin,
                       long end,
@@ -29,9 +29,7 @@ public interface FunctionDataHandler extends HelperChart {
                       long end,
                       double yK,
                       Set<String> series,
-                      CProfile cProfileFilter,
-                      String[] filterData,
-                      CompareFunction compareFunction,
+                      Map<CProfile, LinkedHashSet<String>> topMapSelected,
                       StackedChart stackedChart);
 
   List<StackedColumn> handleFunctionComplex(long begin,

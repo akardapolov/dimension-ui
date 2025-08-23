@@ -4,10 +4,9 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridLayout;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -63,7 +62,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
   private SeriesType seriesType;
   private final DStore dStore;
 
-  private Entry<CProfile, List<String>> filter;
+  private Map<CProfile, LinkedHashSet<String>> topMapSelected;
 
   private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(10);;
 
@@ -74,7 +73,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
                               Map<String, Color> seriesColorMap,
                               ProcessType processType,
                               SeriesType seriesType,
-                              Entry<CProfile, List<String>> filter) {
+                              Map<CProfile, LinkedHashSet<String>> topMapSelected) {
     this.dStore = dStore;
     this.queryInfo = queryInfo;
     this.tableInfo = tableInfo;
@@ -84,7 +83,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
     this.seriesColorMap = seriesColorMap;
     this.processType = processType;
     this.seriesType = seriesType;
-    this.filter = filter;
+    this.topMapSelected = topMapSelected;
 
     this.executorService = Executors.newSingleThreadExecutor();
 
@@ -121,14 +120,17 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
           seriesColorMap.put(metric.getYAxis().getColName(), new Color(255, 93, 93));
         }
 
-        Map.Entry<CProfile, List<String>> actualFilter = filter;
-        if (SeriesType.CUSTOM.equals(seriesType) && filter == null) {
-          actualFilter = Map.entry(cProfile, new ArrayList<>(seriesColorMap.keySet()));
+        Map<CProfile, LinkedHashSet<String>> actualTopMapSelected = topMapSelected;
+        if (SeriesType.CUSTOM.equals(seriesType)) {
+          if (actualTopMapSelected == null) {
+            actualTopMapSelected = new HashMap<>();
+          }
+          actualTopMapSelected.computeIfAbsent(cProfile, k -> new LinkedHashSet<>(seriesColorMap.keySet()));
         }
 
         MainTopDashboardPanel mainTopPanel = new MainTopDashboardPanel(
             dStore, scheduledExecutorService, tableInfo, metric, cProfile,
-            begin, end, seriesColorMap, seriesType, actualFilter);
+            begin, end, seriesColorMap, seriesType, actualTopMapSelected);
         mainJTabbedPane.add("Top", mainTopPanel);
 
         if (MetricFunction.COUNT.equals(metric.getMetricFunction())) {
@@ -156,16 +158,10 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
         mainJTabbedPane.setEnabledAt(separatorIndex, false);
         mainJTabbedPane.setTabComponentAt(separatorIndex, createTextSeparator(range));
 
-        Map.Entry<CProfile, List<String>> filter = null;
-
-        if (SeriesType.CUSTOM.equals(seriesType)) {
-          filter = Map.entry(cProfile, seriesColorMap.keySet().stream().toList());
-        }
-
         ChartInfo chartInfo = new ChartInfo();
         chartInfo.setCustomBegin(begin);
         chartInfo.setCustomEnd(end);
-        SCP chart = new HistorySCP(dStore, buildChartConfig(chartInfo), null, filter);
+        SCP chart = new HistorySCP(dStore, buildChartConfig(chartInfo), null, actualTopMapSelected);
         chart.loadSeriesColor(metric, seriesColorMap);
         chart.initialize();
 
@@ -197,8 +193,8 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
     });
   }
 
-  public void updateSeriesColor(Entry<CProfile, List<String>> filter, Map<String, Color> newSeriesColorMap) {
-    this.filter = filter;
+  public void updateSeriesColor(Map<CProfile, LinkedHashSet<String>> topMapSelected, Map<String, Color> newSeriesColorMap) {
+    this.topMapSelected = topMapSelected;
 
     seriesColorMap.clear();
     seriesColorMap.putAll(newSeriesColorMap);

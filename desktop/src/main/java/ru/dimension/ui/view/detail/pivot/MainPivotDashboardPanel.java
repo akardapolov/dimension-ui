@@ -76,11 +76,9 @@ public class MainPivotDashboardPanel extends GanttPivotPanel implements ListSele
                 .orElseThrow();
 
             List<GanttColumnCount> ganttColumnList1 =
-                dStore.getGantt(tableInfo.getTableName(),
-                                firstLevelGroupBy, cProfile, begin, end);
+                dStore.getGanttCount(tableInfo.getTableName(), firstLevelGroupBy, cProfile, null, begin, end);
             List<GanttColumnCount> ganttColumnList2 =
-                dStore.getGantt(tableInfo.getTableName(),
-                                cProfile, cProfile, begin, end);
+                dStore.getGanttCount(tableInfo.getTableName(), cProfile, cProfile, null, begin, end);
 
             combinedTable = loadPivotGantt(firstLevelGroupBy, cProfile, ganttColumnList1, ganttColumnList2,
                                            seriesColorMap, 100, 23, false);

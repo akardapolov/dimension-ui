@@ -5,12 +5,10 @@ import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.time.ZoneId;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -23,9 +21,21 @@ import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageAction;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
+import ru.dimension.ui.component.chart.ChartConfig;
+import ru.dimension.ui.component.chart.HelperChart;
+import ru.dimension.ui.component.chart.SCP;
+import ru.dimension.ui.component.chart.history.HistorySCP;
+import ru.dimension.ui.component.chart.holder.DetailAndAnalyzeHolder;
+import ru.dimension.ui.component.chart.realtime.ClientRealtimeSCP;
+import ru.dimension.ui.component.chart.realtime.RealtimeSCP;
+import ru.dimension.ui.component.chart.realtime.ServerRealtimeSCP;
+import ru.dimension.ui.component.model.ChartLegendState;
+import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.component.model.PanelTabType;
+import ru.dimension.ui.component.module.analyze.CustomAction;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.helper.DateHelper;
+import ru.dimension.ui.helper.LogHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
@@ -43,17 +53,6 @@ import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.ChartKey;
 import ru.dimension.ui.state.SqlQueryState;
 import ru.dimension.ui.state.UIState;
-import ru.dimension.ui.component.module.analyze.CustomAction;
-import ru.dimension.ui.component.chart.ChartConfig;
-import ru.dimension.ui.component.chart.SCP;
-import ru.dimension.ui.component.chart.history.HistorySCP;
-import ru.dimension.ui.component.chart.realtime.ClientRealtimeSCP;
-import ru.dimension.ui.component.chart.realtime.RealtimeSCP;
-import ru.dimension.ui.component.chart.realtime.ServerRealtimeSCP;
-import ru.dimension.ui.component.model.ChartLegendState;
-import ru.dimension.ui.component.model.DetailState;
-import ru.dimension.ui.component.chart.HelperChart;
-import ru.dimension.ui.component.chart.holder.DetailAndAnalyzeHolder;
 import ru.dimension.ui.view.detail.DetailDashboardPanel;
 
 @Log4j2
@@ -77,7 +76,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
   public ChartPresenter(MessageBroker.Component component,
-                        ChartModel model, 
+                        ChartModel model,
                         ChartView view) {
     this.component = component;
     this.model = model;
@@ -187,7 +186,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
             historyDetail = getDetail(AnalyzeType.HISTORY, historyChart, null, SeriesType.COMMON, null);
           } else {
             HistorySCP historySCP = (HistorySCP) historyChart;
-            historyDetail = getDetail(AnalyzeType.HISTORY, historyChart, historyChart.getSeriesColorMap(), SeriesType.CUSTOM, historySCP.getFilter());
+            historyDetail = getDetail(AnalyzeType.HISTORY, historyChart, historyChart.getSeriesColorMap(), SeriesType.CUSTOM, historySCP.getTopMapSelected());
           }
 
           ChartRange chartRange = getChartRange(historyChart.getConfig().getChartInfo());
@@ -210,7 +209,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
     );
   }
 
-  private SCP createChart(AnalyzeType analyzeType, Entry<CProfile, List<String>> filter) {
+  private SCP createChart(AnalyzeType analyzeType, Map<CProfile, LinkedHashSet<String>> topMapSelected) {
     ChartConfig config = buildChartConfig(analyzeType);
     ProfileTaskQueryKey key = model.getKey();
     SqlQueryState sqlQueryState = model.getSqlQueryState();
@@ -219,9 +218,9 @@ public class ChartPresenter implements HelperChart, MessageAction {
 
     if (analyzeType == AnalyzeType.REAL_TIME) {
       if (GatherDataMode.BY_CLIENT_JDBC.equals(queryInfo.getGatherDataMode())) {
-        return new ClientRealtimeSCP(sqlQueryState, dStore, config, key, filter);
+        return new ClientRealtimeSCP(sqlQueryState, dStore, config, key, topMapSelected);
       } else {
-        return new ServerRealtimeSCP(sqlQueryState, dStore, config, key, filter);
+        return new ServerRealtimeSCP(sqlQueryState, dStore, config, key, topMapSelected);
       }
     } else if (analyzeType == AnalyzeType.HISTORY) {
       ChartRange chartRange = getChartRange(config.getChartInfo());
@@ -229,7 +228,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
       config.getChartInfo().setCustomBegin(chartRange.getBegin());
       config.getChartInfo().setCustomEnd(chartRange.getEnd());
 
-      return new HistorySCP(dStore, config, key, filter);
+      return new HistorySCP(dStore, config, key, topMapSelected);
     } else {
       throw new RuntimeException("Not supported");
     }
@@ -239,7 +238,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
                                            SCP chart,
                                            Map<String, Color> initialSeriesColorMap,
                                            SeriesType seriesType,
-                                           Entry<CProfile, List<String>> filter) {
+                                           Map<CProfile, LinkedHashSet<String>> topMapSelected) {
     ProcessType processType = null;
 
     if (AnalyzeType.REAL_TIME.equals(analyzeType)) {
@@ -266,31 +265,26 @@ public class ChartPresenter implements HelperChart, MessageAction {
                                  seriesColorMapToUse,
                                  processType,
                                  seriesType,
-                                 filter);
+                                 topMapSelected);
 
     CustomAction customAction = new CustomAction() {
 
       @Override
-      public void setCustomSeriesFilter(CProfile profile,
-                                        List<String> series) {
-      }
+      public void setCustomSeriesFilter(Map<CProfile, LinkedHashSet<String>> topMapSelected) {}
 
       @Override
-      public void setCustomSeriesFilter(CProfile cProfileFilter,
-                                        List<String> filter,
+      public void setCustomSeriesFilter(Map<CProfile, LinkedHashSet<String>> topMapSelected,
                                         Map<String, Color> seriesColorMap) {
         Map<String, Color> newSeriesColorMap = new HashMap<>();
-        filter.forEach(key -> newSeriesColorMap.put(key, seriesColorMap.get(key)));
+        topMapSelected.values().forEach(set -> set.forEach(value -> newSeriesColorMap.put(value, seriesColorMap.get(value))));
 
-        detailPanel.updateSeriesColor(Map.entry(cProfileFilter, filter), newSeriesColorMap);
+        detailPanel.updateSeriesColor(topMapSelected, newSeriesColorMap);
         detailPanel.setSeriesType(SeriesType.CUSTOM);
       }
 
       @Override
       public void setBeginEnd(long begin,
-                              long end) {
-
-      }
+                              long end) {}
     };
 
     chart.setHolderDetailsAndAnalyze(new DetailAndAnalyzeHolder(detailPanel, customAction));
@@ -586,25 +580,34 @@ public class ChartPresenter implements HelperChart, MessageAction {
 
   @Override
   public void receive(Message message) {
-    log.info("Message received: " + message.action());
+    log.info("Message received >>> " + message.destination() + " with action >>> " + message.action());
+
     PanelTabType panelTabType = PanelTabType.valueOf(message.destination().panel().name());
-    CProfile cProfileFilter = message.parameters().get("cProfileFilter");
-    List<String> filter = message.parameters().get("filter");
+
+    Map<CProfile, LinkedHashSet<String>> topMapSelected = message.parameters().get("topMapSelected");
+
+    LogHelper.logMapSelected(topMapSelected);
+
     Map<String, Color> seriesColorMap = message.parameters().get("seriesColorMap");
 
     switch (message.action()) {
-      case ADD_CHART_FILTER, REMOVE_CHART_FILTER ->
-          handleFilterChange(panelTabType, cProfileFilter, filter, seriesColorMap);
+      case ADD_CHART_FILTER -> handleFilterChange(panelTabType, topMapSelected, seriesColorMap);
+      case REMOVE_CHART_FILTER -> handleFilterChange(panelTabType, null, seriesColorMap);
     }
   }
 
-  private Map<String, Color> getFilterSeriesColorMap(Map<String, Color> seriesColorMap, List<String> filterKeys) {
-    if (filterKeys == null || filterKeys.isEmpty()) {
+  private Map<String, Color> getFilterSeriesColorMap(Metric metric,
+                                                     Map<String, Color> seriesColorMap,
+                                                     Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+    if (topMapSelected == null
+        || topMapSelected.isEmpty()
+        || topMapSelected.values().stream().allMatch(LinkedHashSet::isEmpty)
+        || !topMapSelected.containsKey(metric.getYAxis())) {
       return seriesColorMap;
     }
 
     Map<String, Color> filteredMap = new HashMap<>();
-    for (String key : filterKeys) {
+    for (String key : topMapSelected.get(metric.getYAxis())) {
       if (seriesColorMap.containsKey(key)) {
         filteredMap.put(key, seriesColorMap.get(key));
       }
@@ -613,23 +616,20 @@ public class ChartPresenter implements HelperChart, MessageAction {
   }
 
   private void handleFilterChange(PanelTabType panelTabType,
-                                  CProfile cProfileFilter,
-                                  List<String> filter,
+                                  Map<CProfile, LinkedHashSet<String>> topMapSelected,
                                   Map<String, Color> seriesColorMap) {
     Map<String, Color> preservedColorMap = new HashMap<>(seriesColorMap);
-    Entry<CProfile, List<String>> filterEntry =
-        (filter == null || filter.isEmpty()) ? null : Map.entry(cProfileFilter, filter);
 
     if (panelTabType == PanelTabType.REALTIME) {
-      updateRealTimeChart(preservedColorMap, filterEntry);
+      updateRealTimeChart(preservedColorMap, topMapSelected);
     } else if (panelTabType == PanelTabType.HISTORY) {
-      updateHistoryChart(preservedColorMap, filterEntry);
+      updateHistoryChart(preservedColorMap, topMapSelected);
     }
 
     if (panelTabType == PanelTabType.REALTIME && realTimeDetail != null) {
-      realTimeDetail.updateSeriesColor(Map.entry(cProfileFilter, filter != null ? filter : Collections.emptyList()), preservedColorMap);
+      realTimeDetail.updateSeriesColor(topMapSelected, preservedColorMap);
     } else if (panelTabType == PanelTabType.HISTORY && historyDetail != null) {
-      historyDetail.updateSeriesColor(Map.entry(cProfileFilter, filter != null ? filter : Collections.emptyList()), preservedColorMap);
+      historyDetail.updateSeriesColor(topMapSelected, preservedColorMap);
     }
   }
 
@@ -637,7 +637,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
     updateRealTimeChart(null, null);
   }
 
-  private void updateRealTimeChart(Map<String, Color> seriesColorMap, Entry<CProfile, List<String>> filter) {
+  private void updateRealTimeChart(Map<String, Color> seriesColorMap, Map<CProfile, LinkedHashSet<String>> topMapSelected) {
     SwingTaskRunner.runWithProgress(
         view.getRealTimeChartPanel(),
         executor,
@@ -656,7 +656,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
           realTimeChart = null;
           realTimeDetail = null;
 
-          realTimeChart = createChart(AnalyzeType.REAL_TIME, filter);
+          realTimeChart = createChart(AnalyzeType.REAL_TIME, topMapSelected);
 
           if (seriesColorMap != null) {
             realTimeChart.loadSeriesColor(realTimeMetric, seriesColorMap);
@@ -665,9 +665,9 @@ public class ChartPresenter implements HelperChart, MessageAction {
 
           handleLegendChangeAll(UIState.INSTANCE.getShowLegend(model.getChartKey()));
 
-          if (seriesColorMap != null && filter != null) {
-            Map<String, Color> filterSeriesColorMap = getFilterSeriesColorMap(seriesColorMap, filter.getValue());
-            realTimeDetail = getDetail(AnalyzeType.REAL_TIME, realTimeChart, filterSeriesColorMap, SeriesType.CUSTOM, filter);
+          if (seriesColorMap != null && topMapSelected != null) {
+            Map<String, Color> filterSeriesColorMap = getFilterSeriesColorMap(realTimeMetric, seriesColorMap, topMapSelected);
+            realTimeDetail = getDetail(AnalyzeType.REAL_TIME, realTimeChart, filterSeriesColorMap, SeriesType.CUSTOM, topMapSelected);
           } else {
             SeriesType seriesTypeChart = realTimeChart.getSeriesType();
             if (SeriesType.COMMON.equals(seriesTypeChart)) {
@@ -714,7 +714,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
     updateHistoryChart(null, null);
   }
 
-  private void updateHistoryChart(Map<String, Color> seriesColorMap, Entry<CProfile, List<String>> filter) {
+  private void updateHistoryChart(Map<String, Color> seriesColorMap, Map<CProfile, LinkedHashSet<String>> topMapSelected) {
     SwingTaskRunner.runWithProgress(
         view.getHistoryChartPanel(),
         executor,
@@ -731,7 +731,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
           historyChart = null;
           historyDetail = null;
 
-          historyChart = createChart(AnalyzeType.HISTORY, filter);
+          historyChart = createChart(AnalyzeType.HISTORY, topMapSelected);
 
           if (seriesColorMap != null) {
             historyChart.loadSeriesColor(historyMetric, seriesColorMap);
@@ -740,16 +740,16 @@ public class ChartPresenter implements HelperChart, MessageAction {
 
           handleLegendChangeAll(UIState.INSTANCE.getShowLegend(model.getChartKey()));
 
-          if (seriesColorMap != null && filter != null) {
-            Map<String, Color> filterSeriesColorMap = getFilterSeriesColorMap(seriesColorMap, filter.getValue());
-            historyDetail = getDetail(AnalyzeType.HISTORY, historyChart, filterSeriesColorMap, SeriesType.CUSTOM, filter);
+          if (seriesColorMap != null && topMapSelected != null) {
+            Map<String, Color> filterSeriesColorMap = getFilterSeriesColorMap(historyMetric, seriesColorMap, topMapSelected);
+            historyDetail = getDetail(AnalyzeType.HISTORY, historyChart, filterSeriesColorMap, SeriesType.CUSTOM, topMapSelected);
           } else {
             SeriesType seriesTypeChart = historyChart.getSeriesType();
             if (SeriesType.COMMON.equals(seriesTypeChart)) {
               historyDetail = getDetail(AnalyzeType.HISTORY, historyChart, null, SeriesType.COMMON, null);
             } else {
               HistorySCP historySCP = (HistorySCP) historyChart;
-              historyDetail = getDetail(AnalyzeType.HISTORY, historyChart, historyChart.getSeriesColorMap(), SeriesType.CUSTOM, historySCP.getFilter());
+              historyDetail = getDetail(AnalyzeType.HISTORY, historyChart, historyChart.getSeriesColorMap(), SeriesType.CUSTOM, historySCP.getTopMapSelected());
             }
           }
 

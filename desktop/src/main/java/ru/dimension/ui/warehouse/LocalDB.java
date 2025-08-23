@@ -16,9 +16,9 @@ import ru.dimension.db.exception.EnumByteExceedException;
 import ru.dimension.db.exception.GanttColumnNotSupportedException;
 import ru.dimension.db.exception.SqlColMetadataException;
 import ru.dimension.db.exception.TableNameEmptyException;
-import ru.dimension.db.model.CompareFunction;
 import ru.dimension.db.model.GroupFunction;
 import ru.dimension.db.model.OrderBy;
+import ru.dimension.db.model.filter.CompositeFilter;
 import ru.dimension.db.model.output.BlockKeyTail;
 import ru.dimension.db.model.output.GanttColumnCount;
 import ru.dimension.db.model.output.GanttColumnSum;
@@ -27,8 +27,8 @@ import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.SProfile;
 import ru.dimension.db.model.profile.TProfile;
 import ru.dimension.db.sql.BatchResultSet;
-import ru.dimension.ui.warehouse.backend.BerkleyDB;
 import ru.dimension.ui.helper.FilesHelper;
+import ru.dimension.ui.warehouse.backend.BerkleyDB;
 
 @Log4j2
 @Singleton
@@ -156,103 +156,55 @@ public class LocalDB implements DStore {
   public List<StackedColumn> getStacked(String tableName,
                                         CProfile cProfile,
                                         GroupFunction groupFunction,
+                                        CompositeFilter compositeFilter,
                                         long begin,
-                                        long end)
-      throws SqlColMetadataException, BeginEndWrongOrderException {
-    return DStore.getStacked(tableName, cProfile, groupFunction, begin, end);
+                                        long end) throws SqlColMetadataException, BeginEndWrongOrderException {
+    return DStore.getStacked(tableName, cProfile, groupFunction, compositeFilter, begin, end);
   }
 
   @Override
-  public List<StackedColumn> getStacked(String tableName,
-                                        CProfile cProfile,
-                                        GroupFunction groupFunction,
-                                        CProfile cProfileFilter,
-                                        String[] filterData,
-                                        CompareFunction compareFunction,
-                                        long begin,
-                                        long end)
-      throws SqlColMetadataException, BeginEndWrongOrderException {
-    return DStore.getStacked(tableName, cProfile, groupFunction, cProfileFilter, filterData, compareFunction, begin, end);
-  }
-
-  @Override
-  public List<GanttColumnCount> getGantt(String tableName,
-                                    CProfile firstGrpBy,
-                                    CProfile secondGrpBy,
-                                    long begin,
-                                    long end)
+  public List<GanttColumnCount> getGanttCount(String tableName,
+                                              CProfile firstGrpBy,
+                                              CProfile secondGrpBy,
+                                              CompositeFilter compositeFilter,
+                                              long begin,
+                                              long end)
       throws SqlColMetadataException, BeginEndWrongOrderException, GanttColumnNotSupportedException {
-    return DStore.getGantt(tableName, firstGrpBy, secondGrpBy, begin, end);
+    return DStore.getGanttCount(tableName, firstGrpBy, secondGrpBy, compositeFilter, begin, end);
   }
 
   @Override
-  public List<GanttColumnCount> getGantt(String tableName,
-                                         CProfile firstGrpBy,
-                                         CProfile secondGrpBy,
-                                         int batchSize,
-                                         long begin,
-                                         long end)
+  public List<GanttColumnCount> getGanttCount(String tableName,
+                                              CProfile firstGrpBy,
+                                              CProfile secondGrpBy,
+                                              CompositeFilter compositeFilter,
+                                              int batchSize,
+                                              long begin,
+                                              long end)
       throws SqlColMetadataException, BeginEndWrongOrderException, GanttColumnNotSupportedException {
-    return DStore.getGantt(tableName, firstGrpBy, secondGrpBy, batchSize, begin, end);
-  }
-
-  @Override
-  public List<GanttColumnCount> getGantt(String tableName,
-                                    CProfile firstGrpBy,
-                                    CProfile secondGrpBy,
-                                    CProfile cProfileFilter,
-                                    String[] filterData,
-                                    CompareFunction compareFunction,
-                                    long begin,
-                                    long end)
-      throws SqlColMetadataException, BeginEndWrongOrderException, GanttColumnNotSupportedException {
-    return DStore.getGantt(tableName, firstGrpBy, secondGrpBy, cProfileFilter, filterData, compareFunction, begin, end);
+    return DStore.getGanttCount(tableName, firstGrpBy, secondGrpBy, compositeFilter, batchSize, begin, end);
   }
 
   @Override
   public List<GanttColumnSum> getGanttSum(String tableName,
                                           CProfile firstGrpBy,
                                           CProfile secondGrpBy,
+                                          CompositeFilter compositeFilter,
                                           long begin,
                                           long end)
       throws SqlColMetadataException, BeginEndWrongOrderException, GanttColumnNotSupportedException {
-    return DStore.getGanttSum(tableName, firstGrpBy, secondGrpBy, begin, end);
-  }
-
-  @Override
-  public List<GanttColumnSum> getGanttSum(String tableName,
-                                          CProfile firstGrpBy,
-                                          CProfile secondGrpBy,
-                                          CProfile cProfileFilter,
-                                          String[] filterData,
-                                          CompareFunction compareFunction,
-                                          long begin,
-                                          long end)
-      throws SqlColMetadataException, BeginEndWrongOrderException, GanttColumnNotSupportedException {
-    return DStore.getGanttSum(tableName, firstGrpBy, secondGrpBy, cProfileFilter, filterData, compareFunction, begin, end);
+    return DStore.getGanttSum(tableName, firstGrpBy, secondGrpBy, compositeFilter, begin, end);
   }
 
   @Override
   public List<String> getDistinct(String tableName,
                                   CProfile cProfile,
                                   OrderBy orderBy,
+                                  CompositeFilter compositeFilter,
                                   int limit,
                                   long begin,
                                   long end) throws BeginEndWrongOrderException {
-    return DStore.getDistinct(tableName, cProfile, orderBy, limit, begin, end);
-  }
-
-  @Override
-  public List<String> getDistinct(String tableName,
-                                  CProfile cProfile,
-                                  OrderBy orderBy,
-                                  int limit,
-                                  long begin,
-                                  long end,
-                                  CProfile cProfileFilter,
-                                  String[] filterData,
-                                  CompareFunction compareFunction) throws BeginEndWrongOrderException {
-    return DStore.getDistinct(tableName, cProfile, orderBy, limit, begin, end, cProfileFilter, filterData, compareFunction);
+    return DStore.getDistinct(tableName, cProfile, orderBy, compositeFilter, limit, begin, end);
   }
 
   @Override

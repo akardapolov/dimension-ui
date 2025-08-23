@@ -6,9 +6,9 @@ import java.awt.GridLayout;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
@@ -28,10 +28,11 @@ import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.GanttColumnNotSupportedException;
 import ru.dimension.db.exception.SqlColMetadataException;
-import ru.dimension.db.model.CompareFunction;
+import ru.dimension.db.model.filter.CompositeFilter;
 import ru.dimension.db.model.output.GanttColumnCount;
 import ru.dimension.db.model.output.GanttColumnSum;
 import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.ui.helper.FilterHelper;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.helper.ProgressBarHelper;
@@ -51,7 +52,7 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
   private final Metric metric;
   private final SeriesType seriesType;
 
-  private final Entry<CProfile, List<String>> filter;
+  private final Map<CProfile, LinkedHashSet<String>> topMapSelected;
 
   public MainTopDashboardPanel(DStore dStore,
                                ScheduledExecutorService executorService,
@@ -62,14 +63,14 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
                                long end,
                                Map<String, Color> seriesColorMap,
                                SeriesType seriesType,
-                               Entry<CProfile, List<String>> filter) {
+                               Map<CProfile, LinkedHashSet<String>> topMapSelected) {
     super(tableInfo, cProfile, begin, end, seriesColorMap);
 
     this.dStore = dStore;
     this.executorService = executorService;
     this.metric = metric;
     this.seriesType = seriesType;
-    this.filter = filter;
+    this.topMapSelected = topMapSelected;
 
     super.jxTableCase.getJxTable().getSelectionModel().addListSelectionListener(this);
 
@@ -190,32 +191,42 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
       throws BeginEndWrongOrderException, GanttColumnNotSupportedException, SqlColMetadataException {
 
     if (MetricFunction.COUNT.equals(metric.getMetricFunction())) {
-      if (SeriesType.CUSTOM.equals(seriesType) && filter != null) {
-        return convertGanttColumns(dStore.getGantt(tableInfo.getTableName(),
+      if (SeriesType.CUSTOM.equals(seriesType) && topMapSelected != null) {
+
+        CompositeFilter compositeFilter = FilterHelper.toCompositeFilter(topMapSelected);
+
+        return convertGanttColumns(dStore.getGanttCount(tableInfo.getTableName(),
                                                    firstLevelGroupBy,
                                                    cProfile,
-                                                   filter.getKey(),
-                                                   filter.getValue().toArray(new String[0]),
-                                                   CompareFunction.EQUAL,
+                                                   compositeFilter,
                                                    begin,
                                                    end));
       } else {
-        return convertGanttColumns(dStore.getGantt(tableInfo.getTableName(),
-                                                   firstLevelGroupBy, cProfile, begin, end));
+        return convertGanttColumns(dStore.getGanttCount(tableInfo.getTableName(),
+                                                        firstLevelGroupBy,
+                                                        cProfile,
+                                                        null,
+                                                        begin,
+                                                        end));
       }
     } else {
-      if (SeriesType.CUSTOM.equals(seriesType) && filter != null) {
+      if (SeriesType.CUSTOM.equals(seriesType) && topMapSelected != null) {
+
+        CompositeFilter compositeFilter = FilterHelper.toCompositeFilter(topMapSelected);
+
         return convertSumToGanttColumns(dStore.getGanttSum(tableInfo.getTableName(),
                                                            firstLevelGroupBy,
                                                            cProfile,
-                                                           filter.getKey(),
-                                                           filter.getValue().toArray(new String[0]),
-                                                           CompareFunction.EQUAL,
+                                                           compositeFilter,
                                                            begin,
                                                            end));
       } else {
         return convertSumToGanttColumns(dStore.getGanttSum(tableInfo.getTableName(),
-                                                           firstLevelGroupBy, cProfile, begin, end));
+                                                           firstLevelGroupBy,
+                                                           cProfile,
+                                                           null,
+                                                           begin,
+                                                           end));
       }
     }
   }

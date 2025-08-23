@@ -5,7 +5,6 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -60,8 +59,6 @@ public class FilterPanel extends ConfigPopupPanel {
 
   private CProfile selectedColumn;
 
-  private boolean columnsEnabled = true;
-
   public FilterPanel(MessageBroker.Component component) {
     super(JPanel::new, "Filter >>", "Filter <<");
 
@@ -74,8 +71,6 @@ public class FilterPanel extends ConfigPopupPanel {
 
     columns = GUIHelper.getJXTableCase(10, colNames);
     filtersPanel = new GanttPopupPanel(component);
-
-    filtersPanel.setSelectionChangeListener(hasSelection -> setColumnsEnabled(!hasSelection));
 
     configureTableColumns(columns);
 
@@ -147,13 +142,8 @@ public class FilterPanel extends ConfigPopupPanel {
           filterSearch.setText("");
 
           loadFiltersForColumn(selectedColumn);
-
-          LinkedHashSet<String> selectedSet = filtersPanel.getFilterSelectedMap()
-              .getOrDefault(selectedColumn, new LinkedHashSet<>());
-          setColumnsEnabled(selectedSet.isEmpty());
         } else {
           clearFilters();
-          setColumnsEnabled(true);
         }
       }
     });
@@ -184,8 +174,8 @@ public class FilterPanel extends ConfigPopupPanel {
   private void updateComponents() {
     boolean panelEnabled = super.isEnabled();
 
-    columnsSearch.setEnabled(panelEnabled && columnsEnabled);
-    columns.getJxTable().setEnabled(panelEnabled && columnsEnabled);
+    columnsSearch.setEnabled(panelEnabled);
+    columns.getJxTable().setEnabled(panelEnabled);
     filterSearch.setEnabled(panelEnabled);
     filtersPanel.setEnabled(panelEnabled);
   }
@@ -196,7 +186,6 @@ public class FilterPanel extends ConfigPopupPanel {
 
     columnsSearch.setText("");
     filterSearch.setText("");
-    setColumnsEnabled(true);
   }
 
   private void loadColumns() {
@@ -263,10 +252,5 @@ public class FilterPanel extends ConfigPopupPanel {
     } catch (Exception e) {
       return false;
     }
-  }
-
-  private void setColumnsEnabled(boolean enabled) {
-    this.columnsEnabled = enabled;
-    updateComponents();
   }
 }

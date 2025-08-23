@@ -6,7 +6,9 @@ import java.awt.BorderLayout;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,11 +27,15 @@ import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.SqlColMetadataException;
-import ru.dimension.db.model.CompareFunction;
 import ru.dimension.db.model.OrderBy;
+import ru.dimension.db.model.filter.CompositeFilter;
 import ru.dimension.db.model.output.StackedColumn;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.chart.ChartConfig;
+import ru.dimension.ui.component.chart.RangeUtils;
+import ru.dimension.ui.component.chart.RangeUtils.TimeRange;
+import ru.dimension.ui.component.module.analyze.handler.TableSelectionHandler;
+import ru.dimension.ui.helper.FilterHelper;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.ProgressBarHelper;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
@@ -42,9 +48,6 @@ import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.SqlQueryState;
-import ru.dimension.ui.component.module.analyze.handler.TableSelectionHandler;
-import ru.dimension.ui.component.chart.RangeUtils;
-import ru.dimension.ui.component.chart.RangeUtils.TimeRange;
 
 @Log4j2
 public class ServerRealtimeSCP extends RealtimeSCP {
@@ -54,7 +57,9 @@ public class ServerRealtimeSCP extends RealtimeSCP {
   private final Metric metric;
 
   protected ExecutorService executorService = Executors.newSingleThreadExecutor();
-  protected Map.Entry<CProfile, List<String>> filter;
+
+  protected Map<CProfile, LinkedHashSet<String>> topMapSelected;
+
   private boolean noDataFound = false;
   private TimeRange currentTimeRange = new TimeRange(0, 0);
 
@@ -72,8 +77,8 @@ public class ServerRealtimeSCP extends RealtimeSCP {
                            DStore dStore,
                            ChartConfig config,
                            ProfileTaskQueryKey profileTaskQueryKey,
-                           Map.Entry<CProfile, List<String>> filter) {
-    super(config, profileTaskQueryKey, filter);
+                           Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+    super(config, profileTaskQueryKey);
 
     super.setSqlQueryState(sqlQueryState);
     super.setDStore(dStore);
@@ -81,11 +86,17 @@ public class ServerRealtimeSCP extends RealtimeSCP {
     this.chartInfo = config.getChartInfo();
     this.queryInfo = config.getQueryInfo();
     this.metric = config.getMetric();
-    this.filter = filter;
 
     this.dataHandler = initFunctionDataHandler(metric, queryInfo, dStore);
-    if (filter != null) {
-      this.dataHandler.setFilter(filter);
+
+    if (topMapSelected != null) {
+      if (topMapSelected.values().stream().allMatch(LinkedHashSet::isEmpty)) {
+        this.topMapSelected = null;
+        this.dataHandler.setFilter(null);
+      } else {
+        this.topMapSelected = topMapSelected;
+        this.dataHandler.setFilter(topMapSelected);
+      }
     }
   }
 
@@ -102,21 +113,11 @@ public class ServerRealtimeSCP extends RealtimeSCP {
 
     try {
       if (MetricFunction.COUNT.equals(metric.getMetricFunction())) {
-        List<String> distinct = new ArrayList<>();
-
-        if (filter != null && !filter.getKey().equals(metric.getYAxis())) {
-          distinct = dStore.getDistinct(queryInfo.getName(),
-                                        metric.getYAxis(),
-                                        OrderBy.DESC,
-                                        MAX_SERIES,
-                                        chartRange.getBegin(),
-                                        chartRange.getEnd(),
-                                        filter.getKey(),
-                                        filter.getValue().toArray(new String[0]),
-                                        CompareFunction.EQUAL);
-        } else {
-          distinct = getDistinct(dStore, queryInfo.getName(), metric.getYAxis(), chartRange, MAX_SERIES);
-        }
+        List<String> distinct = getDistinct(dStore,
+                                            queryInfo.getName(),
+                                            metric.getYAxis(),
+                                            chartRange,
+                                            MAX_SERIES);
 
         boolean useCustom = distinct.size() > THRESHOLD_SERIES;
 
@@ -125,23 +126,16 @@ public class ServerRealtimeSCP extends RealtimeSCP {
 
           int showSeries = SHOW_SERIES;
 
-          if (filter != null && filter.getKey().equals(metric.getYAxis())) {
-            List<String> combined = new ArrayList<>(filter.getValue());
-
-            for (String value : distinct) {
-              if (!combined.contains(value)) {
-                combined.add(value);
-              }
-            }
-
-            distinct = combined;
-            showSeries = filter.getValue().size();
-          }
-
           initializeSeriesSelectableTable(distinct, showSeries);
 
-          filter = Map.entry(metric.getYAxis(), getCheckBoxSelected());
-          series.addAll(getCheckBoxSelected());
+          List<String> checkBoxSelected = getCheckBoxSelected();
+          this.topMapSelected = new HashMap<>() {{
+            put(config.getMetric().getYAxis(), new LinkedHashSet<>(checkBoxSelected));
+          }};
+          this.dataHandler.setFilter(topMapSelected);
+
+          series.clear();
+          series.addAll(checkBoxSelected);
         } else {
           seriesType = SeriesType.COMMON;
           series.addAll(distinct);
@@ -202,11 +196,16 @@ public class ServerRealtimeSCP extends RealtimeSCP {
 
   protected void setCustomFilter() {
     if (seriesType == SeriesType.CUSTOM) {
-      filter = Map.entry(
-          metric.getYAxis(),
-          getCheckBoxSelected()
-      );
-      dataHandler.setFilter(filter);
+      if (topMapSelected != null) {
+        topMapSelected.clear();
+        topMapSelected.putIfAbsent(metric.getYAxis(), new LinkedHashSet<>(getCheckBoxSelected()));
+      } else {
+        topMapSelected = new HashMap<>() {{
+          put(metric.getYAxis(), new LinkedHashSet<>(getCheckBoxSelected()));
+        }};
+      }
+
+      dataHandler.setFilter(topMapSelected);
     }
   }
 
@@ -240,11 +239,12 @@ public class ServerRealtimeSCP extends RealtimeSCP {
 
           reloadDataForCurrentRange();
 
+          topMapSelected.get(config.getMetric().getYAxis()).clear();
+          topMapSelected.get(config.getMetric().getYAxis()).addAll(newSelection);
+
           if (detailAndAnalyzeHolder != null) {
             detailAndAnalyzeHolder.detailAction().cleanMainPanel();
-            detailAndAnalyzeHolder.customAction().setCustomSeriesFilter(config.getMetric().getYAxis(),
-                                       List.copyOf(newSelection),
-                                       getSeriesColorMap());
+            detailAndAnalyzeHolder.customAction().setCustomSeriesFilter(topMapSelected, getSeriesColorMap());
           }
         }
         showChart();
@@ -344,6 +344,11 @@ public class ServerRealtimeSCP extends RealtimeSCP {
     }
   }
 
+  @Override
+  public Map<CProfile, LinkedHashSet<String>> getFilter() {
+    return topMapSelected;
+  }
+
   public void reinitializeChartInCustomMode() {
     this.removeAll();
 
@@ -362,20 +367,22 @@ public class ServerRealtimeSCP extends RealtimeSCP {
       List<String> distinct = fetchDistinctSeries(chartRange);
 
       int showSeries = SHOW_SERIES;
-      if (filter != null && filter.getKey().equals(metric.getYAxis())) {
-        List<String> combined = new ArrayList<>(filter.getValue());
+      if (topMapSelected != null && topMapSelected.containsKey(metric.getYAxis())) {
+        List<String> combined = new ArrayList<>(topMapSelected.get(metric.getYAxis()));
         for (String value : distinct) {
           if (!combined.contains(value)) {
             combined.add(value);
           }
         }
         distinct = combined;
-        showSeries = filter.getValue().size();
+        showSeries = topMapSelected.get(metric.getYAxis()).size();
       }
 
       initializeSeriesSelectableTable(distinct, showSeries);
-      filter = Map.entry(metric.getYAxis(), getCheckBoxSelected());
+
+      series.clear();
       series.addAll(getCheckBoxSelected());
+
       setCustomFilter();
 
       initializeWithSeriesTable();
@@ -387,11 +394,7 @@ public class ServerRealtimeSCP extends RealtimeSCP {
       reloadDataForCurrentRange();
 
       if (detailAndAnalyzeHolder != null) {
-        Set<String> newSelection = new HashSet<>(getCheckBoxSelected());
-        detailAndAnalyzeHolder.customAction().setCustomSeriesFilter(metric.getYAxis(),
-            List.copyOf(newSelection),
-            getSeriesColorMap()
-        );
+        detailAndAnalyzeHolder.customAction().setCustomSeriesFilter(topMapSelected, getSeriesColorMap());
       }
     } catch (BeginEndWrongOrderException e) {
       log.error("Error reinitializing chart", e);
@@ -401,23 +404,23 @@ public class ServerRealtimeSCP extends RealtimeSCP {
   }
 
   private List<String> fetchDistinctSeries(ChartRange chartRange) throws BeginEndWrongOrderException {
-    if (filter != null && !filter.getKey().equals(metric.getYAxis())) {
+    if (topMapSelected != null) {
+      CompositeFilter compositeFilter = FilterHelper.toCompositeFilter(topMapSelected);
+
       return dStore.getDistinct(
           queryInfo.getName(),
           metric.getYAxis(),
           OrderBy.DESC,
+          compositeFilter,
           MAX_SERIES,
           chartRange.getBegin(),
-          chartRange.getEnd(),
-          filter.getKey(),
-          filter.getValue().toArray(new String[0]),
-          CompareFunction.EQUAL
-      );
+          chartRange.getEnd());
     } else {
       return dStore.getDistinct(
           queryInfo.getName(),
           metric.getYAxis(),
           OrderBy.DESC,
+          null,
           MAX_SERIES,
           chartRange.getBegin(),
           chartRange.getEnd()
@@ -530,24 +533,12 @@ public class ServerRealtimeSCP extends RealtimeSCP {
 
         double k = chartInfo.getRangeRealtime().getMinutes();
 
-        boolean applyFilter = false;
-        CProfile cProfileFilter = null;
-        String[] filterData = new String[0];
-        CompareFunction compareFunction = CompareFunction.EQUAL;
-
-        if (filter != null) {
-          applyFilter = true;
-          cProfileFilter = filter.getKey();
-          filterData = filter.getValue().toArray(new String[0]);
-
-          if (cProfileFilter.equals(metric.getYAxis())) {
-            series.clear();
-            series.addAll(filter.getValue());
-          }
-        }
+        boolean applyFilter = topMapSelected != null
+            && !topMapSelected.isEmpty()
+            && topMapSelected.values().stream().anyMatch(set -> !set.isEmpty());
 
         if (applyFilter) {
-          dataHandler.handleFunction(range.getStart(), range.getEnd(), k, series, cProfileFilter, filterData, compareFunction, stackedChart);
+          dataHandler.handleFunction(range.getStart(), range.getEnd(), k, series, topMapSelected, stackedChart);
         } else {
           dataHandler.handleFunction(range.getStart(), range.getEnd(), false, range.getStart(), k, series, stackedChart);
         }
@@ -579,24 +570,12 @@ public class ServerRealtimeSCP extends RealtimeSCP {
           addZeroValuesForAllSeries(range.getStart());
         }
       } else {
-        boolean applyFilter = false;
-        CProfile cProfileFilter = null;
-        String[] filterData = new String[0];
-        CompareFunction compareFunction = CompareFunction.EQUAL;
-
-        if (filter != null) {
-          applyFilter = true;
-          cProfileFilter = filter.getKey();
-          filterData = filter.getValue().toArray(new String[0]);
-
-          if (cProfileFilter.equals(metric.getYAxis())) {
-            series.clear();
-            series.addAll(filter.getValue());
-          }
-        }
+        boolean applyFilter = topMapSelected != null
+            && !topMapSelected.isEmpty()
+            && topMapSelected.values().stream().anyMatch(set -> !set.isEmpty());
 
         if (applyFilter) {
-          dataHandler.handleFunction(range.getStart(), range.getEnd(), k, series, cProfileFilter, filterData, compareFunction, stackedChart);
+          dataHandler.handleFunction(range.getStart(), range.getEnd(), k, series, topMapSelected, stackedChart);
         } else {
           dataHandler.handleFunction(range.getStart(), range.getEnd(), false, range.getStart(), k, series, stackedChart);
         }

@@ -74,7 +74,7 @@ public abstract class FunctionHandler implements FunctionDataHandler {
                                 GroupFunction groupFunction) {
     try {
       List<StackedColumn> stackedColumns
-          = dStore.getStacked(queryInfo.getName(), metric.getYAxis(), groupFunction, begin, end);
+          = dStore.getStacked(queryInfo.getName(), metric.getYAxis(), groupFunction, null, begin, end);
 
       long x;
       double y = getY(groupFunction, stackedColumns);

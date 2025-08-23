@@ -171,6 +171,7 @@ public interface HelperChart {
     return dStore.getDistinct(tableName,
                               cProfile,
                               OrderBy.DESC,
+                              null,
                               limit,
                               chartRange.getBegin(),
                               chartRange.getEnd());

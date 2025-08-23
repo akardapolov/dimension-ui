@@ -13,12 +13,11 @@ import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.SqlColMetadataException;
-import ru.dimension.db.model.CompareFunction;
 import ru.dimension.db.model.output.BlockKeyTail;
 import ru.dimension.db.model.profile.CProfile;
-import ru.dimension.ui.model.function.ChartType;
 import ru.dimension.ui.model.chart.RangeBatchSize;
 import ru.dimension.ui.model.config.Metric;
+import ru.dimension.ui.model.function.ChartType;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 
 @Log4j2
@@ -45,7 +44,7 @@ public class ChartDataLoader implements HelperChart {
   private long clientBegin;
 
   @Setter
-  private Map.Entry<CProfile, List<String>> filter;
+  private Map<CProfile, LinkedHashSet<String>> topMapSelected;
 
   public ChartDataLoader(Metric metric,
                          ChartInfo chartInfo,
@@ -60,13 +59,13 @@ public class ChartDataLoader implements HelperChart {
                          StackedChart stackedChart,
                          FunctionDataHandler dataHandler,
                          boolean isRealTime,
-                         Map.Entry<CProfile, List<String>> filter) {
+                         Map<CProfile, LinkedHashSet<String>> topMapSelected) {
     this.metric = metric;
     this.chartInfo = chartInfo;
     this.stackedChart = stackedChart;
     this.dataHandler = dataHandler;
     this.isRealTime = isRealTime;
-    this.filter = filter;
+    this.topMapSelected = topMapSelected;
 
     this.series = new LinkedHashSet<>();
 
@@ -157,12 +156,11 @@ public class ChartDataLoader implements HelperChart {
             fillEmptyChartLocal(currBatch.get(i-1).getTail(), currBatch.get(i).getKey());
 
             // Process the previous item
-            if (filter != null) {
+            if (topMapSelected != null) {
               dataHandler.handleFunction(currBatch.get(i-1).getKey(),
                                          currBatch.get(i-1).getTail(),
                                          k, series,
-                                         filter.getKey(), filter.getValue().toArray(new String[0]),
-                                         CompareFunction.EQUAL,
+                                         topMapSelected,
                                          stackedChart);
             } else {
               dataHandler.handleFunction(currBatch.get(i-1).getKey(),
@@ -171,12 +169,11 @@ public class ChartDataLoader implements HelperChart {
             }
 
             // Process the current item
-            if (filter != null) {
+            if (topMapSelected != null) {
               dataHandler.handleFunction(currBatch.get(i).getKey(),
                                          currBatch.get(i).getTail(),
                                          k, series,
-                                         filter.getKey(), filter.getValue().toArray(new String[0]),
-                                         CompareFunction.EQUAL,
+                                         topMapSelected,
                                          stackedChart);
             } else {
               dataHandler.handleFunction(currBatch.get(i).getKey(),
@@ -190,18 +187,16 @@ public class ChartDataLoader implements HelperChart {
         if (overallDelta > (range * GAP)) {
           fillEmptyChartLocal(currBatch.getFirst().getKey(), currBatch.getLast().getKey());
 
-          if (filter != null) {
+          if (topMapSelected != null) {
             dataHandler.handleFunction(currBatch.getFirst().getKey(),
                                        currBatch.getFirst().getTail(),
                                        k, series,
-                                       filter.getKey(), filter.getValue().toArray(new String[0]),
-                                       CompareFunction.EQUAL,
+                                       topMapSelected,
                                        stackedChart);
             dataHandler.handleFunction(currBatch.getLast().getKey(),
                                        currBatch.getLast().getTail(),
                                        k, series,
-                                       filter.getKey(), filter.getValue().toArray(new String[0]),
-                                       CompareFunction.EQUAL,
+                                       topMapSelected,
                                        stackedChart);
           } else {
             dataHandler.handleFunction(currBatch.getFirst().getKey(),
@@ -212,12 +207,11 @@ public class ChartDataLoader implements HelperChart {
                                        true, currBatch.getLast().getKey(), k, series, stackedChart);
           }
         } else {
-          if (filter != null) {
+          if (topMapSelected != null) {
             dataHandler.handleFunction(currBatch.getFirst().getKey(),
                                        currBatch.getLast().getTail(),
                                        k, series,
-                                       filter.getKey(), filter.getValue().toArray(new String[0]),
-                                       CompareFunction.EQUAL,
+                                       topMapSelected,
                                        stackedChart);
           } else {
             dataHandler.handleFunction(currBatch.getFirst().getKey(),
@@ -263,12 +257,11 @@ public class ChartDataLoader implements HelperChart {
               }
 
               if (currentBatch.size() == batchSize) {
-                if (filter != null) {
+                if (topMapSelected != null) {
                   dataHandler.handleFunction(currentBatch.getFirst().getKey(),
                                              currentBatch.getLast().getTail(),
                                              k, series,
-                                             filter.getKey(), filter.getValue().toArray(new String[0]),
-                                             CompareFunction.EQUAL,
+                                             topMapSelected,
                                              stackedChart);
                 } else {
                   dataHandler.handleFunction(currentBatch.getFirst().getKey(),

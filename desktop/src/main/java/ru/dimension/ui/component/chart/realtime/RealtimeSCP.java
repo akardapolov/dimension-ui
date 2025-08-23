@@ -2,46 +2,27 @@ package ru.dimension.ui.component.chart.realtime;
 
 import java.awt.BorderLayout;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import lombok.Getter;
-import ru.dimension.db.model.profile.CProfile;
 import org.jfree.chart.util.IDetailPanel;
+import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.chart.ChartConfig;
-import ru.dimension.ui.component.chart.SCP;
-import ru.dimension.ui.model.table.JXTableCase;
-import ru.dimension.ui.model.ProfileTaskQueryKey;
-import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.component.chart.FunctionDataHandler;
+import ru.dimension.ui.component.chart.SCP;
+import ru.dimension.ui.model.ProfileTaskQueryKey;
+import ru.dimension.ui.model.table.JXTableCase;
 
 public abstract class RealtimeSCP extends SCP {
 
   protected FunctionDataHandler dataHandler;
-  @Getter
-  protected Map.Entry<CProfile, List<String>> filter;
   protected JXTableCase seriesSelectable;
   protected ExecutorService executorService = Executors.newSingleThreadExecutor();
 
   public RealtimeSCP(ChartConfig config, ProfileTaskQueryKey profileTaskQueryKey) {
     super(config, profileTaskQueryKey);
-  }
-
-  public RealtimeSCP(ChartConfig config, ProfileTaskQueryKey profileTaskQueryKey,
-                     Map.Entry<CProfile, List<String>> filter) {
-    super(config, profileTaskQueryKey);
-    this.filter = filter;
-  }
-
-  protected void setCustomFilter() {
-    if (seriesType == SeriesType.CUSTOM) {
-      filter = Map.entry(
-          config.getMetric().getYAxis(),
-          getCheckBoxSelected()
-      );
-      dataHandler.setFilter(filter);
-    }
   }
 
   protected List<String> getCheckBoxSelected() {
@@ -62,6 +43,8 @@ public abstract class RealtimeSCP extends SCP {
   }
 
   protected abstract void reloadDataForCurrentRange();
+
+  public abstract Map<CProfile, LinkedHashSet<String>> getFilter();
 
   @Override
   public void addChartListenerReleaseMouse(IDetailPanel iDetailPanel) {

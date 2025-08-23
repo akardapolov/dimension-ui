@@ -5,7 +5,6 @@ import static ru.dimension.ui.helper.GUIHelper.getJScrollPane;
 import ext.egantt.swing.GanttDrawingPartHelper;
 import ext.egantt.swing.GanttTable;
 import java.awt.Color;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,6 +36,9 @@ import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.GanttColumnNotSupportedException;
 import ru.dimension.db.exception.SqlColMetadataException;
 import ru.dimension.db.model.CompareFunction;
+import ru.dimension.db.model.filter.CompositeFilter;
+import ru.dimension.db.model.filter.FilterCondition;
+import ru.dimension.db.model.filter.LogicalOperator;
 import ru.dimension.db.model.output.GanttColumnCount;
 import ru.dimension.db.model.output.GanttColumnSum;
 import ru.dimension.db.model.profile.CProfile;
@@ -48,6 +50,7 @@ import ru.dimension.ui.component.broker.MessageBroker.Action;
 import ru.dimension.ui.component.broker.MessageBroker.Block;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
+import ru.dimension.ui.helper.LogHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.helper.ProgressBarHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
@@ -67,13 +70,6 @@ import ru.dimension.ui.view.detail.GanttCommon;
 @Log4j2
 public class GanttPopupPanel extends GanttCommon {
   private final MessageBroker.Component component;
-
-  public interface SelectionChangeListener {
-    void onSelectionChange(boolean hasSelection);
-  }
-
-  @Setter
-  private SelectionChangeListener selectionChangeListener;
 
   @Setter
   private Panel panelType;
@@ -194,25 +190,31 @@ public class GanttPopupPanel extends GanttCommon {
 
     if (MetricFunction.COUNT.equals(metric.getMetricFunction())) {
       if (Objects.isNull(seriesType) || SeriesType.COMMON.equals(seriesType)) {
-        return convertGanttColumns(dStore.getGantt(tableInfo.getTableName(),
-                                                   column,
-                                                   metric.getYAxis(),
-                                                   begin,
-                                                   end));
+        return convertGanttColumns(dStore.getGanttCount(tableInfo.getTableName(),
+                                                        column,
+                                                        metric.getYAxis(),
+                                                        null,
+                                                        begin,
+                                                        end));
       } else if (SeriesType.CUSTOM.equals(seriesType)) {
-        return convertGanttColumns(dStore.getGantt(tableInfo.getTableName(),
-                                                   column,
-                                                   metric.getYAxis(),
-                                                   metric.getYAxis(),
-                                                   seriesColorMap.keySet().toArray(String[]::new),
-                                                   CompareFunction.EQUAL,
-                                                   begin,
-                                                   end));
+        CompositeFilter compositeFilter = new CompositeFilter(
+            List.of(new FilterCondition(metric.getYAxis(),
+                                        seriesColorMap.keySet().toArray(String[]::new),
+                                        CompareFunction.EQUAL)),
+            LogicalOperator.AND);
+
+        return convertGanttColumns(dStore.getGanttCount(tableInfo.getTableName(),
+                                                        column,
+                                                        metric.getYAxis(),
+                                                        compositeFilter,
+                                                        begin,
+                                                        end));
       }
     } else {
       return convertSumToGanttColumns(dStore.getGanttSum(tableInfo.getTableName(),
                                                          column,
                                                          metric.getYAxis(),
+                                                         null,
                                                          begin,
                                                          end));
     }
@@ -376,16 +378,10 @@ public class GanttPopupPanel extends GanttCommon {
                 getDestination(component, Panel.REALTIME, chartKey) :
                 getDestination(component, Panel.HISTORY, chartKey);
 
-        List<String> selectedValues = new ArrayList<>(selectedSet);
-
-        if (!selectedValues.isEmpty()) {
-          sendFilterMessage(destination, Action.ADD_CHART_FILTER, selectedValues);
+        if (topMapSelected.isEmpty() || topMapSelected.values().stream().allMatch(LinkedHashSet::isEmpty)) {
+          sendFilterMessage(destination, Action.REMOVE_CHART_FILTER);
         } else {
-          sendFilterMessage(destination, Action.REMOVE_CHART_FILTER, Collections.emptyList());
-        }
-
-        if (selectionChangeListener != null) {
-          selectionChangeListener.onSelectionChange(!selectedSet.isEmpty());
+          sendFilterMessage(destination, Action.ADD_CHART_FILTER);
         }
       }
     }
@@ -412,15 +408,16 @@ public class GanttPopupPanel extends GanttCommon {
           .build();
     }
 
-    private void sendFilterMessage(Destination destination, Action action, List<String> filterValues) {
+    private void sendFilterMessage(Destination destination, Action action) {
       log.info("Message send to " + destination + " with action: " + action);
+
+      LogHelper.logMapSelected(topMapSelected);
 
       MessageBroker broker = MessageBroker.getInstance();
       broker.sendMessage(Message.builder()
                              .destination(destination)
                              .action(action)
-                             .parameter("cProfileFilter", cProfile)
-                             .parameter("filter", filterValues)
+                             .parameter("topMapSelected", topMapSelected)
                              .parameter("seriesColorMap", seriesColorMap)
                              .build());
     }

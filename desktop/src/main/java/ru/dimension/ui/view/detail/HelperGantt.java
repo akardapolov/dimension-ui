@@ -8,6 +8,9 @@ import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.GanttColumnNotSupportedException;
 import ru.dimension.db.exception.SqlColMetadataException;
 import ru.dimension.db.model.CompareFunction;
+import ru.dimension.db.model.filter.CompositeFilter;
+import ru.dimension.db.model.filter.FilterCondition;
+import ru.dimension.db.model.filter.LogicalOperator;
 import ru.dimension.db.model.output.GanttColumnCount;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.model.view.SeriesType;
@@ -28,10 +31,14 @@ public interface HelperGantt {
     List<GanttColumnCount> ganttColumnList = new ArrayList<>();
     if (Objects.isNull(seriesType) || SeriesType.COMMON.equals(seriesType)) {
       ganttColumnList =
-          dStore.getGantt(tableName, firstGrpBy, secondGrpBy, begin, end);
+          dStore.getGanttCount(tableName, firstGrpBy, secondGrpBy, null, begin, end);
     } else if (SeriesType.CUSTOM.equals(seriesType)) {
+      CompositeFilter compositeFilter = new CompositeFilter(
+          List.of(new FilterCondition(cProfileFilter, filterData, compareFunction)),
+          LogicalOperator.AND);
+
       ganttColumnList =
-          dStore.getGantt(tableName, firstGrpBy, secondGrpBy, cProfileFilter, filterData, compareFunction, begin, end);
+          dStore.getGanttCount(tableName, firstGrpBy, secondGrpBy, compositeFilter, begin, end);
     }
     return ganttColumnList;
   }

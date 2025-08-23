@@ -4,7 +4,9 @@ import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 
 import java.awt.BorderLayout;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -25,11 +27,11 @@ import lombok.extern.log4j.Log4j2;
 import org.jfree.chart.util.IDetailPanel;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
-import ru.dimension.db.model.CompareFunction;
-import ru.dimension.db.model.OrderBy;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.chart.ChartConfig;
+import ru.dimension.ui.component.chart.FunctionDataHandler;
 import ru.dimension.ui.component.chart.SCP;
+import ru.dimension.ui.component.module.analyze.handler.TableSelectionHandler;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
@@ -37,15 +39,13 @@ import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.function.MetricFunction;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.SeriesType;
-import ru.dimension.ui.component.module.analyze.handler.TableSelectionHandler;
-import ru.dimension.ui.component.chart.FunctionDataHandler;
 
 @Log4j2
 public class HistorySCP extends SCP {
 
   protected FunctionDataHandler dataHandler;
   @Getter
-  protected Map.Entry<CProfile, List<String>> filter;
+  protected Map<CProfile, LinkedHashSet<String>> topMapSelected;
 
   private JXTableCase seriesSelectable;
   private ExecutorService executorService;
@@ -60,16 +60,21 @@ public class HistorySCP extends SCP {
   public HistorySCP(DStore dStore,
                     ChartConfig config,
                     ProfileTaskQueryKey profileTaskQueryKey,
-                    Map.Entry<CProfile, List<String>> filter) {
+                    Map<CProfile, LinkedHashSet<String>> topMapSelected) {
     super(config, profileTaskQueryKey);
-    this.filter = filter;
 
     super.setDStore(dStore);
 
     this.dataHandler = initFunctionDataHandler(config.getMetric(), config.getQueryInfo(), dStore);
 
-    if (filter != null) {
-      this.dataHandler.setFilter(filter);
+    if (topMapSelected != null) {
+      if (topMapSelected.values().stream().allMatch(LinkedHashSet::isEmpty)) {
+        this.topMapSelected = null;
+        this.dataHandler.setFilter(null);
+      } else {
+        this.topMapSelected = topMapSelected;
+        this.dataHandler.setFilter(topMapSelected);
+      }
     }
 
     this.executorService = Executors.newSingleThreadExecutor();
@@ -83,22 +88,11 @@ public class HistorySCP extends SCP {
 
     try {
       if (MetricFunction.COUNT.equals(config.getMetric().getMetricFunction())) {
-        List<String> distinct = new ArrayList<>();
-
-        if (filter != null) {
-
-          distinct = dStore.getDistinct(config.getQueryInfo().getName(),
-                                        config.getMetric().getYAxis(),
-                                        OrderBy.DESC,
-                                        MAX_SERIES,
-                                        chartRange.getBegin(),
-                                        chartRange.getEnd(),
-                                        filter.getKey(),
-                                        filter.getValue().toArray(new String[0]),
-                                        CompareFunction.EQUAL);
-        } else {
-          distinct = getDistinct(dStore, config.getQueryInfo().getName(), config.getMetric().getYAxis(), chartRange, MAX_SERIES);
-        }
+        List<String> distinct = getDistinct(dStore,
+                                            config.getQueryInfo().getName(),
+                                            config.getMetric().getYAxis(),
+                                            chartRange,
+                                            MAX_SERIES);
 
         boolean useCustom = distinct.size() > THRESHOLD_SERIES;
 
@@ -107,26 +101,16 @@ public class HistorySCP extends SCP {
 
           int showSeries = SHOW_SERIES;
 
-          if (filter != null && filter.getKey().equals(config.getMetric().getYAxis())) {
-            List<String> combined = new ArrayList<>(filter.getValue());
-
-            for (String value : distinct) {
-              if (!combined.contains(value)) {
-                combined.add(value);
-              }
-            }
-
-            distinct = combined;
-            showSeries = filter.getValue().size();
-          } else if (filter != null && !filter.getKey().equals(config.getMetric().getYAxis())) {
-
-          }
-
           initializeSeriesSelectable(distinct, showSeries);
 
-          filter = Map.entry(config.getMetric().getYAxis(), getCheckBoxSelected());
+          List<String> checkBoxSelected = getCheckBoxSelected();
+          this.topMapSelected = new HashMap<>() {{
+            put(config.getMetric().getYAxis(), new LinkedHashSet<>(checkBoxSelected));
+          }};
+          this.dataHandler.setFilter(topMapSelected);
 
-          series.addAll(getCheckBoxSelected());
+          series.clear();
+          series.addAll(checkBoxSelected);
         } else {
           seriesType = SeriesType.COMMON;
           series.addAll(distinct);
@@ -150,7 +134,8 @@ public class HistorySCP extends SCP {
     }
   }
 
-  private void initializeSeriesSelectable(List<String> distinct, int showSeries) {
+  private void initializeSeriesSelectable(List<String> distinct,
+                                          int showSeries) {
     Consumer<String> runAction = this::runAction;
     String[] columnNames = {ColumnNames.NAME.getColName(), ColumnNames.PICK.getColName()};
     int nameId = 0;
@@ -214,7 +199,9 @@ public class HistorySCP extends SCP {
   private void updateSeriesFilter() {
     String searchText = seriesSearch.getText();
 
-    if (seriesSelectable == null) return;
+    if (seriesSelectable == null) {
+      return;
+    }
 
     if (seriesSorter == null) {
       seriesSorter = new TableRowSorter<>(seriesSelectable.getJxTable().getModel());
@@ -233,7 +220,9 @@ public class HistorySCP extends SCP {
   }
 
   private void runAction(String seriesName) {
-    if (seriesSelectable.isBlockRunAction()) return;
+    if (seriesSelectable.isBlockRunAction()) {
+      return;
+    }
 
     final List<String> currentSelection = getCheckBoxSelected();
 
@@ -250,8 +239,12 @@ public class HistorySCP extends SCP {
           series.clear();
           series.addAll(newSelection);
 
-          filter.getValue().clear();
-          filter.getValue().addAll(newSelection);
+          if (topMapSelected.get(config.getMetric().getYAxis()).isEmpty()) {
+            topMapSelected.putIfAbsent(config.getMetric().getYAxis(), new LinkedHashSet<>(newSelection));
+          } else {
+            topMapSelected.get(config.getMetric().getYAxis()).clear();
+            topMapSelected.get(config.getMetric().getYAxis()).addAll(newSelection);
+          }
 
           ChartRange chartRange = getChartRangeExact(config.getChartInfo());
 
@@ -263,9 +256,7 @@ public class HistorySCP extends SCP {
 
           if (detailAndAnalyzeHolder != null) {
             detailAndAnalyzeHolder.detailAction().cleanMainPanel();
-            detailAndAnalyzeHolder.customAction().setCustomSeriesFilter(config.getMetric().getYAxis(),
-                                       List.copyOf(newSelection),
-                                       getSeriesColorMap());
+            detailAndAnalyzeHolder.customAction().setCustomSeriesFilter(topMapSelected, getSeriesColorMap());
           }
         }
         showChart();
@@ -315,17 +306,9 @@ public class HistorySCP extends SCP {
       dataHandler.fillSeriesData(chartRange.getBegin(), chartRange.getEnd(), filteredSeries);
     }
 
-    boolean applyFilter = false;
-    CProfile cProfileFilter = null;
-    String[] filterData = new String[0];
-    CompareFunction compareFunction = CompareFunction.EQUAL;
-
-    if (filter != null) {
-      applyFilter = true;
-
-      cProfileFilter = filter.getKey();
-      filterData = filter.getValue().toArray(new String[0]);
-    }
+    boolean applyFilter = topMapSelected != null
+        && !topMapSelected.isEmpty()
+        && topMapSelected.values().stream().anyMatch(set -> !set.isEmpty());
 
     double range = calculateRange(chartRange);
 
@@ -334,7 +317,7 @@ public class HistorySCP extends SCP {
       double k = (double) Math.round(range) / 1000;
 
       if (applyFilter) {
-        dataHandler.handleFunction(dtBegin, dtEnd, k, filteredSeries, cProfileFilter, filterData, compareFunction, stackedChart);
+        dataHandler.handleFunction(dtBegin, dtEnd, k, filteredSeries, topMapSelected, stackedChart);
       } else {
         dataHandler.handleFunction(dtBegin, dtEnd, false, dtBegin, k, filteredSeries, stackedChart);
       }
@@ -349,7 +332,8 @@ public class HistorySCP extends SCP {
   }
 
   @Override
-  public void loadData() {}
+  public void loadData() {
+  }
 
   @Override
   public void addChartListenerReleaseMouse(IDetailPanel iDetailPanel) {

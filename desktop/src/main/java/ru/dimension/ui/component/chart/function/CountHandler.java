@@ -1,9 +1,9 @@
 package ru.dimension.ui.component.chart.function;
 
 import java.util.IntSummaryStatistics;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -12,11 +12,12 @@ import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.SqlColMetadataException;
-import ru.dimension.db.model.CompareFunction;
 import ru.dimension.db.model.GroupFunction;
+import ru.dimension.db.model.filter.CompositeFilter;
 import ru.dimension.db.model.output.StackedColumn;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.chart.StackedChart;
+import ru.dimension.ui.helper.FilterHelper;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.QueryInfo;
 
@@ -24,7 +25,7 @@ import ru.dimension.ui.model.info.QueryInfo;
 public class CountHandler extends FunctionHandler {
 
   private Metric metric;
-  private Entry<CProfile, List<String>> filter;
+  private Map<CProfile, LinkedHashSet<String>> topMapSelected;
 
   public CountHandler(Metric metric,
                       QueryInfo queryInfo,
@@ -50,8 +51,8 @@ public class CountHandler extends FunctionHandler {
   }
 
   @Override
-  public void setFilter(Entry<CProfile, List<String>> filter) {
-    this.filter = filter;
+  public void setFilter(Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+    this.topMapSelected = topMapSelected;
   }
 
   @Override
@@ -111,17 +112,15 @@ public class CountHandler extends FunctionHandler {
                              long end,
                              double yK,
                              Set<String> series,
-                             CProfile cProfileFilter,
-                             String[] filterData,
-                             CompareFunction compareFunction,
+                             Map<CProfile, LinkedHashSet<String>> topMapSelected,
                              StackedChart stackedChart) {
     try {
+      CompositeFilter compositeFilter = FilterHelper.toCompositeFilter(topMapSelected);
+
       List<StackedColumn> sColumnList = dStore.getStacked(queryInfo.getName(),
                                                           metric.getYAxis(),
                                                           GroupFunction.COUNT,
-                                                          cProfileFilter,
-                                                          filterData,
-                                                          compareFunction,
+                                                          compositeFilter,
                                                           begin,
                                                           end);
 
@@ -160,15 +159,15 @@ public class CountHandler extends FunctionHandler {
                                                    long end)
       throws BeginEndWrongOrderException, SqlColMetadataException {
 
-    if (filter == null) {
-      return dStore.getStacked(queryInfo.getName(), metric.getYAxis(), GroupFunction.COUNT, begin, end);
+    if (topMapSelected == null) {
+      return dStore.getStacked(queryInfo.getName(), metric.getYAxis(), GroupFunction.COUNT, null, begin, end);
     } else {
+      CompositeFilter compositeFilter = FilterHelper.toCompositeFilter(topMapSelected);
+
       return dStore.getStacked(queryInfo.getName(),
                                metric.getYAxis(),
                                GroupFunction.COUNT,
-                               filter.getKey(),
-                               filter.getValue().toArray(new String[0]),
-                               CompareFunction.EQUAL,
+                               compositeFilter,
                                begin,
                                end);
     }
