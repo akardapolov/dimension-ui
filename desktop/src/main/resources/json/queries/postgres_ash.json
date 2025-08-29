@@ -47,7 +47,7 @@
           "cType": "STRING"
         }
       },
-      "metricFunction": "COUNT",
+      "groupFunction": "COUNT",
       "chartType": "STACKED",
       "columnGanttList": []
     },
@@ -94,7 +94,7 @@
           "cType": "INT"
         }
       },
-      "metricFunction": "SUM",
+      "groupFunction": "SUM",
       "chartType": "LINEAR",
       "columnGanttList": []
     },
@@ -141,7 +141,7 @@
           "cType": "INT"
         }
       },
-      "metricFunction": "AVG",
+      "groupFunction": "AVG",
       "chartType": "LINEAR",
       "columnGanttList": []
     }

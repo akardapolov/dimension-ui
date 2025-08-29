@@ -15,21 +15,21 @@ public interface ViewResources
 	/**
 	 *  HorizontalView
 	 */
-	Integer HORIZONTAL = new Integer(0);
+	Integer HORIZONTAL = Integer.valueOf(0);
 
 	/**
 	 *  VerticalView
 	 */
-	Integer VERTICAL = new Integer(1);
+	Integer VERTICAL = Integer.valueOf(1);
 
 	/**
 	 *  DepthView / ZView intended for fake 3D / real 3D
 	 */
-	Integer DEPTH = new Integer(2);
+	Integer DEPTH = Integer.valueOf(2);
 
 	/**
 	 *  Angle for real 3D only
 	 */
-	Integer ANGLE = new Integer(3);
+	Integer ANGLE = Integer.valueOf(3);
 }
 

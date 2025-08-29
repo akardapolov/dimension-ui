@@ -37,7 +37,7 @@ public class TextFieldComponent implements FieldComponent
 	 */
 	public Object getValue()
 	{
-		return new Boolean(component.getText());
+		return Boolean.valueOf(component.getText());
 	}
 
 	/**

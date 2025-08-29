@@ -14,7 +14,7 @@ public interface DynamicChart {
 
   void setChartTitle(String titleText);
 
-  void loadSeriesColorInternal(String seriesName);
+  void loadSeriesColorInternal(String colorProfileName, String seriesName);
 
   void setDateAxis(long begin, long end);
 

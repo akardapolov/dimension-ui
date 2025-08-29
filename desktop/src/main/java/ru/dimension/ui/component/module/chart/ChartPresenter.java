@@ -35,13 +35,15 @@ import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.module.analyze.CustomAction;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.helper.DateHelper;
+import ru.dimension.ui.helper.FilterHelper;
 import ru.dimension.ui.helper.LogHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
+import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.function.ChartType;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.function.GroupFunction;
+import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.sql.GatherDataMode;
@@ -57,6 +59,7 @@ import ru.dimension.ui.view.detail.DetailDashboardPanel;
 
 @Log4j2
 public class ChartPresenter implements HelperChart, MessageAction {
+
   private final MessageBroker.Component component;
   private final ChartModel model;
   private final ChartView view;
@@ -90,17 +93,18 @@ public class ChartPresenter implements HelperChart, MessageAction {
   public void initializePresenter() {
     initializeFromState();
 
-    view.getRealTimeMetricFunctionPanel().setRunAction(this::handleRealtimeMetricFunctionChange);
+    view.getRealTimeFunctionPanel().setRunAction(this::handleRealtimeGroupFunctionChange);
     view.getRealTimeRangePanel().setRunAction(this::handleRealTimeRangeChange);
+    view.getHistoryTimeRangeFunctionPanel().setRunAction(this::handleHistoryTimeRangeFunctionChange);
 
     view.getRealTimeLegendPanel().setStateChangeConsumer(showLegend ->
-                                                            handleLegendChange(ChartLegendState.SHOW.equals(showLegend)));
+                                                             handleLegendChange(ChartLegendState.SHOW.equals(showLegend)));
 
-    view.getHistoryMetricFunctionPanel().setRunAction(this::handleHistoryMetricFunctionChange);
+    view.getHistoryFunctionPanel().setRunAction(this::handleHistoryGroupFunctionChange);
     view.getHistoryRangePanel().setRunAction(this::handleHistoryRangeChange);
 
     view.getHistoryLegendPanel().setStateChangeConsumer(showLegend ->
-                                                           handleLegendChange(ChartLegendState.SHOW.equals(showLegend)));
+                                                            handleLegendChange(ChartLegendState.SHOW.equals(showLegend)));
 
     view.getHistoryRangePanel().getButtonApplyRange().addActionListener(e -> applyCustomRange());
 
@@ -144,7 +148,8 @@ public class ChartPresenter implements HelperChart, MessageAction {
 
           view.getRealTimeFilterPanel().clearFilterPanel();
           view.getRealTimeFilterPanel().setSeriesColorMap(realTimeChart.getSeriesColorMap());
-          view.getRealTimeFilterPanel().getMetric().setMetricFunction(realTimeChart.getConfig().getMetric().getMetricFunction());
+          view.getRealTimeFilterPanel().getMetric()
+              .setGroupFunction(realTimeChart.getConfig().getMetric().getGroupFunction());
           return () -> {
             view.getRealTimeChartPanel().removeAll();
             view.getRealTimeDetailPanel().removeAll();
@@ -190,11 +195,13 @@ public class ChartPresenter implements HelperChart, MessageAction {
           }
 
           ChartRange chartRange = getChartRange(historyChart.getConfig().getChartInfo());
-          view.getHistoryFilterPanel().setDataSource(model.getDStore(), historyMetric, chartRange.getBegin(), chartRange.getEnd());
+          view.getHistoryFilterPanel()
+              .setDataSource(model.getDStore(), historyMetric, chartRange.getBegin(), chartRange.getEnd());
 
           view.getHistoryFilterPanel().clearFilterPanel();
           view.getHistoryFilterPanel().setSeriesColorMap(historyChart.getSeriesColorMap());
-          view.getHistoryFilterPanel().getMetric().setMetricFunction(historyChart.getConfig().getMetric().getMetricFunction());
+          view.getHistoryFilterPanel().getMetric()
+              .setGroupFunction(historyChart.getConfig().getMetric().getGroupFunction());
           return () -> {
             view.getHistoryChartPanel().add(historyChart, BorderLayout.CENTER);
             view.getHistoryDetailPanel().add(historyDetail, BorderLayout.CENTER);
@@ -209,7 +216,8 @@ public class ChartPresenter implements HelperChart, MessageAction {
     );
   }
 
-  private SCP createChart(AnalyzeType analyzeType, Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+  private SCP createChart(AnalyzeType analyzeType,
+                          Map<CProfile, LinkedHashSet<String>> topMapSelected) {
     ChartConfig config = buildChartConfig(analyzeType);
     ProfileTaskQueryKey key = model.getKey();
     SqlQueryState sqlQueryState = model.getSqlQueryState();
@@ -270,13 +278,15 @@ public class ChartPresenter implements HelperChart, MessageAction {
     CustomAction customAction = new CustomAction() {
 
       @Override
-      public void setCustomSeriesFilter(Map<CProfile, LinkedHashSet<String>> topMapSelected) {}
+      public void setCustomSeriesFilter(Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+      }
 
       @Override
       public void setCustomSeriesFilter(Map<CProfile, LinkedHashSet<String>> topMapSelected,
                                         Map<String, Color> seriesColorMap) {
         Map<String, Color> newSeriesColorMap = new HashMap<>();
-        topMapSelected.values().forEach(set -> set.forEach(value -> newSeriesColorMap.put(value, seriesColorMap.get(value))));
+        topMapSelected.values()
+            .forEach(set -> set.forEach(value -> newSeriesColorMap.put(value, seriesColorMap.get(value))));
 
         detailPanel.updateSeriesColor(topMapSelected, newSeriesColorMap);
         detailPanel.setSeriesType(SeriesType.CUSTOM);
@@ -284,7 +294,8 @@ public class ChartPresenter implements HelperChart, MessageAction {
 
       @Override
       public void setBeginEnd(long begin,
-                              long end) {}
+                              long end) {
+      }
     };
 
     chart.setHolderDetailsAndAnalyze(new DetailAndAnalyzeHolder(detailPanel, customAction));
@@ -303,20 +314,20 @@ public class ChartPresenter implements HelperChart, MessageAction {
     ChartInfo chartInfoCopy = model.getChartInfo().copy();
 
     if (AnalyzeType.REAL_TIME.equals(analyzeType)) {
-      MetricFunction metricFunction = UIState.INSTANCE.getRealtimeMetricFunction(chartKey);
-      if (metricFunction != null) {
-        metricCopy.setMetricFunction(metricFunction);
-        metricCopy.setChartType(MetricFunction.COUNT.equals(metricFunction) ? ChartType.STACKED : ChartType.LINEAR);
+      GroupFunction groupFunction = UIState.INSTANCE.getRealtimeGroupFunction(chartKey);
+      if (groupFunction != null) {
+        metricCopy.setGroupFunction(groupFunction);
+        metricCopy.setChartType(GroupFunction.COUNT.equals(groupFunction) ? ChartType.STACKED : ChartType.LINEAR);
       }
 
       RangeRealTime rangeRealTime = UIState.INSTANCE.getRealTimeRange(chartKey);
       chartInfoCopy.setRangeRealtime(Objects.requireNonNullElse(rangeRealTime, RangeRealTime.TEN_MIN));
 
     } else if (AnalyzeType.HISTORY.equals(analyzeType)) {
-      MetricFunction metricFunction = UIState.INSTANCE.getHistoryMetricFunction(chartKey);
-      if (metricFunction != null) {
-        metricCopy.setMetricFunction(metricFunction);
-        metricCopy.setChartType(MetricFunction.COUNT.equals(metricFunction) ? ChartType.STACKED : ChartType.LINEAR);
+      GroupFunction groupFunction = UIState.INSTANCE.getHistoryGroupFunction(chartKey);
+      if (groupFunction != null) {
+        metricCopy.setGroupFunction(groupFunction);
+        metricCopy.setChartType(GroupFunction.COUNT.equals(groupFunction) ? ChartType.STACKED : ChartType.LINEAR);
       }
 
       RangeHistory rangeHistory = UIState.INSTANCE.getHistoryRange(chartKey);
@@ -337,6 +348,11 @@ public class ChartPresenter implements HelperChart, MessageAction {
 
           UIState.INSTANCE.putHistoryCustomRange(chartKey, chartRange);
         }
+      }
+
+      TimeRangeFunction timeRangeFunction = UIState.INSTANCE.getTimeRangeFunction(chartKey);
+      if (timeRangeFunction != null) {
+        metricCopy.setTimeRangeFunction(timeRangeFunction);
       }
     }
 
@@ -367,29 +383,31 @@ public class ChartPresenter implements HelperChart, MessageAction {
   private void initializeFromState() {
     ChartKey chartKey = model.getChartKey();
 
-    MetricFunction realTimeMetricFunction = UIState.INSTANCE.getRealtimeMetricFunction(chartKey);
-    if (realTimeMetricFunction != null) {
-      realTimeMetric.setMetricFunction(realTimeMetricFunction);
-      realTimeMetric.setChartType(MetricFunction.COUNT.equals(realTimeMetricFunction) ? ChartType.STACKED : ChartType.LINEAR);
+    GroupFunction realTimeGroupFunction = UIState.INSTANCE.getRealtimeGroupFunction(chartKey);
+    if (realTimeGroupFunction != null) {
+      realTimeMetric.setGroupFunction(realTimeGroupFunction);
+      realTimeMetric.setChartType(
+          GroupFunction.COUNT.equals(realTimeGroupFunction) ? ChartType.STACKED : ChartType.LINEAR);
     }
     if (CType.STRING.equals(model.getMetric().getYAxis().getCsType().getCType())) {
-      view.getRealTimeMetricFunctionPanel().setEnabled(true, false, false);
+      view.getRealTimeFunctionPanel().setEnabled(true, false, false);
     } else {
-      view.getRealTimeMetricFunctionPanel().setEnabled(true, true, true);
+      view.getRealTimeFunctionPanel().setEnabled(true, true, true);
     }
-    view.getRealTimeMetricFunctionPanel().setSelected(realTimeMetric.getMetricFunction());
+    view.getRealTimeFunctionPanel().setSelected(realTimeMetric.getGroupFunction());
 
-    MetricFunction historyMetricFunction = UIState.INSTANCE.getHistoryMetricFunction(chartKey);
-    if (historyMetricFunction != null) {
-      historyMetric.setMetricFunction(historyMetricFunction);
-      historyMetric.setChartType(MetricFunction.COUNT.equals(historyMetricFunction) ? ChartType.STACKED : ChartType.LINEAR);
+    GroupFunction historyGroupFunction = UIState.INSTANCE.getHistoryGroupFunction(chartKey);
+    if (historyGroupFunction != null) {
+      historyMetric.setGroupFunction(historyGroupFunction);
+      historyMetric.setChartType(
+          GroupFunction.COUNT.equals(historyGroupFunction) ? ChartType.STACKED : ChartType.LINEAR);
     }
     if (CType.STRING.equals(model.getMetric().getYAxis().getCsType().getCType())) {
-      view.getHistoryMetricFunctionPanel().setEnabled(true, false, false);
+      view.getHistoryFunctionPanel().setEnabled(true, false, false);
     } else {
-      view.getHistoryMetricFunctionPanel().setEnabled(true, true, true);
+      view.getHistoryFunctionPanel().setEnabled(true, true, true);
     }
-    view.getHistoryMetricFunctionPanel().setSelected(historyMetric.getMetricFunction());
+    view.getHistoryFunctionPanel().setSelected(historyMetric.getGroupFunction());
 
     RangeRealTime localRealTimeRange = UIState.INSTANCE.getRealTimeRange(chartKey);
     RangeRealTime globalRealTimeRange = UIState.INSTANCE.getRealTimeRangeAll(component.name());
@@ -420,21 +438,29 @@ public class ChartPresenter implements HelperChart, MessageAction {
       view.getRealTimeLegendPanel().setSelected(showLegend);
       view.getHistoryLegendPanel().setSelected(showLegend);
     }
+
+    TimeRangeFunction timeRangeFunction = UIState.INSTANCE.getTimeRangeFunction(model.getChartKey());
+    if (timeRangeFunction != null) {
+      view.getHistoryTimeRangeFunctionPanel().setSelected(timeRangeFunction);
+      historyMetric.setTimeRangeFunction(timeRangeFunction);
+    }
   }
 
-  private void handleRealtimeMetricFunctionChange(String action, MetricFunction function) {
-    realTimeMetric.setMetricFunction(function);
-    realTimeMetric.setChartType(MetricFunction.COUNT.equals(function) ? ChartType.STACKED : ChartType.LINEAR);
-    UIState.INSTANCE.putRealtimeMetricFunction(model.getChartKey(), function);
+  private void handleRealtimeGroupFunctionChange(String action,
+                                                  GroupFunction function) {
+    realTimeMetric.setGroupFunction(function);
+    realTimeMetric.setChartType(GroupFunction.COUNT.equals(function) ? ChartType.STACKED : ChartType.LINEAR);
+    UIState.INSTANCE.putRealtimeGroupFunction(model.getChartKey(), function);
 
     view.getRealTimeFilterPanel().clearFilterPanel();
     updateRealTimeChart();
   }
 
-  private void handleHistoryMetricFunctionChange(String action, MetricFunction function) {
-    historyMetric.setMetricFunction(function);
-    historyMetric.setChartType(MetricFunction.COUNT.equals(function) ? ChartType.STACKED : ChartType.LINEAR);
-    UIState.INSTANCE.putHistoryMetricFunction(model.getChartKey(), function);
+  private void handleHistoryGroupFunctionChange(String action,
+                                                 GroupFunction function) {
+    historyMetric.setGroupFunction(function);
+    historyMetric.setChartType(GroupFunction.COUNT.equals(function) ? ChartType.STACKED : ChartType.LINEAR);
+    UIState.INSTANCE.putHistoryGroupFunction(model.getChartKey(), function);
 
     view.getHistoryFilterPanel().clearFilterPanel();
     updateHistoryChart();
@@ -459,6 +485,12 @@ public class ChartPresenter implements HelperChart, MessageAction {
     view.getHistoryRangePanel().setSelectedRange(range);
 
     setActiveTab(PanelTabType.HISTORY);
+    updateHistoryChart();
+  }
+
+  private void handleHistoryTimeRangeFunctionChange(String action, TimeRangeFunction function) {
+    UIState.INSTANCE.putTimeRangeFunction(model.getChartKey(), function);
+    historyMetric.setTimeRangeFunction(function);
     updateHistoryChart();
   }
 
@@ -499,7 +531,8 @@ public class ChartPresenter implements HelperChart, MessageAction {
     historyChart.clearSelectionRegion();
   }
 
-  public void setDetailState(PanelTabType panelTabType, DetailState detailState) {
+  public void setDetailState(PanelTabType panelTabType,
+                             DetailState detailState) {
     boolean showDetail = detailState == DetailState.SHOW;
     log.info("Setting detail visibility to: {} for chart {}", showDetail, model.getChartKey());
 
@@ -515,6 +548,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
       default -> log.warn("Unknown panel tab type: {}", panelTabType);
     }
   }
+
   public void handleLegendChangeAll(Boolean showLegend) {
     Boolean showLegendAll = UIState.INSTANCE.getShowLegendAll(component.name());
     boolean effectiveVisibility = (showLegendAll != null && showLegendAll) ||
@@ -621,15 +655,23 @@ public class ChartPresenter implements HelperChart, MessageAction {
     Map<String, Color> preservedColorMap = new HashMap<>(seriesColorMap);
 
     if (panelTabType == PanelTabType.REALTIME) {
-      updateRealTimeChart(preservedColorMap, topMapSelected);
+      Map<CProfile, LinkedHashSet<String>> sanitizeTopMapSelected =
+          FilterHelper.sanitizeTopMapSelected(topMapSelected, realTimeMetric);
+      updateRealTimeChart(preservedColorMap, sanitizeTopMapSelected);
     } else if (panelTabType == PanelTabType.HISTORY) {
-      updateHistoryChart(preservedColorMap, topMapSelected);
+      Map<CProfile, LinkedHashSet<String>> sanitizeTopMapSelected =
+          FilterHelper.sanitizeTopMapSelected(topMapSelected, historyMetric);
+      updateHistoryChart(preservedColorMap, sanitizeTopMapSelected);
     }
 
     if (panelTabType == PanelTabType.REALTIME && realTimeDetail != null) {
-      realTimeDetail.updateSeriesColor(topMapSelected, preservedColorMap);
+      Map<CProfile, LinkedHashSet<String>> sanitizeTopMapSelected =
+          FilterHelper.sanitizeTopMapSelected(topMapSelected, realTimeMetric);
+      realTimeDetail.updateSeriesColor(sanitizeTopMapSelected, preservedColorMap);
     } else if (panelTabType == PanelTabType.HISTORY && historyDetail != null) {
-      historyDetail.updateSeriesColor(topMapSelected, preservedColorMap);
+      Map<CProfile, LinkedHashSet<String>> sanitizeTopMapSelected =
+          FilterHelper.sanitizeTopMapSelected(topMapSelected, historyMetric);
+      historyDetail.updateSeriesColor(sanitizeTopMapSelected, preservedColorMap);
     }
   }
 
@@ -637,7 +679,8 @@ public class ChartPresenter implements HelperChart, MessageAction {
     updateRealTimeChart(null, null);
   }
 
-  private void updateRealTimeChart(Map<String, Color> seriesColorMap, Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+  private void updateRealTimeChart(Map<String, Color> seriesColorMap,
+                                   Map<CProfile, LinkedHashSet<String>> topMapSelected) {
     SwingTaskRunner.runWithProgress(
         view.getRealTimeChartPanel(),
         executor,
@@ -690,7 +733,8 @@ public class ChartPresenter implements HelperChart, MessageAction {
             view.getRealTimeFilterPanel().clearFilterPanel();
           }
           view.getRealTimeFilterPanel().setSeriesColorMap(realTimeChart.getSeriesColorMap());
-          view.getRealTimeFilterPanel().getMetric().setMetricFunction(realTimeChart.getConfig().getMetric().getMetricFunction());
+          view.getRealTimeFilterPanel().getMetric()
+              .setGroupFunction(realTimeChart.getConfig().getMetric().getGroupFunction());
           return () -> {
             view.getRealTimeChartPanel().add(realTimeChart, BorderLayout.CENTER);
             view.getRealTimeDetailPanel().add(realTimeDetail, BorderLayout.CENTER);
@@ -714,7 +758,8 @@ public class ChartPresenter implements HelperChart, MessageAction {
     updateHistoryChart(null, null);
   }
 
-  private void updateHistoryChart(Map<String, Color> seriesColorMap, Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+  private void updateHistoryChart(Map<String, Color> seriesColorMap,
+                                  Map<CProfile, LinkedHashSet<String>> topMapSelected) {
     SwingTaskRunner.runWithProgress(
         view.getHistoryChartPanel(),
         executor,
@@ -754,13 +799,15 @@ public class ChartPresenter implements HelperChart, MessageAction {
           }
 
           ChartRange chartRange = getChartRange(historyChart.getConfig().getChartInfo());
-          view.getHistoryFilterPanel().setDataSource(model.getDStore(), historyMetric, chartRange.getBegin(), chartRange.getEnd());
+          view.getHistoryFilterPanel()
+              .setDataSource(model.getDStore(), historyMetric, chartRange.getBegin(), chartRange.getEnd());
 
           if (seriesColorMap == null) {
             view.getHistoryFilterPanel().clearFilterPanel();
           }
           view.getHistoryFilterPanel().setSeriesColorMap(historyChart.getSeriesColorMap());
-          view.getHistoryFilterPanel().getMetric().setMetricFunction(historyChart.getConfig().getMetric().getMetricFunction());
+          view.getHistoryFilterPanel().getMetric()
+              .setGroupFunction(historyChart.getConfig().getMetric().getGroupFunction());
           return () -> {
             view.getHistoryChartPanel().add(historyChart, BorderLayout.CENTER);
             view.getHistoryDetailPanel().add(historyDetail, BorderLayout.CENTER);

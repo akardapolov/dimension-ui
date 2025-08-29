@@ -54,6 +54,6 @@ public class LongTransform implements DrawingTransform
 		BigDecimal value = new BigDecimal(Long.toString(pixel), MathContext.DECIMAL128);
 		value = value.divide(ppm, MathContext.DECIMAL128);
 		value = value.add(new BigDecimal(Long.toString(offset), MathContext.DECIMAL128), MathContext.DECIMAL128);
-		return new Long(value.longValue());
+		return Long.valueOf(value.longValue());
 	}
 }

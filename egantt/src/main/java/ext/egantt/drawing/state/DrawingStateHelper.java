@@ -17,7 +17,7 @@ public class DrawingStateHelper
 	// _________________________________________________________________________
 
 	public BasicDrawingState createDrawingState(Object key, String partPainter,
-		Object axises [], AxisInterval intervals[], String plotter, String state, String context)
+                                              Object[] axises, AxisInterval[] intervals, String plotter, String state, String context)
 	{
 		// add our details into the model
 		BasicDrawingState drawingState = new BasicDrawingState();

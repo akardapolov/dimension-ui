@@ -54,8 +54,8 @@ public class BoundedDiamondPainter implements DrawingPainter
 	
 	protected void drawPolygon(Graphics g, int x, int y, int width, int height) {
 		
-		int xx[]  = new int[4];
-		int yy[]  = new int[4];
+		int[] xx = new int[4];
+		int[] yy = new int[4];
     
 		xx[0] = ((x + width) / 2);
     	xx[1] = x + width;

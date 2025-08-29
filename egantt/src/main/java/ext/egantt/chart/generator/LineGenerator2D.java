@@ -55,7 +55,7 @@ public class LineGenerator2D implements ChartGenerator
 	 */
 	public DrawingPart getDrawingPart(ChartModel model, DrawingContext context) 
 	{
-		Object keys[] = new String[2];
+		Object[] keys = new String[2];
 		keys[0] = "xAxis";
 		keys[1] = "yAxis";
 		
@@ -69,17 +69,17 @@ public class LineGenerator2D implements ChartGenerator
 		context.put(keys[1], ContextResources.AXIS_VIEW, axis.getView(AxisView.VERTICAL));
 				
 		ListDrawingPart part = new ListDrawingPart(keys, "painter");
-		AxisInterval intervals [] = new AxisInterval[2];
+		AxisInterval[] intervals = new AxisInterval[2];
 		intervals[0] = new LongInterval(10, 90);
 		intervals[1] = new LongInterval(10, 90);
 		
-		Object values [] = new Object [10000];
+		Object[] values = new Object [10000];
 		for (int i=0; i < 9999; i = i +2)
 		{
-			values[i] = new Long( (long) i);
-			values[i+1] = new Long( (long) i * 5);
+			values[i] = Long.valueOf(i);
+			values[i+1] = Long.valueOf((long) i * 5);
 		}
-		values[10] = new Long(999);
+		values[10] = Long.valueOf(999);
 		part.add(values, intervals, "painter", "state", "context");
 		return part;
 	}

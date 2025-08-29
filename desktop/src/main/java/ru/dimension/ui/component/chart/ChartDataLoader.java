@@ -15,9 +15,9 @@ import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.SqlColMetadataException;
 import ru.dimension.db.model.output.BlockKeyTail;
 import ru.dimension.db.model.profile.CProfile;
-import ru.dimension.ui.model.chart.RangeBatchSize;
+import ru.dimension.ui.model.data.RangeBatchSize;
 import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.function.ChartType;
+import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 
 @Log4j2

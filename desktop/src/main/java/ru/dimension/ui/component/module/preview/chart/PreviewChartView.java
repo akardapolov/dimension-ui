@@ -11,7 +11,7 @@ import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.block.RealTimeConfigBlock;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.panel.LegendPanel;
-import ru.dimension.ui.component.panel.MetricFunctionPanel;
+import ru.dimension.ui.component.panel.FunctionPanel;
 import ru.dimension.ui.component.panel.popup.ActionPanel;
 import ru.dimension.ui.component.panel.popup.FilterPanel;
 import ru.dimension.ui.component.panel.range.RealTimeRangePanel;
@@ -26,7 +26,7 @@ public class PreviewChartView extends JPanel {
 
   private int configDividerLocation = 32;
 
-  private MetricFunctionPanel realTimeMetricFunctionPanel;
+  private FunctionPanel realTimeFunctionPanel;
   private RealTimeRangePanel realTimeRangePanel;
   private LegendPanel realTimeLegendPanel;
   private FilterPanel realTimeFilterPanel;
@@ -44,13 +44,13 @@ public class PreviewChartView extends JPanel {
     this.component = component;
     this.setLayout(new BorderLayout());
 
-    realTimeMetricFunctionPanel = new MetricFunctionPanel(getLabel("Group: "));
+    realTimeFunctionPanel = new FunctionPanel(getLabel("Group: "));
     realTimeRangePanel = new RealTimeRangePanel(getLabel("Range: "));
     realTimeLegendPanel = new LegendPanel(getLabel("Legend: "));
     realTimeFilterPanel = new FilterPanel(component);
     realTimeActionPanel = new ActionPanel(component);
 
-    realTimeConfigBlock = new RealTimeConfigBlock(realTimeMetricFunctionPanel,
+    realTimeConfigBlock = new RealTimeConfigBlock(realTimeFunctionPanel,
                                                   realTimeRangePanel,
                                                   realTimeLegendPanel,
                                                   realTimeFilterPanel,

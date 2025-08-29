@@ -15,7 +15,7 @@ import ru.dimension.db.core.DStore;
 import org.jfree.chart.util.IDetailPanel;
 import ru.dimension.ui.helper.ProgressBarHelper;
 import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.function.ChartType;
+import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.component.module.analyze.DetailAction;
 import ru.dimension.ui.view.detail.pivot.ReportPivotPanel;

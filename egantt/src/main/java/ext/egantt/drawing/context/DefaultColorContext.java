@@ -134,7 +134,7 @@ public class DefaultColorContext
     
     public static final class LocalColorContext implements GraphicsContext {
 
-    	protected final Color color;
+    	private final Color color;
     	
     	public LocalColorContext(Color color) {   	
     		this.color = color;

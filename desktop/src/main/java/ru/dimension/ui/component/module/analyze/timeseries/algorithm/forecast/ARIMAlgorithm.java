@@ -5,7 +5,7 @@ import com.workday.insights.timeseries.arima.struct.ArimaParams;
 import com.workday.insights.timeseries.arima.struct.ForecastResult;
 import java.util.Map;
 import lombok.extern.log4j.Log4j2;
-import ru.dimension.ui.model.chart.CategoryTableXYDatasetRealTime;
+import ru.dimension.ui.model.data.CategoryTableXYDatasetRealTime;
 import ru.dimension.ui.component.module.analyze.timeseries.algorithm.AlgorithmType;
 import ru.dimension.ui.component.module.analyze.timeseries.algorithm.TimeSeriesAlgorithm;
 import ru.dimension.ui.component.module.analyze.timeseries.model.ForecastData;

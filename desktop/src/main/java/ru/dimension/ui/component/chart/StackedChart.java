@@ -54,7 +54,7 @@ import org.jfree.data.time.Month;
 import org.jfree.data.time.Year;
 import ru.dimension.ui.helper.ColorHelper;
 import ru.dimension.ui.laf.LaF;
-import ru.dimension.ui.model.chart.CategoryTableXYDatasetRealTime;
+import ru.dimension.ui.model.data.CategoryTableXYDatasetRealTime;
 
 @Log4j2
 public class StackedChart implements SelectionChangeListener<XYCursor>, DynamicChart, DetailChart {
@@ -82,12 +82,17 @@ public class StackedChart implements SelectionChangeListener<XYCursor>, DynamicC
   private EntitySelectionManager selectionManager;
   private DatasetSelectionExtension<XYCursor> datasetExtension;
 
-  public StackedChart(ChartPanel chartPanel) {
+  private final ColorHelper colorHelper;
+
+  public StackedChart(ChartPanel chartPanel,
+                      ColorHelper colorHelper) {
     this.chartPanel = chartPanel;
     this.jFreeChart = this.chartPanel.getChart();
     this.xyPlot = (XYPlot) this.jFreeChart.getPlot();
     this.dateAxis = (DateAxis) this.xyPlot.getDomainAxis();
     this.chartDataset = (CategoryTableXYDatasetRealTime) this.xyPlot.getDataset();
+
+    this.colorHelper = colorHelper;
   }
 
   @Override
@@ -139,7 +144,7 @@ public class StackedChart implements SelectionChangeListener<XYCursor>, DynamicC
   }
 
   @Override
-  public void loadSeriesColorInternal(String seriesName) {
+  public void loadSeriesColorInternal(String colorProfileName, String seriesName) {
     if (!this.internalSeriesColor.containsKey(seriesName)) {
       try {
         int cnt = counter.getAndIncrement();
@@ -148,7 +153,7 @@ public class StackedChart implements SelectionChangeListener<XYCursor>, DynamicC
         if (this.externalSeriesColor.containsKey(seriesName)) {
           color = externalSeriesColor.get(seriesName);
         } else {
-          color = ColorHelper.getColor(seriesName);
+          color = colorHelper.getColor(colorProfileName, seriesName);
         }
 
         this.stackedXYAreaRenderer3.setSeriesPaint(cnt, color);

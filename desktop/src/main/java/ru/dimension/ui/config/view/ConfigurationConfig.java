@@ -6,22 +6,17 @@ import static ru.dimension.ui.model.view.TemplateAction.SAVE;
 import dagger.Module;
 import dagger.Provides;
 import java.awt.Dimension;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.ResourceBundle;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
-import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
 import javax.swing.table.TableColumn;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
@@ -34,6 +29,7 @@ import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
+import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.column.ConnectionColumnNames;
 import ru.dimension.ui.model.column.MetadataColumnNames;
 import ru.dimension.ui.model.column.MetricsColumnNames;
@@ -41,12 +37,10 @@ import ru.dimension.ui.model.column.ProfileColumnNames;
 import ru.dimension.ui.model.column.QueryColumnNames;
 import ru.dimension.ui.model.column.ReportColumnNames;
 import ru.dimension.ui.model.column.TaskColumnNames;
-import ru.dimension.ui.model.function.ChartType;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.report.QueryReportData;
 import ru.dimension.ui.model.sql.GatherDataMode;
 import ru.dimension.ui.model.table.JXTableCase;
-import ru.dimension.ui.prompt.Internationalization;
 import ru.dimension.ui.view.custom.BorderCellCheckBoxRenderer;
 import ru.dimension.ui.view.custom.DetailedComboBox;
 import ru.dimension.ui.view.panel.DateTimePicker;
@@ -62,53 +56,6 @@ import ru.dimension.ui.view.tab.ConnTypeTab;
 
 @Module
 public class ConfigurationConfig {
-
-  private static ResourceBundle bundleDefault = Internationalization.getInternationalizationBundle();
-
-  @Provides
-  @Singleton
-  @Named("profileSqlTextJScrollPane")
-  public JScrollPane getSqlTextInJScrollPane(@Named("profileSqlTextJTextArea") JTextArea jTextArea) {
-    return GUIHelper.getTextInJScrollPane(jTextArea);
-  }
-
-  @Provides
-  @Singleton
-  @Named("profileSqlTextJTextArea")
-  public JTextArea getProfileSqlTextJTextArea() {
-    return GUIHelper.getJTextArea(10, 60);
-  }
-
-  @Provides
-  @Singleton
-  @Named("profileSqlDescJScrollPane")
-  public JScrollPane getSqlDescInJScrollPane(@Named("profileSqlDescJTextArea") JTextArea jTextArea) {
-    return GUIHelper.getTextInJScrollPane(jTextArea);
-  }
-
-  @Provides
-  @Singleton
-  @Named("profileSqlDescJTextArea")
-  public JTextArea getProfileSqlDescJTextArea() {
-    return GUIHelper.getJTextArea(4, 7);
-  }
-
-
-  @Provides
-  @Singleton
-  @Named("profileUrlJTextField")
-  public JTextField getProfileUrlJTextField() {
-    return new JTextField();
-  }
-
-
-  @Provides
-  @Singleton
-  @Named("profileSqlViewCase")
-  public JXTableCase getProfileSqlViewCase() {
-    return GUIHelper.getJXTableCase(6,
-                                    new String[]{TaskColumnNames.ID.getColName(), TaskColumnNames.NAME.getColName(),});
-  }
 
   @Provides
   @Singleton
@@ -557,10 +504,10 @@ public class ConfigurationConfig {
   public MetricQueryPanel getMetricQueryPanel(
       @Named("metricQueryButtonPanel") ButtonPanel metricQueryButtonPanel,
       @Named("configMetricCase") JXTableCase profileMetricsEditCase,
-      @Named("metricFunction") JComboBox<?> yAisFunComboBox,
+      @Named("groupFunction") JComboBox<?> groupFunction,
       @Named("chartType") JComboBox<?> chartType
   ) {
-    return new MetricQueryPanel(metricQueryButtonPanel, profileMetricsEditCase, yAisFunComboBox, chartType);
+    return new MetricQueryPanel(metricQueryButtonPanel, profileMetricsEditCase, groupFunction, chartType);
   }
 
   @Provides
@@ -596,9 +543,9 @@ public class ConfigurationConfig {
 
   @Provides
   @Singleton
-  @Named("metricFunction")
-  public JComboBox<?> getYAisFunComboBox() {
-    return new JComboBox(MetricFunction.values());
+  @Named("groupFunction")
+  public JComboBox<?> getGroupFunction() {
+    return new JComboBox(GroupFunction.values());
   }
 
   @Provides
@@ -667,15 +614,6 @@ public class ConfigurationConfig {
     return jxTableCase;
   }
 
-
-  @Provides
-  @Singleton
-  @Named("metricsCheckBox")
-  public List<JCheckBox> getMetricsCheckBox() {
-    List<JCheckBox> jCheckBoxList = new ArrayList<>();
-    return jCheckBoxList;
-  }
-
   @Provides
   @Singleton
   @Named("columnsCheckBox")
@@ -718,36 +656,9 @@ public class ConfigurationConfig {
 
   @Provides
   @Singleton
-  @Named("reportSaveComboBox")
-  public JComboBox<String> getReportSaveComboBox() {
-    JComboBox<String> jComboBox = new JComboBox();
-    jComboBox.setPreferredSize(new Dimension(200, 26));
-    return jComboBox;
-  }
-
-  @Provides
-  @Singleton
-  @Named("designSaveDirs")
-  public List<File> getDesignSaveDirs() {
-    List<File> dirsList = new ArrayList<>();
-    return dirsList;
-  }
-
-
-  @Provides
-  @Singleton
   @Named("reportPdfPath")
   public PathPdfInfo getReportPdfPathInfo() {
     return new PathPdfInfo(" ");
-  }
-
-  @Provides
-  @Singleton
-  @Named("reportComboBox")
-  public JComboBox<String> getReportComboBox() {
-    JComboBox<String> jComboBox = new JComboBox();
-    jComboBox.setPreferredSize(new Dimension(200, 26));
-    return jComboBox;
   }
 
   @Provides

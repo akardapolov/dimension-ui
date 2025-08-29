@@ -24,26 +24,26 @@ public class RadiusPartView extends BasicPartView
 	public final static int AXIS_VIEW_INTERVAL  = 0;
 	public final static int	AXIS_VIEW_RADIUS  = 1;
 
-	protected int policy [];
+	protected int[] policy;
 
 	// __________________________________________________________________________
 
-	public void setPolicy(int policy [])
+	public void setPolicy(int[] policy)
 	{
 		this.policy = policy;
 	}
 
 	// __________________________________________________________________________
 
-	public Rectangle create(Component c, AxisInterval intervals [],
-		DrawingTransform transforms[])
+	public Rectangle create(Component c, AxisInterval[] intervals,
+													DrawingTransform[] transforms)
 	{
 		Rectangle rect = super.create(c, intervals, transforms);
 		if (rect == null || policy == null)
 			return rect;
 
-		rect.translate(policy[0] == AXIS_VIEW_INTERVAL ? 0 : 0 - rect.width,
-			policy[1] == AXIS_VIEW_INTERVAL ? 0 : 0 - rect.height);
+		rect.translate(policy[0] == AXIS_VIEW_INTERVAL ? 0 : -rect.width,
+			policy[1] == AXIS_VIEW_INTERVAL ? 0 : -rect.height);
 
 		rect.setSize(policy[0] == AXIS_VIEW_INTERVAL ? rect.width : rect.width * 2,
 						policy[1] == AXIS_VIEW_INTERVAL ? rect.height : rect.height * 2);

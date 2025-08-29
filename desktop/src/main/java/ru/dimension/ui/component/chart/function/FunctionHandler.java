@@ -17,12 +17,14 @@ import ru.dimension.db.model.profile.TProfile;
 import ru.dimension.ui.component.chart.FunctionDataHandler;
 import ru.dimension.ui.component.chart.StackedChart;
 import ru.dimension.ui.exception.SeriesExceedException;
+import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.QueryInfo;
 
 @Log4j2
 public abstract class FunctionHandler implements FunctionDataHandler {
 
+  protected ProfileTaskQueryKey profileTaskQueryKey;
   protected Metric metric;
   protected QueryInfo queryInfo;
   protected DStore dStore;
@@ -30,9 +32,11 @@ public abstract class FunctionHandler implements FunctionDataHandler {
   @Getter
   private TProfile tProfile;
 
-  public FunctionHandler(Metric metric,
+  public FunctionHandler(ProfileTaskQueryKey profileTaskQueryKey,
+                         Metric metric,
                          QueryInfo queryInfo,
                          DStore dStore) {
+    this.profileTaskQueryKey = profileTaskQueryKey;
     this.metric = metric;
     this.queryInfo = queryInfo;
     this.dStore = dStore;

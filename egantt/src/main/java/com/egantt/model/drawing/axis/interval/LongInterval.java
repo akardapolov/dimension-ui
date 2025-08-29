@@ -39,19 +39,19 @@ public class LongInterval implements MutableInterval
 
 	public Object getStart()
 	{
-		return new Long(start);
+		return Long.valueOf(start);
 	}
 
 	public Object getFinish()
 	{
-		return new Long(finish);
+		return Long.valueOf(finish);
 	}
 
 	//___________________________________________________________________________
 
 	public Object getRange()
 	{
-		return new Long(finish - start);
+		return Long.valueOf(finish - start);
 	}
 
 	//___________________________________________________________________________
@@ -86,20 +86,18 @@ public class LongInterval implements MutableInterval
 
 	public boolean contains(AxisInterval i)
 	{
-		if (i == null || !(i instanceof LongInterval))
+		if (i == null || !(i instanceof LongInterval interval))
 			return false;
-		
-		LongInterval interval = (LongInterval) i;
+
 		return this.start <= interval.getStartValue() &&
 		   this.finish >= interval.getFinishValue();
 	}
 
 	public boolean intersects(AxisInterval i)
 	{
-		if (i == null || !(i instanceof LongInterval))
+		if (i == null || !(i instanceof LongInterval interval))
 			return false;
-		
-		LongInterval interval = (LongInterval) i;
+
 		return ! (finish < interval.getStartValue())
 		   || ! (start > interval.getFinishValue());
 	}
@@ -108,12 +106,11 @@ public class LongInterval implements MutableInterval
 	
 	public AxisInterval union(AxisInterval i) {
 		if (i == null)
-			return new LongInterval(new Long(getStartValue()), new Long(getFinishValue()));
+			return new LongInterval(Long.valueOf(getStartValue()), Long.valueOf(getFinishValue()));
 	
-		if (!(i instanceof LongInterval))
+		if (!(i instanceof LongInterval interval))
 			return null;
-		
-		LongInterval interval = (LongInterval) i;
+
 		return new LongInterval(
 				Math.min(getStartValue(), interval.getStartValue()), 
 				Math.max(getFinishValue(), interval.getFinishValue()));

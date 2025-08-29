@@ -40,14 +40,14 @@ public class ClassLoader
 	 *  to be in the correct order for the required constructor. For efficiency
 	 *  as well as other reasons a best match is not really suitable.
 	 */
-	public static Object invoke(String clazzName, Object params [])
+	public static Object invoke(String clazzName, Object[] params)
 	{
 		try
 		{
 		   Class clazz = Class.forName(clazzName);
-			Constructor constructors [] =  clazz.getConstructors();
+			Constructor[] constructors =  clazz.getConstructors();
 
-			Class params2 [] = new Class [params.length];
+			Class[] params2 = new Class [params.length];
 			for (int z =0; z < params.length; z++)
 				params2 [z] = params[z] != null ? params[z].getClass() : null;
 

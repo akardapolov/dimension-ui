@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -36,6 +37,8 @@ import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Action;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
+import ru.dimension.ui.component.chart.HelperChart;
+import ru.dimension.ui.component.module.analyze.handler.TableSelectionHandler;
 import ru.dimension.ui.component.module.db.DatabaseMetadata;
 import ru.dimension.ui.component.module.db.MetadataFactory;
 import ru.dimension.ui.helper.DialogHelper;
@@ -56,8 +59,6 @@ import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.state.UIState;
-import ru.dimension.ui.component.module.analyze.handler.TableSelectionHandler;
-import ru.dimension.ui.component.chart.HelperChart;
 
 @Log4j2
 public class AdHocPresenter implements HelperChart {
@@ -455,26 +456,46 @@ public class AdHocPresenter implements HelperChart {
 
     ChartInfo chartInfo = new ChartInfo();
     chartInfo.setId(queryInfo.getId());
-    chartInfo.setRangeHistory(RangeHistory.DAY);
-    ChartRange chartRange = getChartRange(dStore, tableInfo.getTableName(), chartInfo);
 
     AdHocKey adHocKey = new AdHocKey(connectionInfo.getId(), tableName, cProfile.getColId());
+    ChartRange existingRange = UIState.INSTANCE.getHistoryCustomRange(adHocKey);
+    RangeHistory rangeHistory = UIState.INSTANCE.getHistoryRange(adHocKey);
 
-    UIState.INSTANCE.putHistoryCustomRangeAll(Component.ADHOC.name(), chartRange);
+    chartInfo.setRangeHistory(Objects.requireNonNullElse(rangeHistory, RangeHistory.DAY));
+
+    String componentName = Component.ADHOC.name() + "_" + adHocKey.getConnectionId() + "_" + adHocKey.getTableName();
+    RangeHistory rangeHistoryGlobal = UIState.INSTANCE.getHistoryRangeAll(componentName);
+
+    ChartRange chartRange = existingRange != null ?
+        existingRange :
+        getChartRange(dStore, tableInfo.getTableName(), chartInfo);
+
+    if (existingRange != null) {
+      chartInfo.setRangeHistory(RangeHistory.CUSTOM);
+      chartInfo.setCustomBegin(existingRange.getBegin());
+      chartInfo.setCustomEnd(existingRange.getEnd());
+    }
 
     ChartRange customRange = UIState.INSTANCE.getHistoryCustomRange(adHocKey);
     if (customRange == null) {
+      UIState.INSTANCE.putHistoryRange(adHocKey, chartInfo.getRangeHistory());
       UIState.INSTANCE.putHistoryCustomRange(adHocKey, chartRange);
     }
 
-    broker.sendMessage(Message.builder()
-                           .destination(Destination.withDefault(Component.ADHOC, Module.CONFIG))
-                           .action(Action.HISTORY_CUSTOM_UI_RANGE_CHANGE)
-                           .parameter("chartRange", chartRange)
-                           .build());
+    if (rangeHistoryGlobal == null) {
+      UIState.INSTANCE.putHistoryRangeAll(componentName, chartInfo.getRangeHistory());
 
-    chartInfo.setCustomBegin(chartRange.getBegin());
-    chartInfo.setCustomEnd(chartRange.getEnd());
+      ChartInfo chartInfoCopy = chartInfo.copy();
+      RangeHistory globalRange = UIState.INSTANCE.getHistoryRangeAll(Component.ADHOC.name());
+      chartInfoCopy.setRangeHistory(Objects.requireNonNullElse(globalRange, RangeHistory.DAY));
+
+      broker.sendMessage(Message.builder()
+                             .destination(Destination.withDefault(Component.ADHOC, Module.CONFIG))
+                             .action(Action.HISTORY_CUSTOM_UI_RANGE_CHANGE)
+                             .parameter("chartRange", chartRange)
+                             .parameter("chartInfo", chartInfoCopy)
+                             .build());
+    }
 
     broker.sendMessage(Message.builder()
                            .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))

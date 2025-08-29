@@ -8,10 +8,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.cstype.CType;
-import ru.dimension.ui.model.function.ChartType;
-import ru.dimension.ui.model.function.MetricFunction;
-import ru.dimension.ui.model.info.TableInfo;
+import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.db.TimestampType;
+import ru.dimension.ui.model.function.GroupFunction;
+import ru.dimension.ui.model.function.NormFunction;
+import ru.dimension.ui.model.function.TimeRangeFunction;
+import ru.dimension.ui.model.info.TableInfo;
 
 @Data
 @AllArgsConstructor
@@ -26,7 +28,9 @@ public class Metric {
   private CProfile xAxis; // x-axis
   private CProfile yAxis; // y-axis
   private CProfile group; // group
-  private MetricFunction metricFunction; //NONE, SUM, COUNT, AVG
+  private GroupFunction groupFunction; //NONE, SUM, COUNT, AVG
+  private TimeRangeFunction timeRangeFunction = TimeRangeFunction.AUTO; // AUTO, MINUTE, HOUR, DAY, MONTH
+  private NormFunction normFunction = NormFunction.SECOND; // NONE, SECOND, MINUTE, HOUR, DAY
   private ChartType chartType; // linear, stacked
 
   private List<CProfile> columnGanttList;
@@ -44,21 +48,24 @@ public class Metric {
     this.group = cProfile;
 
     if (CType.STRING.equals(cProfile.getCsType().getCType())) {
-      this.metricFunction = MetricFunction.COUNT;
+      this.groupFunction = GroupFunction.COUNT;
       this.chartType = ChartType.STACKED;
     } else {
       if (Arrays.stream(TimestampType.values())
           .anyMatch((t) -> t.name().equals(cProfile.getColDbTypeName()))) {
-        this.metricFunction = MetricFunction.COUNT;
+        this.groupFunction = GroupFunction.COUNT;
         this.chartType = ChartType.STACKED;
       } else {
-        this.metricFunction = MetricFunction.AVG;
+        this.groupFunction = GroupFunction.AVG;
         this.chartType = ChartType.LINEAR;
       }
+
+      this.timeRangeFunction = TimeRangeFunction.AUTO;
+      this.normFunction = NormFunction.SECOND;
     }
   }
 
-  public Metric(TableInfo tableInfo, CProfile cProfile, MetricFunction metricFunction, ChartType chartType) {
+  public Metric(TableInfo tableInfo, CProfile cProfile, GroupFunction groupFunction, ChartType chartType) {
     this.id = RANDOM.nextInt(Integer.MAX_VALUE);
     this.name = cProfile.getColName();
     this.isDefault = false;
@@ -70,26 +77,10 @@ public class Metric {
     this.yAxis = cProfile;
     this.group = cProfile;
 
-    this.metricFunction = metricFunction;
+    this.groupFunction = groupFunction;
+    this.timeRangeFunction = TimeRangeFunction.AUTO;
+    this.normFunction = NormFunction.SECOND;
     this.chartType = chartType;
-  }
-
-  public boolean isStackedYAxisSameCount() {
-    return chartType.equals(ChartType.STACKED)
-        & yAxis.equals(group)
-        & metricFunction.equals(MetricFunction.COUNT);
-  }
-
-  public boolean isLinearYAxisSameSum() {
-    return chartType.equals(ChartType.LINEAR)
-        & yAxis.equals(group)
-        & metricFunction.equals(MetricFunction.SUM);
-  }
-
-  public boolean isLinearYAxisAvg() {
-    return chartType.equals(ChartType.LINEAR)
-        & yAxis.equals(group)
-        & metricFunction.equals(MetricFunction.AVG);
   }
 
   public Metric copy() {
@@ -102,7 +93,9 @@ public class Metric {
     copy.setYAxis(this.yAxis);
     copy.setGroup(this.group);
 
-    copy.setMetricFunction(this.metricFunction);
+    copy.setGroupFunction(this.groupFunction);
+    copy.setTimeRangeFunction(this.timeRangeFunction);
+    copy.setNormFunction(this.normFunction);
     copy.setChartType(this.chartType);
 
     if (this.columnGanttList != null) {

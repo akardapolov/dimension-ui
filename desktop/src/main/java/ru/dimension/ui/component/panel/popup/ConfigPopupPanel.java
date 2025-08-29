@@ -5,6 +5,7 @@ import static ru.dimension.ui.laf.LafColorGroup.CHART_PANEL;
 import com.github.lgooddatepicker.zinternaltools.InternalUtilities;
 import java.awt.Dimension;
 import java.awt.Insets;
+import java.awt.MouseInfo;
 import java.awt.Rectangle;
 import java.awt.Window;
 import java.awt.event.MouseAdapter;
@@ -17,9 +18,9 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
-import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.component.module.analyze.timeseries.popup.CustomPopup;
 import ru.dimension.ui.component.module.analyze.timeseries.popup.CustomPopup.CustomPopupCloseListener;
+import ru.dimension.ui.laf.LaF;
 
 public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener {
   private CustomPopup popup = null;
@@ -87,6 +88,17 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
 
     contentPanel = contentSupplier.get();
 
+    // Add mouse listener to detect when mouse leaves the popup area
+    contentPanel.addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseExited(MouseEvent e) {
+        // Check if the mouse is still within the popup or button area
+        if (!isMouseInPopupArea() && !isMouseInButtonArea()) {
+          closePopup();
+        }
+      }
+    });
+
     popup = new CustomPopup(contentPanel,
                             SwingUtilities.getWindowAncestor(this),
                             this);
@@ -96,8 +108,21 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
 
     zSetPopupLocation(popup, defaultX, defaultY, this, button, 2, 6);
     popup.show();
-    contentPanel.requestFocus();
     button.setText(buttonTextOpen);
+  }
+
+  private boolean isMouseInPopupArea() {
+    if (popup == null || contentPanel == null) return false;
+
+    Rectangle popupBounds = popup.getBounds();
+    popupBounds.setLocation(popup.getLocationOnScreen());
+    return popupBounds.contains(MouseInfo.getPointerInfo().getLocation());
+  }
+
+  private boolean isMouseInButtonArea() {
+    Rectangle buttonBounds = button.getBounds();
+    buttonBounds.setLocation(button.getLocationOnScreen());
+    return buttonBounds.contains(MouseInfo.getPointerInfo().getLocation());
   }
 
   private void zSetPopupLocation(CustomPopup popup,

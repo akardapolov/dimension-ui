@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.TimeZone;
 import lombok.extern.log4j.Log4j2;
 import org.junit.jupiter.api.Test;
-import ru.dimension.ui.model.chart.CategoryTableXYDatasetRealTime;
+import ru.dimension.ui.model.data.CategoryTableXYDatasetRealTime;
 
 @Log4j2
 public class DatasetRemoveTest {

@@ -1,9 +1,7 @@
 package ru.dimension.ui.view.handler.report.design;
 
-import static ru.dimension.ui.helper.FilesHelper.CONFIG_FTL_DIR_NAME;
-import static ru.dimension.ui.helper.FilesHelper.CONFIG_TTF_DIR_NAME;
-import static ru.dimension.ui.model.function.ChartType.LINEAR;
-import static ru.dimension.ui.model.function.ChartType.STACKED;
+import static ru.dimension.ui.model.chart.ChartType.LINEAR;
+import static ru.dimension.ui.model.chart.ChartType.STACKED;
 
 import com.itextpdf.text.Document;
 import com.itextpdf.text.FontFactory;
@@ -29,11 +27,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -84,7 +80,7 @@ import ru.dimension.ui.model.column.QueryColumnNames;
 import ru.dimension.ui.model.column.TaskColumnNames;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.db.TimestampType;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.info.ProfileInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
@@ -387,12 +383,12 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
                 ChartCardPanel cardChart = new ChartCardPanel(m.getId(), chartInfo, key,
                                                               SourceConfig.METRICS, metric, profileManager, eventListener, fStore, reportHelper, mapReportData);
 
-                cardChart.getMetricFunctionPanel().getCount().setEnabled(false);
-                cardChart.getMetricFunctionPanel().getSum().setEnabled(false);
-                cardChart.getMetricFunctionPanel().getAvg().setEnabled(false);
+                cardChart.getFunctionPanel().getCount().setEnabled(false);
+                cardChart.getFunctionPanel().getSum().setEnabled(false);
+                cardChart.getFunctionPanel().getAvg().setEnabled(false);
 
                 cardChart.setBorder(new EtchedBorder());
-                cardChart.setSelectedRadioButton(m.getMetricFunction());
+                cardChart.setSelectedRadioButton(m.getGroupFunction());
                 cardChart.getJtaDescription().setText(m.getComment());
 
                 cardChart.loadChart(m.getId(), chartInfo, key, cardChart, SourceConfig.METRICS);
@@ -412,7 +408,7 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
                                                               SourceConfig.COLUMNS, metric, profileManager, eventListener, fStore, reportHelper, mapReportData);
 
                 cardChart.setBorder(new EtchedBorder());
-                cardChart.setSelectedRadioButton(metric.getMetricFunction());
+                cardChart.setSelectedRadioButton(metric.getGroupFunction());
                 cardChart.getJtaDescription().setText(cProfileReport.getComment());
 
                 cardChart.loadChart(cProfileReport.getColId(), chartInfo, key, cardChart, SourceConfig.COLUMNS);
@@ -518,8 +514,8 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
 
       if (isEmpty) {
         try {
-          loadFileToFolder("default.ftl", folderPath);
-          loadFileToFolder("arialuni.ttf", folderPath);
+          filesHelper.loadFileToFolder("default.ftl", folderPath);
+          filesHelper.loadFileToFolder("arialuni.ttf", folderPath);
         } catch (IOException ex) {
           throw new RuntimeException(ex);
         }
@@ -534,10 +530,10 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
         }
         try {
           if (!isFTLFile) {
-            loadFileToFolder("default.ftl", folderPath);
+            filesHelper.loadFileToFolder("default.ftl", folderPath);
           }
           if (!isTTFFile) {
-            loadFileToFolder("arialuni.ttf", folderPath);
+            filesHelper.loadFileToFolder("arialuni.ttf", folderPath);
           }
         } catch (IOException ex) {
           throw new RuntimeException(ex);
@@ -731,7 +727,7 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
             String fileName = cardChart.getMetric().getName().trim().replace(" ", "_").toLowerCase();
             String description = cardChart.getJtaDescription().getText();
             String nameFunction = "";
-            for (AbstractButton button : Collections.list(cardChart.getMetricFunctionPanel().getButtonGroup().getElements())) {
+            for (AbstractButton button : Collections.list(cardChart.getFunctionPanel().getButtonGroup().getElements())) {
               if (button.isSelected()) {
                 nameFunction = " FUNCTION: " + button.getText();
               }
@@ -1139,54 +1135,6 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
     return true;
   }
 
-  public void loadFileToFolder(String filename,
-                               String folderPath) throws IOException {
-    String[] fileNameSplit = filename.split("\\.");
-
-    try {
-      if (filesHelper.isJar()) {
-        List<Path> pathList = Collections.emptyList();
-        if (CONFIG_FTL_DIR_NAME.equals(fileNameSplit[1])) {
-          pathList = filesHelper.getFilePathDirectoryResourcesJar(CONFIG_FTL_DIR_NAME);
-        } else if (CONFIG_TTF_DIR_NAME.equals(fileNameSplit[1])) {
-          pathList = filesHelper.getFilePathDirectoryResourcesJar(CONFIG_TTF_DIR_NAME);
-        }
-
-        pathList.forEach(file -> {
-          Path targetPath = Path.of(folderPath, filename);
-          ClassLoader classLoader = getClass().getClassLoader();
-          try (InputStream is = classLoader.getResourceAsStream(file.toString())) {
-            if (is == null) {
-              throw new IllegalArgumentException("Resource not found: " + file);
-            }
-            Files.copy(is, targetPath, StandardCopyOption.REPLACE_EXISTING);
-          } catch (IOException e) {
-            log.catching(e);
-          }
-        });
-      } else {
-        List<Path> pathList = Collections.emptyList();
-        if (CONFIG_FTL_DIR_NAME.equals(fileNameSplit[1])) {
-          pathList = filesHelper.getFilePathDirectoryResourcesFromFS(CONFIG_FTL_DIR_NAME);
-        } else if (CONFIG_TTF_DIR_NAME.equals(fileNameSplit[1])) {
-          pathList = filesHelper.getFilePathDirectoryResourcesFromFS(CONFIG_TTF_DIR_NAME);
-        }
-
-        pathList.forEach(file -> {
-          Path targetPath = Path.of(folderPath, filename);
-          try {
-            Files.copy(file, targetPath, StandardCopyOption.REPLACE_EXISTING);
-          } catch (IOException e) {
-            log.catching(e);
-          }
-        });
-      }
-    } catch (URISyntaxException | IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-
   @Override
   public void valueChanged(ListSelectionEvent e) {
     ListSelectionModel listSelectionModel = (ListSelectionModel) e.getSource();
@@ -1284,12 +1232,12 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
                           new ChartCardPanel(m.getId(), chartInfo, key, SourceConfig.METRICS,
                                              metric, profileManager, eventListener, fStore, reportHelper, mapReportData);
 
-                      cardChart.getMetricFunctionPanel().getCount().setEnabled(false);
-                      cardChart.getMetricFunctionPanel().getSum().setEnabled(false);
-                      cardChart.getMetricFunctionPanel().getAvg().setEnabled(false);
+                      cardChart.getFunctionPanel().getCount().setEnabled(false);
+                      cardChart.getFunctionPanel().getSum().setEnabled(false);
+                      cardChart.getFunctionPanel().getAvg().setEnabled(false);
 
                       cardChart.setBorder(new EtchedBorder());
-                      cardChart.setSelectedRadioButton(m.getMetricFunction());
+                      cardChart.setSelectedRadioButton(m.getGroupFunction());
                       cardChart.getJtaDescription().setText(m.getComment());
 
                       cardChart.loadChart(m.getId(), chartInfo, key, cardChart, SourceConfig.METRICS);
@@ -1309,7 +1257,7 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
                                                                     SourceConfig.COLUMNS, metric, profileManager, eventListener, fStore, reportHelper, mapReportData);
 
                       cardChart.setBorder(new EtchedBorder());
-                      cardChart.setSelectedRadioButton(metric.getMetricFunction());
+                      cardChart.setSelectedRadioButton(metric.getGroupFunction());
                       cardChart.getJtaDescription().setText(cProfileReport.getComment());
 
                       cardChart.loadChart(cProfileReport.getColId(), chartInfo, key, cardChart, SourceConfig.COLUMNS);
@@ -1367,7 +1315,7 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
     metric.setXAxis(mr.getXAxis());
     metric.setYAxis(mr.getYAxis());
     metric.setGroup(mr.getGroup());
-    metric.setMetricFunction(mr.getMetricFunction());
+    metric.setGroupFunction(mr.getGroupFunction());
     metric.setChartType(mr.getChartType());
 
     return metric;
@@ -1382,7 +1330,7 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
     metric.setYAxis(cProfile);
     metric.setGroup(cProfile);
 
-    setMetricFunction(cProfile, metric);
+    setGroupFunction(cProfile, metric);
 
     if (mapReportData != null && mapReportData.get(key) != null) {
       Optional<CProfileReport> value = mapReportData.get(key)
@@ -1392,31 +1340,31 @@ public class DesignPanelHandler extends ChartReportHandler implements ActionList
           .findAny();
 
       if (value.isPresent()) {
-        if (value.get().getMetricFunction() != null && value.get().getChartType() != null) {
-          metric.setMetricFunction(value.get().getMetricFunction());
+        if (value.get().getGroupFunction() != null && value.get().getChartType() != null) {
+          metric.setGroupFunction(value.get().getGroupFunction());
           metric.setChartType(value.get().getChartType());
         } else {
-          setMetricFunction(cProfile, metric);
+          setGroupFunction(cProfile, metric);
         }
       } else {
-        setMetricFunction(cProfile, metric);
+        setGroupFunction(cProfile, metric);
       }
     }
 
     return metric;
   }
 
-  private void setMetricFunction(CProfileReport cProfile,
+  private void setGroupFunction(CProfileReport cProfile,
                                  Metric metric) {
     if (CType.STRING.equals(cProfile.getCsType().getCType())) {
-      metric.setMetricFunction(MetricFunction.COUNT);
+      metric.setGroupFunction(GroupFunction.COUNT);
       metric.setChartType(STACKED);
     } else {
       if (Arrays.stream(TimestampType.values()).anyMatch((t) -> t.name().equals(cProfile.getColDbTypeName()))) {
-        metric.setMetricFunction(MetricFunction.COUNT);
+        metric.setGroupFunction(GroupFunction.COUNT);
         metric.setChartType(STACKED);
       } else {
-        metric.setMetricFunction(MetricFunction.AVG);
+        metric.setGroupFunction(GroupFunction.AVG);
         metric.setChartType(LINEAR);
       }
     }

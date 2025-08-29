@@ -137,7 +137,7 @@ public class GradientColorContext
     
     public static final class LocalColorContext implements GraphicsContext {
 
-    	protected final Paint color;
+    	private final Paint color;
     	
     	public LocalColorContext(Color color) {   	
     		color = color.darker().darker();

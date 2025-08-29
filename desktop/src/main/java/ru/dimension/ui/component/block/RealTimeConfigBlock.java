@@ -13,24 +13,24 @@ import lombok.Getter;
 import ru.dimension.ui.component.panel.popup.ActionPanel;
 import ru.dimension.ui.component.panel.popup.FilterPanel;
 import ru.dimension.ui.component.panel.LegendPanel;
-import ru.dimension.ui.component.panel.MetricFunctionPanel;
+import ru.dimension.ui.component.panel.FunctionPanel;
 import ru.dimension.ui.component.panel.range.RealTimeRangePanel;
 import ru.dimension.ui.laf.LaF;
 
 public class RealTimeConfigBlock extends JPanel {
-  private final MetricFunctionPanel metricFunctionPanel;
+  private final FunctionPanel functionPanel;
   private final RealTimeRangePanel realTimePanel;
   @Getter
   private final LegendPanel legendPanel;
   private final FilterPanel filterPanel;
   private final ActionPanel actionPanel;
 
-  public RealTimeConfigBlock(MetricFunctionPanel metricFunctionPanel,
+  public RealTimeConfigBlock(FunctionPanel functionPanel,
                              RealTimeRangePanel realTimePanel,
                              LegendPanel legendPanel,
                              FilterPanel filterPanel,
                              ActionPanel actionPanel) {
-    this.metricFunctionPanel = metricFunctionPanel;
+    this.functionPanel = functionPanel;
     this.realTimePanel = realTimePanel;
     this.legendPanel = legendPanel;
     this.filterPanel = filterPanel;
@@ -58,7 +58,7 @@ public class RealTimeConfigBlock extends JPanel {
     gbc.gridx = 0;
     gbc.gridy = 0;
     gbc.weightx = 2.0 / 15;
-    add(metricFunctionPanel, gbc);
+    add(functionPanel, gbc);
 
     gbc.gridx = 1;
     gbc.weightx = 2.0 / 15;

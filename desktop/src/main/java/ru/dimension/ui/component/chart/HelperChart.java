@@ -12,32 +12,34 @@ import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.model.OrderBy;
 import ru.dimension.db.model.profile.CProfile;
-import ru.dimension.ui.model.chart.ChartRange;
-import ru.dimension.ui.model.chart.RangeBatchSize;
-import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.info.QueryInfo;
-import ru.dimension.ui.model.info.gui.ChartInfo;
-import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.component.chart.function.AverageHandler;
 import ru.dimension.ui.component.chart.function.CountHandler;
 import ru.dimension.ui.component.chart.function.SumHandler;
+import ru.dimension.ui.model.ProfileTaskQueryKey;
+import ru.dimension.ui.model.chart.ChartRange;
+import ru.dimension.ui.model.config.Metric;
+import ru.dimension.ui.model.data.RangeBatchSize;
+import ru.dimension.ui.model.info.QueryInfo;
+import ru.dimension.ui.model.info.gui.ChartInfo;
+import ru.dimension.ui.model.view.RangeHistory;
 
 public interface HelperChart {
   int MAX_POINTS_PER_GRAPH = 300;
 
   double GAP = 2; // if gap more than this value - then show one on chart
 
-  int THRESHOLD_SERIES = 15;
+  int THRESHOLD_SERIES = 30;
   int SHOW_SERIES = 10;
-  int MAX_SERIES = 1000;
+  int MAX_SERIES = 6000;
 
-  default FunctionDataHandler initFunctionDataHandler(Metric metric,
+  default FunctionDataHandler initFunctionDataHandler(ProfileTaskQueryKey profileTaskQueryKey,
+                                                      Metric metric,
                                                       QueryInfo queryInfo,
                                                       DStore dStore) {
-    return switch (metric.getMetricFunction()) {
-      case COUNT -> new CountHandler(metric, queryInfo, dStore);
-      case SUM -> new SumHandler(metric, queryInfo, dStore);
-      case AVG -> new AverageHandler(metric, queryInfo, dStore);
+    return switch (metric.getGroupFunction()) {
+      case COUNT -> new CountHandler(profileTaskQueryKey, metric, queryInfo, dStore);
+      case SUM -> new SumHandler(profileTaskQueryKey, metric, queryInfo, dStore);
+      case AVG -> new AverageHandler(profileTaskQueryKey, metric, queryInfo, dStore);
       case NONE -> null;
     };
   }
@@ -186,23 +188,35 @@ public interface HelperChart {
       chartRange.setBegin(chartInfo.getCustomBegin());
       chartRange.setEnd(chartInfo.getCustomEnd());
     } else {
+      long first = dStore.getFirst(tableName, Long.MIN_VALUE, Long.MAX_VALUE);
       long last = dStore.getLast(tableName, Long.MIN_VALUE, Long.MAX_VALUE);
 
       if (Long.MIN_VALUE == last) {
         throw new RuntimeException("No data found in table: " + tableName);
       }
 
-      LocalDateTime dateTime = Instant.ofEpochMilli(last)
-          .atZone(ZoneId.systemDefault())
-          .toLocalDateTime()
-          .plusDays(1)
-          .truncatedTo(ChronoUnit.DAYS);
+      long twentyFourHoursMs = 24 * 60 * 60 * 1000L;
+      if (last - first < twentyFourHoursMs) { //ranges < 24 hours
+        chartInfo.setRangeHistory(RangeHistory.CUSTOM);
+        chartRange.setBegin(first);
+        chartRange.setEnd(last);
+        chartInfo.setCustomBegin(first);
+        chartInfo.setCustomEnd(last);
+      } else {//ranges >= 24 hours
+        LocalDateTime dateTime = Instant.ofEpochMilli(last)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDateTime()
+            .plusDays(1)
+            .truncatedTo(ChronoUnit.DAYS);
 
-      long end = dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() - 1;
-      long begin = end - getRangeHistory(chartInfo) + 1;
+        long end = dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() - 1;
+        long begin = end - getRangeHistory(chartInfo) + 1;
 
-      chartRange.setBegin(begin);
-      chartRange.setEnd(end);
+        chartRange.setBegin(begin);
+        chartRange.setEnd(end);
+        chartInfo.setCustomBegin(begin);
+        chartInfo.setCustomEnd(end);
+      }
     }
 
     return chartRange;

@@ -19,11 +19,11 @@ public interface TraceImpl
 	/**
 	  *  Tracing enabled for this class
 	  */
-	public boolean getEnable(String clazzName);
+  boolean getEnable(String clazzName);
 
 	/**
 	  * PrintStream used for standard logging
 	  * this defaults to System.out
 	  */
-	public PrintStream getPrintStream();
+  PrintStream getPrintStream();
 }

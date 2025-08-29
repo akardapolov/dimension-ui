@@ -30,7 +30,7 @@ public class MoveResizeEditor extends AbstractResizeEditor {
 	public void mousePressed(MouseEvent e, Rectangle bounds, DrawingState drawing, Object axisKey, DrawingContext context) {
 		this.interval =  getInterval(e.getPoint(), 5, drawing, axisKey);
 		this.originalPoint = e.getPoint();
-		this.savedInterval = (MutableInterval) interval != null ? (MutableInterval) interval.clone() : null;
+		this.savedInterval = interval != null ? (MutableInterval) interval.clone() : null;
 		calculateCursor(interval, bounds, 5, e, axisKey, context);
 	}
 	
@@ -83,9 +83,9 @@ public class MoveResizeEditor extends AbstractResizeEditor {
 		int finishX = transform.transform(interval.getFinish(), size);
 		
 		if (isStart)
-			interval.setStart(transform.inverseTransform(startX - ((originalPos - pos) *2), size));
+			interval.setStart(transform.inverseTransform(startX - ((originalPos - pos) * 2L), size));
 		else if (isFinish)
-			interval.setFinish(transform.inverseTransform(finishX - ((originalPos - pos)*2), size));
+			interval.setFinish(transform.inverseTransform(finishX - ((originalPos - pos)* 2L), size));
 		else if (isMiddle) {
 			Object start = transform.inverseTransform(startX
 					- (originalPos - pos), size);
@@ -103,7 +103,7 @@ public class MoveResizeEditor extends AbstractResizeEditor {
 	}
 
 	public void mouseMoved(MouseEvent e, Rectangle bounds, DrawingState drawing, Object axisKey, DrawingContext context) {
-		AxisInterval interval = (LongInterval) getInterval(e.getPoint(),3,  drawing, axisKey);
+		AxisInterval interval = getInterval(e.getPoint(), 3, drawing, axisKey);
 		
 		calculateCursor(interval, bounds, 3, e, axisKey, context);
 	}

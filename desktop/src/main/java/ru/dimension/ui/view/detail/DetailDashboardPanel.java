@@ -32,11 +32,12 @@ import ru.dimension.ui.component.module.analyze.timeseries.AnalyzeForecastPanel;
 import ru.dimension.ui.helper.DateHelper;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.ProgressBarHelper;
+import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.column.DimensionValuesNames;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.date.DateLocale;
-import ru.dimension.ui.model.function.ChartType;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.chart.ChartType;
+import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
@@ -116,7 +117,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
       try {
         JTabbedPane mainJTabbedPane = new JTabbedPane();
 
-        if (!MetricFunction.COUNT.equals(metric.getMetricFunction())) {
+        if (!GroupFunction.COUNT.equals(metric.getGroupFunction())) {
           seriesColorMap.put(metric.getYAxis().getColName(), new Color(255, 93, 93));
         }
 
@@ -133,7 +134,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
             begin, end, seriesColorMap, seriesType, actualTopMapSelected);
         mainJTabbedPane.add("Top", mainTopPanel);
 
-        if (MetricFunction.COUNT.equals(metric.getMetricFunction())) {
+        if (GroupFunction.COUNT.equals(metric.getGroupFunction())) {
           if (Objects.isNull(seriesType) || SeriesType.COMMON.equals(seriesType)) {
             MainPivotDashboardPanel mainPivotPanel = new MainPivotDashboardPanel(
                 dStore, scheduledExecutorService, tableInfo, metric,
@@ -161,7 +162,11 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
         ChartInfo chartInfo = new ChartInfo();
         chartInfo.setCustomBegin(begin);
         chartInfo.setCustomEnd(end);
-        SCP chart = new HistorySCP(dStore, buildChartConfig(chartInfo), null, actualTopMapSelected);
+
+        // TODO implement code for adhoc
+        ProfileTaskQueryKey key = new ProfileTaskQueryKey(0, 0, 0);
+
+        SCP chart = new HistorySCP(dStore, buildChartConfig(chartInfo), key, actualTopMapSelected);
         chart.loadSeriesColor(metric, seriesColorMap);
         chart.initialize();
 

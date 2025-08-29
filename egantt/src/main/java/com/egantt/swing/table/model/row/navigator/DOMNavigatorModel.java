@@ -17,18 +17,18 @@ import org.w3c.dom.Element;
  */
 public class DOMNavigatorModel extends AbstractNavigatorModel
 {
-	protected final Object columns [];
+	protected final Object[] columns;
 	protected final int index;
 
 	protected Map<Object, Object[]>cache = new HashMap<Object, Object[]>(0);
 
-	public DOMNavigatorModel(Object columns [], int index)
+	public DOMNavigatorModel(Object[] columns, int index)
 	{
 		this.columns = columns;
 		this.index = index;
 	}
 
-	public DOMNavigatorModel(Object columns [])
+	public DOMNavigatorModel(Object[] columns)
 	{
 		this (columns, -1);
 	}
@@ -37,7 +37,7 @@ public class DOMNavigatorModel extends AbstractNavigatorModel
 
 	protected Object getValue(Object o, int col)
 	{
-		Object [] values = (Object []) cache.get(o);
+		Object [] values = cache.get(o);
 		if (values != null && values[col] != null)
 			return values[col];
 
@@ -56,7 +56,7 @@ public class DOMNavigatorModel extends AbstractNavigatorModel
 			return;
 		}
 
-		Object values [] = (Object []) cache.get(o);
+		Object[] values = cache.get(o);
 		if (values == null)
 		{
 			values = new Object[columns.length];

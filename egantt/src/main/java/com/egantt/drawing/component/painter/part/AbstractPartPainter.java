@@ -68,8 +68,8 @@ public abstract class AbstractPartPainter implements PartPainter
 	protected void paintProtected(Component c, DrawingPart part, GraphicsState graphics, CellState cellState, DrawingContext context)
 	{
 		final Object [] keys  = part.keys().toArray();
-		final AxisInterval intervals [] = new AxisInterval[keys.length];
-		final DrawingTransform transforms [] = new DrawingTransform [keys.length];
+		final AxisInterval[] intervals = new AxisInterval[keys.length];
+		final DrawingTransform[] transforms = new DrawingTransform [keys.length];
 
 		DrawingState drawing = cellState.getDrawing();
 		for (int i=0; i < keys.length; i++)
@@ -106,5 +106,5 @@ public abstract class AbstractPartPainter implements PartPainter
 	}
 
 	protected abstract void paint(Object key, Component c, DrawingPart part,
-		CellState cellState, DrawingTransform transforms[], Graphics g, DrawingContext context);
+																CellState cellState, DrawingTransform[] transforms, Graphics g, DrawingContext context);
 }

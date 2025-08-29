@@ -35,7 +35,7 @@ public class GanttTable extends SplitLayeredHolder {
 
 	private static final long serialVersionUID = 198427067966485637L;
 
-	public final static String axises[] = new String[] {"xAxis", "yAxis", "percentageAxis"};
+	public final static String[] axises = new String[] {"xAxis", "yAxis", "percentageAxis"};
 
 	public final static String X_AXIS = axises[0];
 	public final static String Y_AXIS = axises[1];
@@ -52,15 +52,15 @@ public class GanttTable extends SplitLayeredHolder {
 
 	private JPopupMenu popup;
 
-	public GanttTable(Object rowData[][],
-										Object columnNames[][],
+	public GanttTable(Object[][] rowData,
+										Object[][] columnNames,
 										ComponentList componentList,
 										Map<String, Color> seriesColorMap) {
 		this(JTableHelper.createTableModel(rowData, columnNames), componentList, columnNames, seriesColorMap, true);
 	}
 
-	public GanttTable(Object rowData[][],
-										Object columnNames[][],
+	public GanttTable(Object[][] rowData,
+										Object[][] columnNames,
 										ComponentList componentList,
 										Map<String, Color> seriesColorMap,
 										Boolean isColumnSortable) {
@@ -69,7 +69,7 @@ public class GanttTable extends SplitLayeredHolder {
 
 	public GanttTable(TableModel model,
 										ComponentList componentList,
-										Object columnNames[][],
+										Object[][] columnNames,
 										Map<String, Color> seriesColorMap,
 										Boolean isColumnSortable) {
 		this.componentList = componentList;
@@ -121,8 +121,7 @@ public class GanttTable extends SplitLayeredHolder {
 			if (part.getInterval() != null) {
 				for (Iterator<?> valueIt = part.values(part.getInterval()); valueIt.hasNext();) {
 					Object value = valueIt.next();
-					if (value instanceof String) {
-						String strValue = (String) value;
+					if (value instanceof String strValue) {
 						if (strValue.contains("%")) {
 							String[] tokens = strValue.split("\\s+");
 							for (String token : tokens) {
@@ -144,9 +143,9 @@ public class GanttTable extends SplitLayeredHolder {
 	private void setComparatorForColumn(TableRowSorter tableRowSorter, int column, Boolean isColumnSortable){
 		tableRowSorter.setComparator(column, (Comparator<String>) (o1, o2) -> {
 			if (!isNumeric(o1) || !isNumeric(o2)){
-				return o1.toString().compareToIgnoreCase(o2.toString());
+				return o1.compareToIgnoreCase(o2);
 			} else {
-				return Long.compare(Long.parseLong(o1.toString()), Long.parseLong(o2.toString()));
+				return Long.compare(Long.parseLong(o1), Long.parseLong(o2));
 			}
 		});
 		tableRowSorter.setSortable(column, isColumnSortable);
@@ -392,7 +391,7 @@ public class GanttTable extends SplitLayeredHolder {
 		}
 		int sz = str.length();
 		for (int i = 0; i < sz; i++) {
-			if (Character.isDigit(str.charAt(i)) == false) {
+			if (!Character.isDigit(str.charAt(i))) {
 				return false;
 			}
 		}

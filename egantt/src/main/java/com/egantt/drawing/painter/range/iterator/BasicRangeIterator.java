@@ -37,7 +37,7 @@ public class BasicRangeIterator extends AbstractRangeIterator
 	   this.lastData = data;
 	   this.data = iter.next();
 
-		long x2 = transform.transform(data, (long) width);
+		long x2 = transform.transform(data, width);
 
 	   int width = (int) x2 - (int) lastX;
 	   if (width <= 0)

@@ -59,9 +59,7 @@ public abstract class GanttPivotPanel extends GanttPivotCommon {
 
     this.tableInfo.getCProfiles().forEach(cProfile -> {
       if (!cProfile.getCsType().isTimeStamp()) {
-        if (!cProfile.getColName().equalsIgnoreCase(this.cProfile.getColName())) {
-          this.jxTableCase.getDefaultTableModel().addRow(new Object[]{cProfile.getColId(), cProfile.getColName()});
-        }
+        this.jxTableCase.getDefaultTableModel().addRow(new Object[]{cProfile.getColId(), cProfile.getColName()});
       }
     });
   }

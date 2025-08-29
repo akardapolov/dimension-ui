@@ -3,6 +3,9 @@ package ru.dimension.ui.component.chart.history;
 import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 
 import java.awt.BorderLayout;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -36,7 +39,9 @@ import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.column.ColumnNames;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.function.GroupFunction;
+import ru.dimension.ui.model.function.NormFunction;
+import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.SeriesType;
 
@@ -65,7 +70,7 @@ public class HistorySCP extends SCP {
 
     super.setDStore(dStore);
 
-    this.dataHandler = initFunctionDataHandler(config.getMetric(), config.getQueryInfo(), dStore);
+    this.dataHandler = initFunctionDataHandler(profileTaskQueryKey, config.getMetric(), config.getQueryInfo(), dStore);
 
     if (topMapSelected != null) {
       if (topMapSelected.values().stream().allMatch(LinkedHashSet::isEmpty)) {
@@ -87,7 +92,7 @@ public class HistorySCP extends SCP {
     ChartRange chartRange = getChartRangeExact(config.getChartInfo());
 
     try {
-      if (MetricFunction.COUNT.equals(config.getMetric().getMetricFunction())) {
+      if (GroupFunction.COUNT.equals(config.getMetric().getGroupFunction())) {
         List<String> distinct = getDistinct(dStore,
                                             config.getQueryInfo().getName(),
                                             config.getMetric().getYAxis(),
@@ -310,11 +315,28 @@ public class HistorySCP extends SCP {
         && !topMapSelected.isEmpty()
         && topMapSelected.values().stream().anyMatch(set -> !set.isEmpty());
 
-    double range = calculateRange(chartRange);
+    TimeRangeFunction timeRangeFunction = config.getMetric().getTimeRangeFunction();
+    double range = switch (timeRangeFunction) {
+      case MINUTE -> 60 * 1000;
+      case HOUR -> 60 * 60 * 1000;
+      case DAY -> 24 * 60 * 60 * 1000;
+      case MONTH -> calculateMonthlyRange(chartRange);
+      default -> calculateAutoRange(chartRange);
+    };
+
+    NormFunction normFunction = config.getMetric().getNormFunction();
+    log.info("Normalization function: " + normFunction);
 
     for (long dtBegin = chartRange.getBegin(); dtBegin <= chartRange.getEnd(); dtBegin += Math.round(range)) {
       long dtEnd = dtBegin + Math.round(range) - 1;
-      double k = (double) Math.round(range) / 1000;
+
+      double k = switch (normFunction) {
+        case NONE -> 1.0;
+        case SECOND -> (double) Math.round(range) / 1000;
+        case MINUTE -> (double) Math.round(range) / (60 * 1000);
+        case HOUR -> (double) Math.round(range) / (60 * 60 * 1000);
+        case DAY -> (double) Math.round(range) / (24 * 60 * 60 * 1000);
+      };
 
       if (applyFilter) {
         dataHandler.handleFunction(dtBegin, dtEnd, k, filteredSeries, topMapSelected, stackedChart);
@@ -324,7 +346,21 @@ public class HistorySCP extends SCP {
     }
   }
 
-  private double calculateRange(ChartRange chartRange) {
+  private long calculateMonthlyRange(ChartRange chartRange) {
+    long totalMillis = chartRange.getEnd() - chartRange.getBegin();
+    long totalMonths = ChronoUnit.MONTHS.between(
+        Instant.ofEpochMilli(chartRange.getBegin()).atZone(ZoneId.systemDefault()).toLocalDate(),
+        Instant.ofEpochMilli(chartRange.getEnd()).atZone(ZoneId.systemDefault()).toLocalDate()
+    );
+
+    if (totalMonths == 0) {
+      return totalMillis;
+    }
+
+    return totalMillis / totalMonths;
+  }
+
+  private double calculateAutoRange(ChartRange chartRange) {
     if (config.getChartInfo().getCustomBegin() != 0 & config.getChartInfo().getCustomEnd() != 0) {
       return (double) (chartRange.getEnd() - chartRange.getBegin()) / config.getMaxPointsPerGraph();
     }

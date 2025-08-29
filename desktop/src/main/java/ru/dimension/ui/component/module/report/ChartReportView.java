@@ -11,7 +11,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.panel.LegendPanel;
-import ru.dimension.ui.component.panel.MetricFunctionPanel;
+import ru.dimension.ui.component.panel.FunctionPanel;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.helper.GUIHelper;
 
@@ -19,7 +19,7 @@ import ru.dimension.ui.helper.GUIHelper;
 @Data
 public class ChartReportView extends JPanel {
 
-  private MetricFunctionPanel historyMetricFunctionPanel;
+  private FunctionPanel historyFunctionPanel;
   private HistoryRangePanel historyRangePanel;
   private LegendPanel historyLegendPanel;
 
@@ -35,7 +35,7 @@ public class ChartReportView extends JPanel {
     setLayout(new BorderLayout());
     setBorder(new EtchedBorder());
 
-    historyMetricFunctionPanel = new MetricFunctionPanel(GUIHelper.getLabel("Group: "));
+    historyFunctionPanel = new FunctionPanel(GUIHelper.getLabel("Group: "));
     historyRangePanel = new HistoryRangePanel(GUIHelper.getLabel("Range: "));
     historyLegendPanel = new LegendPanel(GUIHelper.getLabel("Legend: "));
 
@@ -48,7 +48,7 @@ public class ChartReportView extends JPanel {
     gbc.gridx = 0;
     gbc.gridy = 0;
     gbc.weightx = 2.0 / 15;
-    configPanel.add(historyMetricFunctionPanel, gbc);
+    configPanel.add(historyFunctionPanel, gbc);
 
     gbc.gridx = 1;
     gbc.weightx = 2.0 / 15;

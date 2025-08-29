@@ -14,6 +14,7 @@ import ru.dimension.db.model.output.StackedColumn;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.chart.StackedChart;
 import ru.dimension.ui.helper.FilterHelper;
+import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.QueryInfo;
 
@@ -22,10 +23,11 @@ public class SumHandler extends FunctionHandler {
 
   private Map<CProfile, LinkedHashSet<String>> topMapSelected;
 
-  public SumHandler(Metric metric,
+  public SumHandler(ProfileTaskQueryKey profileTaskQueryKey,
+                    Metric metric,
                     QueryInfo queryInfo,
                     DStore dStore) {
-    super(metric, queryInfo, dStore);
+    super(profileTaskQueryKey, metric, queryInfo, dStore);
   }
 
   @Override

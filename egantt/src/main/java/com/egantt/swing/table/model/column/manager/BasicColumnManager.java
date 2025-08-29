@@ -48,7 +48,7 @@ public class BasicColumnManager implements ColumnManager
 		models.add(columnModel);
 	}
 	
-	public BasicColumnManager(TableModel model, Object columnNames[][])
+	public BasicColumnManager(TableModel model, Object[][] columnNames)
 	{
 		this.model = model;
 		this.selectionModel = new DefaultListSelectionModel();	
@@ -107,7 +107,7 @@ public class BasicColumnManager implements ColumnManager
 	 */
 	public void add(TableColumn column)
 	{
-		TableColumnModel model = (TableColumnModel) models.get(models.size() - 1);
+		TableColumnModel model = models.get(models.size() - 1);
 		column.setModelIndex(index++);
 		model.addColumn(column);
 	}

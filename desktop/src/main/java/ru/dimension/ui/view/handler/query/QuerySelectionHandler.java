@@ -245,7 +245,7 @@ public class QuerySelectionHandler extends MouseListenerImpl implements ListSele
                   m.getXAxis().getColName(),
                   m.getYAxis().getColName(),
                   m.getGroup().getColName(),
-                  m.getMetricFunction().toString(),
+                  m.getGroupFunction().toString(),
                   m.getChartType().toString()});
         }
         if (metricQueryPanel.getConfigMetricCase().getJxTable().getRowCount() != 0) {

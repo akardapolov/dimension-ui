@@ -46,7 +46,7 @@ public class AxisPercentagePainter implements DrawingPainter
 		}
 		
 		DrawingPart part = (DrawingPart) state.get(StateResources.DRAWING_PART);
-		if (part == null  || part.keys().indexOf(axis) < 0)
+		if (part == null  || !part.keys().contains(axis))
 		{
 			if (trace) Trace.out.println("AxisPercentagePainter - paint: Axis not defined for DrawingPart axis [" + axis + "]");
 			return bounds; 

@@ -38,7 +38,7 @@ import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.helper.ProgressBarHelper;
 import ru.dimension.ui.model.column.TaskColumnNames;
 import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.gantt.DrawingScale;
 import ru.dimension.ui.model.gantt.GanttColumn;
 import ru.dimension.ui.model.info.TableInfo;
@@ -190,7 +190,7 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
   private List<GanttColumn> loadGanttData(CProfile firstLevelGroupBy)
       throws BeginEndWrongOrderException, GanttColumnNotSupportedException, SqlColMetadataException {
 
-    if (MetricFunction.COUNT.equals(metric.getMetricFunction())) {
+    if (GroupFunction.COUNT.equals(metric.getGroupFunction())) {
       if (SeriesType.CUSTOM.equals(seriesType) && topMapSelected != null) {
 
         CompositeFilter compositeFilter = FilterHelper.toCompositeFilter(topMapSelected);

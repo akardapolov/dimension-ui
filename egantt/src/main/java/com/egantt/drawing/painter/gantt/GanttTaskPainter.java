@@ -33,7 +33,7 @@ public class GanttTaskPainter implements DrawingPainter
 		int offset = (int) Math.round(height * 1.8);
 
 		int top = height;
-	  	int xPoints [] = new int[3];  int yPoints [] = new int[3];
+	  	int[] xPoints = new int[3];  int[] yPoints = new int[3];
 		xPoints[0] = bounds.x; yPoints[0] = bounds.y + top;
 	  	xPoints[1] = bounds.x + (offset /2);  yPoints[1] = bounds.y + height + top;
 	  	xPoints[2] = bounds.x + offset; yPoints[2] = bounds.y + top;

@@ -50,7 +50,7 @@ public class GanttDrawingPartHelper {
 	}
 	
 	public DrawingPart createActivityEntry(Object key, Date startDate, Date endDate, String painter, String context, ListDrawingPart part) {
-		AxisInterval intervals [] = new AxisInterval [2];
+		AxisInterval[] intervals = new AxisInterval [2];
 		intervals[0] = new LongInterval(startDate.getTime(), endDate.getTime());
 		intervals[1] = new LongInterval(5, 95);
 
@@ -71,7 +71,7 @@ public class GanttDrawingPartHelper {
 			drawingStates.add(start);
 			drawingStates.add(finish);
 		
-			AxisInterval intervals [] = new AxisInterval [3];
+			AxisInterval[] intervals = new AxisInterval [3];
 			intervals[0] = null;
 			intervals[1] = new LongInterval(0, 100);
 			intervals[2] = new DrawingStateInterval("xAxis", drawingStates);
@@ -87,7 +87,7 @@ public class GanttDrawingPartHelper {
 	}
 	
 	public void createShiftEntry(Object key, List <DrawingState> drawingState, String context, ListDrawingPart part) {
-		AxisInterval intervals [] = new AxisInterval [2];
+		AxisInterval[] intervals = new AxisInterval [2];
 		intervals[0] = new DrawingStateInterval("xAxis", drawingState);
 		intervals[1] = new LongInterval(5, 95);
 
@@ -105,7 +105,7 @@ public class GanttDrawingPartHelper {
 	}
 	
 	public void createMilestoneEntry(Object key, Date date, String painter, String context, ListDrawingPart part) {
-		AxisInterval intervals [] = new AxisInterval [2];
+		AxisInterval[] intervals = new AxisInterval [2];
 		intervals[0] = new LongInterval(date.getTime(), Long.MAX_VALUE);
 		intervals[1] = new LongInterval(17, 83);
 
@@ -119,7 +119,7 @@ public class GanttDrawingPartHelper {
 	}
 	
 	public void createPercentageEntry(Object key, int i, Date date, Date date2, String context, ListDrawingPart part) {
-		AxisInterval intervals [] = new AxisInterval [3];
+		AxisInterval[] intervals = new AxisInterval [3];
 		intervals[0] = new LongInterval(date.getTime(), date2.getTime());
 		intervals[1] = new LongInterval(17, 83);
 		intervals[2] = new LongInterval(0, i);

@@ -20,6 +20,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.io.TempDir;
 import ru.dimension.ui.cache.impl.AppCacheImpl;
 import ru.dimension.ui.config.FileConfig;
+import ru.dimension.ui.helper.ColorHelper;
 import ru.dimension.ui.helper.FilesHelper;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.model.column.QueryColumnNames;
@@ -62,6 +63,9 @@ public abstract class HandlerMock {
 
   @Inject
   protected Lazy<ConfigurationManagerImpl> configurationManagerLazy;
+
+  @Inject
+  protected Lazy<ColorHelper> colorHelperLazy;
 
   @Inject
   protected Lazy<FilesHelper> filesHelperLazy;

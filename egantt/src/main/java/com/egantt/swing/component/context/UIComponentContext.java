@@ -80,10 +80,9 @@ public class UIComponentContext implements ComponentContext
 			while (enumerator.hasMoreElements())
 			{
 				Object o = enumerator.nextElement();
-				if (!(o instanceof String))
+				if (!(o instanceof String s))
 					continue;
-				
-				String s = (String) o;
+
 				int i = s.indexOf(key);
 				if (i < 0)
 					continue;

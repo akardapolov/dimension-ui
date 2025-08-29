@@ -30,7 +30,7 @@ import java.net.URL;
  */
 public final class Hive
 {
-	protected static HiveImpl hiveImpl; /** implementation of the hive */
+	private static HiveImpl hiveImpl; /** implementation of the hive */
 	
 	// __________________________________________________________________________
 	

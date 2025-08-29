@@ -16,5 +16,5 @@ import java.awt.Rectangle;
 
 public interface PartView
 {
-	Rectangle create(Component c, AxisInterval intervals [], DrawingTransform transforms[]);
+	Rectangle create(Component c, AxisInterval[] intervals, DrawingTransform[] transforms);
 }

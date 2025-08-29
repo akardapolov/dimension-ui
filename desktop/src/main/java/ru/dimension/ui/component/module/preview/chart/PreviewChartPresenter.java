@@ -28,12 +28,13 @@ import ru.dimension.ui.component.model.ChartConfigState;
 import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.helper.DateHelper;
+import ru.dimension.ui.helper.FilterHelper;
 import ru.dimension.ui.helper.LogHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.function.ChartType;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.chart.ChartType;
+import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.sql.GatherDataMode;
@@ -73,7 +74,7 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
   public void initializePresenter() {
     initializeFromState();
 
-    view.getRealTimeMetricFunctionPanel().setRunAction(this::handleRealtimeMetricFunctionChange);
+    view.getRealTimeFunctionPanel().setRunAction(this::handleRealtimeGroupFunctionChange);
     view.getRealTimeRangePanel().setRunAction(this::handleRealTimeRangeChange);
 
     view.getRealTimeLegendPanel().setStateChangeConsumer(showLegend ->
@@ -105,7 +106,7 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
 
           view.getRealTimeFilterPanel().clearFilterPanel();
           view.getRealTimeFilterPanel().setSeriesColorMap(realTimeChart.getSeriesColorMap());
-          view.getRealTimeFilterPanel().getMetric().setMetricFunction(realTimeChart.getConfig().getMetric().getMetricFunction());
+          view.getRealTimeFilterPanel().getMetric().setGroupFunction(realTimeChart.getConfig().getMetric().getGroupFunction());
           return () -> {
             view.getRealTimeChartPanel().removeAll();
             view.getRealTimeChartPanel().add(realTimeChart, BorderLayout.CENTER);
@@ -144,10 +145,10 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
     Metric metricCopy = baseMetric.copy();
     ChartInfo chartInfoCopy = model.getChartInfo().copy();
 
-    MetricFunction metricFunction = UIState.INSTANCE.getRealtimeMetricFunction(chartKey);
-    if (metricFunction != null) {
-      metricCopy.setMetricFunction(metricFunction);
-      metricCopy.setChartType(MetricFunction.COUNT.equals(metricFunction) ? ChartType.STACKED : ChartType.LINEAR);
+    GroupFunction groupFunction = UIState.INSTANCE.getRealtimeGroupFunction(chartKey);
+    if (groupFunction != null) {
+      metricCopy.setGroupFunction(groupFunction);
+      metricCopy.setChartType(GroupFunction.COUNT.equals(groupFunction) ? ChartType.STACKED : ChartType.LINEAR);
     }
 
     RangeRealTime rangeRealTime = UIState.INSTANCE.getRealTimeRange(chartKey);
@@ -172,12 +173,12 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
   private void initializeFromState() {
     ChartKey chartKey = model.getChartKey();
 
-    MetricFunction realTimeMetricFunction = UIState.INSTANCE.getRealtimeMetricFunction(chartKey);
-    if (realTimeMetricFunction != null) {
-      realTimeMetric.setMetricFunction(realTimeMetricFunction);
-      realTimeMetric.setChartType(MetricFunction.COUNT.equals(realTimeMetricFunction) ? ChartType.STACKED : ChartType.LINEAR);
+    GroupFunction realTimeGroupFunction = UIState.INSTANCE.getRealtimeGroupFunction(chartKey);
+    if (realTimeGroupFunction != null) {
+      realTimeMetric.setGroupFunction(realTimeGroupFunction);
+      realTimeMetric.setChartType(GroupFunction.COUNT.equals(realTimeGroupFunction) ? ChartType.STACKED : ChartType.LINEAR);
     }
-    view.getRealTimeMetricFunctionPanel().setSelected(realTimeMetric.getMetricFunction());
+    view.getRealTimeFunctionPanel().setSelected(realTimeMetric.getGroupFunction());
 
     RangeRealTime localRealTimeRange = UIState.INSTANCE.getRealTimeRange(chartKey);
     RangeRealTime globalRealTimeRange = UIState.INSTANCE.getRealTimeRangeAll(component.name());
@@ -193,10 +194,10 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
     }
   }
 
-  private void handleRealtimeMetricFunctionChange(String action, MetricFunction function) {
-    realTimeMetric.setMetricFunction(function);
-    realTimeMetric.setChartType(MetricFunction.COUNT.equals(function) ? ChartType.STACKED : ChartType.LINEAR);
-    UIState.INSTANCE.putRealtimeMetricFunction(model.getChartKey(), function);
+  private void handleRealtimeGroupFunctionChange(String action, GroupFunction function) {
+    realTimeMetric.setGroupFunction(function);
+    realTimeMetric.setChartType(GroupFunction.COUNT.equals(function) ? ChartType.STACKED : ChartType.LINEAR);
+    UIState.INSTANCE.putRealtimeGroupFunction(model.getChartKey(), function);
 
     view.getRealTimeFilterPanel().clearFilterPanel();
     updateRealTimeChart();
@@ -276,7 +277,9 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
     Map<String, Color> preservedColorMap = new HashMap<>(seriesColorMap);
 
     if (panelTabType == PanelTabType.REALTIME) {
-      updateRealTimeChart(preservedColorMap, topMapSelected);
+      Map<CProfile, LinkedHashSet<String>> sanitizeTopMapSelected =
+          FilterHelper.sanitizeTopMapSelected(topMapSelected, realTimeMetric);
+      updateRealTimeChart(preservedColorMap, sanitizeTopMapSelected);
     }
   }
 
@@ -318,7 +321,7 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
             view.getRealTimeFilterPanel().clearFilterPanel();
           }
           view.getRealTimeFilterPanel().setSeriesColorMap(realTimeChart.getSeriesColorMap());
-          view.getRealTimeFilterPanel().getMetric().setMetricFunction(realTimeChart.getConfig().getMetric().getMetricFunction());
+          view.getRealTimeFilterPanel().getMetric().setGroupFunction(realTimeChart.getConfig().getMetric().getGroupFunction());
           return () -> {
             view.getRealTimeChartPanel().add(realTimeChart, BorderLayout.CENTER);
             isReadyRealTimeUpdate = true;

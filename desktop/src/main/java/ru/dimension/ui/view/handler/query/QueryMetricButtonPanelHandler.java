@@ -24,8 +24,10 @@ import ru.dimension.ui.exception.EmptyNameException;
 import ru.dimension.ui.exception.NameAlreadyExistException;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.exception.NotSelectedRowException;
-import ru.dimension.ui.model.function.ChartType;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.chart.ChartType;
+import ru.dimension.ui.model.function.GroupFunction;
+import ru.dimension.ui.model.function.NormFunction;
+import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.manager.ProfileManager;
@@ -164,7 +166,7 @@ public class QueryMetricButtonPanelHandler implements ActionListener {
                     m.getXAxis().getColName(),
                     m.getYAxis().getColName(),
                     m.getGroup().getColName(),
-                    m.getMetricFunction().toString(),
+                    m.getGroupFunction().toString(),
                     m.getChartType().toString()});
           }
           if (metricQueryPanel.getConfigMetricCase().getJxTable().getRowCount() != 0) {
@@ -224,7 +226,7 @@ public class QueryMetricButtonPanelHandler implements ActionListener {
                                                                   .getSelectedItem()).toString();
             CProfile dimensionProfile = getCProfile(selectedTable, selectedDimension);
 
-            String selectedYAxisFunction = Objects.requireNonNull(metricQueryPanel.getMetricFunction()
+            String selectedYAxisFunction = Objects.requireNonNull(metricQueryPanel.getGroupFunction()
                                                                       .getSelectedItem()).toString();
 
             String selectedChartType = Objects.requireNonNull(metricQueryPanel.getChartType()
@@ -260,10 +262,17 @@ public class QueryMetricButtonPanelHandler implements ActionListener {
               }
             }
 
-            Metric saveMetric = new Metric(metricIdNext.incrementAndGet(), nameMetrics, isDefault,
+            Metric saveMetric = new Metric(metricIdNext.incrementAndGet(),
+                                           nameMetrics,
+                                           isDefault,
                                            xAxisProfile,
-                                           yAxisProfile, dimensionProfile, MetricFunction.valueOf(selectedYAxisFunction),
-                                           ChartType.valueOf(selectedChartType), Collections.emptyList());
+                                           yAxisProfile,
+                                           dimensionProfile,
+                                           GroupFunction.valueOf(selectedYAxisFunction),
+                                           TimeRangeFunction.AUTO,
+                                           NormFunction.SECOND,
+                                           ChartType.valueOf(selectedChartType),
+                                           Collections.emptyList());
 
             this.saveMetricList = saveQuery.getMetricList();
 
@@ -282,7 +291,7 @@ public class QueryMetricButtonPanelHandler implements ActionListener {
                       saveMetric.getXAxis().getColName(),
                       saveMetric.getYAxis().getColName(),
                       saveMetric.getGroup().getColName(),
-                      saveMetric.getMetricFunction().toString(),
+                      saveMetric.getGroupFunction().toString(),
                       saveMetric.getChartType().toString()});
             }
             setPanelView(true);
@@ -324,7 +333,7 @@ public class QueryMetricButtonPanelHandler implements ActionListener {
                                                                   .getSelectedItem()).toString();
             CProfile dimensionProfile = getCProfile(selectedTable, selectedDimension);
 
-            String selectedYAxisFunction = Objects.requireNonNull(metricQueryPanel.getMetricFunction()
+            String selectedYAxisFunction = Objects.requireNonNull(metricQueryPanel.getGroupFunction()
                                                                       .getSelectedItem()).toString();
 
             String selectedChartType = Objects.requireNonNull(metricQueryPanel.getChartType()
@@ -361,9 +370,17 @@ public class QueryMetricButtonPanelHandler implements ActionListener {
 
             }
 
-            Metric editMetric = new Metric(selectedMetric.getId(), nameMetric, isDefault, xAxisProfile,
-                                           yAxisProfile, dimensionProfile, MetricFunction.valueOf(selectedYAxisFunction),
-                                           ChartType.valueOf(selectedChartType), Collections.emptyList());
+            Metric editMetric = new Metric(selectedMetric.getId(),
+                                           nameMetric,
+                                           isDefault,
+                                           xAxisProfile,
+                                           yAxisProfile,
+                                           dimensionProfile,
+                                           GroupFunction.valueOf(selectedYAxisFunction),
+                                           TimeRangeFunction.AUTO,
+                                           NormFunction.SECOND,
+                                           ChartType.valueOf(selectedChartType),
+                                           Collections.emptyList());
 
             this.editMetricList = editQuery.getMetricList();
             int index = editMetricList.indexOf(selectedMetric);
@@ -399,7 +416,7 @@ public class QueryMetricButtonPanelHandler implements ActionListener {
             .getValueAt(metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow(), 4);
         String selectedMetricGroup = (String) metricQueryPanel.getConfigMetricCase().getDefaultTableModel()
             .getValueAt(metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow(), 5);
-        String selectedMetricFunction = (String) metricQueryPanel.getConfigMetricCase().getDefaultTableModel()
+        String selectedGroupFunction = (String) metricQueryPanel.getConfigMetricCase().getDefaultTableModel()
             .getValueAt(metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow(), 6);
         String selectedMetricType = (String) metricQueryPanel.getConfigMetricCase().getDefaultTableModel()
             .getValueAt(metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow(), 7);
@@ -409,7 +426,7 @@ public class QueryMetricButtonPanelHandler implements ActionListener {
         metricQueryPanel.getXTextFile().setText(selectedMetricX);
         metricQueryPanel.getYComboBox().setSelectedItem(selectedMetricY);
         metricQueryPanel.getDimensionComboBox().setSelectedItem(selectedMetricGroup);
-        metricQueryPanel.getMetricFunction().setSelectedItem(selectedMetricFunction);
+        metricQueryPanel.getGroupFunction().setSelectedItem(selectedGroupFunction);
         metricQueryPanel.getChartType().setSelectedItem(selectedMetricType);
       } else {
         setPanelView(true);
@@ -424,7 +441,7 @@ public class QueryMetricButtonPanelHandler implements ActionListener {
     metricQueryPanel.getDefaultCheckBox().setSelected(false);
     metricQueryPanel.getYComboBox().setSelectedIndex(0);
     metricQueryPanel.getDimensionComboBox().setSelectedIndex(0);
-    metricQueryPanel.getMetricFunction().setSelectedIndex(0);
+    metricQueryPanel.getGroupFunction().setSelectedIndex(0);
     metricQueryPanel.getChartType().setSelectedIndex(0);
   }
 
@@ -436,7 +453,7 @@ public class QueryMetricButtonPanelHandler implements ActionListener {
     metricQueryPanel.getXTextFile().setEditable(!isSelected);
     metricQueryPanel.getYComboBox().setEnabled(!isSelected);
     metricQueryPanel.getDimensionComboBox().setEnabled(!isSelected);
-    metricQueryPanel.getMetricFunction().setEnabled(!isSelected);
+    metricQueryPanel.getGroupFunction().setEnabled(!isSelected);
     metricQueryPanel.getChartType().setEnabled(!isSelected);
     taskCase.getJxTable().setEnabled(isSelected);
     connectionCase.getJxTable().setEnabled(isSelected);
@@ -524,7 +541,7 @@ public class QueryMetricButtonPanelHandler implements ActionListener {
               m.getXAxis().getColName(),
               m.getYAxis().getColName(),
               m.getGroup().getColName(),
-              m.getMetricFunction().toString(),
+              m.getGroupFunction().toString(),
               m.getChartType().toString()});
     }
     if (metricQueryPanel.getConfigMetricCase().getJxTable().getRowCount() != 0) {

@@ -60,7 +60,7 @@ public abstract class AbstractTableAction extends AbstractAction
 				parent = (JPopupMenu) SwingUtilities.getAncestorOfClass(JPopupMenu.class, 
 						parent.getInvoker());
 			}
-			component = (JComponent) parent.getInvoker();		
+			component = parent.getInvoker();
 			Point screenPoint = getPreferredLocation(parent);
 			if (screenPoint != null)
 			{
@@ -88,10 +88,9 @@ public abstract class AbstractTableAction extends AbstractAction
 		if (component instanceof JXTable)
 			return (JXTable) component;
 		
-		if (!(component instanceof Container))
+		if (!(component instanceof Container container))
 			return null;
 
-		Container container = (Container) component;
 		for (int i=0; i < container.getComponentCount(); i++) {
 			JXTable result = findTable(container.getComponent(i));
 			if (result != null)
@@ -104,7 +103,7 @@ public abstract class AbstractTableAction extends AbstractAction
 		try
 		{
 			int desiredLocationX = -1 ,desiredLocationY = -1;
-			final Field fields[] = JPopupMenu.class.getDeclaredFields();
+			final Field[] fields = JPopupMenu.class.getDeclaredFields();
 		    for (int i = 0; i < fields.length; ++i) {
 		      if ("desiredLocationX".equals(fields[i].getName())) {
 		    	  fields[i].setAccessible(true);

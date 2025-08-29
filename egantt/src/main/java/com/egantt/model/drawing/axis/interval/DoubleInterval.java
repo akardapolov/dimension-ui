@@ -86,20 +86,18 @@ public class DoubleInterval implements MutableInterval
 
 	public boolean contains(AxisInterval i)
 	{
-		if (i == null || !(i instanceof DoubleInterval))
+		if (i == null || !(i instanceof DoubleInterval interval))
 			return false;
-		
-		DoubleInterval interval = (DoubleInterval) i;
+
 		return this.start <= interval.getStartValue() &&
 		   this.finish >= interval.getFinishValue();
 	}
 
 	public boolean intersects(AxisInterval i)
 	{
-		if (i == null || !(i instanceof DoubleInterval))
+		if (i == null || !(i instanceof DoubleInterval interval))
 			return false;
-		
-		DoubleInterval interval = (DoubleInterval) i;
+
 		return ! (finish < interval.getStartValue())
 		   || ! (start > interval.getFinishValue());
 	}
@@ -110,10 +108,9 @@ public class DoubleInterval implements MutableInterval
 		if (i == null)
 			return new DoubleInterval(new Double(getStartValue()), new Double(getFinishValue()));
 	
-		if (!(i instanceof DoubleInterval))
+		if (!(i instanceof DoubleInterval interval))
 			return null;
-		
-		DoubleInterval interval = (DoubleInterval) i;
+
 		return new DoubleInterval(
 				Math.min(getStartValue(), interval.getStartValue()), 
 				Math.max(getFinishValue(), interval.getFinishValue()));

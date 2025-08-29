@@ -38,7 +38,7 @@ public class BooleanFieldComponent implements FieldComponent
 	 */
 	public Object getValue()
 	{
-		return new Boolean(component.isSelected());
+		return Boolean.valueOf(component.isSelected());
 	}
 
 	/**

@@ -4,8 +4,8 @@ import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 import static ru.dimension.ui.laf.LafColorGroup.CHART_PANEL;
 import static ru.dimension.ui.model.SourceConfig.COLUMNS;
 import static ru.dimension.ui.model.SourceConfig.METRICS;
-import static ru.dimension.ui.model.function.ChartType.LINEAR;
-import static ru.dimension.ui.model.function.ChartType.STACKED;
+import static ru.dimension.ui.model.chart.ChartType.LINEAR;
+import static ru.dimension.ui.model.chart.ChartType.STACKED;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -43,7 +43,7 @@ import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.cstype.CType;
 import ru.dimension.db.model.profile.table.BType;
-import ru.dimension.ui.component.panel.MetricFunctionPanel;
+import ru.dimension.ui.component.panel.FunctionPanel;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.exception.SeriesExceedException;
 import ru.dimension.ui.helper.GUIHelper;
@@ -55,8 +55,8 @@ import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.SourceConfig;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.db.TimestampType;
-import ru.dimension.ui.model.function.ChartType;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.chart.ChartType;
+import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
@@ -88,7 +88,7 @@ public class ChartCardPanel extends JPanel implements HelperChart {
   private final JSplitPane jSplitPane;
 
   private final JPanel jPanelFunction;
-  protected MetricFunction metricFunctionOnEdit = MetricFunction.NONE;
+  protected GroupFunction groupFunctionOnEdit = GroupFunction.NONE;
   private final Metric metric;
 
   protected ExecutorService executorService;
@@ -105,7 +105,7 @@ public class ChartCardPanel extends JPanel implements HelperChart {
   private String descriptionFrom;
   private String descriptionTo;
 
-  private final MetricFunctionPanel metricFunctionPanel;
+  private final FunctionPanel functionPanel;
 
   private final ResourceBundle bundleDefault;
 
@@ -143,13 +143,13 @@ public class ChartCardPanel extends JPanel implements HelperChart {
 
     this.setToolTipText(getTooltip());
 
-    metricFunctionPanel = new MetricFunctionPanel(GUIHelper.getLabel("Group: "));
-    metricFunctionPanel.setRunAction((eventName, function) -> {
-      metricFunctionOnEdit = function;
+    functionPanel = new FunctionPanel(GUIHelper.getLabel("Group: "));
+    functionPanel.setRunAction((eventName, function) -> {
+      groupFunctionOnEdit = function;
 
-      ChartType chartType = (function == MetricFunction.COUNT) ? ChartType.STACKED : ChartType.LINEAR;
+      ChartType chartType = (function == GroupFunction.COUNT) ? ChartType.STACKED : ChartType.LINEAR;
 
-      metric.setMetricFunction(function);
+      metric.setGroupFunction(function);
       metric.setChartType(chartType);
 
       updateReportDataWithFunction(function, chartType);
@@ -196,7 +196,7 @@ public class ChartCardPanel extends JPanel implements HelperChart {
 
     gblLabel.row()
         .cell(jlTitle)
-        .cell(metricFunctionPanel)
+        .cell(functionPanel)
         .fillX();
     gblLabel.done();
 
@@ -296,11 +296,11 @@ public class ChartCardPanel extends JPanel implements HelperChart {
   }
 
   public void setEnabled(boolean flag) {
-    metricFunctionPanel.setEnabled(flag, flag, flag);
+    functionPanel.setEnabled(flag, flag, flag);
   }
 
-  public void setSelectedRadioButton(MetricFunction metricFunction) {
-    metricFunctionPanel.setSelected(metricFunction);
+  public void setSelectedRadioButton(GroupFunction groupFunction) {
+    functionPanel.setSelected(groupFunction);
   }
 
   public void loadChart(int cId,
@@ -327,7 +327,7 @@ public class ChartCardPanel extends JPanel implements HelperChart {
     log.info("Query: " + key.getQueryId());
   }
 
-  private void updateReportDataWithFunction(MetricFunction function, ChartType chartType) {
+  private void updateReportDataWithFunction(GroupFunction function, ChartType chartType) {
     if (mapReportData == null) {
       return;
     }
@@ -340,7 +340,7 @@ public class ChartCardPanel extends JPanel implements HelperChart {
     if (sourceConfig == SourceConfig.METRICS) {
       for (MetricReport mr : reportData.getMetricReportList()) {
         if (mr.getId() == id) {
-          mr.setMetricFunction(function);
+          mr.setGroupFunction(function);
           mr.setChartType(chartType);
           break;
         }
@@ -348,7 +348,7 @@ public class ChartCardPanel extends JPanel implements HelperChart {
     } else if (sourceConfig == SourceConfig.COLUMNS) {
       for (CProfileReport cr : reportData.getCProfileReportList()) {
         if (cr.getColId() == id) {
-          cr.setMetricFunction(function);
+          cr.setGroupFunction(function);
           cr.setChartType(chartType);
           break;
         }
@@ -422,7 +422,7 @@ public class ChartCardPanel extends JPanel implements HelperChart {
 
         Metric metric = getMetricByCProfile(cProfile, tableInfo);
 
-        setMetricFunctionAndChartType(metric);
+        setGroupFunctionAndChartType(metric);
 
         tableInfo.setBackendType(BType.BERKLEYDB);
 
@@ -451,12 +451,12 @@ public class ChartCardPanel extends JPanel implements HelperChart {
     metric.setYAxis(cProfile);
     metric.setGroup(cProfile);
 
-    boolean useEditFunction = !MetricFunction.NONE.equals(metricFunctionOnEdit);
+    boolean useEditFunction = !GroupFunction.NONE.equals(groupFunctionOnEdit);
 
     if (useEditFunction) {
-      setMetricFunctionAndChartType(metric);
+      setGroupFunctionAndChartType(metric);
     } else {
-      setMetricFunctionAndChartNotEdit(cProfile, metric);
+      setGroupFunctionAndChartNotEdit(cProfile, metric);
     }
 
     if (mapReportData != null && mapReportData.get(key) != null) {
@@ -468,8 +468,8 @@ public class ChartCardPanel extends JPanel implements HelperChart {
 
       if (report.isPresent()) {
         CProfileReport profileReport = report.get();
-        if (profileReport.getMetricFunction() != null && profileReport.getChartType() != null) {
-          metric.setMetricFunction(profileReport.getMetricFunction());
+        if (profileReport.getGroupFunction() != null && profileReport.getChartType() != null) {
+          metric.setGroupFunction(profileReport.getGroupFunction());
           metric.setChartType(profileReport.getChartType());
         } else {
           setDefaultFunctionAndChart(metric, cProfile, useEditFunction);
@@ -484,36 +484,36 @@ public class ChartCardPanel extends JPanel implements HelperChart {
 
   private void setDefaultFunctionAndChart(Metric metric, CProfile cProfile, boolean useEditFunction) {
     if (useEditFunction) {
-      setMetricFunctionAndChartType(metric);
+      setGroupFunctionAndChartType(metric);
     } else {
-      setMetricFunctionAndChartNotEdit(cProfile, metric);
+      setGroupFunctionAndChartNotEdit(cProfile, metric);
     }
   }
 
-  private void setMetricFunctionAndChartType(Metric metric) {
-    switch (metricFunctionOnEdit) {
+  private void setGroupFunctionAndChartType(Metric metric) {
+    switch (groupFunctionOnEdit) {
       case COUNT -> {
-        metric.setMetricFunction(metricFunctionOnEdit);
+        metric.setGroupFunction(groupFunctionOnEdit);
         metric.setChartType(STACKED);
       }
       case SUM, AVG -> {
-        metric.setMetricFunction(metricFunctionOnEdit);
+        metric.setGroupFunction(groupFunctionOnEdit);
         metric.setChartType(LINEAR);
       }
     }
   }
 
-  private void setMetricFunctionAndChartNotEdit(CProfile cProfile,
+  private void setGroupFunctionAndChartNotEdit(CProfile cProfile,
                                                 Metric metric) {
     if (CType.STRING.equals(cProfile.getCsType().getCType())) {
-      metric.setMetricFunction(MetricFunction.COUNT);
+      metric.setGroupFunction(GroupFunction.COUNT);
       metric.setChartType(STACKED);
     } else {
       if (Arrays.stream(TimestampType.values()).anyMatch((t) -> t.name().equals(cProfile.getColDbTypeName()))) {
-        metric.setMetricFunction(MetricFunction.COUNT);
+        metric.setGroupFunction(GroupFunction.COUNT);
         metric.setChartType(STACKED);
       } else {
-        metric.setMetricFunction(MetricFunction.AVG);
+        metric.setGroupFunction(GroupFunction.AVG);
         metric.setChartType(LINEAR);
       }
     }
@@ -573,8 +573,8 @@ public class ChartCardPanel extends JPanel implements HelperChart {
     Metric metricCopy = metric.copy();
     ChartInfo chartInfoCopy = chartInfo.copy();
 
-    metricCopy.setMetricFunction(metric.getMetricFunction());
-    metricCopy.setChartType(MetricFunction.COUNT.equals(metric.getMetricFunction()) ? ChartType.STACKED : ChartType.LINEAR);
+    metricCopy.setGroupFunction(metric.getGroupFunction());
+    metricCopy.setChartType(GroupFunction.COUNT.equals(metric.getGroupFunction()) ? ChartType.STACKED : ChartType.LINEAR);
 
     chartInfoCopy.setRangeHistory(RangeHistory.DAY);
 

@@ -145,7 +145,7 @@ public class MetricColumnPanel extends JXTaskPane {
           metricReport.setXAxis(metric.getXAxis());
           metricReport.setYAxis(metric.getYAxis());
           metricReport.setGroup(metric.getGroup());
-          metricReport.setMetricFunction(metric.getMetricFunction());
+          metricReport.setGroupFunction(metric.getGroupFunction());
           metricReport.setChartType(metric.getChartType());
           metricReport.setColumnGanttList(metric.getColumnGanttList());
 

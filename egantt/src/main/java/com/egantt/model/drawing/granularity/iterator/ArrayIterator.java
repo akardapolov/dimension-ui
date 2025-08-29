@@ -11,11 +11,11 @@ import java.util.Iterator;
 
 public class ArrayIterator implements Iterator
 {
-	protected Object values [];
+	protected Object[] values;
 	protected int position;
 	protected int step;
 
-	public ArrayIterator(Object values [], int step)
+	public ArrayIterator(Object[] values, int step)
 	{
 		this.position = 0;
 		this.step = step;

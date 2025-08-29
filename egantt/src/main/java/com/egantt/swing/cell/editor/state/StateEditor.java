@@ -10,11 +10,11 @@ public interface StateEditor {
 	
 	//	________________________________________________________________________
 	
-	public void mousePressed(MouseEvent e, Rectangle bounds, DrawingState drawing, Object axisKey, DrawingContext context);
+	void mousePressed(MouseEvent e, Rectangle bounds, DrawingState drawing, Object axisKey, DrawingContext context);
 	
-	public void mouseReleased(MouseEvent e, Rectangle bounds, DrawingState drawing, Object axisKey, DrawingContext context);
+	void mouseReleased(MouseEvent e, Rectangle bounds, DrawingState drawing, Object axisKey, DrawingContext context);
 
-	public void mouseMoved(MouseEvent e, Rectangle bounds, DrawingState drawing, Object axisKey, DrawingContext context);
+	void mouseMoved(MouseEvent e, Rectangle bounds, DrawingState drawing, Object axisKey, DrawingContext context);
 
-	public void mouseDragged(MouseEvent e, Rectangle bounds, DrawingState drawing, Object axisKey, DrawingContext context);
+	void mouseDragged(MouseEvent e, Rectangle bounds, DrawingState drawing, Object axisKey, DrawingContext context);
 }

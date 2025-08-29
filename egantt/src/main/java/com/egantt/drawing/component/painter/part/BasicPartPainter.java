@@ -37,8 +37,8 @@ public class BasicPartPainter extends AbstractPartPainter
 
 	// _________________________________________________________________________
 
-	protected void paint(Object key, Component c, DrawingPart part, CellState cellState, 
-			DrawingTransform transforms[], Graphics g, DrawingContext context)
+	protected void paint(Object key, Component c, DrawingPart part, CellState cellState,
+											 DrawingTransform[] transforms, Graphics g, DrawingContext context)
 	{
 		// Graphics configuration
 		Iterator contexts = context.iterator(part.getContext(key), ContextResources.GRAPHICS_CONTEXT);
@@ -93,8 +93,8 @@ public class BasicPartPainter extends AbstractPartPainter
 	
 	protected final class LocalGraphicsContext implements CompoundContext {
 	
-		protected final GraphicsContext graphicsContext;
-		protected final DrawingContext context;
+		private final GraphicsContext graphicsContext;
+		private final DrawingContext context;
 		
 		public LocalGraphicsContext(GraphicsContext graphicsContext, DrawingContext context) {
 			this.graphicsContext = graphicsContext;

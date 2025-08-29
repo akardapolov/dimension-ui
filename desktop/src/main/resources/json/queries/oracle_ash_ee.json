@@ -47,7 +47,7 @@
           "cType": "STRING"
         }
       },
-      "metricFunction": "COUNT",
+      "groupFunction": "COUNT",
       "chartType": "STACKED",
       "columnGanttList": []
     }

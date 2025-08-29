@@ -31,11 +31,11 @@ public class ListDrawingPart extends AbstractDrawingPart implements MutableDrawi
 	protected Map <Object, Object>painters = new HashMap<Object, Object>(); // EntryKey --> plotterKey
 	protected Map <Object, Object>states = new HashMap<Object, Object>(); // EntryKey -- proxyKey
 
-	public ListDrawingPart(Object keyValues[], Object painter) {
+	public ListDrawingPart(Object[] keyValues, Object painter) {
 		this (keyValues, painter, false);
 	}
 	
-	public ListDrawingPart(Object keyValues[], Object painter, boolean summaryPart)
+	public ListDrawingPart(Object[] keyValues, Object painter, boolean summaryPart)
 	{
 		List <Object>keys = new ArrayList<Object>();
 		{
@@ -57,7 +57,7 @@ public class ListDrawingPart extends AbstractDrawingPart implements MutableDrawi
 
 	// _________________________________________________________________________
 
-	public void add(Object key, AxisInterval intervals[], Object painter, Object state, Object context)
+	public void add(Object key, AxisInterval[] intervals, Object painter, Object state, Object context)
 	{
 		this.intervals.put(key, intervals);
 
@@ -74,7 +74,7 @@ public class ListDrawingPart extends AbstractDrawingPart implements MutableDrawi
 		return keys;
 	}
 
-	public Iterator values(AxisInterval intervals [])
+	public Iterator values(AxisInterval[] intervals)
 	{
 		List<Object> values = new ArrayList<Object>(this.intervals.size());
 		for (Iterator iter = this.intervals.entrySet().iterator(); iter.hasNext();)
@@ -91,7 +91,7 @@ public class ListDrawingPart extends AbstractDrawingPart implements MutableDrawi
 	public AxisInterval [] getInterval() {
 		AxisInterval[] results = null;
 		for (Iterator iter = intervals.values().iterator(); iter.hasNext();) {
-			AxisInterval values [] = (AxisInterval []) iter.next();
+			AxisInterval[] values = (AxisInterval []) iter.next();
 			
 			if (values == null)
 				continue;
@@ -107,13 +107,13 @@ public class ListDrawingPart extends AbstractDrawingPart implements MutableDrawi
 		return results;
 	}
 	
-	public AxisInterval [] getInterval(Object o, AxisInterval intervals[])
+	public AxisInterval [] getInterval(Object o, AxisInterval[] intervals)
 	{
-		AxisInterval values [] = (AxisInterval []) this.intervals.get(o);
+		AxisInterval[] values = this.intervals.get(o);
 		if (values == null)
 			return null;
 
-		AxisInterval results [] = new AxisInterval[values.length];
+		AxisInterval[] results = new AxisInterval[values.length];
 		for (int i=0; i < results.length; i++)
 			results[i] = values[i] != null || intervals.length <= i
 				? values[i] : intervals[i];
@@ -167,7 +167,7 @@ public class ListDrawingPart extends AbstractDrawingPart implements MutableDrawi
 
 	//	________________________________________________________________________
 
-	protected boolean contains(AxisInterval a [], AxisInterval b[])
+	protected boolean contains(AxisInterval[] a, AxisInterval[] b)
 	{
 		for (int i=0; i < Math.min(a.length, b.length); i++)
 			if (b[i] != null && !a[i].contains(b[i]))

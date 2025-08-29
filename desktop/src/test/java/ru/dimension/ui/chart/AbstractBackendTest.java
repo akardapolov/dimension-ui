@@ -1,5 +1,6 @@
 package ru.dimension.ui.chart;
 
+import static org.mockito.Mockito.when;
 import static ru.dimension.ui.component.chart.HelperChart.THRESHOLD_SERIES;
 
 import java.io.File;
@@ -14,7 +15,11 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 import ru.dimension.db.DBase;
 import ru.dimension.db.config.DBaseConfig;
 import ru.dimension.db.core.DStore;
@@ -31,8 +36,13 @@ import ru.dimension.db.model.profile.cstype.SType;
 import ru.dimension.db.model.profile.table.BType;
 import ru.dimension.db.model.profile.table.IType;
 import ru.dimension.db.model.profile.table.TType;
+import ru.dimension.ui.HandlerMock;
 import ru.dimension.ui.component.chart.ChartConfig;
+import ru.dimension.ui.helper.ColorHelper;
+import ru.dimension.ui.helper.FilesHelper;
+import ru.dimension.ui.manager.ConfigurationManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
+import ru.dimension.ui.model.config.ColorProfile;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.db.DBType;
 import ru.dimension.ui.model.info.QueryInfo;
@@ -47,7 +57,8 @@ import ru.dimension.ui.warehouse.backend.BerkleyDB;
 
 @Log4j2
 @TestInstance(Lifecycle.PER_CLASS)
-public class AbstractBackendTest {
+@ExtendWith(MockitoExtension.class)
+public class AbstractBackendTest extends HandlerMock {
   public static long PULL_TIMEOUT_CLIENT = 1;
   @TempDir
   static File databaseDir;
@@ -58,6 +69,13 @@ public class AbstractBackendTest {
   protected DStore dStore;
 
   protected SqlQueryState sqlQueryState;
+
+  @Mock
+  protected FilesHelper filesHelper;
+  @Mock
+  protected ConfigurationManager configurationManager;
+
+  protected ColorHelper colorHelper;
 
   @BeforeAll
   public void initialize() {
@@ -162,6 +180,20 @@ public class AbstractBackendTest {
     List<List<Object>> data = dStore.getRawDataAll(tProfile.getTableName(), 0, lastTimestamp);
     log.info(data);
     log.info(data.size());
+  }
+
+  public static FilesHelper createMockFilesHelper() {
+    FilesHelper mockFilesHelper = Mockito.mock(FilesHelper.class);
+    when(mockFilesHelper.getColorsDir()).thenReturn("/test/colors");
+    return mockFilesHelper;
+  }
+
+  public static ConfigurationManager createMockConfigurationManagerWithNullProfile(String profileName) {
+    ConfigurationManager mockConfigManager = Mockito.mock(ConfigurationManager.class);
+    when(mockConfigManager.getConfig(ColorProfile.class, profileName))
+        .thenReturn(null);
+
+    return mockConfigManager;
   }
 
   public List<List<Object>> getData(TProfile tProfile, long time, Random random, boolean isRandomStatus) {

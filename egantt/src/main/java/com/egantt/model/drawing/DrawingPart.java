@@ -47,7 +47,7 @@ public interface DrawingPart
 	/**
 	  * Returns the keys
 	  */
-	Iterator values(AxisInterval interval[]);
+	Iterator values(AxisInterval[] interval);
 
 	// __________________________________________________________________________
 
@@ -61,7 +61,7 @@ public interface DrawingPart
 	/**
 	  * Returns the location on the given Axis
 	  */
-	AxisInterval [] getInterval(Object key, AxisInterval intervals []);
+	AxisInterval [] getInterval(Object key, AxisInterval[] intervals);
 	
 	AxisInterval [] getInterval();
 	

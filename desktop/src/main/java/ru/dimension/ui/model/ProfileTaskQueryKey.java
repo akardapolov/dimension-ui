@@ -17,4 +17,8 @@ public class ProfileTaskQueryKey {
   private int profileId;
   private int taskId;
   private int queryId;
+
+  public String getColorProfileName() {
+    return "color_profile" + "_" + profileId + "_" + taskId + "_" + queryId;
+  }
 }

@@ -6,13 +6,14 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.helper.GsonHelper;
+import ru.dimension.ui.manager.ConfigurationManager;
+import ru.dimension.ui.model.config.ColorProfile;
 import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.config.Profile;
 import ru.dimension.ui.model.config.Query;
 import ru.dimension.ui.model.config.Table;
 import ru.dimension.ui.model.config.Task;
 import ru.dimension.ui.security.EncryptDecrypt;
-import ru.dimension.ui.manager.ConfigurationManager;
 
 @Log4j2
 @Singleton
@@ -31,6 +32,7 @@ public class ConfigurationManagerImpl implements ConfigurationManager {
       saveEmptyConfigToFileIfNotExist(Task.class);
       saveEmptyConfigToFileIfNotExist(Profile.class);
       saveEmptyConfigToFileIfNotExist(Table.class);
+      saveEmptyConfigToFileIfNotExist(ColorProfile.class);
     } catch (IOException e) {
       log.catching(e);
       throw new RuntimeException(e);

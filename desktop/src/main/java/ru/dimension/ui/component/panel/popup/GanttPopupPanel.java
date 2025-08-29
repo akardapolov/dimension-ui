@@ -59,7 +59,7 @@ import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.model.AdHocChartKey;
 import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.gantt.DrawingScale;
 import ru.dimension.ui.model.gantt.GanttColumn;
 import ru.dimension.ui.model.info.TableInfo;
@@ -188,7 +188,7 @@ public class GanttPopupPanel extends GanttCommon {
     if (dStore == null || tableInfo == null || metric == null)
       return Collections.emptyList();
 
-    if (MetricFunction.COUNT.equals(metric.getMetricFunction())) {
+    if (GroupFunction.COUNT.equals(metric.getGroupFunction())) {
       if (Objects.isNull(seriesType) || SeriesType.COMMON.equals(seriesType)) {
         return convertGanttColumns(dStore.getGanttCount(tableInfo.getTableName(),
                                                         column,

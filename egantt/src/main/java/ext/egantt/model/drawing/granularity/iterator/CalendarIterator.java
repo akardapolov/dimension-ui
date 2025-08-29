@@ -60,7 +60,7 @@ public class CalendarIterator implements Iterator
 		long value = position.getTime().getTime();  // 1.3.x SDK+
 		this.returnValue = value < finish;
 		position.add(field, step); // next element
-		return new Long(value);
+		return Long.valueOf(value);
 	}
 
 	// __________________________________________________________________________

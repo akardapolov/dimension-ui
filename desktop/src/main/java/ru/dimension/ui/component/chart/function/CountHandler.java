@@ -18,6 +18,7 @@ import ru.dimension.db.model.output.StackedColumn;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.chart.StackedChart;
 import ru.dimension.ui.helper.FilterHelper;
+import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.QueryInfo;
 
@@ -27,10 +28,11 @@ public class CountHandler extends FunctionHandler {
   private Metric metric;
   private Map<CProfile, LinkedHashSet<String>> topMapSelected;
 
-  public CountHandler(Metric metric,
+  public CountHandler(ProfileTaskQueryKey profileTaskQueryKey,
+                      Metric metric,
                       QueryInfo queryInfo,
                       DStore dStore) {
-    super(metric, queryInfo, dStore);
+    super(profileTaskQueryKey, metric, queryInfo, dStore);
 
     this.metric = metric;
   }
@@ -86,7 +88,7 @@ public class CountHandler extends FunctionHandler {
                                          Collectors.summarizingInt(Map.Entry::getValue)));
       series.forEach(seriesName -> {
         Optional<IntSummaryStatistics> batch = Optional.ofNullable(batchData.get(seriesName));
-        stackedChart.loadSeriesColorInternal(seriesName);
+        stackedChart.loadSeriesColorInternal(profileTaskQueryKey.getColorProfileName(), seriesName);
 
         try {
           if (batch.isPresent()) {
@@ -133,7 +135,7 @@ public class CountHandler extends FunctionHandler {
                                          Collectors.summarizingInt(Map.Entry::getValue)));
       series.forEach(seriesName -> {
         Optional<IntSummaryStatistics> batch = Optional.ofNullable(batchData.get(seriesName));
-        stackedChart.loadSeriesColorInternal(seriesName);
+        stackedChart.loadSeriesColorInternal(profileTaskQueryKey.getColorProfileName(), seriesName);
 
         try {
           if (batch.isPresent()) {

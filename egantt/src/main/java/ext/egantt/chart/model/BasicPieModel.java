@@ -25,7 +25,7 @@ public class BasicPieModel implements ChartModel
 	
 	public AxisInterval getInterval(Object axis, Object key)
 	{
-		return (AxisInterval) map.get(key);
+		return map.get(key);
 	}
 	
 	//	------------------------------------------------------------------------

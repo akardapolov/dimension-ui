@@ -224,16 +224,16 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
           setPanelView(false, connectionType);
           if (openedTab.equals(ConnectionTypeTabPane.JDBC)) {
             connectionPanel.getJTextFieldConnectionName().setText(connection.getName() + "_copy");
-            connectionPanel.getJTextFieldConnectionURL().setText(connection.getUrl() + "_copy");
-            connectionPanel.getJTextFieldConnectionUserName().setText(connection.getUserName() + "_copy");
+            connectionPanel.getJTextFieldConnectionURL().setText(connection.getUrl());
+            connectionPanel.getJTextFieldConnectionUserName().setText(connection.getUserName());
             connectionPanel.getJTextFieldConnectionPassword().setText("");
-            connectionPanel.getJTextFieldConnectionJar().setText(connection.getJar() + "_copy");
-            connectionPanel.getJTextFieldConnectionDriver().setText(connection.getDriver() + "_copy");
+            connectionPanel.getJTextFieldConnectionJar().setText(connection.getJar());
+            connectionPanel.getJTextFieldConnectionDriver().setText(connection.getDriver());
             connectionPanel.getConnTypeTab().setEnabledAt(1, false);
           } else if (openedTab.equals(ConnectionTypeTabPane.HTTP)) {
             connectionPanel.getJTextFieldHttpName().setText(connection.getName() + "_copy");
             connectionPanel.getJTextFieldHttpName().setPrompt(bundleDefault.getString("cName"));
-            connectionPanel.getJTextFieldHttpURL().setText(connection.getUrl() + "_copy");
+            connectionPanel.getJTextFieldHttpURL().setText(connection.getUrl());
             connectionPanel.getJTextFieldHttpURL().setPrompt(bundleDefault.getString("cURL"));
             connectionPanel.getConnTypeTab().setEnabledAt(0, false);
           }

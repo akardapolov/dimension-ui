@@ -40,7 +40,7 @@ public class BooleanCellEditor extends AbstractCellEditor
 	 */
 	public Object getValue()
 	{
-		return new Boolean(component.isSelected());
+		return Boolean.valueOf(component.isSelected());
 	}
 
 	/**

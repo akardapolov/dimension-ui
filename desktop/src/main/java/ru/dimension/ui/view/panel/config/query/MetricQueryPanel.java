@@ -31,7 +31,7 @@ public class MetricQueryPanel extends JPanel {
   private final JXTextField xTextFile;
   private final JComboBox<String> yComboBox;
   private final JComboBox<String> dimensionComboBox;
-  private final JComboBox<?> metricFunction;
+  private final JComboBox<?> groupFunction;
   private final JComboBox<?> chartType;
   private final JXTableCase configMetricCase;
   private final ResourceBundle bundleDefault;
@@ -39,7 +39,7 @@ public class MetricQueryPanel extends JPanel {
   @Inject
   public MetricQueryPanel(@Named("metricQueryButtonPanel") ButtonPanel metricQueryButtonPanel,
                           @Named("configMetricCase") JXTableCase configMetricCase,
-                          @Named("metricFunction") JComboBox<?> metricFunction,
+                          @Named("groupFunction") JComboBox<?> groupFunction,
                           @Named("chartType") JComboBox<?> chartType) {
     this.metricQueryButtonPanel = metricQueryButtonPanel;
     this.bundleDefault = Internationalization.getInternationalizationBundle();
@@ -49,7 +49,7 @@ public class MetricQueryPanel extends JPanel {
     this.xTextFile = new JXTextField();
     this.yComboBox = new JComboBox<String>();
     this.dimensionComboBox = new JComboBox<>();
-    this.metricFunction = metricFunction;
+    this.groupFunction = groupFunction;
     this.chartType = chartType;
     this.configMetricCase = configMetricCase;
 
@@ -58,12 +58,12 @@ public class MetricQueryPanel extends JPanel {
     this.xTextFile.setBorder(finalBorder);
     this.yComboBox.setBorder(finalBorder);
     this.dimensionComboBox.setBorder(finalBorder);
-    this.metricFunction.setBorder(finalBorder);
+    this.groupFunction.setBorder(finalBorder);
     this.chartType.setBorder(finalBorder);
 
     AutoCompleteDecorator.decorate(yComboBox);
     AutoCompleteDecorator.decorate(dimensionComboBox);
-    AutoCompleteDecorator.decorate(this.metricFunction);
+    AutoCompleteDecorator.decorate(this.groupFunction);
     AutoCompleteDecorator.decorate(this.chartType);
 
     defaultCheckBox.setEnabled(false);
@@ -71,7 +71,7 @@ public class MetricQueryPanel extends JPanel {
     xTextFile.setEnabled(false);
     yComboBox.setEnabled(false);
     dimensionComboBox.setEnabled(false);
-    this.metricFunction.setEnabled(false);
+    this.groupFunction.setEnabled(false);
     this.chartType.setEnabled(false);
 
     PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(), false);
@@ -92,7 +92,7 @@ public class MetricQueryPanel extends JPanel {
 
     gbl.row()
         .cell(new JLabel("Function"))
-        .cell(metricFunction).fillX();
+        .cell(groupFunction).fillX();
 
     gbl.row()
         .cell(new JLabel("Chart"))

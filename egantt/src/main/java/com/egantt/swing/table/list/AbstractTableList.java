@@ -65,13 +65,13 @@ public abstract class AbstractTableList implements ComponentList {
 	// __________________________________________________________________________
 
 	public JComponent get(int index) {
-		JXTable table = cache.containsKey(new Integer(index)) ? cache
-				.get(new Integer(index)) : null;
+		JXTable table = cache.containsKey(Integer.valueOf(index)) ? cache
+				.get(Integer.valueOf(index)) : null;
 
 		if (table == null) {
 			table = createTable();
 			initializeTable(table);
-			cache.put(new Integer(index), table);
+			cache.put(Integer.valueOf(index), table);
 		}
 
 		componentManager.registerComponent(table, rendererComponentContext);

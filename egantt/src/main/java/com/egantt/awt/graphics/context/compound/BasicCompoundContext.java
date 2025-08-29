@@ -44,7 +44,7 @@ public class BasicCompoundContext implements CompoundContext
 
 	public Object get(Object key, Object type, Object group)
 	{
-		Map attrib = (Map) attributes.get(group);
+		Map attrib = attributes.get(group);
 		if (attrib == null)
 		   return group != DEFAULT_GROUP ? get(key, type, DEFAULT_GROUP) : null;
 

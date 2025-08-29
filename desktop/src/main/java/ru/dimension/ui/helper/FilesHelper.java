@@ -14,6 +14,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,12 +37,14 @@ public class FilesHelper {
   private String reportDir;
   private String templateDir;
   private String designDir;
+  private String colorsDir;
 
   public static String PROFILES_DIR_NAME = "profiles";
   public static String TASKS_DIR_NAME = "tasks";
   public static String CONNECTIONS_DIR_NAME = "connections";
   public static String QUERIES_DIR_NAME = "queries";
   public static String TABLES_DIR_NAME = "tables";
+  public static String COLORS_DIR_NAME = "colors";
 
   public static String CONFIG_JSON_DIR_NAME = "json";
   public static String CONFIG_FTL_DIR_NAME = "ftl";
@@ -58,6 +61,7 @@ public class FilesHelper {
       setReportDir(getRootDir() + getFileSeparator() + "report-data");
       setTemplateDir(getReportDir() + getFileSeparator() + "templates");
       setDesignDir(getReportDir() + getFileSeparator() + "design");
+      setColorsDir(getConfigDir() + getFileSeparator() + COLORS_DIR_NAME);
 
       createDirectory(configDir);
       createDirectory(databaseDir);
@@ -65,6 +69,7 @@ public class FilesHelper {
       createDirectory(reportDir);
       createDirectory(templateDir);
       createDirectory(designDir);
+      createDirectory(colorsDir);
     } catch (IOException e) {
       log.error(e.getMessage());
       log.error(Arrays.toString(e.getStackTrace()));
@@ -258,5 +263,94 @@ public class FilesHelper {
       }
     }
     return directoryToBeDeleted.delete();
+  }
+
+  public void loadFileToFolder(String filename,
+                               String folderPath) throws IOException {
+    String[] fileNameSplit = filename.split("\\.");
+
+    try {
+      if (isJar()) {
+        List<Path> pathList = Collections.emptyList();
+        if (CONFIG_FTL_DIR_NAME.equals(fileNameSplit[1])) {
+          pathList = getFilePathDirectoryResourcesJar(CONFIG_FTL_DIR_NAME);
+        } else if (CONFIG_TTF_DIR_NAME.equals(fileNameSplit[1])) {
+          pathList = getFilePathDirectoryResourcesJar(CONFIG_TTF_DIR_NAME);
+        }
+
+        pathList.forEach(file -> {
+          Path targetPath = Path.of(folderPath, filename);
+          ClassLoader classLoader = getClass().getClassLoader();
+          try (InputStream is = classLoader.getResourceAsStream(file.toString())) {
+            if (is == null) {
+              throw new IllegalArgumentException("Resource not found: " + file);
+            }
+            Files.copy(is, targetPath, StandardCopyOption.REPLACE_EXISTING);
+          } catch (IOException e) {
+            log.catching(e);
+          }
+        });
+      } else {
+        List<Path> pathList = Collections.emptyList();
+        if (CONFIG_FTL_DIR_NAME.equals(fileNameSplit[1])) {
+          pathList = getFilePathDirectoryResourcesFromFS(CONFIG_FTL_DIR_NAME);
+        } else if (CONFIG_TTF_DIR_NAME.equals(fileNameSplit[1])) {
+          pathList = getFilePathDirectoryResourcesFromFS(CONFIG_TTF_DIR_NAME);
+        }
+
+        pathList.forEach(file -> {
+          Path targetPath = Path.of(folderPath, filename);
+          try {
+            Files.copy(file, targetPath, StandardCopyOption.REPLACE_EXISTING);
+          } catch (IOException e) {
+            log.catching(e);
+          }
+        });
+      }
+    } catch (URISyntaxException | IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public void loadFileToFolder(String filename, String resourceDir, String folderPath) throws IOException {
+    try {
+      if (isJar()) {
+        List<Path> pathList = getFilePathDirectoryResourcesJar(resourceDir);
+
+        pathList.forEach(file -> {
+          // Check if the file matches the requested filename
+          if (file.getFileName().toString().equals(filename)) {
+            Path targetPath = Path.of(folderPath, filename);
+            ClassLoader classLoader = getClass().getClassLoader();
+
+            // Construct the full resource path including the directory
+            String fullResourcePath = resourceDir + "/" + filename;
+            try (InputStream is = classLoader.getResourceAsStream(fullResourcePath)) {
+              if (is == null) {
+                throw new IllegalArgumentException("Resource not found: " + fullResourcePath);
+              }
+              Files.copy(is, targetPath, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+              log.catching(e);
+            }
+          }
+        });
+      } else {
+        List<Path> pathList = getFilePathDirectoryResourcesFromFS(resourceDir);
+
+        pathList.forEach(file -> {
+          if (file.getFileName().toString().equals(filename)) {
+            Path targetPath = Path.of(folderPath, filename);
+            try {
+              Files.copy(file, targetPath, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+              log.catching(e);
+            }
+          }
+        });
+      }
+    } catch (URISyntaxException | IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

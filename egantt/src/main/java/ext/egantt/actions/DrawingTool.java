@@ -6,11 +6,11 @@ import ext.egantt.swing.GanttTable;
 
 public interface DrawingTool {
 	
-	public void intialize(GanttTable table);
+	void intialize(GanttTable table);
 	
-	public void terminate();
+	void terminate();
 
 	//	________________________________________________________________________
 	
-	public void paintComponent(Graphics g);
+	void paintComponent(Graphics g);
 }

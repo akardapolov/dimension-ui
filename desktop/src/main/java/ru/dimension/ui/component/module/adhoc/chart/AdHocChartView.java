@@ -11,17 +11,19 @@ import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.block.HistoryConfigBlock;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
+import ru.dimension.ui.component.panel.FunctionPanel;
 import ru.dimension.ui.component.panel.LegendPanel;
-import ru.dimension.ui.component.panel.MetricFunctionPanel;
 import ru.dimension.ui.component.panel.popup.ActionPanel;
 import ru.dimension.ui.component.panel.popup.FilterPanel;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
+import ru.dimension.ui.component.panel.function.NormFunctionPanel;
+import ru.dimension.ui.component.panel.function.TimeRangeFunctionPanel;
 import ru.dimension.ui.helper.GUIHelper;
 
 @Data
 @Log4j2
 public class AdHocChartView extends JPanel {
-  private static Dimension dimension = new Dimension(100, 500);
+  private static Dimension dimension = new Dimension(100, 600);
 
   private int configDividerLocation = 32;
   private int chartDividerLocation = 250;
@@ -32,7 +34,9 @@ public class AdHocChartView extends JPanel {
   @Getter
   private JPanel tabbedPane;
 
-  private MetricFunctionPanel historyMetricFunctionPanel;
+  private FunctionPanel historyFunctionPanel;
+  private TimeRangeFunctionPanel historyTimeRangeFunctionPanel;
+  private NormFunctionPanel historyNormFunctionPanel;
   private HistoryRangePanel historyRangePanel;
   private LegendPanel historyLegendPanel;
   private FilterPanel historyFilterPanel;
@@ -52,14 +56,18 @@ public class AdHocChartView extends JPanel {
     tabbedPane = new JPanel(new BorderLayout());
     tabbedPane.setBorder(new EtchedBorder());
 
-    historyMetricFunctionPanel = new MetricFunctionPanel(getLabel("Group: "));
+    historyTimeRangeFunctionPanel = new TimeRangeFunctionPanel();
+    historyNormFunctionPanel = new NormFunctionPanel();
+    historyFunctionPanel = new FunctionPanel(getLabel("Group: "),
+                                             historyTimeRangeFunctionPanel,
+                                             historyNormFunctionPanel);
     historyRangePanel = new HistoryRangePanel(getLabel("Range: "));
     historyLegendPanel = new LegendPanel(getLabel("Legend: "));
     historyFilterPanel = new FilterPanel(Component.ADHOC);
     historyActionPanel = new ActionPanel(Component.ADHOC);
 
     historyConfigBlock = new HistoryConfigBlock(
-        historyMetricFunctionPanel,
+        historyFunctionPanel,
         historyRangePanel,
         historyLegendPanel,
         historyFilterPanel,

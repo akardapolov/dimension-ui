@@ -60,7 +60,7 @@ public class PieGenerator2D implements ChartGenerator
 	 */
 	public DrawingPart getDrawingPart(ChartModel model, DrawingContext context) 
 	{
-		Object keys[] = new String[2];
+		Object[] keys = new String[2];
 		keys[0] = "xAxis";
 		keys[1] = "yAxis";
 		
@@ -74,7 +74,7 @@ public class PieGenerator2D implements ChartGenerator
 		context.put(keys[1], ContextResources.AXIS_VIEW, AxisView.VERTICAL);
 				
 		ListDrawingPart part = new ListDrawingPart(keys, "painter");
-		AxisInterval intervals [] = new AxisInterval[2];
+		AxisInterval[] intervals = new AxisInterval[2];
 		intervals[0] = new LongInterval(10, 90);
 		intervals[1] = new LongInterval(10, 90);
 		for (Iterator iter = model.keys(); iter.hasNext();)

@@ -7,6 +7,7 @@ import ru.dimension.ui.config.CollectorConfig;
 import ru.dimension.ui.config.ExecutorConfig;
 import ru.dimension.ui.config.FileConfig;
 import ru.dimension.ui.config.HandlerConfig;
+import ru.dimension.ui.config.HelperConfig;
 import ru.dimension.ui.config.LocalDBConfig;
 import ru.dimension.ui.config.MainComponent;
 import ru.dimension.ui.config.ManagerTestConfig;
@@ -38,7 +39,8 @@ import ru.dimension.ui.config.view.ViewConfig;
     LocalDBConfig.class,
     CacheConfig.class,
     SecurityConfig.class,
-    ParserHttpConfig.class
+    ParserHttpConfig.class,
+    HelperConfig.class
 })
 @Singleton
 public interface MainComponentTest extends MainComponent {

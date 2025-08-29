@@ -18,16 +18,16 @@ import java.awt.Rectangle;
 
 public class BasicPartView implements PartView
 {
-	public Rectangle create(Component c, AxisInterval intervals [],
-		DrawingTransform transforms[])
+	public Rectangle create(Component c, AxisInterval[] intervals,
+                          DrawingTransform[] transforms)
 	{
-		int points [] = new int [2];
+		int[] points = new int [2];
 		{
 			points[0]= c.getWidth();
 			points[1]= c.getHeight();
 		}
 
-		int r[] = new int [points.length * 2];
+		int[] r = new int [points.length * 2];
 		for (int i=0; i < points.length; i++)
 		{
 			r[i *2] = transforms[i].transform(intervals[i].getStart(), points[i]);

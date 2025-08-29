@@ -20,16 +20,18 @@ import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.plot.PlotOrientation;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.output.StackedColumn;
+import ru.dimension.ui.Application;
+import ru.dimension.ui.component.chart.holder.DetailAndAnalyzeHolder;
 import ru.dimension.ui.exception.NotFoundException;
+import ru.dimension.ui.helper.ColorHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
-import ru.dimension.ui.model.chart.CategoryTableXYDatasetRealTime;
 import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.data.CategoryTableXYDatasetRealTime;
+import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.SqlQueryState;
-import ru.dimension.ui.component.chart.holder.DetailAndAnalyzeHolder;
 
 @Log4j2
 public abstract class SCP extends JPanel implements HelperChart, DetailChart {
@@ -70,7 +72,9 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
   }
 
   protected void createStackedChart() {
-    this.stackedChart = new StackedChart(getChartPanel(this.chartDataset));
+    ColorHelper colorHelper = Application.getInstance().getColorHelper();
+
+    this.stackedChart = new StackedChart(getChartPanel(this.chartDataset), colorHelper);
     this.stackedChart.setLegendFontSize(config.getLegendFontSize());
     this.stackedChart.initialize();
 
@@ -97,7 +101,7 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
   public abstract void loadData();
 
   public void loadSeriesColor(Metric metric, Map<String, Color> seriesColorMap) {
-    if (MetricFunction.COUNT.equals(metric.getMetricFunction())) {
+    if (GroupFunction.COUNT.equals(metric.getGroupFunction())) {
       log.info("Try to load series color from the main chart");
 
       if (seriesColorMap == null || seriesColorMap.isEmpty()) {
@@ -116,7 +120,7 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
   }
 
   public void loadSeriesColorInternal(String seriesName) {
-    this.stackedChart.loadSeriesColorInternal(seriesName);
+    this.stackedChart.loadSeriesColorInternal(profileTaskQueryKey.getColorProfileName(), seriesName);
   }
 
   protected void initializeGUI() {
@@ -137,19 +141,19 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
   }
 
   protected void fillSeriesAnalyze(List<StackedColumn> sColumnList) {
-    if (MetricFunction.COUNT.equals(config.getMetric().getMetricFunction())) {
+    if (GroupFunction.COUNT.equals(config.getMetric().getGroupFunction())) {
       sColumnList.stream()
           .map(StackedColumn::getKeyCount)
           .map(Map::keySet)
           .flatMap(Collection::stream)
           .forEach(series::add);
-    } else if (MetricFunction.SUM.equals(config.getMetric().getMetricFunction())) {
+    } else if (GroupFunction.SUM.equals(config.getMetric().getGroupFunction())) {
       sColumnList.stream()
           .map(StackedColumn::getKeySum)
           .map(Map::keySet)
           .flatMap(Collection::stream)
           .forEach(series::add);
-    } else if (MetricFunction.AVG.equals(config.getMetric().getMetricFunction())) {
+    } else if (GroupFunction.AVG.equals(config.getMetric().getGroupFunction())) {
       sColumnList.stream()
           .map(StackedColumn::getKeyAvg)
           .map(Map::keySet)

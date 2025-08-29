@@ -20,7 +20,7 @@ public class ReflectionHelper
 {
 	public static Iterator fields(Class clazz)
 	{
-		Field fields [] = clazz.getFields();
+		Field[] fields = clazz.getFields();
 		List <Object> list = new ArrayList<Object>(fields.length);
 		for (int i=0; i < fields.length; i++)
 		{
@@ -48,7 +48,7 @@ public class ReflectionHelper
 		if (method == null)
 			return;
 		
-		Object values[] = new Object [1];
+		Object[] values = new Object [1];
 		values[0] = value;
 		
 		try
@@ -65,14 +65,14 @@ public class ReflectionHelper
 	
 	protected static Method findMethod(Class clazz, String method)
 	{
-		Method methods [] = clazz.getMethods();
+		Method[] methods = clazz.getMethods();
 		
 		for (int z=0; z < methods.length; z++)
 		{
 			if (!methods[z].getName().equals(method))
 				continue;
 			
-			Class params [] = methods[z].getParameterTypes();
+			Class[] params = methods[z].getParameterTypes();
 			if (params.length == 1)
 				return methods[z];
 		 }

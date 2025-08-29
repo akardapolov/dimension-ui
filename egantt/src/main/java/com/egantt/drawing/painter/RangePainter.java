@@ -27,5 +27,5 @@ public interface RangePainter extends DrawingPainter
 	
 	//	________________________________________________________________________
 	
-	public long width(Object data, Object granularity, Graphics vg, Rectangle rect, GraphicsContext context);
+	long width(Object data, Object granularity, Graphics vg, Rectangle rect, GraphicsContext context);
 }

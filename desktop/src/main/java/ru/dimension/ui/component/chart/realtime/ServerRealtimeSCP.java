@@ -42,8 +42,8 @@ import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.function.ChartType;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.chart.ChartType;
+import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.SeriesType;
@@ -87,7 +87,7 @@ public class ServerRealtimeSCP extends RealtimeSCP {
     this.queryInfo = config.getQueryInfo();
     this.metric = config.getMetric();
 
-    this.dataHandler = initFunctionDataHandler(metric, queryInfo, dStore);
+    this.dataHandler = initFunctionDataHandler(profileTaskQueryKey, metric, queryInfo, dStore);
 
     if (topMapSelected != null) {
       if (topMapSelected.values().stream().allMatch(LinkedHashSet::isEmpty)) {
@@ -112,7 +112,7 @@ public class ServerRealtimeSCP extends RealtimeSCP {
     ChartRange chartRange = new ChartRange(rangeStart, serverTimeMillis);
 
     try {
-      if (MetricFunction.COUNT.equals(metric.getMetricFunction())) {
+      if (GroupFunction.COUNT.equals(metric.getGroupFunction())) {
         List<String> distinct = getDistinct(dStore,
                                             queryInfo.getName(),
                                             metric.getYAxis(),
@@ -196,12 +196,14 @@ public class ServerRealtimeSCP extends RealtimeSCP {
 
   protected void setCustomFilter() {
     if (seriesType == SeriesType.CUSTOM) {
+      Set<String> newSelection = new HashSet<>(getCheckBoxSelected());
+
       if (topMapSelected != null) {
         topMapSelected.clear();
-        topMapSelected.putIfAbsent(metric.getYAxis(), new LinkedHashSet<>(getCheckBoxSelected()));
+        topMapSelected.putIfAbsent(metric.getYAxis(), new LinkedHashSet<>(newSelection));
       } else {
         topMapSelected = new HashMap<>() {{
-          put(metric.getYAxis(), new LinkedHashSet<>(getCheckBoxSelected()));
+          put(metric.getYAxis(), new LinkedHashSet<>(newSelection));
         }};
       }
 
@@ -238,9 +240,6 @@ public class ServerRealtimeSCP extends RealtimeSCP {
           }
 
           reloadDataForCurrentRange();
-
-          topMapSelected.get(config.getMetric().getYAxis()).clear();
-          topMapSelected.get(config.getMetric().getYAxis()).addAll(newSelection);
 
           if (detailAndAnalyzeHolder != null) {
             detailAndAnalyzeHolder.detailAction().cleanMainPanel();

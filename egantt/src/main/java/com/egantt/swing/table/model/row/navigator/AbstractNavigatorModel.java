@@ -18,7 +18,7 @@ import com.egantt.swing.table.model.RowModel;
 public abstract class AbstractNavigatorModel implements RowModel
 {
 	protected Navigator navigator;
-	protected transient Object rows [] = new Object[0];
+	protected transient Object[] rows = new Object[0];
 	
 	// _________________________________________________________________________
 	

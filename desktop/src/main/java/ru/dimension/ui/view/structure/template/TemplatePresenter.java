@@ -278,7 +278,7 @@ public class TemplatePresenter extends WindowAdapter
                     m.getXAxis().getColName(),
                     m.getYAxis().getColName(),
                     m.getGroup().getColName(),
-                    m.getMetricFunction().toString(),
+                    m.getGroupFunction().toString(),
                     m.getChartType().toString()});
           }
 

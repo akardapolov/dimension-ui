@@ -28,7 +28,7 @@ import java.util.ResourceBundle;
   */
 public class BasicTraceImpl implements TraceImpl
 {
-	private static String THIS = BasicTraceImpl.class.getName();
+	private static final String THIS = BasicTraceImpl.class.getName();
 	private static boolean TRACE = false; // value will be setup at the end of the static constructor
 
 	public static final String DELIMITER = "=";
@@ -83,7 +83,7 @@ public class BasicTraceImpl implements TraceImpl
 
 		for (int i=0; i >=0; i=s.lastIndexOf('.'))
 		{
-			Boolean value = (Boolean) traceEnable.get(s);
+			Boolean value = traceEnable.get(s);
 			if (value != null)
 				return value.booleanValue();
 

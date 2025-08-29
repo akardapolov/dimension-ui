@@ -43,20 +43,20 @@ public class GanttComponentUtilities implements ComponentUtilities
 	protected GraphicsState state;
 
 	protected DrawingContext context;
-	protected ScrollManager managers [] = new ScrollManager[2];
+	protected ScrollManager[] managers = new ScrollManager[2];
 
 	private List eventList = null;
 	
-	String axises[];
+	String[] axises;
 
-	public GanttComponentUtilities(String axises[]) {
+	public GanttComponentUtilities(String[] axises) {
 		this.graphics = new BasicGraphicsManager();
 		this.state = new GraphicsState2D();
 		this.axises = axises;
 	}
 
 
-	public GanttComponentUtilities(String axises[], List eventList)
+	public GanttComponentUtilities(String[] axises, List eventList)
 	{
 		managers = new ScrollManager[2];
 		graphics = new BasicGraphicsManager();
@@ -89,7 +89,7 @@ public class GanttComponentUtilities implements ComponentUtilities
 	{
 		this.context = createContexts();
 
-		AxisInterval intervals [] = createIntervals(axises);
+		AxisInterval[] intervals = createIntervals(axises);
 		for (int i=0; i < axises.length; i++)
 		{
 			LongAxis axis = new LongAxis();
@@ -107,9 +107,9 @@ public class GanttComponentUtilities implements ComponentUtilities
 
 	// __________________________________________________________________________
 
-	protected AxisInterval [] createIntervals(String axises [])
+	protected AxisInterval [] createIntervals(String[] axises)
 	{
-		AxisInterval intervals [] = new AxisInterval[axises.length];
+		AxisInterval[] intervals = new AxisInterval[axises.length];
 		for (int i=0; i < axises.length; i++)
 			intervals [i] = new LongInterval(0, 100);		
 		return intervals;

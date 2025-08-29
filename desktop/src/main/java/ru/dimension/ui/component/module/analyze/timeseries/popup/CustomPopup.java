@@ -27,12 +27,15 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
@@ -79,6 +82,17 @@ public class CustomPopup extends Popup implements WindowFocusListener, Component
       }
     });
 
+    // Add mouse listener to detect when mouse leaves the popup area
+    displayWindow.addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseExited(MouseEvent e) {
+        // Check if the mouse is still within the popup area
+        if (!isMouseInPopupArea()) {
+          hide();
+        }
+      }
+    });
+
     displayWindow.getContentPane().add(mainPanel);
     displayWindow.setFocusable(true);
 
@@ -98,6 +112,18 @@ public class CustomPopup extends Popup implements WindowFocusListener, Component
                     }
                   });
     registerListeners();
+  }
+
+  private boolean isMouseInPopupArea() {
+    if (displayWindow == null) return false;
+
+    Point mousePos = displayWindow.getMousePosition();
+    if (mousePos == null) return false;
+
+    return displayWindow.getBounds().contains(
+        displayWindow.getLocationOnScreen().x + mousePos.x,
+        displayWindow.getLocationOnScreen().y + mousePos.y
+    );
   }
 
   @Override
@@ -178,6 +204,13 @@ public class CustomPopup extends Popup implements WindowFocusListener, Component
 
   public void setMinimumSize(Dimension minimumSize) {
     displayWindow.setMinimumSize(minimumSize);
+  }
+
+  public Point getLocationOnScreen() {
+    if (displayWindow != null) {
+      return displayWindow.getLocationOnScreen();
+    }
+    return null;
   }
 
   public static interface CustomPopupCloseListener {

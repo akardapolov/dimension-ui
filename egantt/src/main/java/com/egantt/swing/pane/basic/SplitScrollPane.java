@@ -97,8 +97,7 @@ public class SplitScrollPane extends BasicSplitPane implements SwingPane
 		scrollBar.setBlockIncrement(rangeModel.getExtent() / 100);
 		scrollBar.setUnitIncrement(rangeModel.getExtent() / 50);
 		
-		if (rangeModel instanceof ScrollManager) {
-			ScrollManager scrollManager = (ScrollManager) rangeModel;
+		if (rangeModel instanceof ScrollManager scrollManager) {
 			scrollBar.setBlockIncrement(scrollManager.getBlockIncrement());
 			scrollBar.setUnitIncrement(scrollManager.getUnitIncrement());
 		}

@@ -23,7 +23,7 @@ public class BasicDrawingContext implements DrawingContext
 
 	public Object get(Object key, Class type)
 	{
-		Map attribs = (Map) attributes.get(key);
+		Map attribs = attributes.get(key);
 		if (attribs == null)
 		{
 			return (key != null && key.getClass().isInstance(type)) ? key : null;
@@ -37,7 +37,7 @@ public class BasicDrawingContext implements DrawingContext
 
 	public Iterator iterator(Object key, Class classType)
 	{
-		Map attribs = (Map) attributes.get(key);
+		Map attribs = attributes.get(key);
 		if (attribs == null)
 		{
 			if (key != null && key.getClass().isInstance(classType))

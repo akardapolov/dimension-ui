@@ -1,6 +1,6 @@
 package ru.dimension.ui.model.function;
 
-public enum MetricFunction {
+public enum GroupFunction {
   NONE("None"),
   COUNT("Count"),
   SUM("Sum"),
@@ -8,7 +8,7 @@ public enum MetricFunction {
 
   private final String name;
 
-  MetricFunction(String name) {
+  GroupFunction(String name) {
     this.name = name;
   }
 

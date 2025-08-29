@@ -31,10 +31,8 @@ public class BasicElementFilter implements Filter
 		if (!(node instanceof Element))
 			return false;
 
-		if (!(node.getParentNode() instanceof Element))
+		if (!(node.getParentNode() instanceof Element element))
 			return true;
-
-		Element element = (Element) node.getParentNode();
 
 		if (element.getAttributes().getLength() == 0)
 			return true;

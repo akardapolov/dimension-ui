@@ -14,8 +14,8 @@ import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.function.ChartType;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.chart.ChartType;
+import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.ProcessType;
 import ru.dimension.ui.model.view.RangeHistory;
@@ -49,7 +49,7 @@ public class ChartReportPresenter implements HelperChart {
 
   private void initializePresenter() {
     initializeFromState();
-    view.getHistoryMetricFunctionPanel().setRunAction(this::handleHistoryMetricFunctionChange);
+    view.getHistoryFunctionPanel().setRunAction(this::handleHistoryGroupFunctionChange);
     view.getHistoryRangePanel().setRunAction(this::handleHistoryRangeChange);
     view.getHistoryLegendPanel().setStateChangeConsumer(
         showLegend -> handleLegendChange(ChartLegendState.SHOW.equals(showLegend))
@@ -119,10 +119,10 @@ public class ChartReportPresenter implements HelperChart {
     Metric metricCopy = model.getMetric().copy();
     ChartInfo chartInfoCopy = model.getChartInfo().copy();
 
-    MetricFunction metricFunction = UIState.INSTANCE.getHistoryMetricFunction(chartKey);
-    if (metricFunction != null) {
-      metricCopy.setMetricFunction(metricFunction);
-      metricCopy.setChartType(MetricFunction.COUNT.equals(metricFunction) ?
+    GroupFunction groupFunction = UIState.INSTANCE.getHistoryGroupFunction(chartKey);
+    if (groupFunction != null) {
+      metricCopy.setGroupFunction(groupFunction);
+      metricCopy.setChartType(GroupFunction.COUNT.equals(groupFunction) ?
                                   ChartType.STACKED : ChartType.LINEAR);
     }
 
@@ -142,12 +142,12 @@ public class ChartReportPresenter implements HelperChart {
 
   private void initializeFromState() {
     ChartKey chartKey = model.getChartKey();
-    // History metric function initialization
-    MetricFunction metricFunction = UIState.INSTANCE.getHistoryMetricFunction(chartKey);
-    if (metricFunction == null) {
-      view.getHistoryMetricFunctionPanel().setSelected(model.getMetric().getMetricFunction());
+    // History group function initialization
+    GroupFunction groupFunction = UIState.INSTANCE.getHistoryGroupFunction(chartKey);
+    if (groupFunction == null) {
+      view.getHistoryFunctionPanel().setSelected(model.getMetric().getGroupFunction());
     } else {
-      view.getHistoryMetricFunctionPanel().setSelected(metricFunction);
+      view.getHistoryFunctionPanel().setSelected(groupFunction);
     }
 
     // History range initialization
@@ -163,9 +163,9 @@ public class ChartReportPresenter implements HelperChart {
     }
   }
 
-  private void handleHistoryMetricFunctionChange(String action,
-                                                 MetricFunction function) {
-    UIState.INSTANCE.putHistoryMetricFunction(model.getChartKey(), function);
+  private void handleHistoryGroupFunctionChange(String action,
+                                                 GroupFunction function) {
+    UIState.INSTANCE.putHistoryGroupFunction(model.getChartKey(), function);
     updateHistoryChart();
   }
 

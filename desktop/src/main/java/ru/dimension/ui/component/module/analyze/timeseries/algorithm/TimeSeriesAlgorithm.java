@@ -2,7 +2,7 @@ package ru.dimension.ui.component.module.analyze.timeseries.algorithm;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import ru.dimension.ui.model.chart.CategoryTableXYDatasetRealTime;
+import ru.dimension.ui.model.data.CategoryTableXYDatasetRealTime;
 
 public abstract class TimeSeriesAlgorithm<T> {
 

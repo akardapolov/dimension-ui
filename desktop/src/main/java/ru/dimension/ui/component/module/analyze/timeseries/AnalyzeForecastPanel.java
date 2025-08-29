@@ -7,7 +7,7 @@ import javax.swing.JSplitPane;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.module.analyze.AnalyzeTimeSeriesPanel;
 import ru.dimension.ui.component.module.analyze.timeseries.algorithm.forecast.ARIMAlgorithm;
-import ru.dimension.ui.model.chart.CategoryTableXYDatasetRealTime;
+import ru.dimension.ui.model.data.CategoryTableXYDatasetRealTime;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.component.module.analyze.timeseries.algorithm.AlgorithmType;
 import ru.dimension.ui.component.module.analyze.timeseries.algorithm.TimeSeriesAlgorithm;

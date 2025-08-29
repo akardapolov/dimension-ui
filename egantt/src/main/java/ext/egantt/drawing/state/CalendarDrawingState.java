@@ -18,7 +18,7 @@ public class CalendarDrawingState extends BasicDrawingState
 {
 	public static final String PART_PAINTER = "TimelinePartPainter";
 
-	public static String painters[] = new String [2];
+	public static String[] painters = new String [2];
 	static
 	{
 		painters[0] = "-line";
@@ -31,11 +31,11 @@ public class CalendarDrawingState extends BasicDrawingState
 	public static String LINE_PAINTER = "-line";
 	public static String TEXT_PAINTER = "-text";
 
-	public CalendarDrawingState(String keys [])
+	public CalendarDrawingState(String[] keys)
 	{
 		for (int i=0; i < painters.length; i++)
 		{
-			AxisInterval intervals [] = new AxisInterval[2];
+			AxisInterval[] intervals = new AxisInterval[2];
 			intervals[0] = null;
 			intervals[1] = new LongInterval(5,50);
 

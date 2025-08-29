@@ -10,9 +10,9 @@ import java.util.Map;
 
 public class MapNavigatorModel extends AbstractNavigatorModel
 {
-	protected final Object columns[];
+	protected final Object[] columns;
 	
-	public MapNavigatorModel(Object columns [])
+	public MapNavigatorModel(Object[] columns)
 	{
 		this.columns = columns;
 	}

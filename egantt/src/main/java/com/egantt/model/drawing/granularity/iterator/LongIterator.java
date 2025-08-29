@@ -31,7 +31,7 @@ public class LongIterator implements Iterator
 
 	public Object next()
 	{
-		Long value = new Long(position);
+		Long value = Long.valueOf(position);
 		this.position +=  step;
 		return value;
 	}

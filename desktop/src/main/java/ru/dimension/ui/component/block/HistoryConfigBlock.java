@@ -12,23 +12,23 @@ import javax.swing.border.EtchedBorder;
 import ru.dimension.ui.component.panel.popup.ActionPanel;
 import ru.dimension.ui.component.panel.popup.FilterPanel;
 import ru.dimension.ui.component.panel.LegendPanel;
-import ru.dimension.ui.component.panel.MetricFunctionPanel;
+import ru.dimension.ui.component.panel.FunctionPanel;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.laf.LaF;
 
 public class HistoryConfigBlock extends JPanel {
-  private final MetricFunctionPanel metricFunctionPanel;
+  private final FunctionPanel functionPanel;
   private final HistoryRangePanel historyPanel;
   private final LegendPanel legendPanel;
   private final FilterPanel filterPanel;
   private final ActionPanel actionPanel;
 
-  public HistoryConfigBlock(MetricFunctionPanel metricFunctionPanel,
+  public HistoryConfigBlock(FunctionPanel functionPanel,
                             HistoryRangePanel historyPanel,
                             LegendPanel legendPanel,
                             FilterPanel filterPanel,
                             ActionPanel actionPanel) {
-    this.metricFunctionPanel = metricFunctionPanel;
+    this.functionPanel = functionPanel;
     this.historyPanel = historyPanel;
     this.legendPanel = legendPanel;
     this.filterPanel = filterPanel;
@@ -54,7 +54,7 @@ public class HistoryConfigBlock extends JPanel {
     gbc.gridx = 0;
     gbc.gridy = 0;
     gbc.weightx = 2.0 / 15;
-    add(metricFunctionPanel, gbc);
+    add(functionPanel, gbc);
 
     gbc.gridx = 1;
     gbc.weightx = 2.0 / 15;

@@ -3,6 +3,7 @@ package ru.dimension.ui.config;
 import dagger.Component;
 import javax.inject.Singleton;
 import ru.dimension.ui.config.presenter.PresenterConfig;
+import ru.dimension.ui.helper.ColorHelper;
 import ru.dimension.ui.view.BaseFrame;
 import ru.dimension.ui.config.view.BaseFrameConfig;
 import ru.dimension.ui.config.view.ConfigurationConfig;
@@ -27,10 +28,13 @@ import ru.dimension.ui.config.view.ViewConfig;
     LocalDBConfig.class,
     CacheConfig.class,
     SecurityConfig.class,
-    ParserHttpConfig.class
+    ParserHttpConfig.class,
+    HelperConfig.class
 })
 @Singleton
 public interface MainComponent {
 
   BaseFrame createBaseFrame();
+
+  ColorHelper getColorHelper();
 }

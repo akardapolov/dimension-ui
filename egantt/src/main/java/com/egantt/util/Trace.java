@@ -24,7 +24,7 @@ public class Trace
 
 	public static boolean getEnable(String s)
 	{
-		return traceable != null ? traceable.getEnable(s) : false;
+		return traceable != null && traceable.getEnable(s);
 	}
 
 	//___________________________________________________________________________

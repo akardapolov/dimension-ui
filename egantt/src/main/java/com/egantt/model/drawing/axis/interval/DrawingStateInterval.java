@@ -56,17 +56,17 @@ public class DrawingStateInterval implements AxisInterval {
 
 	public boolean contains(AxisInterval rhs) {
 		AxisInterval lhs = getInterval();
-		return lhs != null ? lhs.contains(rhs) : false;
+		return lhs != null && lhs.contains(rhs);
 	}
 
 	public boolean containsValue(Object rhs) {
 		AxisInterval lhs = getInterval();
-		return lhs != null ? lhs.containsValue(rhs) : false;
+		return lhs != null && lhs.containsValue(rhs);
 	}
 
 	public boolean intersects(AxisInterval rhs) {
 		AxisInterval lhs = getInterval();
-		return lhs != null ? lhs.intersects(rhs) : false;
+		return lhs != null && lhs.intersects(rhs);
 	}
 
 	public AxisInterval union(AxisInterval rhs) {
@@ -101,7 +101,7 @@ public class DrawingStateInterval implements AxisInterval {
 			if (index < 0)
 				continue;
 		
-			AxisInterval intervals[] = part.getInterval();
+			AxisInterval[] intervals = part.getInterval();
 			if (intervals == null || intervals[index] == null)
 				continue;
 		

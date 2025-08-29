@@ -40,7 +40,7 @@ public class JFrameLauncher extends JFrame
 
 	// __________________________________________________________________________
 
-	public void initialise(String arguments[])
+	public void initialise(String[] arguments)
 	{
 		/*ComponentExample example = new BasicMDIExample();
 		example.setArguments(arguments);
@@ -50,7 +50,7 @@ public class JFrameLauncher extends JFrame
 
 	// __________________________________________________________________________
 
-	public static void main(String args[])
+	public static void main(String[] args)
 	{
 		// create a frame get it ready for us to use
 		JFrameLauncher frame = new JFrameLauncher("images/eGanttSTD.gif");

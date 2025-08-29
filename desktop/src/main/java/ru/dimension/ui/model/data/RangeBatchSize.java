@@ -1,4 +1,4 @@
-package ru.dimension.ui.model.chart;
+package ru.dimension.ui.model.data;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

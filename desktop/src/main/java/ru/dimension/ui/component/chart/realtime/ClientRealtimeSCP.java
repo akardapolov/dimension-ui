@@ -33,7 +33,7 @@ import ru.dimension.ui.helper.ProgressBarHelper;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.column.ColumnNames;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.SqlQueryState;
 
@@ -63,7 +63,7 @@ public class ClientRealtimeSCP extends RealtimeSCP {
     super.setSqlQueryState(sqlQueryState);
     super.setDStore(dStore);
 
-    this.dataHandler = initFunctionDataHandler(config.getMetric(), config.getQueryInfo(), dStore);
+    this.dataHandler = initFunctionDataHandler(profileTaskQueryKey, config.getMetric(), config.getQueryInfo(), dStore);
 
     if (topMapSelected != null) {
       if (topMapSelected.values().stream().allMatch(LinkedHashSet::isEmpty)) {
@@ -87,7 +87,7 @@ public class ClientRealtimeSCP extends RealtimeSCP {
     ChartRange chartRange = getBeginEndRange();
 
     try {
-      if (MetricFunction.COUNT.equals(config.getMetric().getMetricFunction())) {
+      if (GroupFunction.COUNT.equals(config.getMetric().getGroupFunction())) {
         List<String> distinct = dStore.getDistinct(
             config.getQueryInfo().getName(),
             config.getMetric().getYAxis(),
@@ -126,6 +126,7 @@ public class ClientRealtimeSCP extends RealtimeSCP {
     }
 
     setCustomFilter();
+
     chartDataLoader.setSeries(series);
     chartDataLoader.setTopMapSelected(topMapSelected);
 
@@ -157,8 +158,9 @@ public class ClientRealtimeSCP extends RealtimeSCP {
     ChartRange currRange = getBeginEndRange();
 
     try {
-      chartDataLoader.loadDataFromBdbToDeque(dStore.getBlockKeyTailList(config.getQueryInfo()
-                                                                            .getName(), chartDataLoader.getClientBegin(), currRange.getEnd()));
+      chartDataLoader.loadDataFromBdbToDeque(dStore.getBlockKeyTailList(config.getQueryInfo().getName(),
+                                                                        chartDataLoader.getClientBegin(),
+                                                                        currRange.getEnd()));
     } catch (BeginEndWrongOrderException | SqlColMetadataException e) {
       log.error("Data loading error: ", e);
       log.catching(e);
@@ -311,8 +313,6 @@ public class ClientRealtimeSCP extends RealtimeSCP {
     reloadDataForCurrentRange();
 
     if (detailAndAnalyzeHolder != null) {
-      Set<String> newSelection = new HashSet<>(getCheckBoxSelected());
-
       detailAndAnalyzeHolder.detailAction().cleanMainPanel();
       detailAndAnalyzeHolder.customAction().setCustomSeriesFilter(topMapSelected, getSeriesColorMap());
     }
@@ -429,12 +429,14 @@ public class ClientRealtimeSCP extends RealtimeSCP {
 
   protected void setCustomFilter() {
     if (seriesType == SeriesType.CUSTOM) {
+      Set<String> newSelection = new HashSet<>(getCheckBoxSelected());
+
       if (topMapSelected != null) {
         topMapSelected.clear();
-        topMapSelected.putIfAbsent(config.getMetric().getYAxis(), new LinkedHashSet<>(getCheckBoxSelected()));
+        topMapSelected.putIfAbsent(config.getMetric().getYAxis(), new LinkedHashSet<>(newSelection));
       } else {
         topMapSelected = new HashMap<>() {{
-          put(config.getMetric().getYAxis(), new LinkedHashSet<>(getCheckBoxSelected()));
+          put(config.getMetric().getYAxis(), new LinkedHashSet<>(newSelection));
         }};
       }
 

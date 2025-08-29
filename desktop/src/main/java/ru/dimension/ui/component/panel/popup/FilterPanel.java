@@ -28,7 +28,7 @@ import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.model.column.MetricsColumnNames;
 import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.SeriesType;
@@ -227,7 +227,7 @@ public class FilterPanel extends ConfigPopupPanel {
     filtersPanel.setSeriesType(seriesType);
     filtersPanel.setSeriesColorMap(seriesColorMap);
 
-    if (!MetricFunction.COUNT.equals(metric.getMetricFunction())) {
+    if (!GroupFunction.COUNT.equals(metric.getGroupFunction())) {
       seriesColorMap.put(metric.getYAxis().getColName(), new Color(255, 93, 93));
     }
 

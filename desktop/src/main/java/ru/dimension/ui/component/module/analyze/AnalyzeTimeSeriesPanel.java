@@ -33,7 +33,7 @@ import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
-import ru.dimension.ui.model.chart.CategoryTableXYDatasetRealTime;
+import ru.dimension.ui.model.data.CategoryTableXYDatasetRealTime;
 import ru.dimension.ui.model.column.DimensionValuesNames;
 import ru.dimension.ui.component.module.analyze.handler.TablePopupCellEditorHandler;
 import ru.dimension.ui.component.module.analyze.handler.TableSelectionHandler;

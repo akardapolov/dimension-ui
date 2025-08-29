@@ -113,7 +113,7 @@ public class NodeCellRenderer extends AbstractCellRenderer implements CellRender
 	protected void setValue(Object value)
 	{
 		int depth = -2; // -1 show root
-		for (Node node = ((Node) value).getParentNode(); node != null; node = (Node) node.getParentNode())
+		for (Node node = ((Node) value).getParentNode(); node != null; node = node.getParentNode())
 			if (node instanceof Element)
 				depth++;
 

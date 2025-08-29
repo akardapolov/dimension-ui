@@ -3,12 +3,14 @@ package ru.dimension.ui.state;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import ru.dimension.ui.component.broker.ParameterStore;
+import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.chart.ChartRange;
-import ru.dimension.ui.model.function.MetricFunction;
+import ru.dimension.ui.model.function.GroupFunction;
+import ru.dimension.ui.model.function.NormFunction;
+import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.RangeRealTime;
-import ru.dimension.ui.component.model.DetailState;
 
 public enum UIState {
   INSTANCE;
@@ -28,27 +30,30 @@ public enum UIState {
   private static final String SHOW_CONFIG = "SHOW_CONFIG";
   private static final String SHOW_CONFIG_ALL = "SHOW_CONFIG_ALL";
 
+  private static final String TIME_RANGE_FUNCTION = "TIME_RANGE_FUNCTION";
+  private static final String NORM_FUNCTION = "NORM_FUNCTION";
+
   private final ConcurrentMap<String, ParameterStore> globalStateMap = new ConcurrentHashMap<>();
   private final ConcurrentMap<ChartKey, ParameterStore> stateMap = new ConcurrentHashMap<>();
 
   private final ConcurrentMap<AdHocKey, ParameterStore> adHocStateMap = new ConcurrentHashMap<>();
 
-  public void putRealtimeMetricFunction(ChartKey key, MetricFunction function) {
+  public void putRealtimeGroupFunction(ChartKey key, GroupFunction function) {
     getOrCreateParameterStore(key).put(REAL_TIME_METRIC_FUNCTION, function);
   }
 
-  public MetricFunction getRealtimeMetricFunction(ChartKey key) {
+  public GroupFunction getRealtimeGroupFunction(ChartKey key) {
     ParameterStore store = stateMap.get(key);
-    return store != null ? store.get(REAL_TIME_METRIC_FUNCTION, MetricFunction.class) : null;
+    return store != null ? store.get(REAL_TIME_METRIC_FUNCTION, GroupFunction.class) : null;
   }
 
-  public void putHistoryMetricFunction(ChartKey key, MetricFunction function) {
+  public void putHistoryGroupFunction(ChartKey key, GroupFunction function) {
     getOrCreateParameterStore(key).put(HISTORY_METRIC_FUNCTION, function);
   }
 
-  public MetricFunction getHistoryMetricFunction(ChartKey key) {
+  public GroupFunction getHistoryGroupFunction(ChartKey key) {
     ParameterStore store = stateMap.get(key);
-    return store != null ? store.get(HISTORY_METRIC_FUNCTION, MetricFunction.class) : null;
+    return store != null ? store.get(HISTORY_METRIC_FUNCTION, GroupFunction.class) : null;
   }
 
   public void putRealTimeRange(ChartKey key, RangeRealTime range) {
@@ -144,13 +149,13 @@ public enum UIState {
     return globalStateMap.computeIfAbsent(key, k -> new ParameterStore());
   }
 
-  public void putHistoryMetricFunction(AdHocKey key, MetricFunction function) {
+  public void putHistoryGroupFunction(AdHocKey key, GroupFunction function) {
     getOrCreateParameterStore(key).put(HISTORY_METRIC_FUNCTION, function);
   }
 
-  public MetricFunction getHistoryMetricFunction(AdHocKey key) {
+  public GroupFunction getHistoryGroupFunction(AdHocKey key) {
     ParameterStore store = adHocStateMap.get(key);
-    return store != null ? store.get(HISTORY_METRIC_FUNCTION, MetricFunction.class) : null;
+    return store != null ? store.get(HISTORY_METRIC_FUNCTION, GroupFunction.class) : null;
   }
 
   public void putHistoryRange(AdHocKey key, RangeHistory range) {
@@ -200,5 +205,41 @@ public enum UIState {
 
   private ParameterStore getOrCreateParameterStore(AdHocKey key) {
     return adHocStateMap.computeIfAbsent(key, k -> new ParameterStore());
+  }
+
+  public void putTimeRangeFunction(AdHocKey key, TimeRangeFunction timeRangeFunction) {
+    getOrCreateParameterStore(key).put(TIME_RANGE_FUNCTION, timeRangeFunction);
+  }
+
+  public TimeRangeFunction getTimeRangeFunction(AdHocKey key) {
+    ParameterStore store = adHocStateMap.get(key);
+    return store != null ? store.get(TIME_RANGE_FUNCTION, TimeRangeFunction.class) : null;
+  }
+
+  public void putTimeRangeFunction(ChartKey key, TimeRangeFunction timeRangeFunction) {
+    getOrCreateParameterStore(key).put(TIME_RANGE_FUNCTION, timeRangeFunction);
+  }
+
+  public TimeRangeFunction getTimeRangeFunction(ChartKey key) {
+    ParameterStore store = stateMap.get(key);
+    return store != null ? store.get(TIME_RANGE_FUNCTION, TimeRangeFunction.class) : null;
+  }
+
+  public void putNormFunction(ChartKey key, NormFunction function) {
+    getOrCreateParameterStore(key).put(NORM_FUNCTION, function);
+  }
+
+  public NormFunction getNormFunction(ChartKey key) {
+    ParameterStore store = stateMap.get(key);
+    return store != null ? store.get(NORM_FUNCTION, NormFunction.class) : null;
+  }
+
+  public void putNormFunction(AdHocKey key, NormFunction function) {
+    getOrCreateParameterStore(key).put(NORM_FUNCTION, function);
+  }
+
+  public NormFunction getNormFunction(AdHocKey key) {
+    ParameterStore store = adHocStateMap.get(key);
+    return store != null ? store.get(NORM_FUNCTION, NormFunction.class) : null;
   }
 }

@@ -26,7 +26,7 @@ public class ResizeFinishEditor extends AbstractResizeEditor {
 	public void mousePressed(MouseEvent e, Rectangle bounds, DrawingState drawing, Object axisKey, DrawingContext context) {
 		this.interval =  getInterval(e.getPoint(), 5, drawing, axisKey);
 		this.originalPoint = e.getPoint();
-		this.savedInterval = (MutableInterval) interval != null ? (MutableInterval) interval.clone() : null;
+		this.savedInterval = interval != null ? (MutableInterval) interval.clone() : null;
 		calculateCursor(interval, bounds, 5, e, axisKey, context);
 	}
 
@@ -77,7 +77,7 @@ public class ResizeFinishEditor extends AbstractResizeEditor {
 	}
 
 	public void mouseMoved(MouseEvent e, Rectangle bounds, DrawingState drawing, Object axisKey, DrawingContext context) {
-		AxisInterval interval = (LongInterval) getInterval(e.getPoint(),3,  drawing, axisKey);
+		AxisInterval interval = getInterval(e.getPoint(), 3, drawing, axisKey);
 		
 		calculateCursor(interval, bounds, 3, e, axisKey, context);
 	}

@@ -70,7 +70,7 @@ public abstract class AbstractSelection implements DrawingSelection
 		boolean ctrlDown = e.isControlDown();
 
 		if (!selectable(o))
-			return (!shiftDown && !ctrlDown) ? false : clearSelection();
+			return (shiftDown || ctrlDown) && clearSelection();
 
 		if (shiftDown && selected(o))
 		   return false;

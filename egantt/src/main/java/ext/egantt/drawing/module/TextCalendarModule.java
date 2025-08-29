@@ -99,22 +99,22 @@ public class TextCalendarModule
 		context.setPaint(Color.black);
 
 		// hard coded, as this demo code does not have access to bundles
-		context.setFormat(new Integer(Calendar.SECOND),
-			new SimpleDateFormat(" hh:mm:ss"));
-	   context.setFormat(new Integer(Calendar.MINUTE),
-			new SimpleDateFormat(formatType ? " hh:mm:'xx'" : " hh:mm:'xx' dd MMM yyyy"));
-		context.setFormat(new Integer(Calendar.HOUR),
-			new SimpleDateFormat(formatType ? " hh:'xx'" : " hh:'xx' dd MMM yyyy"));
-		context.setFormat(new Integer(Calendar.DAY_OF_MONTH),
-			new SimpleDateFormat(formatType ? " E dd/m/yy" : " dd MMMM yyyy"));
-		context.setFormat(new Integer(Calendar.WEEK_OF_MONTH),
-			new SimpleDateFormat(formatType ? "MMM" : " ww MM/yy"));
-		context.setFormat(new Integer(Calendar.WEEK_OF_YEAR),
-			new SimpleDateFormat(formatType ? "M" : "M yyyy"));
-		context.setFormat(new Integer(Calendar.MONTH),
-      	new SimpleDateFormat(formatType ? " MMM" : " MMMM yyyy"));
-		context.setFormat(new Integer(Calendar.YEAR),
-			new SimpleDateFormat(" yyyy"));
+		context.setFormat(Integer.valueOf(Calendar.SECOND),
+											new SimpleDateFormat(" hh:mm:ss"));
+	   context.setFormat(Integer.valueOf(Calendar.MINUTE),
+											 new SimpleDateFormat(formatType ? " hh:mm:'xx'" : " hh:mm:'xx' dd MMM yyyy"));
+		context.setFormat(Integer.valueOf(Calendar.HOUR),
+											new SimpleDateFormat(formatType ? " hh:'xx'" : " hh:'xx' dd MMM yyyy"));
+		context.setFormat(Integer.valueOf(Calendar.DAY_OF_MONTH),
+											new SimpleDateFormat(formatType ? " E dd/m/yy" : " dd MMMM yyyy"));
+		context.setFormat(Integer.valueOf(Calendar.WEEK_OF_MONTH),
+											new SimpleDateFormat(formatType ? "MMM" : " ww MM/yy"));
+		context.setFormat(Integer.valueOf(Calendar.WEEK_OF_YEAR),
+											new SimpleDateFormat(formatType ? "M" : "M yyyy"));
+		context.setFormat(Integer.valueOf(Calendar.MONTH),
+											new SimpleDateFormat(formatType ? " MMM" : " MMMM yyyy"));
+		context.setFormat(Integer.valueOf(Calendar.YEAR),
+											new SimpleDateFormat(" yyyy"));
 		return context;
 	}
 

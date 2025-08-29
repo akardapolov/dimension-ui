@@ -20,17 +20,17 @@ import java.util.Iterator;
 
 public class BasicCalendarGranularity implements DrawingGranularity
 {
-	protected final Object granularities[];
+	protected final Object[] granularities;
 	protected final boolean round;
 	protected final int step;
 
-	public BasicCalendarGranularity(int step, Object granularities[])
+	public BasicCalendarGranularity(int step, Object[] granularities)
 	{
 		this (step, true, granularities);
 
 	}
 
-	protected BasicCalendarGranularity(int step, boolean round, Object granularities[])
+	protected BasicCalendarGranularity(int step, boolean round, Object[] granularities)
 	{
 		this.granularities = granularities;
 		this.round = round;
@@ -47,7 +47,7 @@ public class BasicCalendarGranularity implements DrawingGranularity
 		cal.setTime( new Date(start) );
 		cal.add(((Integer) granularity).intValue(), step);
 
-		return transform.transform(new Long(cal.getTime().getTime()), width);
+		return transform.transform(Long.valueOf(cal.getTime().getTime()), width);
 	}
 
 	//___________________________________________________________________________

@@ -6,6 +6,7 @@ public enum ConfigClasses {
   Connection(Connection.class),
   Query(Query.class),
   Table(Table.class),
+  ColorProfile(ColorProfile.class),
   Unknown(null);
 
   private final Class<?> targetClass;

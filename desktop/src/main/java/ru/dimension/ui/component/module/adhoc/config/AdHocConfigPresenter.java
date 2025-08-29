@@ -10,6 +10,7 @@ import ru.dimension.ui.component.broker.MessageBroker.Action;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.model.chart.ChartRange;
+import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.state.UIState;
 import ru.dimension.ui.component.model.ChartCardState;
@@ -128,5 +129,13 @@ public class AdHocConfigPresenter implements MessageAction {
     ChartRange chartRange = message.parameters().get("chartRange");
     view.getHistoryPanel().getDateTimePickerFrom().setDate(new Date(chartRange.getBegin()));
     view.getHistoryPanel().getDateTimePickerTo().setDate(new Date(chartRange.getEnd()));
+
+    ChartInfo chartInfo = message.parameters().get("chartInfo");
+    if (chartInfo != null && chartInfo.getRangeHistory() != null &&
+        chartInfo.getRangeHistory().equals(RangeHistory.CUSTOM)) {
+      view.getHistoryPanel().getButtonGroup().clearSelection();
+      view.getHistoryPanel().getCustom().setSelected(true);
+      view.getHistoryPanel().colorButton(RangeHistory.CUSTOM);
+    }
   }
 }

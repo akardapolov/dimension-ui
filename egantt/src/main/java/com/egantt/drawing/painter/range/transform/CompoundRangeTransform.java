@@ -14,9 +14,9 @@ import com.egantt.model.drawing.DrawingTransform;
 public class CompoundRangeTransform implements RangeTransform
 {
 	protected final int axisKey;
-	protected final DrawingTransform transforms [];
+	protected final DrawingTransform[] transforms;
 
-	public CompoundRangeTransform(int axisKey, DrawingTransform transforms [])
+	public CompoundRangeTransform(int axisKey, DrawingTransform[] transforms)
 	{
 		this.axisKey = axisKey;
 		this.transforms = transforms;

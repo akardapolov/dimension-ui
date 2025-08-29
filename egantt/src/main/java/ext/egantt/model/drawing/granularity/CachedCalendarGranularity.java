@@ -20,16 +20,16 @@ import java.util.Iterator;
 
 public class CachedCalendarGranularity implements DrawingGranularity
 {
-	protected Object granularities [];
+	protected Object[] granularities;
 	protected boolean round;
 	protected int step;
 		
-	public CachedCalendarGranularity(int step, Object granularities[])
+	public CachedCalendarGranularity(int step, Object[] granularities)
 	{
 		this (step, true, granularities);
 	}
 	
-	protected CachedCalendarGranularity(int step, boolean round, Object granularities[])
+	protected CachedCalendarGranularity(int step, boolean round, Object[] granularities)
 	{
 		this.round = round;
 		this.step = step;
@@ -48,13 +48,13 @@ public class CachedCalendarGranularity implements DrawingGranularity
 		calendar.setTime(new Date(startTime));
 		calendar.add(field, step);
 		
-		long resultPixelsFromZero = transform.transform(new Long(calendar.getTime().getTime()), width);
+		long resultPixelsFromZero = transform.transform(Long.valueOf(calendar.getTime().getTime()), width);
 		
 		calendar.setTime(new Date(startTime));
 		for (int i=field + 1; i < 14; i++)
 			calendar.clear(i);
 		
-		long resultDeadPixels = transform.transform(new Long(calendar.getTime().getTime()), width);
+		long resultDeadPixels = transform.transform(Long.valueOf(calendar.getTime().getTime()), width);
 		return resultPixelsFromZero - resultDeadPixels;
 	}
 

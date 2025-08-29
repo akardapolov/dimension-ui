@@ -1,4 +1,4 @@
-package ru.dimension.ui.model.function;
+package ru.dimension.ui.model.chart;
 
 public enum ChartType {
   NONE("None"),

@@ -12,10 +12,9 @@ public class BasicPaintScheme extends BasicPainterContext
 {
 	public Object get(Object key, String type)
 	{
-		if (type != PainterResources.PAINT || !(key instanceof AxisInterval))
+		if (type != PainterResources.PAINT || !(key instanceof AxisInterval interval))
 			return super.get(key, type);
 
-		AxisInterval interval = (AxisInterval) key;
 		int value  = ((Long)interval.getFinish()).intValue() * 150;
 
 		return new Color(value);

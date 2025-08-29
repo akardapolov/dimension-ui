@@ -15,10 +15,10 @@ import com.egantt.swing.table.model.ColumnModel;
 public class BasicColumnModel implements ColumnModel
 {
 	/** the root node is internal and therefore invisible*/
-	protected final Object columns[];
+	protected final Object[] columns;
 	protected final Class [] columnClasses; /** column classes */
 
-	public BasicColumnModel(Object columns [], Class columnClasses [])
+	public BasicColumnModel(Object[] columns, Class[] columnClasses)
 	{
 		this.columnClasses = columnClasses;
 		this.columns = columns;

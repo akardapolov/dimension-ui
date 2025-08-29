@@ -14,14 +14,14 @@ import java.util.Calendar;
  */
 public interface CalendarConstants
 {
-	Object FORMAT_KEYS [] = new Object []
+	Object[] FORMAT_KEYS = new Object []
 	{
-		new Integer(Calendar.YEAR),
-		new Integer(Calendar.MONTH),
-		new Integer(Calendar.DAY_OF_MONTH),
-		new Integer(Calendar.HOUR),
-		new Integer(Calendar.MINUTE),
-		new Integer(Calendar.SECOND),
-		new Integer(Calendar.MILLISECOND)		
+      Integer.valueOf(Calendar.YEAR),
+      Integer.valueOf(Calendar.MONTH),
+      Integer.valueOf(Calendar.DAY_OF_MONTH),
+      Integer.valueOf(Calendar.HOUR),
+      Integer.valueOf(Calendar.MINUTE),
+      Integer.valueOf(Calendar.SECOND),
+      Integer.valueOf(Calendar.MILLISECOND)
 	};
 }

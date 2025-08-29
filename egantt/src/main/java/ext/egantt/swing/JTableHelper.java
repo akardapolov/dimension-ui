@@ -39,7 +39,7 @@ public class JTableHelper {
 		rowValues[1] = new Object[model.getColumnCount() == 0 ? 0 : 1];
 		
 		for (int a = 0; a < model.getColumnCount() -1; a++ )
-			rowValues[0][a] = (Object) model.getColumnName(a);
+			rowValues[0][a] = model.getColumnName(a);
 		
 		if (rowValues[1].length != 0)
 			rowValues[1][0] = model.getColumnName(model.getColumnCount() -1);
