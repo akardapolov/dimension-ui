@@ -20,9 +20,9 @@ import ru.dimension.ui.component.model.DetailState;
 
 @Log4j2
 public class AdHocChartModule extends JXTaskPane {
+  private final AdHocChartModel model;
   @Getter
   private final AdHocChartView view;
-  private final AdHocChartModel model;
   @Getter
   private final AdHocChartPresenter presenter;
 
@@ -41,11 +41,7 @@ public class AdHocChartModule extends JXTaskPane {
 
   public Runnable initializeUI() {
     presenter.initializeChart();
-    return () -> PGHelper.cellXYRemainder(this, view.getTabbedPane(), false);
-  }
-
-  public void loadData() {
-    this.presenter.initializeChart();
+    return () -> PGHelper.cellXYRemainder(this, view.getPanel(), false);
   }
 
   public void handleLegendChange(ChartLegendState chartLegendState) {

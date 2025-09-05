@@ -30,6 +30,7 @@ import ru.dimension.ui.state.SqlQueryState;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.model.DetailState;
+import ru.dimension.ui.state.UIState;
 
 @Log4j2
 public class ChartsPresenter implements MessageAction, CollectStartStopListener {
@@ -155,6 +156,9 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
 
       taskPane.revalidate();
       taskPane.repaint();
+
+      ChartCardState chartCardState = UIState.INSTANCE.getChartCardStateAll(component.name());
+      taskPane.setCollapsed(ChartCardState.EXPAND_ALL.equals(chartCardState));
     });
   }
 

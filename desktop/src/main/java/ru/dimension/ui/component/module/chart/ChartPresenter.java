@@ -43,6 +43,7 @@ import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.function.GroupFunction;
+import ru.dimension.ui.model.function.NormFunction;
 import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
@@ -96,6 +97,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
     view.getRealTimeFunctionPanel().setRunAction(this::handleRealtimeGroupFunctionChange);
     view.getRealTimeRangePanel().setRunAction(this::handleRealTimeRangeChange);
     view.getHistoryTimeRangeFunctionPanel().setRunAction(this::handleHistoryTimeRangeFunctionChange);
+    view.getHistoryNormFunctionPanel().setRunAction(this::handleHistoryNormFunctionChange);
 
     view.getRealTimeLegendPanel().setStateChangeConsumer(showLegend ->
                                                              handleLegendChange(ChartLegendState.SHOW.equals(showLegend)));
@@ -354,6 +356,11 @@ public class ChartPresenter implements HelperChart, MessageAction {
       if (timeRangeFunction != null) {
         metricCopy.setTimeRangeFunction(timeRangeFunction);
       }
+
+      NormFunction normFunction = UIState.INSTANCE.getNormFunction(chartKey);
+      if (normFunction != null) {
+        metricCopy.setNormFunction(normFunction);
+      }
     }
 
     if (AnalyzeType.REAL_TIME.equals(analyzeType)) {
@@ -441,9 +448,15 @@ public class ChartPresenter implements HelperChart, MessageAction {
 
     TimeRangeFunction timeRangeFunction = UIState.INSTANCE.getTimeRangeFunction(model.getChartKey());
     if (timeRangeFunction != null) {
-      view.getHistoryTimeRangeFunctionPanel().setSelected(timeRangeFunction);
       historyMetric.setTimeRangeFunction(timeRangeFunction);
     }
+    view.getHistoryTimeRangeFunctionPanel().setSelected(historyMetric.getTimeRangeFunction());
+
+    NormFunction normFunction = UIState.INSTANCE.getNormFunction(model.getChartKey());
+    if (normFunction != null) {
+      historyMetric.setNormFunction(normFunction);
+    }
+    view.getHistoryNormFunctionPanel().setSelected(historyMetric.getNormFunction());
   }
 
   private void handleRealtimeGroupFunctionChange(String action,
@@ -491,6 +504,12 @@ public class ChartPresenter implements HelperChart, MessageAction {
   private void handleHistoryTimeRangeFunctionChange(String action, TimeRangeFunction function) {
     UIState.INSTANCE.putTimeRangeFunction(model.getChartKey(), function);
     historyMetric.setTimeRangeFunction(function);
+    updateHistoryChart();
+  }
+
+  private void handleHistoryNormFunctionChange(String action, NormFunction function) {
+    UIState.INSTANCE.putNormFunction(model.getChartKey(), function);
+    historyMetric.setNormFunction(function);
     updateHistoryChart();
   }
 

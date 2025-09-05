@@ -18,7 +18,6 @@ import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.cstype.CType;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageAction;
-import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.chart.ChartConfig;
 import ru.dimension.ui.component.chart.HelperChart;
@@ -31,6 +30,7 @@ import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.module.analyze.CustomAction;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.helper.FilterHelper;
+import ru.dimension.ui.helper.KeyHelper;
 import ru.dimension.ui.helper.LogHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.model.AdHocChartKey;
@@ -46,7 +46,7 @@ import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.ProcessType;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.SeriesType;
-import ru.dimension.ui.state.UIState;
+import ru.dimension.ui.state.AdHocStateManager;
 import ru.dimension.ui.view.detail.DetailDashboardPanel;
 
 @Log4j2
@@ -63,12 +63,12 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
 
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-  public AdHocChartPresenter(AdHocChartModel model,
-                             AdHocChartView view) {
+  private final AdHocStateManager adHocStateManager = AdHocStateManager.getInstance();
+
+  public AdHocChartPresenter(AdHocChartModel model, AdHocChartView view) {
     this.model = model;
     this.view = view;
     this.historyMetric = model.getMetric().copy();
-
     initializePresenter();
   }
 
@@ -80,8 +80,8 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
     view.getHistoryRangePanel().setRunAction(this::handleHistoryRangeChange);
     view.getHistoryNormFunctionPanel().setRunAction(this::handleHistoryNormFunctionChange);
 
-    view.getHistoryLegendPanel().setStateChangeConsumer(showLegend ->
-                                                           handleLegendChange(ChartLegendState.SHOW.equals(showLegend)));
+    view.getHistoryLegendPanel().setStateChangeConsumer(
+        showLegend -> handleLegendChange(ChartLegendState.SHOW.equals(showLegend)));
 
     view.getHistoryRangePanel().getButtonApplyRange().addActionListener(e -> applyCustomRange());
 
@@ -93,6 +93,9 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
   }
 
   private void createHistoryChart() {
+    AdHocKey adHocKey = model.getAdHocKey();
+    String globalKey = KeyHelper.getGlobalKey(adHocKey.getConnectionId(), model.getTableInfo().getTableName());
+
     SwingTaskRunner.runWithProgress(
         view.getHistoryChartPanel(),
         executor,
@@ -124,7 +127,10 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
             historyDetail = getDetail(historyChart, null, SeriesType.COMMON, null);
           } else {
             HistorySCP historySCP = (HistorySCP) historyChart;
-            historyDetail = getDetail(historyChart, historyChart.getSeriesColorMap(), SeriesType.CUSTOM, historySCP.getTopMapSelected());
+            historyDetail = getDetail(historyChart,
+                                      historyChart.getSeriesColorMap(),
+                                      SeriesType.CUSTOM,
+                                      historySCP.getTopMapSelected());
           }
 
           return () -> {
@@ -137,7 +143,10 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
         },
         e -> log.error("Error creating history chart", e),
         () -> createProgressBar("Creating history chart..."),
-        () -> setDetailState(PanelTabType.HISTORY, UIState.INSTANCE.getShowDetailAll(Component.ADHOC.name()))
+        () -> {
+          setDetailState(PanelTabType.HISTORY, adHocStateManager.getShowDetailAll(globalKey));
+          updateLegendVisibility(adHocStateManager.getShowLegend(adHocKey, globalKey));
+        }
     );
   }
 
@@ -162,8 +171,8 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
     ProcessType processType = ProcessType.HISTORY;
     Metric chartMetric = chart.getConfig().getMetric();
 
-    Map<String, Color> seriesColorMapToUse = initialSeriesColorMap != null ?
-        initialSeriesColorMap : chart.getSeriesColorMap();
+    Map<String, Color> seriesColorMapToUse =
+        initialSeriesColorMap != null ? initialSeriesColorMap : chart.getSeriesColorMap();
 
     if (SeriesType.CUSTOM.equals(seriesType) && seriesColorMapToUse.isEmpty()) {
       seriesColorMapToUse = chart.getSeriesColorMap();
@@ -177,8 +186,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
                                  seriesColorMapToUse,
                                  processType,
                                  seriesType,
-                                 topMapSelected
-        );
+                                 topMapSelected);
 
     CustomAction customAction = new CustomAction() {
       @Override
@@ -189,14 +197,15 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
       public void setCustomSeriesFilter(Map<CProfile, LinkedHashSet<String>> topMapSelected,
                                         Map<String, Color> seriesColorMap) {
         Map<String, Color> newSeriesColorMap = new HashMap<>();
-        topMapSelected.values().forEach(set -> set.forEach(value -> newSeriesColorMap.put(value, seriesColorMap.get(value))));
+        topMapSelected.values()
+            .forEach(set -> set.forEach(
+                value -> newSeriesColorMap.put(value, seriesColorMap.get(value))));
 
         detailPanel.updateSeriesColor(topMapSelected, newSeriesColorMap);
       }
 
       @Override
-      public void setBeginEnd(long begin,
-                              long end) {
+      public void setBeginEnd(long begin, long end) {
       }
     };
 
@@ -210,35 +219,32 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
     Metric metricCopy = model.getMetric().copy();
     ChartInfo chartInfoCopy = model.getChartInfo().copy();
     AdHocKey key = model.getAdHocKey();
+    String globalKey = KeyHelper.getGlobalKey(key.getConnectionId(), model.getTableInfo().getTableName());
 
-    // Get group function from state
-    GroupFunction groupFunction = UIState.INSTANCE.getHistoryGroupFunction(key);
+    GroupFunction groupFunction = adHocStateManager.getHistoryGroupFunction(key);
     if (groupFunction != null) {
       metricCopy.setGroupFunction(groupFunction);
-      metricCopy.setChartType(GroupFunction.COUNT.equals(groupFunction) ? ChartType.STACKED : ChartType.LINEAR);
+      metricCopy.setChartType(GroupFunction.COUNT.equals(groupFunction)
+                                  ? ChartType.STACKED : ChartType.LINEAR);
     }
 
-    // Get group function from state
-    TimeRangeFunction timeRangeFunction = UIState.INSTANCE.getTimeRangeFunction(model.getAdHocKey());
+    TimeRangeFunction timeRangeFunction = adHocStateManager.getTimeRangeFunction(key);
     if (timeRangeFunction != null) {
       metricCopy.setTimeRangeFunction(timeRangeFunction);
     }
 
-    // Get norm function from state
-    NormFunction normFunction = UIState.INSTANCE.getNormFunction(model.getAdHocKey());
+    NormFunction normFunction = adHocStateManager.getNormFunction(key);
     if (normFunction != null) {
       metricCopy.setNormFunction(normFunction);
     }
 
-    // Get range from state
-    RangeHistory rangeHistory = UIState.INSTANCE.getHistoryRange(key);
+    RangeHistory rangeHistory = adHocStateManager.getHistoryRange(key, globalKey);
     chartInfoCopy.setRangeHistory(Objects.requireNonNullElse(rangeHistory, RangeHistory.DAY));
 
-    // Handle custom range
     if (rangeHistory == RangeHistory.CUSTOM) {
-      ChartRange customRange = UIState.INSTANCE.getHistoryCustomRange(key);
+      ChartRange customRange = adHocStateManager.getCustomChartRange(key, globalKey);
       if (customRange == null) {
-        customRange = UIState.INSTANCE.getHistoryCustomRangeAll(Component.ADHOC.name());
+        customRange = adHocStateManager.getCustomChartRange(key, globalKey);
       }
       if (customRange != null) {
         chartInfoCopy.setCustomBegin(customRange.getBegin());
@@ -247,7 +253,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
         ChartRange chartRange = getChartRangeFromHistoryRangePanel();
         chartInfoCopy.setCustomBegin(chartRange.getBegin());
         chartInfoCopy.setCustomEnd(chartRange.getEnd());
-        UIState.INSTANCE.putHistoryCustomRange(key, chartRange);
+        adHocStateManager.putHistoryCustomRange(key, chartRange);
       }
     }
 
@@ -262,13 +268,15 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
   }
 
   private void initializeFromState() {
-    AdHocKey key = model.getAdHocKey();
+    AdHocKey adHocKey = model.getAdHocKey();
+    String tableName = model.getTableInfo().getTableName();
+    String globalKey = KeyHelper.getGlobalKey(adHocKey.getConnectionId(), tableName);
 
-    GroupFunction groupFunction = UIState.INSTANCE.getHistoryGroupFunction(key);
+    GroupFunction groupFunction = adHocStateManager.getHistoryGroupFunction(adHocKey);
     if (groupFunction != null) {
       historyMetric.setGroupFunction(groupFunction);
-      historyMetric.setChartType(GroupFunction.COUNT.equals(groupFunction) ?
-                                     ChartType.STACKED : ChartType.LINEAR);
+      historyMetric.setChartType(GroupFunction.COUNT.equals(groupFunction)
+                                     ? ChartType.STACKED : ChartType.LINEAR);
     }
 
     if (CType.STRING.equals(model.getMetric().getYAxis().getCsType().getCType())) {
@@ -278,36 +286,29 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
     }
     view.getHistoryFunctionPanel().setSelected(historyMetric.getGroupFunction());
 
-    RangeHistory localRange = UIState.INSTANCE.getHistoryRange(key);
-    RangeHistory globalRange = UIState.INSTANCE.getHistoryRangeAll(Component.ADHOC.name());
-    RangeHistory effectiveRange = localRange != null ? localRange : globalRange;
-
-    if (effectiveRange != null) {
-      view.getHistoryRangePanel().setSelectedRange(effectiveRange);
+    RangeHistory rangeHistory = adHocStateManager.getHistoryRange(adHocKey, globalKey);
+    if (rangeHistory != null) {
+      view.getHistoryRangePanel().setSelectedRange(rangeHistory);
     }
 
-    ChartRange customRange = UIState.INSTANCE.getHistoryCustomRange(key);
-    if (customRange == null) {
-      customRange = UIState.INSTANCE.getHistoryCustomRangeAll(Component.ADHOC.name());
-    }
+    ChartRange customRange = adHocStateManager.getCustomChartRange(adHocKey, globalKey);
     if (customRange != null) {
       view.getHistoryRangePanel().getDateTimePickerFrom().setDate(new Date(customRange.getBegin()));
       view.getHistoryRangePanel().getDateTimePickerTo().setDate(new Date(customRange.getEnd()));
     }
 
-    Boolean showLegend = UIState.INSTANCE.getShowLegend(key);
+    Boolean showLegend = adHocStateManager.getShowLegend(adHocKey, globalKey);
     if (showLegend != null) {
       view.getHistoryLegendPanel().setSelected(showLegend);
     }
 
-    TimeRangeFunction timeRangeFunction = UIState.INSTANCE.getTimeRangeFunction(model.getAdHocKey());
+    TimeRangeFunction timeRangeFunction = adHocStateManager.getTimeRangeFunction(adHocKey);
     if (timeRangeFunction != null) {
-      view.getHistoryTimeRangeFunctionPanel().setSelected(timeRangeFunction);
-
       historyMetric.setTimeRangeFunction(timeRangeFunction);
     }
+    view.getHistoryTimeRangeFunctionPanel().setSelected(historyMetric.getTimeRangeFunction());
 
-    NormFunction normFunction = UIState.INSTANCE.getNormFunction(key);
+    NormFunction normFunction = adHocStateManager.getNormFunction(adHocKey);
     if (normFunction != null) {
       historyMetric.setNormFunction(normFunction);
     }
@@ -315,11 +316,15 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
   }
 
   private void handleHistoryGroupFunctionChange(String action, GroupFunction function) {
-    UIState.INSTANCE.putHistoryGroupFunction(model.getAdHocKey(), function);
+    adHocStateManager.putHistoryGroupFunction(model.getAdHocKey(), function);
     updateHistoryChart(null, null);
   }
 
-  private void updateHistoryChart(Map<String, Color> seriesColorMap, Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+  private void updateHistoryChart(Map<String, Color> seriesColorMap,
+                                  Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+    AdHocKey adHocKey = model.getAdHocKey();
+    String globalKey = KeyHelper.getGlobalKey(adHocKey.getConnectionId(), model.getTableInfo().getTableName());
+
     SwingTaskRunner.runWithProgress(
         view.getHistoryChartPanel(),
         executor,
@@ -344,15 +349,22 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
           historyChart.initialize();
 
           if (seriesColorMap != null && topMapSelected != null) {
-            Map<String, Color> filterSeriesColorMap = getFilterSeriesColorMap(historyMetric, seriesColorMap, topMapSelected);
-            historyDetail = getDetail(historyChart, filterSeriesColorMap, SeriesType.CUSTOM, topMapSelected);
+            Map<String, Color> filterSeriesColorMap =
+                getFilterSeriesColorMap(historyMetric, seriesColorMap, topMapSelected);
+            historyDetail = getDetail(historyChart,
+                                      filterSeriesColorMap,
+                                      SeriesType.CUSTOM,
+                                      topMapSelected);
           } else {
             SeriesType seriesTypeChart = historyChart.getSeriesType();
             if (SeriesType.COMMON.equals(seriesTypeChart)) {
               historyDetail = getDetail(historyChart, null, SeriesType.COMMON, null);
             } else {
               HistorySCP historySCP = (HistorySCP) historyChart;
-              historyDetail = getDetail(historyChart, historyChart.getSeriesColorMap(), SeriesType.CUSTOM, historySCP.getTopMapSelected());
+              historyDetail = getDetail(historyChart,
+                                        historyChart.getSeriesColorMap(),
+                                        SeriesType.CUSTOM,
+                                        historySCP.getTopMapSelected());
             }
           }
 
@@ -382,19 +394,19 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
         },
         e -> log.error("Error updating history chart", e),
         () -> createProgressBar("Updating history chart..."),
-        () -> setDetailState(PanelTabType.HISTORY, UIState.INSTANCE.getShowDetailAll(Component.ADHOC.name()))
+        () -> setDetailState(PanelTabType.HISTORY, adHocStateManager.getShowDetailAll(globalKey))
     );
   }
 
   public void handleHistoryRangeChange(String action, RangeHistory range) {
-    UIState.INSTANCE.putHistoryRange(model.getAdHocKey(), range);
+    adHocStateManager.putHistoryRange(model.getAdHocKey(), range);
     model.getChartInfo().setRangeHistory(range);
     view.getHistoryRangePanel().setSelectedRange(range);
     updateHistoryChart(null, null);
   }
 
   private void handleHistoryNormFunctionChange(String action, NormFunction function) {
-    UIState.INSTANCE.putNormFunction(model.getAdHocKey(), function);
+    adHocStateManager.putNormFunction(model.getAdHocKey(), function);
     model.getMetric().setNormFunction(function);
     view.getHistoryNormFunctionPanel().setSelected(function);
     updateHistoryChart(null, null);
@@ -406,8 +418,8 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
   }
 
   public void updateHistoryCustomRange(ChartRange chartRange) {
-    UIState.INSTANCE.putHistoryRange(model.getAdHocKey(), RangeHistory.CUSTOM);
-    UIState.INSTANCE.putHistoryCustomRange(model.getAdHocKey(), chartRange);
+    adHocStateManager.putHistoryRange(model.getAdHocKey(), RangeHistory.CUSTOM);
+    adHocStateManager.putHistoryCustomRange(model.getAdHocKey(), chartRange);
 
     model.getChartInfo().setRangeHistory(RangeHistory.CUSTOM);
 
@@ -425,8 +437,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
     }
   }
 
-  public void setDetailState(PanelTabType panelTabType,
-                             DetailState detailState) {
+  public void setDetailState(PanelTabType panelTabType, DetailState detailState) {
     if (panelTabType == PanelTabType.HISTORY) {
       boolean showDetail = detailState == DetailState.SHOW;
       view.setHistoryDetailVisible(showDetail);
@@ -439,7 +450,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
   public void handleLegendChange(Boolean showLegend) {
     boolean visibility = showLegend != null ? showLegend : true;
     updateLegendVisibility(visibility);
-    UIState.INSTANCE.putShowLegend(model.getAdHocKey(), visibility);
+    adHocStateManager.putShowLegend(model.getAdHocKey(), visibility);
   }
 
   private void applyCustomRange() {
@@ -452,7 +463,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
     Date to = rangePanel.getDateTimePickerTo().getDate();
     ChartRange chartRange = new ChartRange(from.getTime(), to.getTime());
 
-    UIState.INSTANCE.putHistoryCustomRange(model.getAdHocKey(), chartRange);
+    adHocStateManager.putHistoryCustomRange(model.getAdHocKey(), chartRange);
     handleHistoryRangeChange("rangeChanged", RangeHistory.CUSTOM);
   }
 
@@ -484,7 +495,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
   }
 
   private void handleHistoryTimeRangeFunctionChange(String action, TimeRangeFunction function) {
-    UIState.INSTANCE.putTimeRangeFunction(model.getAdHocKey(), function);
+    adHocStateManager.putTimeRangeFunction(model.getAdHocKey(), function);
     log.info("Action: " + action + " for time range function: " + function);
 
     handleFilterChange(PanelTabType.HISTORY,
@@ -501,7 +512,6 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
     Map<String, Color> seriesColorMap = message.parameters().get("seriesColorMap");
 
     model.updateMaps(topMapSelected, seriesColorMap);
-
     LogHelper.logMapSelected(topMapSelected);
 
     switch (message.action()) {

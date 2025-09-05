@@ -8,12 +8,14 @@ import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageAction;
 import ru.dimension.ui.component.broker.MessageBroker;
+import ru.dimension.ui.component.broker.MessageBroker.Action;
 import ru.dimension.ui.component.broker.MessageBroker.Block;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.module.adhoc.AdHocChartModule;
 import ru.dimension.ui.helper.DialogHelper;
+import ru.dimension.ui.helper.KeyHelper;
 import ru.dimension.ui.model.AdHocChartKey;
 import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.chart.ChartRange;
@@ -26,6 +28,7 @@ import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.model.DetailState;
+import ru.dimension.ui.state.AdHocStateManager;
 
 @Log4j2
 public class AdHocChartsPresenter implements MessageAction {
@@ -34,15 +37,31 @@ public class AdHocChartsPresenter implements MessageAction {
   private final AdHocChartsView view;
 
   private final MessageBroker broker = MessageBroker.getInstance();
+  private final AdHocStateManager adHocStateManager = AdHocStateManager.getInstance();
 
   public AdHocChartsPresenter(AdHocChartsModel model,
                               AdHocChartsView view) {
     this.model = model;
     this.view = view;
+
+    view.setTabChangeListener(this::handleTabChange);
+  }
+
+  private void handleTabChange(String globalKey) {
+    if (globalKey != null && !globalKey.isEmpty()) {
+      broker.sendMessage(Message.builder()
+                             .destination(Destination.withDefault(Component.ADHOC, Module.CONFIG))
+                             .action(Action.HISTORY_CUSTOM_UI_RANGE_CHANGE)
+                             .parameter("globalKey", globalKey)
+                             .build());
+    }
   }
 
   @Override
   public void receive(Message message) {
+    String globalKey = message.parameters().get("globalKey");
+    model.setGlobalKey(globalKey);
+
     switch (message.action()) {
       case HISTORY_RANGE_CHANGE -> handleHistoryRangeChange(message);
       case ADD_CHART -> handleAddChart(message);
@@ -57,18 +76,18 @@ public class AdHocChartsPresenter implements MessageAction {
     RangeHistory historyRange = message.parameters().get("range");
     ChartRange chartRange = message.parameters().get("chartRange");
 
-    if (RangeHistory.CUSTOM.equals(historyRange)) {
-      model.getChartPanes().forEach((key, chartMap) ->
-                                        chartMap.values().forEach(chartModule ->
-                                                                      chartModule.updateHistoryCustomRange(chartRange)
-                                        )
-      );
-    } else {
-      model.getChartPanes().forEach((key, chartMap) ->
-                                        chartMap.values().forEach(chartModule ->
-                                                                      chartModule.updateHistoryRange(historyRange)
-                                        ));
-    }
+    model.getChartPanes().forEach((key, chartMap) -> {
+      String chartGlobalKey = key.getConnectionId() + "_" + key.getTableName();
+      if (chartGlobalKey.equals(model.getGlobalKey())) {
+        chartMap.values().forEach(chartModule -> {
+          if (RangeHistory.CUSTOM.equals(historyRange)) {
+            chartModule.updateHistoryCustomRange(chartRange);
+          } else {
+            chartModule.updateHistoryRange(historyRange);
+          }
+        });
+      }
+    });
   }
 
   private void handleDetailVisibilityChange(Message message) {
@@ -76,32 +95,36 @@ public class AdHocChartsPresenter implements MessageAction {
     if (model == null || model.getChartPanes() == null) return;
 
     model.getChartPanes().forEach((key, value) -> {
-      value.values().forEach(chartModule -> chartModule.setDetailState(detailState)
-      );
+      String chartGlobalKey = key.getConnectionId() + "_" + key.getTableName();
+      if (chartGlobalKey.equals(model.getGlobalKey())) {
+        value.values().forEach(chartModule -> chartModule.setDetailState(detailState));
+      }
     });
   }
 
   private void chartLegendStateAll(Message message) {
-    if (model == null || model.getChartPanes() == null) {
-      return;
-    }
+    if (model == null || model.getChartPanes() == null) return;
 
     ChartLegendState chartLegendState = message.parameters().get("chartLegendState");
-
     model.getChartPanes().forEach((key, value) -> {
-      value.values().forEach(chartModule -> chartModule.handleLegendChange(chartLegendState));
+      String chartGlobalKey = key.getConnectionId() + "_" + key.getTableName();
+      if (chartGlobalKey.equals(model.getGlobalKey())) {
+        value.values().forEach(chartModule -> chartModule.handleLegendChange(chartLegendState));
+      }
     });
   }
 
   private void expandCollapseAll(Message message) {
-    if (model == null || model.getChartPanes() == null) {
-      return;
-    }
+    if (model == null || model.getChartPanes() == null) return;
 
     ChartCardState cardState = message.parameters().get("cardState");
-
     model.getChartPanes().forEach((key, value) -> {
-      value.values().forEach(chartModule -> chartModule.setCollapsed(ChartCardState.EXPAND_ALL.equals(cardState)));
+      String chartGlobalKey = key.getConnectionId() + "_" + key.getTableName();
+      if (chartGlobalKey.equals(model.getGlobalKey())) {
+        value.values().forEach(chartModule ->
+                                   chartModule.setCollapsed(ChartCardState.EXPAND_ALL.equals(cardState))
+        );
+      }
     });
   }
 
@@ -109,6 +132,7 @@ public class AdHocChartsPresenter implements MessageAction {
     logChartAction(message);
 
     ConnectionInfo connectionInfo = message.parameters().get("connectionInfo");
+    String activeTab = message.parameters().get("activeTab");
     String tableName = message.parameters().get("tableName");
     CProfile cProfile = message.parameters().get("cProfile");
     TableInfo tableInfo = message.parameters().get("tableInfo");
@@ -128,7 +152,12 @@ public class AdHocChartsPresenter implements MessageAction {
 
     taskPane.setTitle(keyValue);
 
+    String adHocTabKey = getAdHocTabKey(connectionInfo, activeTab, tableName);
+    String globalKey = KeyHelper.getGlobalKey(connectionInfo.getId(), tableName);
+
     view.addChartCard(
+        adHocTabKey,
+        globalKey,
         taskPane,
         (module, error) -> {
           if (error != null) {
@@ -144,6 +173,9 @@ public class AdHocChartsPresenter implements MessageAction {
 
           taskPane.revalidate();
           taskPane.repaint();
+
+          ChartCardState chartCardState = adHocStateManager.getChartCardStateAll(globalKey);
+          taskPane.setCollapsed(ChartCardState.EXPAND_ALL.equals(chartCardState));
         }
     );
   }
@@ -152,10 +184,12 @@ public class AdHocChartsPresenter implements MessageAction {
     logChartAction(message);
 
     ConnectionInfo connectionInfo = message.parameters().get("connectionInfo");
+    String activeTab = message.parameters().get("activeTab");
     String tableName = message.parameters().get("tableName");
     CProfile cProfile = message.parameters().get("cProfile");
 
     AdHocKey adHocKey = new AdHocKey(connectionInfo.getId(), tableName, cProfile.getColId());
+    String adHocTabKey = getAdHocTabKey(connectionInfo, activeTab, tableName);
 
     AdHocChartModule taskPane = model.getChartPanes().get(adHocKey).get(cProfile);
 
@@ -164,7 +198,7 @@ public class AdHocChartsPresenter implements MessageAction {
       broker.deleteReceiver(destination, taskPane.getPresenter());
     } finally {
       log.info("Remove task pane: " + taskPane.getTitle());
-      view.removeChartCard(taskPane);
+      view.removeChartCard(adHocTabKey, taskPane);
       model.getChartPanes().get(adHocKey).remove(cProfile);
     }
   }
@@ -176,6 +210,12 @@ public class AdHocChartsPresenter implements MessageAction {
     String keyValue = String.format("Connection: %s >>> Table: %s >>> Column: %s", connName, tableName, columnName);
 
     return keyValue.length() > 300 ? keyValue.substring(0, 300) + " ... " : keyValue;
+  }
+
+  public String getAdHocTabKey(ConnectionInfo connectionInfo, String activeTab, String tableName) {
+    String connName = connectionInfo.getName();
+    return String.format("<html><b>Connection:</b> %s<br><b>%s:</b> %s</html>",
+                         connName, activeTab, tableName);
   }
 
   private static Destination getDestination(AdHocKey adHocKey) {
@@ -190,13 +230,17 @@ public class AdHocChartsPresenter implements MessageAction {
 
   private void logChartAction(Message message) {
     ConnectionInfo connectionInfo = message.parameters().get("connectionInfo");
+    String activeTab = message.parameters().get("activeTab");
     String tableName = message.parameters().get("tableName");
     CProfile cProfile = message.parameters().get("cProfile");
+    ChartInfo chartInfo = message.parameters().get("chartInfo");
 
-    log.info("Message action: {}\nfor\n{}\n{}\n{}",
+    log.info("Message action: {}\nfor\n{}\n{}\n{}\n{}\n{}",
              message.action(),
              connectionInfo,
+             activeTab,
              tableName,
-             cProfile);
+             cProfile,
+             chartInfo);
   }
 }

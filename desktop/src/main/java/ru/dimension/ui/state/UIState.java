@@ -3,6 +3,7 @@ package ru.dimension.ui.state;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import ru.dimension.ui.component.broker.ParameterStore;
+import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.chart.ChartRange;
@@ -32,6 +33,9 @@ public enum UIState {
 
   private static final String TIME_RANGE_FUNCTION = "TIME_RANGE_FUNCTION";
   private static final String NORM_FUNCTION = "NORM_FUNCTION";
+
+  private static final String CHART_CARD_STATE = "CHART_CARD_STATE";
+  private static final String CHART_CARD_STATE_ALL = "CHART_CARD_STATE_ALL";
 
   private final ConcurrentMap<String, ParameterStore> globalStateMap = new ConcurrentHashMap<>();
   private final ConcurrentMap<ChartKey, ParameterStore> stateMap = new ConcurrentHashMap<>();
@@ -241,5 +245,32 @@ public enum UIState {
   public NormFunction getNormFunction(AdHocKey key) {
     ParameterStore store = adHocStateMap.get(key);
     return store != null ? store.get(NORM_FUNCTION, NormFunction.class) : null;
+  }
+
+  public void putChartCardState(ChartKey key, ChartCardState cardState) {
+    getOrCreateParameterStore(key).put(CHART_CARD_STATE, cardState);
+  }
+
+  public ChartCardState getChartCardState(ChartKey key) {
+    ParameterStore store = stateMap.get(key);
+    return store != null ? store.get(CHART_CARD_STATE, ChartCardState.class) : null;
+  }
+
+  public void putChartCardStateAll(String key, ChartCardState cardState) {
+    getOrCreateParameterGlobalStore(key).put(CHART_CARD_STATE_ALL, cardState);
+  }
+
+  public ChartCardState getChartCardStateAll(String key) {
+    ParameterStore store = globalStateMap.get(key);
+    return store != null ? store.get(CHART_CARD_STATE_ALL, ChartCardState.class) : null;
+  }
+
+  public void putChartCardState(AdHocKey key, ChartCardState cardState) {
+    getOrCreateParameterStore(key).put(CHART_CARD_STATE, cardState);
+  }
+
+  public ChartCardState getChartCardState(AdHocKey key) {
+    ParameterStore store = adHocStateMap.get(key);
+    return store != null ? store.get(CHART_CARD_STATE, ChartCardState.class) : null;
   }
 }

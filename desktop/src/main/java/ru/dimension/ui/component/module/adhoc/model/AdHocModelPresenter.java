@@ -38,11 +38,14 @@ import ru.dimension.ui.component.broker.MessageBroker.Action;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.chart.HelperChart;
+import ru.dimension.ui.component.model.ChartCardState;
+import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.component.module.analyze.handler.TableSelectionHandler;
 import ru.dimension.ui.component.module.db.DatabaseMetadata;
 import ru.dimension.ui.component.module.db.MetadataFactory;
 import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.helper.GUIHelper;
+import ru.dimension.ui.helper.KeyHelper;
 import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.column.ColumnNames;
@@ -58,14 +61,15 @@ import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.RangeHistory;
-import ru.dimension.ui.state.UIState;
+import ru.dimension.ui.state.AdHocStateManager;
 
 @Log4j2
-public class AdHocPresenter implements HelperChart {
+public class AdHocModelPresenter implements HelperChart {
 
-  private final AdHocModel model;
-  private final AdHocView view;
+  private final AdHocModelModel model;
+  private final AdHocModelView view;
   private final MessageBroker broker = MessageBroker.getInstance();
+  private final AdHocStateManager adHocStateManager = AdHocStateManager.getInstance();
 
   private final JXTableCase connectionCase;
   private final JComboBox<String> schemaCatalogCBox;
@@ -83,8 +87,8 @@ public class AdHocPresenter implements HelperChart {
 
   private int currentConnectionId;
 
-  public AdHocPresenter(AdHocModel model,
-                        AdHocView view) {
+  public AdHocModelPresenter(AdHocModelModel model,
+                             AdHocModelView view) {
     this.model = model;
     this.view = view;
     this.connectionCase = view.getConnectionCase();
@@ -435,7 +439,9 @@ public class AdHocPresenter implements HelperChart {
 
   private void addChart(String tableName,
                         int cProfileId) {
-    log.info("Table name: {}", tableName);
+    String activeTab = view.getTableViewPane().getTitleAt(view.getTableViewPane().getSelectedIndex());
+
+    log.info("{} name: {}", activeTab, tableName);
     CProfile cProfile = tProfile.getCProfiles().stream()
         .filter(f -> f.getColId() == cProfileId)
         .findAny()
@@ -457,50 +463,54 @@ public class AdHocPresenter implements HelperChart {
     ChartInfo chartInfo = new ChartInfo();
     chartInfo.setId(queryInfo.getId());
 
-    AdHocKey adHocKey = new AdHocKey(connectionInfo.getId(), tableName, cProfile.getColId());
-    ChartRange existingRange = UIState.INSTANCE.getHistoryCustomRange(adHocKey);
-    RangeHistory rangeHistory = UIState.INSTANCE.getHistoryRange(adHocKey);
+    /*TODO AdHocStateManager usage*/
+    AdHocKey adHocKey = KeyHelper.getAdHocKey(connectionInfo, tableName, cProfile);
+    String globalKey = KeyHelper.getGlobalKey(connectionInfo, tableName);
+
+    RangeHistory rangeHistory = adHocStateManager.getHistoryRange(adHocKey, globalKey);
+    ChartRange chartRange = adHocStateManager.getCustomChartRange(adHocKey, globalKey);
 
     chartInfo.setRangeHistory(Objects.requireNonNullElse(rangeHistory, RangeHistory.DAY));
 
-    String componentName = Component.ADHOC.name() + "_" + adHocKey.getConnectionId() + "_" + adHocKey.getTableName();
-    RangeHistory rangeHistoryGlobal = UIState.INSTANCE.getHistoryRangeAll(componentName);
+    boolean isEmptyRange = false;
+    if (chartRange == null) {
+      chartRange = getChartRange(dStore, tableInfo.getTableName(), chartInfo);
+      rangeHistory = chartInfo.getRangeHistory();
 
-    ChartRange chartRange = existingRange != null ?
-        existingRange :
-        getChartRange(dStore, tableInfo.getTableName(), chartInfo);
+      isEmptyRange = true;
+    }
 
-    if (existingRange != null) {
+    if (RangeHistory.CUSTOM.equals(rangeHistory)) {
       chartInfo.setRangeHistory(RangeHistory.CUSTOM);
-      chartInfo.setCustomBegin(existingRange.getBegin());
-      chartInfo.setCustomEnd(existingRange.getEnd());
     }
 
-    ChartRange customRange = UIState.INSTANCE.getHistoryCustomRange(adHocKey);
-    if (customRange == null) {
-      UIState.INSTANCE.putHistoryRange(adHocKey, chartInfo.getRangeHistory());
-      UIState.INSTANCE.putHistoryCustomRange(adHocKey, chartRange);
+    chartInfo.setCustomBegin(chartRange.getBegin());
+    chartInfo.setCustomEnd(chartRange.getEnd());
+
+    if (isEmptyRange) {
+      adHocStateManager.putHistoryRange(adHocKey, rangeHistory);
+      adHocStateManager.putHistoryCustomRange(adHocKey, chartRange);
+
+      adHocStateManager.putGlobalHistoryRange(globalKey, rangeHistory);
+      adHocStateManager.putGlobalHistoryCustomRange(globalKey, chartRange);
+
+      adHocStateManager.putGlobalShowLegend(globalKey, true);
+      adHocStateManager.putGlobalShowDetail(globalKey, DetailState.SHOW);
+
+      adHocStateManager.putGlobalChartCardState(globalKey, ChartCardState.COLLAPSE_ALL);
     }
 
-    if (rangeHistoryGlobal == null) {
-      UIState.INSTANCE.putHistoryRangeAll(componentName, chartInfo.getRangeHistory());
-
-      ChartInfo chartInfoCopy = chartInfo.copy();
-      RangeHistory globalRange = UIState.INSTANCE.getHistoryRangeAll(Component.ADHOC.name());
-      chartInfoCopy.setRangeHistory(Objects.requireNonNullElse(globalRange, RangeHistory.DAY));
-
-      broker.sendMessage(Message.builder()
-                             .destination(Destination.withDefault(Component.ADHOC, Module.CONFIG))
-                             .action(Action.HISTORY_CUSTOM_UI_RANGE_CHANGE)
-                             .parameter("chartRange", chartRange)
-                             .parameter("chartInfo", chartInfoCopy)
-                             .build());
-    }
+    broker.sendMessage(Message.builder()
+                           .destination(Destination.withDefault(Component.ADHOC, Module.CONFIG))
+                           .action(Action.HISTORY_CUSTOM_UI_RANGE_CHANGE)
+                           .parameter("globalKey", globalKey)
+                           .build());
 
     broker.sendMessage(Message.builder()
                            .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
                            .action(Action.ADD_CHART)
                            .parameter("connectionInfo", connectionInfo)
+                           .parameter("activeTab", activeTab)
                            .parameter("tableName", tableName)
                            .parameter("cProfile", cProfile)
                            .parameter("tableInfo", tableInfo)
@@ -511,7 +521,9 @@ public class AdHocPresenter implements HelperChart {
 
   private void removeChart(String tableName,
                            int cProfileId) {
-    log.info("Table name: {}", tableName);
+    String activeTab = view.getTableViewPane().getTitleAt(view.getTableViewPane().getSelectedIndex());
+
+    log.info("{} name: {}", activeTab, tableName);
     CProfile cProfile = tProfile.getCProfiles().stream()
         .filter(f -> f.getColId() == cProfileId)
         .findAny()
@@ -525,6 +537,7 @@ public class AdHocPresenter implements HelperChart {
                            .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
                            .action(Action.REMOVE_CHART)
                            .parameter("connectionInfo", connectionInfo)
+                           .parameter("activeTab", activeTab)
                            .parameter("tableName", tableName)
                            .parameter("cProfile", cProfile)
                            .build());

@@ -1,5 +1,6 @@
 package ru.dimension.ui.view.handler.connection;
 
+import dagger.Lazy;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -19,7 +20,6 @@ import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
-import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollBar;
@@ -32,22 +32,23 @@ import ru.dimension.ui.exception.EmptyNameException;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.exception.NotSelectedRowException;
 import ru.dimension.ui.helper.GUIHelper;
+import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
+import ru.dimension.ui.model.parse.ParseType;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.handler.LifeCycleStatus;
 import ru.dimension.ui.model.view.tab.ConfigEditTabPane;
 import ru.dimension.ui.model.view.tab.ConnectionTypeTabPane;
+import ru.dimension.ui.prompt.Internationalization;
+import ru.dimension.ui.router.event.EventListener;
 import ru.dimension.ui.security.EncryptDecrypt;
+import ru.dimension.ui.view.BaseFrame;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.connection.ConnectionPanel;
 import ru.dimension.ui.view.tab.ConfigTab;
-import ru.dimension.ui.manager.ProfileManager;
-import ru.dimension.ui.model.parse.ParseType;
-import ru.dimension.ui.prompt.Internationalization;
-import ru.dimension.ui.router.event.EventListener;
 
 @Log4j2
 @Singleton
@@ -70,7 +71,7 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
   private ConnectionInfo oldFileConnection;
 
   private final JFileChooser jarFC;
-  private JFrame jFrame;
+  private final Lazy<BaseFrame> jFrame;
   private ExecutorService executor = Executors.newSingleThreadExecutor();
   private final ResourceBundle bundleDefault;
   private ConnectionTypeTabPane openedTab;
@@ -87,7 +88,8 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
                                       @Named("connectionConfigPanel") ConnectionPanel connectionPanel,
                                       @Named("connectionButtonPanel") ButtonPanel connectionButtonPanel,
                                       @Named("jTabbedPaneConfig") ConfigTab configTab,
-                                      @Named("checkboxConfig") JCheckBox checkboxConfig) {
+                                      @Named("checkboxConfig") JCheckBox checkboxConfig,
+                                      Lazy<BaseFrame> jFrame) {
 
     this.profileManager = profileManager;
     this.encryptDecrypt = encryptDecrypt;
@@ -103,6 +105,7 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
     this.connectionButtonPanel = connectionButtonPanel;
     this.configTab = configTab;
     this.checkboxConfig = checkboxConfig;
+    this.jFrame = jFrame;
     this.jarFC = new JFileChooser();
 
     this.openedTab = ConnectionTypeTabPane.JDBC;
@@ -119,7 +122,7 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
       connectionPanel.getJarButton().setEnabled(false);
       connectionPanel.getJTextFieldConnectionJar().requestFocus();
 
-      int returnVal = jarFC.showOpenDialog(jFrame);
+      int returnVal = jarFC.showOpenDialog(jFrame.get());
       if (returnVal == JFileChooser.APPROVE_OPTION) {
         File file = jarFC.getSelectedFile();
         connectionPanel.getJTextFieldConnectionJar().setText(file.getAbsolutePath());

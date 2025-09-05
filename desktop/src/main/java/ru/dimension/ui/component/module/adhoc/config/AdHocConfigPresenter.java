@@ -9,26 +9,28 @@ import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Action;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
-import ru.dimension.ui.model.chart.ChartRange;
-import ru.dimension.ui.model.info.gui.ChartInfo;
-import ru.dimension.ui.model.view.RangeHistory;
-import ru.dimension.ui.state.UIState;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.model.DetailState;
+import ru.dimension.ui.model.AdHocKey;
+import ru.dimension.ui.model.chart.ChartRange;
+import ru.dimension.ui.model.view.RangeHistory;
+import ru.dimension.ui.state.AdHocStateManager;
 import ru.dimension.ui.view.panel.DateTimePicker;
 
 @Log4j2
 public class AdHocConfigPresenter implements MessageAction {
 
+  private final AdHocConfigModel model;
   private final AdHocConfigView view;
 
   private final MessageBroker broker = MessageBroker.getInstance();
+  private final AdHocStateManager adHocStateManager = AdHocStateManager.getInstance();
 
-  public AdHocConfigPresenter(AdHocConfigView view) {
+  public AdHocConfigPresenter(AdHocConfigModel model,
+                              AdHocConfigView view) {
+    this.model = model;
     this.view = view;
-
-    UIState.INSTANCE.putShowDetailAll(Component.ADHOC.name(), DetailState.SHOW);
 
     setupListeners();
   }
@@ -48,35 +50,49 @@ public class AdHocConfigPresenter implements MessageAction {
   private void handleLegendVisibilityChange(ChartLegendState chartLegendState) {
     log.info("Legend visibility changed to: {}", chartLegendState);
 
-    UIState.INSTANCE.putShowLegendAll(Component.ADHOC.name(), ChartLegendState.SHOW.equals(chartLegendState));
-
-    broker.sendMessage(Message.builder()
-                           .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
-                           .action(Action.CHART_LEGEND_STATE_ALL)
-                           .parameter("chartLegendState", chartLegendState)
-                           .build());
+    if (model.getGlobalKey().isEmpty()) {
+      log.info("Global key is empty");
+    } else {
+      adHocStateManager.putGlobalShowLegend(model.getGlobalKey(), ChartLegendState.SHOW.equals(chartLegendState));
+      broker.sendMessage(Message.builder()
+                             .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
+                             .action(Action.CHART_LEGEND_STATE_ALL)
+                             .parameter("globalKey", model.getGlobalKey())
+                             .parameter("chartLegendState", chartLegendState)
+                             .build());
+    }
   }
 
   private void handleDetailVisibilityChange(DetailState detailState) {
     log.info("Detail visibility changed to: {}", detailState);
 
-    UIState.INSTANCE.putShowDetailAll(Component.ADHOC.name(), detailState);
-
-    broker.sendMessage(Message.builder()
-                           .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
-                           .action(Action.SHOW_HIDE_DETAIL_ALL)
-                           .parameter("detailState", detailState)
-                           .build());
+    if (model.getGlobalKey().isEmpty()) {
+      log.info("Global key is empty");
+    } else {
+      adHocStateManager.putGlobalShowDetail(model.getGlobalKey(), detailState);
+      broker.sendMessage(Message.builder()
+                             .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
+                             .action(Action.SHOW_HIDE_DETAIL_ALL)
+                             .parameter("globalKey", model.getGlobalKey())
+                             .parameter("detailState", detailState)
+                             .build());
+    }
   }
 
   private void handleCollapseCardChange(ChartCardState cardState) {
     log.info("Set card state in ad-hoc to: {}", cardState);
 
-    broker.sendMessage(Message.builder()
-                           .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
-                           .action(Action.EXPAND_COLLAPSE_ALL)
-                           .parameter("cardState", cardState)
-                           .build());
+    if (model.getGlobalKey().isEmpty()) {
+      log.info("Global key is empty");
+    } else {
+      adHocStateManager.putGlobalChartCardState(model.getGlobalKey(), cardState);
+      broker.sendMessage(Message.builder()
+                             .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
+                             .action(Action.EXPAND_COLLAPSE_ALL)
+                             .parameter("globalKey", model.getGlobalKey())
+                             .parameter("cardState", cardState)
+                             .build());
+    }
   }
 
   private void handleHistoryRangeChange(RangeHistory range) {
@@ -104,16 +120,20 @@ public class AdHocConfigPresenter implements MessageAction {
   }
 
   private void updateHistoryRange(RangeHistory range, ChartRange chartRange) {
-    String componentName = Component.ADHOC.name();
-    UIState.INSTANCE.putHistoryCustomRangeAll(componentName, chartRange);
-    UIState.INSTANCE.putHistoryRangeAll(componentName, range);
+    if (model.getGlobalKey().isEmpty()) {
+      log.info("Global key is empty");
+    } else {
+      adHocStateManager.putGlobalHistoryCustomRange(model.getGlobalKey(), chartRange);
+      adHocStateManager.putGlobalHistoryRange(model.getGlobalKey(), range);
 
-    broker.sendMessage(Message.builder()
-                           .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
-                           .action(Action.HISTORY_RANGE_CHANGE)
-                           .parameter("range", range)
-                           .parameter("chartRange", chartRange)
-                           .build());
+      broker.sendMessage(Message.builder()
+                             .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
+                             .action(Action.HISTORY_RANGE_CHANGE)
+                             .parameter("globalKey", model.getGlobalKey())
+                             .parameter("range", range)
+                             .parameter("chartRange", chartRange)
+                             .build());
+    }
   }
 
   @Override
@@ -126,16 +146,23 @@ public class AdHocConfigPresenter implements MessageAction {
   private void handleCustomUIHistoryRangeChange(Message message) {
     log.info("Message action {}", message.action());
 
-    ChartRange chartRange = message.parameters().get("chartRange");
+    String globalKey = message.parameters().get("globalKey");
+    model.setGlobalKey(globalKey);
+
+    ChartRange chartRange = adHocStateManager.getCustomChartRange(new AdHocKey(), globalKey);
     view.getHistoryPanel().getDateTimePickerFrom().setDate(new Date(chartRange.getBegin()));
     view.getHistoryPanel().getDateTimePickerTo().setDate(new Date(chartRange.getEnd()));
 
-    ChartInfo chartInfo = message.parameters().get("chartInfo");
-    if (chartInfo != null && chartInfo.getRangeHistory() != null &&
-        chartInfo.getRangeHistory().equals(RangeHistory.CUSTOM)) {
-      view.getHistoryPanel().getButtonGroup().clearSelection();
-      view.getHistoryPanel().getCustom().setSelected(true);
-      view.getHistoryPanel().colorButton(RangeHistory.CUSTOM);
-    }
+    RangeHistory rangeHistory = adHocStateManager.getHistoryRange(new AdHocKey(), globalKey);
+    view.getHistoryPanel().setSelectedRange(rangeHistory);
+
+    boolean showLegend = adHocStateManager.getShowLegend(new AdHocKey(), globalKey);
+    view.getLegendPanel().setSelected(showLegend);
+
+    DetailState detailState = adHocStateManager.getShowDetailAll(globalKey);
+    view.getDetailShowHidePanel().setDetailState(detailState);
+
+    ChartCardState chartCardState = adHocStateManager.getChartCardStateAll(globalKey);
+    view.getCollapseCardPanel().setState(chartCardState);
   }
 }

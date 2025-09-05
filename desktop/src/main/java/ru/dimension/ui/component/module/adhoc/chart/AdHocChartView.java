@@ -22,7 +22,7 @@ import ru.dimension.ui.helper.GUIHelper;
 
 @Data
 @Log4j2
-public class AdHocChartView extends JPanel {
+public class AdHocChartView {
   private static Dimension dimension = new Dimension(100, 600);
 
   private int configDividerLocation = 32;
@@ -32,7 +32,7 @@ public class AdHocChartView extends JPanel {
   private int lastHistoryChartDividerLocation = 250;
 
   @Getter
-  private JPanel tabbedPane;
+  private JPanel panel;
 
   private FunctionPanel historyFunctionPanel;
   private TimeRangeFunctionPanel historyTimeRangeFunctionPanel;
@@ -53,8 +53,8 @@ public class AdHocChartView extends JPanel {
   private JSplitPane historyConfigChartDetail;
 
   public AdHocChartView() {
-    tabbedPane = new JPanel(new BorderLayout());
-    tabbedPane.setBorder(new EtchedBorder());
+    panel = new JPanel(new BorderLayout());
+    panel.setBorder(new EtchedBorder());
 
     historyTimeRangeFunctionPanel = new TimeRangeFunctionPanel();
     historyNormFunctionPanel = new NormFunctionPanel();
@@ -77,7 +77,7 @@ public class AdHocChartView extends JPanel {
     historyChartPanel = new JPanel(new BorderLayout());
     historyDetailPanel = new JPanel(new BorderLayout());
 
-    tabbedPane.add(createHistoryTab());
+    panel.add(createHistoryTab());
   }
 
   private JLabel getLabel(String text) {

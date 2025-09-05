@@ -85,6 +85,8 @@ public class ConfigPresenter {
   private void handleCollapseCardChange(ChartCardState cardState) {
     log.info("Set card state in " + component.name() + " to: {}", cardState);
 
+    UIState.INSTANCE.putChartCardStateAll(component.name(), cardState);
+
     broker.sendMessage(Message.builder()
                            .destination(Destination.withDefault(component, Module.CHARTS))
                            .action(Action.EXPAND_COLLAPSE_ALL)

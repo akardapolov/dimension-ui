@@ -24,11 +24,23 @@ public class AdHocChartsModel {
 
   private final ConcurrentMap<AdHocKey, ConcurrentMap<CProfile, AdHocChartModule>> chartPanes = new ConcurrentHashMap<>();
 
+  private final StringBuilder globalKey;
   public AdHocChartsModel(ProfileManager profileManager,
                           ConnectionPoolManager connectionPoolManager,
                           AdHocDatabaseManager adHocDatabaseManager) {
     this.profileManager = profileManager;
     this.connectionPoolManager = connectionPoolManager;
     this.adHocDatabaseManager = adHocDatabaseManager;
+
+    this.globalKey = new StringBuilder();
+  }
+
+  public void setGlobalKey(String globalKey) {
+    this.globalKey.setLength(0);
+    this.globalKey.append(globalKey);
+  }
+
+  public String getGlobalKey() {
+    return this.globalKey.toString();
   }
 }

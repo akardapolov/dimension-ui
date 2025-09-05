@@ -1,5 +1,6 @@
 package ru.dimension.ui.view.handler.report.report;
 
+import dagger.Lazy;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -14,7 +15,6 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
-import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
@@ -25,6 +25,7 @@ import ru.dimension.ui.helper.FilesHelper;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.ReportHelper;
 import ru.dimension.ui.model.column.ReportColumnNames;
+import ru.dimension.ui.view.BaseFrame;
 import ru.dimension.ui.view.panel.report.ReportTabsPane;
 import ru.dimension.ui.view.panel.report.pdf.PathPdfInfo;
 import ru.dimension.ui.view.panel.report.pdf.PdfViewer;
@@ -35,7 +36,7 @@ public class ReportPanelHandler implements ActionListener, ListSelectionListener
 
   private final ReportTabsPane reportTabsPane;
   private final JFileChooser saveFC;
-  private JFrame jFrame;
+  private final Lazy<BaseFrame> jFrame;
   private final PathPdfInfo reportPdfPath;
   private final FilesHelper filesHelper;
   private final ReportHelper reportHelper;
@@ -45,12 +46,15 @@ public class ReportPanelHandler implements ActionListener, ListSelectionListener
   public ReportPanelHandler(@Named("reportTaskPanel") ReportTabsPane reportTabsPane,
                             @Named("reportPdfPath") PathPdfInfo reportPdfPath,
                             FilesHelper filesHelper,
-                            ReportHelper reportHelper) {
+                            ReportHelper reportHelper,
+                            Lazy<BaseFrame> jFrame) {
     this.reportTabsPane = reportTabsPane;
     this.reportPdfPath = reportPdfPath;
 
     this.filesHelper = filesHelper;
     this.reportHelper = reportHelper;
+
+    this.jFrame = jFrame;
 
     this.saveFC = new JFileChooser();
     this.saveFC.setDialogTitle("Сохранить PDF файл");
@@ -67,7 +71,7 @@ public class ReportPanelHandler implements ActionListener, ListSelectionListener
   @Override
   public void actionPerformed(ActionEvent event) {
     if (event.getSource() == reportTabsPane.getSaveBtnPDFReport()) {
-      int userSelection = saveFC.showSaveDialog(jFrame);
+      int userSelection = saveFC.showSaveDialog(jFrame.get());
       if (userSelection == JFileChooser.APPROVE_OPTION) {
 
         String savePath = saveFC.getSelectedFile().getAbsolutePath();

@@ -28,7 +28,7 @@ import ru.dimension.ui.model.table.JXTableCase;
 
 @Data
 @Log4j2
-public class AdHocView extends JPanel {
+public class AdHocModelView extends JPanel {
   private static final int DEFAULT_TABLE_ROW_COUNT = 10;
   private static final int NAME_COLUMN_MIN_WIDTH = 30;
   private static final int NAME_COLUMN_MAX_WIDTH = 40;
@@ -48,7 +48,7 @@ public class AdHocView extends JPanel {
   private final JTextField viewSearchField;
   private final JTextField columnSearchField;
 
-  public AdHocView() {
+  public AdHocModelView() {
     this.connectionCase = createConnectionCase();
     this.schemaCatalogCBox = createSchemaCatalogComboBox();
     this.tableCase = createTableCase();

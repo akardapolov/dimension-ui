@@ -3,11 +3,15 @@ package ru.dimension.ui.component.module.adhoc.charts;
 import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 import static ru.dimension.ui.laf.LafColorGroup.REPORT;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
 import javax.swing.border.EtchedBorder;
 import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.jdesktop.swingx.VerticalLayout;
@@ -20,43 +24,92 @@ import ru.dimension.ui.laf.LaF;
 
 public class AdHocChartsView extends JPanel {
 
-  private final JXTaskPaneContainer cardContainer;
-  private final JScrollPane cardScrollPane;
-  private final JPanel cardPanel;
+  private final JTabbedPane tabbedPane;
+  private final Map<String, JPanel> tabPanels;
+  private final Map<String, JXTaskPaneContainer> tabContainers;
+
+  private Consumer<String> tabChangeListener;
+
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
   public AdHocChartsView() {
-    cardContainer = new JXTaskPaneContainer();
-    LaF.setBackgroundColor(REPORT, cardContainer);
-    cardContainer.setBackgroundPainter(null);
-
-    cardScrollPane = new JScrollPane();
-    GUIHelper.setScrolling(cardScrollPane);
-
-    cardPanel = new JPanel(new VerticalLayout());
-    LaF.setBackgroundColor(REPORT, cardPanel);
-    cardPanel.add(cardContainer);
-
-    cardScrollPane.setViewportView(cardPanel);
+    tabbedPane = new JTabbedPane();
+    tabPanels = new HashMap<>();
+    tabContainers = new HashMap<>();
 
     setBorder(new EtchedBorder());
 
     PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(), false);
-    gbl.row().cellXYRemainder(cardScrollPane).fillXY();
+    gbl.row().cellXYRemainder(tabbedPane).fillXY();
     gbl.done();
+
+    tabbedPane.addChangeListener(e -> handleTabChange());
   }
 
-  public void addChartCard(AdHocChartModule taskPane,
+  public void setTabChangeListener(Consumer<String> listener) {
+    this.tabChangeListener = listener;
+  }
+
+  private void handleTabChange() {
+    int selectedIndex = tabbedPane.getSelectedIndex();
+    if (selectedIndex >= 0 && tabChangeListener != null) {
+      JPanel selectedPanel = (JPanel) tabbedPane.getComponentAt(selectedIndex);
+      String globalKey = (String) selectedPanel.getClientProperty("globalKey");
+      if (globalKey != null) {
+        tabChangeListener.accept(globalKey);
+      }
+    }
+  }
+
+  public void addChartCard(String tabKey,
+                           String globalKey,
+                           AdHocChartModule taskPane,
                            BiConsumer<AdHocChartModule, Exception> onComplete) {
 
-    addTaskPane(taskPane);
+    JPanel tabPanel = tabPanels.computeIfAbsent(tabKey, k -> {
+      JXTaskPaneContainer container = new JXTaskPaneContainer();
+      LaF.setBackgroundColor(REPORT, container);
+      container.setBackgroundPainter(null);
+
+      JPanel containerPanel = new JPanel(new VerticalLayout());
+      LaF.setBackgroundColor(REPORT, containerPanel);
+      containerPanel.add(container);
+
+      JScrollPane scrollPane = new JScrollPane(containerPanel);
+      GUIHelper.setScrolling(scrollPane);
+
+      JPanel panel = new JPanel();
+      panel.putClientProperty("globalKey", globalKey);
+      LaF.setBackgroundColor(REPORT, panel);
+
+      PainlessGridBag gbl = new PainlessGridBag(panel, PGHelper.getPGConfig(), false);
+      gbl.row().cellXYRemainder(scrollPane).fillXY();
+      gbl.done();
+
+      tabContainers.put(tabKey, container);
+
+      tabbedPane.addTab(tabKey, panel);
+      panel.putClientProperty("tabKey", tabKey);
+
+      return panel;
+    });
+
+    JXTaskPaneContainer container = tabContainers.get(tabKey);
+    container.add(taskPane);
+    container.revalidate();
+    container.repaint();
+
+    int index = tabbedPane.indexOfComponent(tabPanel);
+    if (index != -1) {
+      tabbedPane.setSelectedIndex(index);
+    }
 
     SwingTaskRunner.runWithProgress(
         taskPane,
         executor,
         taskPane::initializeUI,
         e -> {
-          removeTaskPane(taskPane);
+          removeChartCard(tabKey, taskPane);
           onComplete.accept(null, e);
         },
         () -> createProgressBar("Loading, please wait..."),
@@ -64,29 +117,24 @@ public class AdHocChartsView extends JPanel {
     );
   }
 
-  public void removeChartCard(AdHocChartModule taskPane) {
-    if (taskPane != null) {
-      cardContainer.remove(taskPane);
-      cardContainer.revalidate();
-      cardContainer.repaint();
+  public void removeChartCard(String tabKey, AdHocChartModule taskPane) {
+    JXTaskPaneContainer container = tabContainers.get(tabKey);
+    if (container != null && taskPane != null) {
+      container.remove(taskPane);
+      container.revalidate();
+      container.repaint();
+
+      if (container.getComponentCount() == 0) {
+        tabbedPane.remove(tabPanels.get(tabKey));
+        tabPanels.remove(tabKey);
+        tabContainers.remove(tabKey);
+      }
     }
   }
 
-  private void addTaskPane(AdHocChartModule taskPane) {
-    cardContainer.add(taskPane);
-    cardContainer.revalidate();
-    cardContainer.repaint();
-  }
-
-  private void removeTaskPane(AdHocChartModule taskPane) {
-    cardContainer.remove(taskPane);
-    cardContainer.revalidate();
-    cardContainer.repaint();
-  }
-
   public void clearAllCharts() {
-    cardContainer.removeAll();
-    cardContainer.revalidate();
-    cardContainer.repaint();
+    tabbedPane.removeAll();
+    tabPanels.clear();
+    tabContainers.clear();
   }
 }

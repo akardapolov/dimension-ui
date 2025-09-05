@@ -33,12 +33,31 @@ public class DetailShowHidePanel extends JPanel {
 
     detailCheckBox.addActionListener(e -> {
       currentState = currentState.toggle();
-      detailCheckBox.setText(currentState.getName());
-      detailCheckBox.setSelected(currentState == DetailState.SHOW);
+      updateCheckboxState();
       if (stateChangeConsumer != null) {
         stateChangeConsumer.accept(currentState);
       }
     });
+  }
+
+  public void setDetailState(DetailState state) {
+    if (state != null && state != currentState) {
+      currentState = state;
+      updateCheckboxState();
+
+      if (stateChangeConsumer != null) {
+        stateChangeConsumer.accept(currentState);
+      }
+    }
+  }
+
+  public DetailState getDetailState() {
+    return currentState;
+  }
+
+  private void updateCheckboxState() {
+    detailCheckBox.setText(currentState.getName());
+    detailCheckBox.setSelected(currentState == DetailState.SHOW);
   }
 
   public void setStateChangeConsumer(Consumer<DetailState> consumer) {

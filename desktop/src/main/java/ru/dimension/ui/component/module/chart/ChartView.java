@@ -19,6 +19,7 @@ import ru.dimension.ui.component.module.analyze.timeseries.AnalyzeAnomalyPanel;
 import ru.dimension.ui.component.module.analyze.timeseries.AnalyzeForecastPanel;
 import ru.dimension.ui.component.panel.FunctionPanel;
 import ru.dimension.ui.component.panel.LegendPanel;
+import ru.dimension.ui.component.panel.function.NormFunctionPanel;
 import ru.dimension.ui.component.panel.popup.ActionPanel;
 import ru.dimension.ui.component.panel.popup.FilterPanel;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
@@ -51,6 +52,7 @@ public class ChartView extends JPanel {
 
   private FunctionPanel historyFunctionPanel;
   private TimeRangeFunctionPanel historyTimeRangeFunctionPanel;
+  private NormFunctionPanel historyNormFunctionPanel;
   private HistoryRangePanel historyRangePanel;
   private LegendPanel historyLegendPanel;
   private FilterPanel historyFilterPanel;
@@ -96,7 +98,8 @@ public class ChartView extends JPanel {
                                                   realTimeActionPanel);
 
     historyTimeRangeFunctionPanel = new TimeRangeFunctionPanel();
-    historyFunctionPanel = new FunctionPanel(getLabel("Group: "), historyTimeRangeFunctionPanel);
+    historyNormFunctionPanel = new NormFunctionPanel();
+    historyFunctionPanel = new FunctionPanel(getLabel("Group: "), historyTimeRangeFunctionPanel, historyNormFunctionPanel);
     historyRangePanel = new HistoryRangePanel(getLabel("Range: "));
     historyLegendPanel = new LegendPanel(getLabel("Legend: "));
     historyFilterPanel = new FilterPanel(component);
