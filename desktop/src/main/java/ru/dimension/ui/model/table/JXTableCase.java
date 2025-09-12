@@ -22,14 +22,15 @@ public class JXTableCase {
   @Setter
   private boolean isBlockRunAction;
 
-  public void removeAllElements() {
+  public void clearTable() {
     defaultTableModel.getDataVector().removeAllElements();
     defaultTableModel.fireTableDataChanged();
   }
 
-  public void clearTable() {
-    defaultTableModel.getDataVector().removeAllElements();
-    defaultTableModel.fireTableDataChanged();
+  public void clearSelection() {
+    if (!isBlockRunAction) {
+      jxTable.clearSelection();
+    }
   }
 
   public void addRow(Object[] objects) {

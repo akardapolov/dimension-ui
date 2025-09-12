@@ -10,6 +10,7 @@ import java.util.Objects;
 public class ChartKey {
   @Getter
   private final ProfileTaskQueryKey profileTaskQueryKey;
+  @Getter
   private final CProfile cProfile;
 
   public ChartKey(ProfileTaskQueryKey profileTaskQueryKey, CProfile cProfile) {

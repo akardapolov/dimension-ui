@@ -8,9 +8,7 @@ import dagger.Provides;
 import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import javax.swing.JButton;
@@ -20,7 +18,6 @@ import javax.swing.JTabbedPane;
 import javax.swing.table.TableColumn;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
-import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.jdesktop.swingx.JXTextArea;
 import org.jetbrains.annotations.NotNull;
 import ru.dimension.db.model.profile.table.IType;
@@ -28,29 +25,24 @@ import ru.dimension.db.model.profile.table.TType;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
-import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.column.ConnectionColumnNames;
 import ru.dimension.ui.model.column.MetadataColumnNames;
 import ru.dimension.ui.model.column.MetricsColumnNames;
 import ru.dimension.ui.model.column.ProfileColumnNames;
 import ru.dimension.ui.model.column.QueryColumnNames;
-import ru.dimension.ui.model.column.ReportColumnNames;
 import ru.dimension.ui.model.column.TaskColumnNames;
 import ru.dimension.ui.model.function.GroupFunction;
-import ru.dimension.ui.model.report.QueryReportData;
 import ru.dimension.ui.model.sql.GatherDataMode;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.view.custom.BorderCellCheckBoxRenderer;
 import ru.dimension.ui.view.custom.DetailedComboBox;
-import ru.dimension.ui.view.panel.DateTimePicker;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.profile.MultiSelectTaskPanel;
 import ru.dimension.ui.view.panel.config.query.MainQueryPanel;
 import ru.dimension.ui.view.panel.config.query.MetadataQueryPanel;
 import ru.dimension.ui.view.panel.config.query.MetricQueryPanel;
 import ru.dimension.ui.view.panel.config.task.MultiSelectQueryPanel;
-import ru.dimension.ui.view.panel.report.pdf.PathPdfInfo;
 import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.view.tab.ConnTypeTab;
 
@@ -572,112 +564,9 @@ public class ConfigurationConfig {
 
   @Provides
   @Singleton
-  @Named("profileReportCase")
-  public JXTableCase getProfileReportCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(7,
-                                                       new String[]{ProfileColumnNames.ID.getColName(),
-                                                           ProfileColumnNames.NAME.getColName(),});
-    return jxTableCase;
-  }
-
-  @Provides
-  @Singleton
-  @Named("taskReportCase")
-  public JXTableCase getTaskReportCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(7,
-                                                       new String[]{TaskColumnNames.ID.getColName(),
-                                                           TaskColumnNames.NAME.getColName(),});
-    return jxTableCase;
-  }
-
-
-  @Provides
-  @Singleton
-  @Named("queryReportCase")
-  public JXTableCase getQueryReportCase() {
-    return getReportQueryCase();
-  }
-
-  @NotNull
-  private JXTableCase getReportQueryCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCaseCheckBox(7,
-                                                               new String[]{QueryColumnNames.ID.getColName(),
-                                                                   QueryColumnNames.PICK.getColName(),
-                                                                   QueryColumnNames.NAME.getColName()}, 1);
-
-    jxTableCase.getJxTable().getColumnExt(0).setVisible(false);
-
-    TableColumn col = jxTableCase.getJxTable().getColumnModel().getColumn(0);
-    col.setMinWidth(30);
-    col.setMaxWidth(35);
-
-    return jxTableCase;
-  }
-
-  @Provides
-  @Singleton
   @Named("columnsCheckBox")
   public List<JCheckBox> getColumnsCheckBox() {
     List<JCheckBox> jCheckBoxList = new ArrayList<>();
     return jCheckBoxList;
-  }
-
-  @Provides
-  @Singleton
-  @Named("dateTimePickerFrom")
-  public DateTimePicker getDateTimePickerFrom() {
-    return new DateTimePicker();
-  }
-
-  @Provides
-  @Singleton
-  @Named("dateTimePickerTo")
-  public DateTimePicker getDateTimePickerTo() {
-    return new DateTimePicker();
-  }
-
-  @Provides
-  @Singleton
-  @Named("mapReportData")
-  public Map<ProfileTaskQueryKey, QueryReportData> getMapReportData() {
-    Map<ProfileTaskQueryKey, QueryReportData> map = new HashMap<>();
-    return map;
-  }
-
-  @Provides
-  @Singleton
-  @Named("containerCardDesign")
-  public JXTaskPaneContainer getContainerCardDesign() {
-    JXTaskPaneContainer container = new JXTaskPaneContainer();
-    LaF.setBackgroundColor(LafColorGroup.REPORT, container);
-    container.setBackgroundPainter(null);
-    return container;
-  }
-
-  @Provides
-  @Singleton
-  @Named("reportPdfPath")
-  public PathPdfInfo getReportPdfPathInfo() {
-    return new PathPdfInfo(" ");
-  }
-
-  @Provides
-  @Singleton
-  @Named("savedReportCase")
-  public JXTableCase getSavedReportCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(10,
-                                                       new String[]{ReportColumnNames.REPORT_NAME.getColName(),});
-
-    return jxTableCase;
-  }
-
-  @Provides
-  @Singleton
-  @Named("designReportCase")
-  public JXTableCase getDesignReportCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(7,
-                                                       new String[]{"Design name",});
-
-    return jxTableCase;
   }
 }

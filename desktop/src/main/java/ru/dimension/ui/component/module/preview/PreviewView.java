@@ -234,7 +234,7 @@ public class PreviewView extends JDialog {
   }
 
   public void updateColumnTables(TableInfo tableInfo) {
-    columnTableCase.removeAllElements();
+    columnTableCase.clearTable();
     populateColumnTable(tableInfo);
   }
 

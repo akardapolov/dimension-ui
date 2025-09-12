@@ -28,7 +28,7 @@
 
     <dagger2.version>2.57</dagger2.version>
 
-    <dimension-db-version>25.9.1</dimension-db-version>
+    <dimension-db-version>25.9.2</dimension-db-version>
 
     <bdb-version>5.0.73</bdb-version>
     <gson-version>2.13.1</gson-version>

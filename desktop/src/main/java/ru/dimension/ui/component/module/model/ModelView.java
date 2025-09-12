@@ -91,7 +91,7 @@ public class ModelView extends JPanel {
   }
 
   public void initializeProfileTable(List<ProfileInfo> profileInfoList) {
-    profileTableCase.removeAllElements();
+    profileTableCase.clearTable();
     profileInfoList.forEach(profile -> profileTableCase.getDefaultTableModel()
         .addRow(new Object[]{profile.getId(), profile.getName()}));
   }
@@ -110,7 +110,7 @@ public class ModelView extends JPanel {
   }
 
   public void updateTaskTable(List<TaskInfo> taskInfoList) {
-    taskTableCase.removeAllElements();
+    taskTableCase.clearTable();
     taskInfoList.forEach(taskInfo -> taskTableCase.getDefaultTableModel()
         .addRow(new Object[]{taskInfo.getId(), taskInfo.getName()}));
   }
@@ -124,7 +124,7 @@ public class ModelView extends JPanel {
   }
 
   public void updateQueryTable(List<QueryInfo> queryInfoList) {
-    queryTableCase.removeAllElements();
+    queryTableCase.clearTable();
     queryInfoList.forEach(queryInfo -> queryTableCase.getDefaultTableModel()
         .addRow(new Object[]{queryInfo.getId(), queryInfo.getName()}));
   }
@@ -138,15 +138,15 @@ public class ModelView extends JPanel {
   }
 
   private void clearQueryAndDetailsTables() {
-    queryTableCase.removeAllElements();
-    columnTableCase.removeAllElements();
-    metricTableCase.removeAllElements();
+    queryTableCase.clearTable();
+    columnTableCase.clearTable();
+    metricTableCase.clearTable();
   }
 
   public void updateColumnAndMetricTables(TableInfo tableInfo,
                                           List<Metric> metricList) {
-    columnTableCase.removeAllElements();
-    metricTableCase.removeAllElements();
+    columnTableCase.clearTable();
+    metricTableCase.clearTable();
 
     populateColumnTable(tableInfo);
     populateMetricTable(metricList);

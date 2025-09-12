@@ -14,8 +14,6 @@ import ru.dimension.ui.view.handler.query.QueryMetadataHandler;
 import ru.dimension.ui.view.handler.query.QueryMetricButtonPanelHandler;
 import ru.dimension.ui.view.handler.query.QueryMetricHandler;
 import ru.dimension.ui.view.handler.query.QuerySelectionHandler;
-import ru.dimension.ui.view.handler.report.design.DesignPanelHandler;
-import ru.dimension.ui.view.handler.report.report.ReportPanelHandler;
 import ru.dimension.ui.view.handler.task.MultiSelectQueryHandler;
 import ru.dimension.ui.view.handler.task.TaskButtonPanelHandler;
 import ru.dimension.ui.view.handler.task.TaskSelectionHandler;
@@ -93,15 +91,5 @@ public abstract class HandlerConfig {
   @Named("connectionTemplateTableHandler")
   public abstract ConnectionTemplateTableHandler bindConnectionTemplateTableHandler(
       ConnectionTemplateTableHandler connectionTemplateTableHandler);
-
-  @Binds
-  @Named("designPanelHandler")
-  public abstract DesignPanelHandler bindDesignPanelHandler(
-      DesignPanelHandler designPanelHandler);
-
-  @Binds
-  @Named("reportPanelHandler")
-  public abstract ReportPanelHandler bindReportPanelHandler(
-      ReportPanelHandler reportPanelHandler);
 }
 

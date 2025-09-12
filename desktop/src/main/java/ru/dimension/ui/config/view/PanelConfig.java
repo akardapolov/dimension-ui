@@ -7,7 +7,6 @@ import ru.dimension.ui.view.panel.config.connection.ConnectionPanel;
 import ru.dimension.ui.view.panel.config.profile.ProfilePanel;
 import ru.dimension.ui.view.panel.config.query.QueryPanel;
 import ru.dimension.ui.view.panel.config.task.TaskPanel;
-import ru.dimension.ui.view.panel.report.ReportTabsPane;
 import ru.dimension.ui.view.panel.template.TemplateConnPanel;
 import ru.dimension.ui.view.panel.template.TemplateEditPanel;
 import ru.dimension.ui.view.panel.template.TemplateHTTPConnPanel;
@@ -42,8 +41,4 @@ public abstract class PanelConfig {
   @Binds
   @Named("templateEditPanel")
   public abstract TemplateEditPanel bindTemplateEditPanel(TemplateEditPanel templateEditPanel);
-
-  @Binds
-  @Named("reportTaskPanel")
-  public abstract ReportTabsPane bindReportTabsPane(ReportTabsPane reportTabsPane);
 }

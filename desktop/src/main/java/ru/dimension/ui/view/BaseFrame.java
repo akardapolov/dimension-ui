@@ -20,20 +20,22 @@ import ru.dimension.ui.collector.Collector;
 import ru.dimension.ui.collector.http.HttpResponseFetcher;
 import ru.dimension.ui.component.AdHocComponent;
 import ru.dimension.ui.component.DashboardComponent;
+import ru.dimension.ui.component.ReportComponent;
 import ru.dimension.ui.component.WorkspaceComponent;
 import ru.dimension.ui.executor.TaskExecutorPool;
+import ru.dimension.ui.helper.FilesHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.manager.AdHocDatabaseManager;
 import ru.dimension.ui.manager.ConfigurationManager;
 import ru.dimension.ui.manager.ConnectionPoolManager;
 import ru.dimension.ui.manager.ProfileManager;
+import ru.dimension.ui.manager.ReportManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.info.TaskInfo;
 import ru.dimension.ui.router.event.EventListener;
 import ru.dimension.ui.state.SqlQueryState;
 import ru.dimension.ui.view.structure.ConfigView;
 import ru.dimension.ui.view.structure.ProgressbarView;
-import ru.dimension.ui.view.structure.ReportView;
 import ru.dimension.ui.view.structure.TemplateView;
 import ru.dimension.ui.view.structure.ToolbarView;
 
@@ -50,7 +52,6 @@ public class BaseFrame extends JFrame {
   private final ToolbarView toolbarView;
   private final ConfigView configView;
   private final TemplateView templateView;
-  private final ReportView reportView;
   private final ProgressbarView progressbarView;
 
   private final EventListener eventListener;
@@ -59,10 +60,13 @@ public class BaseFrame extends JFrame {
   private final ConfigurationManager configurationManager;
   private final ConnectionPoolManager connectionPoolManager;
   private final AdHocDatabaseManager adHocDatabaseManager;
+  private final ReportManager reportManager;
   private final HttpResponseFetcher httpResponseFetcher;
   private final SqlQueryState sqlQueryState;
   private final Collector collector;
   private final DStore dStore;
+
+  private final FilesHelper filesHelper;
 
   @Override
   public void remove(Component comp) {
@@ -71,7 +75,6 @@ public class BaseFrame extends JFrame {
 
   @Inject
   public BaseFrame(@Named("mainTabPane") JTabbedPane mainTabPane,
-                   @Named("reportView") ReportView reportView,
                    @Named("toolbarView") ToolbarView toolbarView,
                    @Named("configView") ConfigView configView,
                    @Named("templateView") TemplateView templateView,
@@ -84,12 +87,11 @@ public class BaseFrame extends JFrame {
                    @Named("connectionPoolManager") ConnectionPoolManager connectionPoolManager,
                    @Named("httpResponseFetcher") HttpResponseFetcher httpResponseFetcher,
                    @Named("adHocDatabaseManager") AdHocDatabaseManager adHocDatabaseManager,
+                   @Named("reportManager") ReportManager reportManager,
                    @Named("collector") Collector collector,
-                   @Named("localDB") DStore dStore) throws HeadlessException {
+                   @Named("localDB") DStore dStore,
+                   FilesHelper filesHelper) throws HeadlessException {
     this.mainTabPane = mainTabPane;
-
-    this.reportView = reportView;
-    this.reportView.bindPresenter();
 
     this.toolbarView = toolbarView;
     this.toolbarView.bindPresenter();
@@ -111,9 +113,11 @@ public class BaseFrame extends JFrame {
     this.configurationManager = configurationManager;
     this.connectionPoolManager = connectionPoolManager;
     this.adHocDatabaseManager = adHocDatabaseManager;
+    this.reportManager = reportManager;
     this.httpResponseFetcher = httpResponseFetcher;
     this.collector = collector;
     this.dStore = dStore;
+    this.filesHelper = filesHelper;
 
     this.setTitle("Dimension UI");
     this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -148,8 +152,11 @@ public class BaseFrame extends JFrame {
     addTab(panel, DASHBOARD_TAB_INDEX);
   }
 
+
   private void initializeReportTab() {
-    addTab((Container) reportView, REPORT_TAB_INDEX);
+    ReportComponent component = createReportComponent();
+    JPanel panel = createComponentPanel(component.getMainTabPane());
+    addTab(panel, REPORT_TAB_INDEX);
   }
 
   private void initializeAdHocTab() {
@@ -171,6 +178,10 @@ public class BaseFrame extends JFrame {
     DashboardComponent component = new DashboardComponent(profileManager, eventListener, sqlQueryState, dStore);
     eventListener.addProfileStartStopListener(component);
     return component;
+  }
+
+  private ReportComponent createReportComponent() {
+    return new ReportComponent(profileManager, configurationManager, reportManager, filesHelper, dStore);
   }
 
   private AdHocComponent createAdHocComponent() {
