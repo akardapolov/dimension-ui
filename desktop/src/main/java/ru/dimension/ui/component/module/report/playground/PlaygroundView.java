@@ -39,6 +39,7 @@ import org.jdesktop.swingx.plaf.basic.SpinningCalendarHeaderHandler;
 import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.module.ReportChartModule;
+import ru.dimension.ui.component.panel.CollapseCardPanel;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.helper.DateHelper;
 import ru.dimension.ui.helper.DesignHelper;
@@ -93,6 +94,8 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
   private final JScrollPane cardScrollPane;
   private final JScrollPane chartScrollPane;
 
+  private final CollapseCardPanel collapseCardPanel;
+
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
   public PlaygroundView(PlaygroundModel model) {
@@ -116,6 +119,8 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
     this.cardScrollPane = createCardScrollPane();
     this.chartContainer = initChartContainer();
     this.chartScrollPane = createChartScrollPane();
+    this.collapseCardPanel = new CollapseCardPanel();
+    this.collapseCardPanel.setCollapseCheckBoxEnabled(false);
 
     initDateTimePickers();
     setupDateChangeListeners();
@@ -328,6 +333,7 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
         .cell(showButton)
         .cell(clearButton)
         .cell(saveButton)
+        .cell(collapseCardPanel)
         .cell(new JLabel()).fillX();
     gblConfig.done();
     return configPanel;
@@ -462,6 +468,8 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
     showButton.setEnabled(hasCharts);
     clearButton.setEnabled(hasCharts);
     saveButton.setEnabled(hasCharts);
+    collapseCardPanel.setCollapseCheckBoxEnabled(hasCharts);
+
     collapseCard.setVisible(hasCards);
   }
 

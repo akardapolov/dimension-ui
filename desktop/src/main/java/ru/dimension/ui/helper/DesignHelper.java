@@ -3,6 +3,7 @@ package ru.dimension.ui.helper;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import ru.dimension.ui.model.ProfileTaskQueryKey;
 
 public final class DesignHelper {
 
@@ -36,5 +37,19 @@ public final class DesignHelper {
   public static LocalDateTime parseDesignDate(String designName) {
     String dateStr = designName.substring(designName.indexOf("-") + 1).trim();
     return LocalDateTime.parse(dateStr, getDateFormatFormatter());
+  }
+
+  public static ProfileTaskQueryKey stringToKey(String keyString) {
+    String[] stringKey = keyString.split("_");
+    int profileId = Integer.parseInt(stringKey[0]);
+    int taskId = Integer.parseInt(stringKey[1]);
+    int queryId = Integer.parseInt(stringKey[2]);
+    return new ProfileTaskQueryKey(profileId, taskId, queryId);
+  }
+
+  public static String keyToString(ProfileTaskQueryKey key) {
+    return key.getProfileId() + "_" +
+        key.getTaskId() + "_" +
+        key.getQueryId();
   }
 }

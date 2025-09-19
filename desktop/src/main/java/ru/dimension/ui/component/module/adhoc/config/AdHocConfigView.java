@@ -2,18 +2,18 @@ package ru.dimension.ui.component.module.adhoc.config;
 
 import static ru.dimension.ui.laf.LafColorGroup.CHART_PANEL;
 
-import javax.swing.JLabel;
+import java.awt.Dimension;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JPanel;
 import javax.swing.border.EtchedBorder;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTitledSeparator;
-import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.ui.component.panel.CollapseCardPanel;
 import ru.dimension.ui.component.panel.DetailShowHidePanel;
 import ru.dimension.ui.component.panel.LegendPanel;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
-import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
 
 @Log4j2
@@ -37,26 +37,36 @@ public class AdHocConfigView extends JPanel {
     setBorder(new EtchedBorder());
     LaF.setBackgroundConfigPanel(CHART_PANEL, this);
 
-    PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(1), false);
+    initComponents();
+  }
 
-    JXTitledSeparator history = new JXTitledSeparator("Range");
-    JXTitledSeparator legend = new JXTitledSeparator("Legend");
-    JXTitledSeparator detail = new JXTitledSeparator("Detail");
-    JXTitledSeparator dashboard = new JXTitledSeparator("Dashboard");
+  private void initComponents() {
+    setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
 
-    gbl.row()
-        .cellX(history, 2).fillX(2)
-        .cellX(legend, 1).fillX(1)
-        .cellX(detail, 1).fillX(1)
-        .cellX(dashboard, 1).fillX(1)
-        .cellXRemainder(new JXTitledSeparator("")).fillX();
-    gbl.row()
-        .cellX(historyPanel, 2).fillX(2)
-        .cellX(legendPanel, 1).fillX(1)
-        .cellX(detailShowHidePanel, 1).fillX(1)
-        .cellX(collapseCardPanel, 1).fillX(1)
-        .cellX(new JLabel(), 10).fillX(10);
+    add(createSection("Range", historyPanel));
+    add(Box.createRigidArea(new Dimension(10, 0)));
+    add(createSection("Legend", legendPanel));
+    add(Box.createRigidArea(new Dimension(10, 0)));
+    add(createSection("Detail", detailShowHidePanel));
+    add(Box.createRigidArea(new Dimension(10, 0)));
+    add(createSection("Dashboard", collapseCardPanel));
+    add(Box.createHorizontalGlue());
+  }
 
-    gbl.done();
+  private JPanel createSection(String title, JPanel content) {
+    JPanel sectionPanel = new JPanel();
+    sectionPanel.setLayout(new BoxLayout(sectionPanel, BoxLayout.Y_AXIS));
+    sectionPanel.setOpaque(false);
+
+    JXTitledSeparator separator = new JXTitledSeparator(title);
+    separator.setAlignmentX(LEFT_ALIGNMENT);
+
+    content.setAlignmentX(LEFT_ALIGNMENT);
+
+    sectionPanel.add(separator);
+    sectionPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+    sectionPanel.add(content);
+
+    return sectionPanel;
   }
 }

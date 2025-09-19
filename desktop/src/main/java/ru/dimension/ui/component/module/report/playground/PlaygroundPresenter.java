@@ -4,13 +4,12 @@ import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,13 +35,16 @@ import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
+import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.config.Metric;
+import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.info.ProfileInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.TaskInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.report.CProfileReport;
+import ru.dimension.ui.model.report.DesignReportData;
 import ru.dimension.ui.model.report.QueryReportData;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.state.ChartKey;
@@ -81,10 +83,21 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
         .setCellEditor(view.getQueryEditor());
 
     this.view.getCollapseCard().addActionListener(this);
-
     this.view.getShowButton().addActionListener(this);
     this.view.getClearButton().addActionListener(this);
     this.view.getSaveButton().addActionListener(this);
+
+    this.view.getCollapseCardPanel().setStateChangeConsumer(this::handleCollapseCardChange);
+  }
+
+  private void handleCollapseCardChange(ChartCardState cardState) {
+    ArrayList<Component> containerCards = new ArrayList<>(List.of(view.getChartContainer().getComponents()));
+    boolean collapseAll = ChartCardState.EXPAND_ALL.equals(cardState);
+
+    containerCards.stream()
+        .filter(c -> c instanceof ReportChartModule)
+        .map(c -> (ReportChartModule) c)
+        .forEach(cardChart -> cardChart.setCollapsed(collapseAll));
   }
 
   @Override
@@ -92,7 +105,46 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
     switch (message.action()) {
       case ADD_CHART -> handleAddChart(message);
       case REMOVE_CHART -> handleRemoveChart(message);
+      case NEED_TO_SAVE_COMMENT -> handleNeedSaveComment(message);
+      case NEED_TO_SAVE_GROUP_FUNCTION -> handleNeedSaveGroupFunction(message);
     }
+  }
+
+  private void handleNeedSaveComment(Message message) {
+    ProfileTaskQueryKey key = message.parameters().get("key");
+    CProfile cProfile = message.parameters().get("cProfile");
+    String comment = message.parameters().get("comment");
+
+    Optional<CProfileReport> cProfileReport = model.getMapReportData().get(key)
+        .getCProfileReportList()
+        .stream()
+        .filter(f -> f.getColId() == cProfile.getColId())
+        .findAny();
+
+    cProfileReport.ifPresent(profileReport -> profileReport.setComment(comment));
+
+    view.getSaveButton().setEnabled(true);
+  }
+
+  private void handleNeedSaveGroupFunction(Message message) {
+    ProfileTaskQueryKey key = message.parameters().get("key");
+    CProfile cProfile = message.parameters().get("cProfile");
+    GroupFunction groupFunction = message.parameters().get("groupFunction");
+
+    Optional<CProfileReport> cProfileReport = model.getMapReportData().get(key)
+        .getCProfileReportList()
+        .stream()
+        .filter(f -> f.getColId() == cProfile.getColId())
+        .findAny();
+
+    cProfileReport.ifPresent(profileReport -> {
+      profileReport.setGroupFunction(groupFunction);
+      ChartType chartType = GroupFunction.COUNT.equals(groupFunction) ?
+          ChartType.STACKED : ChartType.LINEAR;
+      profileReport.setChartType(chartType);
+    });
+
+    view.getSaveButton().setEnabled(true);
   }
 
   private void handleAddChart(Message message) {
@@ -123,8 +175,7 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
     }
 
     ChartInfo chartInfoCopy = chartInfo.copy();
-    RangeHistory rangeHistory = UIState.INSTANCE.getHistoryRangeAll(model.getComponent().name());
-    chartInfoCopy.setRangeHistory(rangeHistory);
+    chartInfoCopy.setRangeHistory(RangeHistory.CUSTOM);
     Date beginDate = view.getDateTimePickerFrom().getDate();
     Date endDate = view.getDateTimePickerTo().getDate();
     chartInfoCopy.setCustomBegin(beginDate.getTime());
@@ -321,19 +372,28 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
     view.getSaveButton().setText("Saving…");
 
     LocalDateTime now = LocalDateTime.now();
+    String folderDate = DesignHelper.formatFolderName(now);
 
     virtualThreadExecutor.execute(() -> {
-
       try {
-        String dirName = now.format(DesignHelper.getFileFormatFormatter());
+        Map<String, QueryReportData> configToSave = new HashMap<>();
 
-        Map<String, QueryReportData> mapKeyString = createMapKeyString();
-        model.getReportManager().addConfig(mapKeyString, dirName);
+        for (Map.Entry<ProfileTaskQueryKey, QueryReportData> entry : model.getMapReportData().entrySet()) {
+          configToSave.put(DesignHelper.keyToString(entry.getKey()), entry.getValue());
+        }
+
+        DesignReportData designData = new DesignReportData(
+            folderDate,
+            view.getDateTimePickerFrom().getDate().getTime(),
+            view.getDateTimePickerTo().getDate().getTime()
+        );
+        designData.getMapReportData().putAll(configToSave);
+
+        model.getReportManager().saveDesign(designData);
       } catch (Exception e) {
-        log.error("Failed to generate report", e);
+        log.error("Failed to save design", e);
         javax.swing.SwingUtilities.invokeLater(() ->
-                                                   DialogHelper.showErrorDialog("Failed to generate report: "
-                                                                                    + e.getMessage(),"Error", e));
+                                                   DialogHelper.showErrorDialog("Failed to save design: " + e.getMessage(),"Error", e));
       } finally {
         view.updateButtonStates();
         log.info("Design saved: {}", DesignHelper.formatFolderName(now));
@@ -348,27 +408,6 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
                                .build());
       }
     });
-  }
-
-  private Map<String, QueryReportData> createMapKeyString() {
-    Map<String, QueryReportData> mapKeyString = new HashMap<>();
-    Date beginDate = view.getDateTimePickerFrom().getDate();
-    Date endDate = view.getDateTimePickerTo().getDate();
-
-    DateTimeFormatter formatter = DesignHelper.getFileFormatFormatter();
-    String formattedBegin = LocalDateTime.ofInstant(beginDate.toInstant(), ZoneId.systemDefault()).format(formatter);
-    String formattedEnd = LocalDateTime.ofInstant(endDate.toInstant(), ZoneId.systemDefault()).format(formatter);
-
-    model.getMapReportData().forEach((key, value) -> {
-      String mapKey = key.getProfileId() + "_" +
-          key.getTaskId() + "_" +
-          key.getQueryId() + "_" +
-          formattedBegin + "_" +
-          formattedEnd;
-      mapKeyString.put(mapKey, value);
-    });
-
-    return mapKeyString;
   }
 
   private void handleClear() {

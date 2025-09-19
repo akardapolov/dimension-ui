@@ -58,8 +58,8 @@ public class QueryMetricHandler implements ListSelectionListener {
         metricQueryPanel.getXTextFile().setText(metric.getXAxis().getColName());
         metricQueryPanel.getYComboBox().setSelectedItem(metric.getYAxis().getColName());
         metricQueryPanel.getDimensionComboBox().setSelectedItem(metric.getGroup().getColName());
-        metricQueryPanel.getGroupFunction().setSelectedItem(metric.getGroupFunction().toString());
-        metricQueryPanel.getChartType().setSelectedItem(metric.getChartType().toString());
+        metricQueryPanel.getGroupFunction().setSelectedItem(metric.getSafeGroupFunction().toString());
+        metricQueryPanel.getChartType().setSelectedItem(metric.getSafeChartType().toString());
 
         GUIHelper.disableButton(metricQueryPanel.getMetricQueryButtonPanel(), true);
       }

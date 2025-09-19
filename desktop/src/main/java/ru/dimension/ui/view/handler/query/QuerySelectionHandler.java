@@ -197,7 +197,7 @@ public class QuerySelectionHandler extends MouseListenerImpl implements ListSele
                                                                  connectionInfo.getDriver(),
                                                                  connectionInfo.getType())));
                              },
-                             () -> log.info("No found query by query id: " + queryId));
+                             () -> log.info("Not found query by query id: " + queryId));
 
         metadataQueryPanel.getEditMetadata().setEnabled(true);
         metadataQueryPanel.getQueryConnectionMetadataComboBox().setTableData(connectionData);
@@ -245,8 +245,8 @@ public class QuerySelectionHandler extends MouseListenerImpl implements ListSele
                   m.getXAxis().getColName(),
                   m.getYAxis().getColName(),
                   m.getGroup().getColName(),
-                  m.getGroupFunction().toString(),
-                  m.getChartType().toString()});
+                  m.getSafeGroupFunction().toString(),
+                  m.getSafeChartType().toString()});
         }
         if (metricQueryPanel.getConfigMetricCase().getJxTable().getRowCount() != 0) {
           metricQueryPanel.getConfigMetricCase().getJxTable().setRowSelectionInterval(0, 0);

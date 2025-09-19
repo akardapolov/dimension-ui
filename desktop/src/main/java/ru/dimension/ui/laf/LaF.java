@@ -4,6 +4,7 @@ import com.formdev.flatlaf.FlatDarculaLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import java.awt.Color;
 import java.awt.Component;
+import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.UIManager;
 import javax.swing.UIManager.LookAndFeelInfo;
@@ -186,6 +187,12 @@ public class LaF {
                                               JPanel panel) {
     Color backgroundColor = getBackgroundColor(lafColorGroup, getLafType());
     panel.setBackground(backgroundColor);
+  }
+
+  public static void setBackgroundConfigPanel(LafColorGroup lafColorGroup,
+                                              JComponent component) {
+    Color backgroundColor = getBackgroundColor(lafColorGroup, getLafType());
+    component.setBackground(backgroundColor);
   }
 
   public static Color getColorBorder(LafColorGroup lafColorGroup) {

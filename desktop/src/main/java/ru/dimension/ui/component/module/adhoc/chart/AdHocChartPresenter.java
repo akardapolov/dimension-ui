@@ -22,6 +22,7 @@ import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.chart.ChartConfig;
 import ru.dimension.ui.component.chart.HelperChart;
 import ru.dimension.ui.component.chart.SCP;
+import ru.dimension.ui.component.chart.history.HistoryAdHocSCP;
 import ru.dimension.ui.component.chart.history.HistorySCP;
 import ru.dimension.ui.component.chart.holder.DetailAndAnalyzeHolder;
 import ru.dimension.ui.component.model.ChartLegendState;
@@ -47,7 +48,7 @@ import ru.dimension.ui.model.view.ProcessType;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.AdHocStateManager;
-import ru.dimension.ui.view.detail.DetailDashboardPanel;
+import ru.dimension.ui.view.detail.DetailAdHocPanel;
 
 @Log4j2
 public class AdHocChartPresenter implements HelperChart, MessageAction {
@@ -56,7 +57,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
   private final AdHocChartView view;
 
   private SCP historyChart;
-  private DetailDashboardPanel historyDetail;
+  private DetailAdHocPanel historyDetail;
 
   @Getter
   private final Metric historyMetric;
@@ -158,13 +159,12 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
     config.getChartInfo().setCustomBegin(chartRange.getBegin());
     config.getChartInfo().setCustomEnd(chartRange.getEnd());
 
-    // TODO implement code for adhoc
     ProfileTaskQueryKey key = new ProfileTaskQueryKey(0, 0, 0);
 
-    return new HistorySCP(dStore, config, key, topMapSelected);
+    return new HistoryAdHocSCP(dStore, config, key, topMapSelected);
   }
 
-  protected DetailDashboardPanel getDetail(SCP chart,
+  protected DetailAdHocPanel getDetail(SCP chart,
                                            Map<String, Color> initialSeriesColorMap,
                                            SeriesType seriesType,
                                            Map<CProfile, LinkedHashSet<String>> topMapSelected) {
@@ -178,15 +178,16 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
       seriesColorMapToUse = chart.getSeriesColorMap();
     }
 
-    DetailDashboardPanel detailPanel =
-        new DetailDashboardPanel(model.getDStore(),
-                                 model.getQueryInfo(),
-                                 model.getTableInfo(),
-                                 chartMetric,
-                                 seriesColorMapToUse,
-                                 processType,
-                                 seriesType,
-                                 topMapSelected);
+    DetailAdHocPanel detailPanel =
+        new DetailAdHocPanel(model.getDStore(),
+                             model.getQueryInfo(),
+                             model.getChartInfo(),
+                             model.getTableInfo(),
+                             chartMetric,
+                             seriesColorMapToUse,
+                             processType,
+                             seriesType,
+                             topMapSelected);
 
     CustomAction customAction = new CustomAction() {
       @Override

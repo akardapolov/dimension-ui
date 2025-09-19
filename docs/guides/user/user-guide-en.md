@@ -236,54 +236,58 @@ Template integration is also built into the application's settings storage and s
 
 ## Data visualization
 
-The application supports four data display options, which are located in the **Workspace** and **Dashboard** interfaces:
+The application supports several ways to display data:
 
-In the **Workspace** interface:
+### **Workspace** Interface
 
-1. Real-time mode, when the data are visualized as they arrive. To display data in this mode, you need to select the appropriate metric or query column in the **Real-time** interface. In the **Details** interface, it is possible to choose **Count**, **Sum** and **Average** functions. For numeric values it is possible any of these functions can be selected, for string data it is not possible to call the sum and average calculation. 
-
-    <a href="media/view/real-time.gif"  target="_blank">Screencast </a>
+* In real-time mode, data is visualized as it arrives. To display data in this mode, select the appropriate metric or query column in the **Real-time** interface. In the **Details** interface, you can choose **Count**, **Sum**, or **Average** functions. For numeric values, any of these functions can be selected; for string data, sum and average calculations are not available. &lt;a href="media/view/real-time.gif" target="_blank"&gt;Screencast&lt;/a&gt;
 
 ![Real-time](media/view/real-time.png)
 
-2. In the historical section, when the data is displayed for the previous observation period. To do this you need to select a metric or query column and specify the range in **History** interface. The **Custom** field allows for more detailed range selection using the **Relative** and **Absolute** interfaces.
-
-   <a href="media/view/history.gif"  target="_blank"> Screencast</a>
+* In historical view, data is displayed for a previous observation period. To do this, select a metric or query column and specify a range in the **History** interface; when selecting the **Custom** field, a more detailed range selection is possible.&lt;a href="media/view/history.gif" target="_blank"&gt; Screencast&lt;/a&gt;
 
 ![History](media/view/history.png)
 
-3. Display multidimensional data as a **Pivot** summary report with support for row and column totals.
-   
+* Display of multidimensional data as a **Pivot** summary report with support for row and column totals.
+
 ![Stacked pivot](media/view/pivot.png)
 
-In the **Dashboard** interface, you can display real-time data while simultaneously tracking multiple selected metrics and columns from running profiles.
+### **Dashboard** Interface
+
+In the **Dashboard** interface, data can be displayed in real-time while simultaneously tracking several selected metrics and columns from different profiles.
 
 ![Dashboard](media/view/dashboard.png)
+
+If you need to view detailed information for a selected dimension, clicking the **Details** button will open an extended statistics window with history viewing capability.
+
+![Dashboard details](media/view/dashboard-details.png)
 
 [Return to Table of Contents](#contents)
 
 ## Data analysis
 
-Data analysis functionality is available in the **Analyze** interface. By selecting a certain range, get the top indicators associated with the selected measurement in the **Visualize** block for all other measurements (for numerical data) and then get a real-time updated graph on them, but with the selected filter:
+Data analysis functionality is available in detail when a range is selected.
+
+By selecting a specific range, you can get the top related indicators for all other dimensions (for numeric data) and then obtain a real-time updating graph with the selected filter:
 
 ![Analyze real time](media/analyze/analyze_real_time.png)
 
-For history, the display logic is similar, except that the data is not updated, but only the ranges selected in the **Visualize** block are displayed.
+For history, the display logic is similar, except that the data is not updated; only the selected ranges are shown.
 
 ![Analyze history](media/analyze/analyze_history.png)
 
-It is possible to hide data on indicators in the legend, it is convenient in case of long names of measurement indicators.
+You can hide data by indicators in the legend, which is convenient when dimension indicator names are long.
 
-To analyse the data, the graph of each selected measurement is divided into blocks: **Data**, **Anomaly** and **Forecast**. The **Data** block displays graphs of the collected data for the selected range, while the **Anomaly** and **Forecast** blocks display the results of data analysis using the connected **Matrix Profile** algorithms and the **Smile** algorithm library in the form of graphs. This type of interface is displayed for each selected measurement.
+For data analysis, the graph for each selected dimension is divided into blocks: **Data**, **Anomaly**, and **Forecast**. The **Data** block displays graphs of collected data for the selected range; **Anomaly** and **Forecast** show data analysis results using connected **Matrix Profile** algorithms and the **Smile** algorithm library as graphs. This interface view is displayed for each selected dimension.
 
-For the **Anomaly** block, the top part of the interface displays the available algorithms (in the screenshot it is **STAMP**), the left part displays all the available measurement metrics, selecting a value from the list gives the user a **Matrix Profile** calculation graph, where *maximums* at the top of the graph are *anomalies in the data*, *minimums* at the bottom are *repeated values in the metrics*.
+For the **Anomaly** block, available algorithms are shown at the top of the interface (in the screenshot, this is **STAMP**); on the left, all available dimension indicators are displayed. When a value is selected from the list, the user gets a **Matrix Profile** calculation graph, where *maxima* at the top of the graph are *anomalies in the data*, and *minima* at the bottom are *repeated values in the indicators*.
 
-For the **Forecast** block, the top part of the interface also shows the available algorithms (in the screenshot it is **ARIMA**), the left part shows all available measurement indicators, selecting a value from the list gives the user a graph with data and continued forecast values (dashed line).
+For the **Forecast** block, available algorithms are also shown at the top of the interface (in the screenshot, this is **ARMA**); on the left, all available dimension indicators are displayed. When a value is selected from the list, the user gets a graph with data and forecast continuation values (dashed line).
 
 ![Anomaly](media/analyze/anomaly-data.png)
 ![Forecast](media/analyze/forecast-data.png)
 
-For each selected algorithm (for **Anomaly** and for **Forecast**), there is an option to manage its settings through the **Settings** form.
+For each selected algorithm (for **Anomaly** and **Forecast**), you can manage its settings via the **Settings** form.
 
 ![Settings anomaly](media/analyze/settings_anomaly.png) ![Settings forecast](media/analyze/settings_forecast.png)
 
@@ -291,28 +295,27 @@ For each selected algorithm (for **Anomaly** and for **Forecast**), there is an 
 
 ## Reporting system
 
-The application has a function for creating reports in PDF format.
+The application has a feature to create reports in PDF format.
 
-### Customising report parameters
+### Report Parameter Configuration
 
-To customise the report parameters, you need to select the appropriate profile, job and query and then select the corresponding 
-metric or query column in the **Report** interface. On the **Design** tab, there is an option to select a date range.
-After displaying the design of the future report, you can edit the description, you can select the desired one from the **Count**, **Sum** and
-**Average**. For numeric values any of these functions can be selected, for string data it is not possible to call **Count**, **Sum** and **Average** functions.
-calculation of the average value.
+To configure report parameters, select the appropriate profile, job, and query, then choose a metric or query column in the **Playground** interface and save the design profile.
+
+![Playground](media/report/playground.png)
+
+On the **Design** tab, select the saved profile, choose the required ranges, and create a report by clicking the **Report** button.
+
+After the future report layout is displayed, you can edit the description, select any of the **Count**, **Sum**, or **Average** functions, arbitrary date ranges, hide the legend, and enable filtering.
 
 ![Design](media/report/design.png)
 
-
 ### Report generation
 
-After the user has configured all the necessary parameters of the report, he starts the process of generating the report using
-the button **Report** <a href="media/report/report.gif"  target="_blank">Screencast</a>
-
+After the user has configured all necessary report parameters, they start the report generation process via the **Report** button &lt;a href="media/report/report.gif" target="_blank"&gt;Screencast&lt;/a&gt;
 
 ### Viewing the report
 
-The created PDF report is displayed on the **Report** tab, designed for viewing reports. The report contains all the data from the design: graphs, tables and comments.
+The created PDF report is displayed on the **Report** tab, which is intended for report viewing. The report contains all data from the layout: graphs, tables, and comments.
 
 ![Report](media/report/report.png)
 

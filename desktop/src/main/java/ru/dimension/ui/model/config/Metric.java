@@ -104,4 +104,38 @@ public class Metric {
 
     return copy;
   }
+
+  public GroupFunction getSafeGroupFunction() {
+    if (this.groupFunction != null) {
+      return this.groupFunction;
+    }
+
+    if (CType.STRING.equals(this.yAxis.getCsType().getCType())) {
+      return GroupFunction.COUNT;
+    } else {
+      if (Arrays.stream(TimestampType.values())
+          .anyMatch((t) -> t.name().equals(this.yAxis.getColDbTypeName()))) {
+        return GroupFunction.COUNT;
+      } else {
+        return GroupFunction.AVG;
+      }
+    }
+  }
+
+  public ChartType getSafeChartType() {
+    if (this.chartType != null) {
+      return this.chartType;
+    }
+
+    if (CType.STRING.equals(this.yAxis.getCsType().getCType())) {
+      return ChartType.STACKED;
+    } else {
+      if (Arrays.stream(TimestampType.values())
+          .anyMatch((t) -> t.name().equals(this.yAxis.getColDbTypeName()))) {
+        return ChartType.STACKED;
+      } else {
+        return ChartType.LINEAR;
+      }
+    }
+  }
 }

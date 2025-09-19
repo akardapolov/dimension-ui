@@ -29,7 +29,9 @@ public class ChartDataLoader implements HelperChart {
   private final FunctionDataHandler dataHandler;
   private boolean isRealTime;
 
+  @Setter
   private double range;
+  @Setter
   private int batchSize;
 
   @Getter
@@ -88,6 +90,10 @@ public class ChartDataLoader implements HelperChart {
       throws BeginEndWrongOrderException, SqlColMetadataException {
 
     double k = getK(range, chartInfo);
+
+    if (!isRealTime) {
+      k = HelperChart.calculateK(range, metric.getNormFunction());
+    }
 
     if (beginRange > endRange) {
       return;

@@ -40,6 +40,7 @@ import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.module.ReportChartModule;
 import ru.dimension.ui.component.module.report.playground.MetricColumnPanel;
+import ru.dimension.ui.component.panel.CollapseCardPanel;
 import ru.dimension.ui.helper.DateHelper;
 import ru.dimension.ui.helper.DesignHelper;
 import ru.dimension.ui.helper.GUIHelper;
@@ -84,6 +85,8 @@ public class DesignView extends JPanel {
   private final JScrollPane chartScrollPane;
   private final JScrollPane designListScrollPane;
 
+  private final CollapseCardPanel collapseCardPanel;
+
   private List<File> designSaveDirs;
 
   private boolean programmaticDateUpdate = false;
@@ -111,6 +114,9 @@ public class DesignView extends JPanel {
     this.cardScrollPane = createCardScrollPane();
     this.chartContainer = initChartContainer();
     this.chartScrollPane = createChartScrollPane();
+    this.collapseCardPanel = new CollapseCardPanel();
+    this.collapseCardPanel.setCollapseCheckBoxEnabled(false);
+
     this.designListScrollPane = new JScrollPane(designReportCase.getJScrollPane());
 
     this.designSaveDirs = new ArrayList<>();
@@ -156,6 +162,7 @@ public class DesignView extends JPanel {
         .cell(saveButton)
         .cell(reportButton)
         .cell(deleteButton)
+        .cell(collapseCardPanel)
         .cell()
         .cell(new JLabel()).fillX();
     gblConfig.done();
@@ -437,6 +444,8 @@ public class DesignView extends JPanel {
     clearButton.setEnabled(hasCharts);
     reportButton.setEnabled(hasCharts);
     deleteButton.setEnabled(hasCharts);
+    collapseCardPanel.setCollapseCheckBoxEnabled(hasCharts);
+
     collapseCard.setVisible(hasCards);
   }
 

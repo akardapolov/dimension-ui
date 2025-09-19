@@ -11,11 +11,16 @@ import javax.swing.JRadioButton;
 import lombok.Data;
 import org.jdesktop.swingx.JXTitledSeparator;
 import org.painlessgridbag.PainlessGridBag;
-import ru.dimension.ui.component.panel.popup.ConfigPopupPanel;
+import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.ui.component.broker.Destination;
+import ru.dimension.ui.component.broker.Message;
+import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.panel.function.NormFunctionPanel;
 import ru.dimension.ui.component.panel.function.TimeRangeFunctionPanel;
+import ru.dimension.ui.component.panel.popup.ConfigPopupPanel;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
+import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.function.GroupFunction;
 
 @Data
@@ -25,7 +30,13 @@ public class FunctionPanel extends JPanel {
   private final JRadioButton avg;
   private final ButtonGroup buttonGroup;
   private final ConfigPopupPanel configPopupPanel;
+
+  private MessageBroker.Component component;
+  private ProfileTaskQueryKey key;
+  private CProfile cProfile;
+
   private BiConsumer<String, GroupFunction> runAction;
+  private BiConsumer<String, GroupFunction> externalRunAction;
 
   public FunctionPanel(JLabel label, TimeRangeFunctionPanel timeRangeFunctionPanel) {
     this(label);
@@ -34,6 +45,19 @@ public class FunctionPanel extends JPanel {
 
   public FunctionPanel(JLabel label, TimeRangeFunctionPanel timeRangeFunctionPanel, NormFunctionPanel normFunctionPanel) {
     this(label);
+    this.configPopupPanel.updateContent(() -> createPopupContent(timeRangeFunctionPanel, normFunctionPanel));
+  }
+
+  public FunctionPanel(JLabel label,
+                       MessageBroker.Component component,
+                       ProfileTaskQueryKey key,
+                       CProfile cProfile,
+                       TimeRangeFunctionPanel timeRangeFunctionPanel,
+                       NormFunctionPanel normFunctionPanel) {
+    this(label);
+    this.component = component;
+    this.key = key;
+    this.cProfile = cProfile;
     this.configPopupPanel.updateContent(() -> createPopupContent(timeRangeFunctionPanel, normFunctionPanel));
   }
 
@@ -73,13 +97,36 @@ public class FunctionPanel extends JPanel {
 
     count.addActionListener(e -> {
       if (runAction != null) runAction.accept("functionChanged", GroupFunction.COUNT);
+      if (component != null) {
+        sendGroupFunctionMessage(GroupFunction.COUNT);
+      }
     });
     sum.addActionListener(e -> {
       if (runAction != null) runAction.accept("functionChanged", GroupFunction.SUM);
+      if (component != null) {
+        sendGroupFunctionMessage(GroupFunction.SUM);
+      }
     });
     avg.addActionListener(e -> {
       if (runAction != null) runAction.accept("functionChanged", GroupFunction.AVG);
+      if (component != null) {
+        sendGroupFunctionMessage(GroupFunction.AVG);
+      }
     });
+  }
+
+  private void sendGroupFunctionMessage(GroupFunction function) {
+    if (component != null && key != null && cProfile != null) {
+      Destination destination = Destination.withDefault(component);
+      MessageBroker broker = MessageBroker.getInstance();
+      broker.sendMessage(Message.builder()
+                             .destination(destination)
+                             .action(MessageBroker.Action.NEED_TO_SAVE_GROUP_FUNCTION)
+                             .parameter("key", key)
+                             .parameter("cProfile", cProfile)
+                             .parameter("groupFunction", function)
+                             .build());
+    }
   }
 
   private JPanel createPopupContent() {

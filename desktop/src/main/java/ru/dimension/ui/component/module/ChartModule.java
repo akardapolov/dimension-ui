@@ -1,7 +1,5 @@
 package ru.dimension.ui.component.module;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTaskPane;
@@ -30,15 +28,13 @@ import ru.dimension.ui.state.SqlQueryState;
 
 @Log4j2
 public class ChartModule extends JXTaskPane {
-  private final MessageBroker.Component component;
 
   @Getter
   private final ChartView view;
+  @Getter
   private final ChartModel model;
   @Getter
   private final ChartPresenter presenter;
-
-  private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
   public ChartModule(MessageBroker.Component component,
                      ChartKey chartKey,
@@ -49,7 +45,6 @@ public class ChartModule extends JXTaskPane {
                      TableInfo tableInfo,
                      SqlQueryState sqlQueryState,
                      DStore dStore) {
-    this.component = component;
     this.model = new ChartModel(chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
     this.view = new ChartView(component);
     this.presenter = new ChartPresenter(component, model, view);

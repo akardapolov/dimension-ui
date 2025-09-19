@@ -9,9 +9,10 @@ import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
-import ru.dimension.ui.component.module.ChartsModule;
-import ru.dimension.ui.component.module.ConfigureModule;
+import ru.dimension.ui.component.chart.HelperChart;
 import ru.dimension.ui.component.module.ModelModule;
+import ru.dimension.ui.component.module.preview.PreviewChartsModule;
+import ru.dimension.ui.component.module.preview.PreviewConfigModule;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
@@ -19,7 +20,6 @@ import ru.dimension.ui.model.info.ProfileInfo;
 import ru.dimension.ui.router.event.EventListener;
 import ru.dimension.ui.router.listener.ProfileStartStopListener;
 import ru.dimension.ui.state.SqlQueryState;
-import ru.dimension.ui.component.chart.HelperChart;
 
 @Log4j2
 public class DashboardComponent implements HelperChart, ProfileStartStopListener {
@@ -34,8 +34,8 @@ public class DashboardComponent implements HelperChart, ProfileStartStopListener
   private final DStore dStore;
 
   private ModelModule modelModule;
-  private ConfigureModule configureModule;
-  private ChartsModule chartsModule;
+  private PreviewConfigModule configureModule;
+  private PreviewChartsModule chartsModule;
 
   private final MessageBroker broker = MessageBroker.getInstance();
 
@@ -59,8 +59,8 @@ public class DashboardComponent implements HelperChart, ProfileStartStopListener
     verticalSplitPane.setResizeWeight(0.5);
 
     modelModule = new ModelModule(component, profileManager);
-    configureModule = new ConfigureModule(component);
-    chartsModule = new ChartsModule(component, profileManager, sqlQueryState, dStore);
+    configureModule = new PreviewConfigModule(component);
+    chartsModule = new PreviewChartsModule(component, profileManager, sqlQueryState, dStore);
 
     verticalSplitPane.setTopComponent(configureModule.getView());
     verticalSplitPane.setBottomComponent(chartsModule.getView());

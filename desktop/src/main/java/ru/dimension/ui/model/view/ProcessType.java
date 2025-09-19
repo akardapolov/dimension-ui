@@ -2,12 +2,7 @@ package ru.dimension.ui.model.view;
 
 public enum ProcessType {
   REAL_TIME("Real-time"),
-  REAL_TIME_ANALYZE("Analyze"),
-  HISTORY("History"),
-  HISTORY_ANALYZE("Analyze"),
-  ADHOC("Ad-hoc"),
-  ADHOC_ANALYZE("Ad-hoc analyze"),
-  SEARCH("Search");
+  HISTORY("History");
 
   private final String name;
 

@@ -57,7 +57,12 @@ public class ReportChartView {
 
     historyTimeRangeFunctionPanel = new TimeRangeFunctionPanel();
     historyNormFunctionPanel = new NormFunctionPanel();
-    historyFunctionPanel = new FunctionPanel(getLabel("Group: "), historyTimeRangeFunctionPanel, historyNormFunctionPanel);
+    historyFunctionPanel = new FunctionPanel(getLabel("Group: "),
+                                             reportChartModel.getComponent(),
+                                             reportChartModel.getKey(),
+                                             reportChartModel.getChartKey().getCProfile(),
+                                             historyTimeRangeFunctionPanel,
+                                             historyNormFunctionPanel);
     historyRangePanel = new HistoryRangePanel(getLabel("Range: "));
     historyLegendPanel = new LegendPanel(getLabel("Legend: "));
     historyFilterPanel = new FilterPanel(reportChartModel.getComponent());

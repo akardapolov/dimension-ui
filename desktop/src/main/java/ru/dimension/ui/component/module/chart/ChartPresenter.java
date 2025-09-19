@@ -270,6 +270,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
     DetailDashboardPanel detailPanel =
         new DetailDashboardPanel(model.getDStore(),
                                  model.getQueryInfo(),
+                                 model.getChartInfo(),
                                  model.getTableInfo(),
                                  chartMetric,
                                  seriesColorMapToUse,

@@ -7,8 +7,6 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -47,13 +45,16 @@ import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
+import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.config.Metric;
+import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.info.ProfileInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.TaskInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.report.CProfileReport;
+import ru.dimension.ui.model.report.DesignReportData;
 import ru.dimension.ui.model.report.MetricReport;
 import ru.dimension.ui.model.report.QueryReportData;
 import ru.dimension.ui.model.table.JXTableCase;
@@ -87,6 +88,18 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
     this.view.getSaveButton().addActionListener(this);
     this.view.getReportButton().addActionListener(this);
     this.view.getDeleteButton().addActionListener(this);
+
+    this.view.getCollapseCardPanel().setStateChangeConsumer(this::handleCollapseCardChange);
+  }
+
+  private void handleCollapseCardChange(ChartCardState cardState) {
+    ArrayList<Component> containerCards = new ArrayList<>(List.of(view.getChartContainer().getComponents()));
+    boolean collapseAll = ChartCardState.EXPAND_ALL.equals(cardState);
+
+    containerCards.stream()
+        .filter(c -> c instanceof ReportChartModule)
+        .map(c -> (ReportChartModule) c)
+        .forEach(cardChart -> cardChart.setCollapsed(collapseAll));
   }
 
   @Override
@@ -96,12 +109,38 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
     switch (message.action()) {
       case ADD_CHART -> handleAddChart(message);
       case REMOVE_CHART -> handleRemoveChart(message);
-      case NEED_TO_SAVE_DESIGN -> handleNeedSaveDesign(message);
-      case NEED_TO_UPDATE_LIST_DESIGN -> handleNeedUpdateListDesign(message);
+      case NEED_TO_SAVE_COMMENT -> handleNeedSaveComment(message);
+      case NEED_TO_SAVE_GROUP_FUNCTION -> handleNeedSaveGroupFunction(message);
+      case NEED_TO_UPDATE_LIST_DESIGN -> handleNeedUpdateList(message);
     }
   }
 
-  private void handleNeedUpdateListDesign(Message message) {
+  private void handleNeedSaveGroupFunction(Message message) {
+    ProfileTaskQueryKey key = message.parameters().get("key");
+    CProfile cProfile = message.parameters().get("cProfile");
+    GroupFunction groupFunction = message.parameters().get("groupFunction");
+
+    log.info("Key: " + key);
+    log.info("CProfile: " + cProfile);
+    log.info("GroupFunction: " + groupFunction);
+
+    Optional<CProfileReport> cProfileReport = model.getMapReportData().get(key)
+        .getCProfileReportList()
+        .stream()
+        .filter(f -> f.getColId() == cProfile.getColId())
+        .findAny();
+
+    cProfileReport.ifPresent(profileReport -> {
+      profileReport.setGroupFunction(groupFunction);
+      ChartType chartType = GroupFunction.COUNT.equals(groupFunction) ?
+          ChartType.STACKED : ChartType.LINEAR;
+      profileReport.setChartType(chartType);
+    });
+
+    view.getSaveButton().setEnabled(true);
+  }
+
+  private void handleNeedUpdateList(Message message) {
     String designName = message.parameters().get("designName");
     SwingUtilities.invokeLater(() -> {
       view.loadDesignConfigurationByName(designName);
@@ -196,13 +235,6 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
           handleClear();
         }
 
-        JOptionPane.showMessageDialog(
-            view,
-            "Design deleted successfully.",
-            "Information",
-            JOptionPane.INFORMATION_MESSAGE
-        );
-
       } catch (Exception e) {
         log.error("Failed to delete design", e);
         JOptionPane.showMessageDialog(
@@ -240,10 +272,10 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
       );
 
       LocalDateTime dateTime = DesignHelper.parseDesignDate(designDir);
-      String folderDate = dateTime.format(DesignHelper.getFileFormatFormatter());
+      String folderDate = DesignHelper.formatFolderName(dateTime);
 
-      saveDesignConfig(model.getMapReportData(),
-                       folderDate,
+      saveDesignConfig(folderDate,
+                       model.getMapReportData(),
                        view.getDateTimePickerFrom().getDate(),
                        view.getDateTimePickerTo().getDate());
 
@@ -256,30 +288,25 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
     }
   }
 
-  public void saveDesignConfig(Map<ProfileTaskQueryKey, QueryReportData> mapReportData,
-                               String folderDate,
+  public void saveDesignConfig(String folderDate,
+                               Map<ProfileTaskQueryKey, QueryReportData> mapReportData,
                                Date startDate,
                                Date endDate) throws IOException {
     Map<String, QueryReportData> configToSave = new HashMap<>();
-    DateTimeFormatter formatter = DesignHelper.getFileFormatFormatter();
 
-    // Create new configuration
     for (Map.Entry<ProfileTaskQueryKey, QueryReportData> entry : mapReportData.entrySet()) {
-      ProfileTaskQueryKey key = entry.getKey();
-      String formattedStart = LocalDateTime.ofInstant(startDate.toInstant(), ZoneId.systemDefault()).format(formatter);
-      String formattedEnd = LocalDateTime.ofInstant(endDate.toInstant(), ZoneId.systemDefault()).format(formatter);
-
-      String configKey = key.getProfileId() + "_" +
-          key.getTaskId() + "_" +
-          key.getQueryId() + "_" +
-          formattedStart + "_" +
-          formattedEnd;
-
-      configToSave.put(configKey, entry.getValue());
+      configToSave.put(DesignHelper.keyToString(entry.getKey()), entry.getValue());
     }
 
-    String folderName = DesignHelper.formatFolderName(LocalDateTime.parse(folderDate, DesignHelper.getFileFormatFormatter()));
-    String fileJson = folderName + model.getFilesHelper().getFileSeparator() + "design.json";
+    DesignReportData designData = new DesignReportData(
+        folderDate,
+        startDate.getTime(),
+        endDate.getTime()
+    );
+
+    designData.getMapReportData().putAll(configToSave);
+
+    String fileJson = folderDate + model.getFilesHelper().getFileSeparator() + "design.json";
 
     // Delete existing design before saving
     try {
@@ -289,7 +316,7 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
     }
 
     // Save new configuration
-    model.getReportManager().addConfig(configToSave, folderDate);
+    model.getReportManager().saveDesign(designData);
   }
 
   @Override
@@ -319,130 +346,125 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
     String folderName = DesignHelper.formatFolderName(dateTime);
 
     model.setLoadedDesignFolder(folderName);
-    loadDesignConfiguration(folderName);
+
+    try {
+      loadDesignConfiguration(folderName);
+    } catch (IOException e) {
+      log.error("Failed to load design configuration for folder: {}", folderName, e);
+      DialogHelper.showErrorDialog("Failed to load design: " + e.getMessage(), "Error", e);
+      model.setLoadedDesignFolder("");
+      return;
+    }
 
     boolean hasChanges = hasConfigChanges();
     view.setEnabledButton(true, true, hasChanges, true, true);
   }
 
-  private void loadDesignConfiguration(String folderName) {
-    Map<String, QueryReportData> mapDesign = model.getReportManager().getConfig(folderName, "design");
-    if (mapDesign.isEmpty()) {
+  private void loadDesignConfiguration(String folderName) throws IOException {
+    DesignReportData designReportData = model.getReportManager().loadDesign(folderName);
+    if (Objects.isNull(designReportData)) {
       return;
     }
 
     handleClear();
 
-    for (Map.Entry<String, QueryReportData> entry : mapDesign.entrySet()) {
-      processDesignEntry(entry, folderName);
-    }
+    processDesignEntry(designReportData);
   }
 
-  private void processDesignEntry(Map.Entry<String, QueryReportData> entry,
-                                  String folderName) {
-    String[] stringKey = entry.getKey().split("_");
-
+  private void processDesignEntry(DesignReportData designData) {
     ProfileManager profileManager = model.getProfileManager();
 
-    int profileId = Integer.parseInt(stringKey[0]);
-    String profileName = profileManager.getProfileInfoById(profileId).getName();
-    int taskId = Integer.parseInt(stringKey[1]);
-    String taskName = profileManager.getTaskInfoById(taskId).getName();
-    int queryId = Integer.parseInt(stringKey[2]);
-    String queryName = profileManager.getQueryInfoById(queryId).getName();
-    QueryInfo queryInfo = profileManager.getQueryInfoById(queryId);
+    Date dateBegin = new Date(designData.getDateFrom());
+    Date dateEnd = new Date(designData.getDateTo());
 
-    TableInfo tableInfo = profileManager.getTableInfoByTableName(queryName);
+    model.getDesignDateRanges().put(designData.getFolderName(), Map.entry(dateBegin, dateEnd));
 
-    String dateFrom = stringKey[3];
-    LocalDateTime begin = LocalDateTime.parse(dateFrom, DesignHelper.getFileFormatFormatter());
-    Date dateBegin = Date.from(begin.atZone(ZoneId.systemDefault()).toInstant());
+    for (Map.Entry<String, QueryReportData> entry : designData.getMapReportData().entrySet()) {
+      ProfileTaskQueryKey key = DesignHelper.stringToKey(entry.getKey());
+      QueryReportData queryReportData = entry.getValue();
 
-    String dateTo = stringKey[4];
-    LocalDateTime end = LocalDateTime.parse(dateTo, DesignHelper.getFileFormatFormatter());
-    Date dateEnd = Date.from(end.atZone(ZoneId.systemDefault()).toInstant());
+      QueryInfo queryInfo = profileManager.getQueryInfoById(key.getQueryId());
+      TableInfo tableInfo = profileManager.getTableInfoByTableName(queryInfo.getName());
 
-    model.getDesignDateRanges().put(folderName, Map.entry(dateBegin, dateEnd));
+      List<MetricReport> metricReportList = queryReportData.getMetricReportList();
+      List<CProfileReport> cProfileReportList = queryReportData.getCProfileReportList();
 
-    ProfileTaskQueryKey key = new ProfileTaskQueryKey(profileId, taskId, queryId);
+      model.getMapReportData().putIfAbsent(key, new QueryReportData(cProfileReportList, metricReportList));
 
-    List<MetricReport> metricReportList = entry.getValue().getMetricReportList();
-    List<CProfileReport> cProfileReportList = entry.getValue().getCProfileReportList();
-    model.getMapReportData().putIfAbsent(key, new QueryReportData(cProfileReportList, metricReportList));
-
-    ChartInfo chartInfo = profileManager.getChartInfoById(queryInfo.getId());
-    if (Objects.isNull(chartInfo)) {
-      throw new NotFoundException(String.format("Chart info with id=%s not found", queryInfo.getId()));
-    }
-
-    addQueryCard(key);
-
-    if (metricReportList.size() != 0 || cProfileReportList.size() != 0) {
-      MetricColumnPanel card = view.getCardComponent(key);
-
-      for (MetricReport metric : metricReportList) {
-        setCheckboxInTable(card.getJtcMetric(), metric.getId(), true);
+      ChartInfo chartInfo = profileManager.getChartInfoById(queryInfo.getId());
+      if (Objects.isNull(chartInfo)) {
+        throw new NotFoundException(String.format("Chart info with id=%s not found", queryInfo.getId()));
       }
 
-      for (CProfileReport cProfileReport : cProfileReportList) {
-        CProfile cProfile = tableInfo.getCProfiles().stream()
-            .filter(cp -> cp.getColId() == cProfileReport.getColId())
-            .findFirst()
-            .orElseThrow(() -> new NotFoundException("CProfile not found for colId: " + cProfileReport.getColId()));
+      addQueryCard(key);
 
-        setCheckboxInTable(card.getJtcColumn(), cProfile.getColId(), true);
+      if (metricReportList.size() != 0 || cProfileReportList.size() != 0) {
+        MetricColumnPanel card = view.getCardComponent(key);
 
-        ChartInfo chartInfoCopy = chartInfo.copy();
-        chartInfoCopy.setRangeHistory(RangeHistory.CUSTOM);
-        chartInfoCopy.setCustomBegin(dateBegin.getTime());
-        chartInfoCopy.setCustomEnd(dateEnd.getTime());
+        for (MetricReport metric : metricReportList) {
+          setCheckboxInTable(card.getJtcMetric(), metric.getId(), true);
+        }
 
-        ChartKey chartKey = new ChartKey(key, cProfile);
-        Metric metric = new Metric(tableInfo, cProfile);
-        Optional.ofNullable(cProfileReport.getGroupFunction()).ifPresent(metric::setGroupFunction);
-        Optional.ofNullable(cProfileReport.getChartType()).ifPresent(metric::setChartType);
+        for (CProfileReport cProfileReport : cProfileReportList) {
+          CProfile cProfile = tableInfo.getCProfiles().stream()
+              .filter(cp -> cp.getColId() == cProfileReport.getColId())
+              .findFirst()
+              .orElseThrow(() -> new NotFoundException("CProfile not found for colId: " + cProfileReport.getColId()));
 
-        ReportChartModule taskPane = new ReportChartModule(
-            model.getComponent(),
-            chartKey,
-            key,
-            metric,
-            queryInfo,
-            chartInfoCopy,
-            tableInfo,
-            model.getDStore()
-        );
+          setCheckboxInTable(card.getJtcColumn(), cProfile.getColId(), true);
 
-        Optional.ofNullable(cProfileReport.getComment()).ifPresent(taskPane.getModel().getDescription()::setText);
+          ChartInfo chartInfoCopy = chartInfo.copy();
+          chartInfoCopy.setRangeHistory(RangeHistory.CUSTOM);
+          chartInfoCopy.setCustomBegin(dateBegin.getTime());
+          chartInfoCopy.setCustomEnd(dateEnd.getTime());
 
-        String keyValue = getKey(key, cProfile);
-        taskPane.setTitle(keyValue);
+          ChartKey chartKey = new ChartKey(key, cProfile);
+          Metric metric = new Metric(tableInfo, cProfile);
+          Optional.ofNullable(cProfileReport.getGroupFunction()).ifPresent(metric::setGroupFunction);
+          Optional.ofNullable(cProfileReport.getChartType()).ifPresent(metric::setChartType);
 
-        log.info("Add task pane: " + keyValue);
+          ReportChartModule taskPane = new ReportChartModule(
+              model.getComponent(),
+              chartKey,
+              key,
+              metric,
+              queryInfo,
+              chartInfoCopy,
+              tableInfo,
+              model.getDStore()
+          );
 
-        view.addChartCard(taskPane, (module, error) -> {
-          if (error != null) {
-            DialogHelper.showErrorDialog("Failed to load chart: " + error.getMessage(), "Error", error);
-            return;
-          }
-          model.getChartPanes().computeIfAbsent(key, k -> new ConcurrentHashMap<>()).put(cProfile, taskPane);
+          Optional.ofNullable(cProfileReport.getComment()).ifPresent(taskPane.getModel().getDescription()::setText);
 
-          Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+          String keyValue = getKey(key, cProfile);
+          taskPane.setTitle(keyValue);
 
-          broker.addReceiver(destinationHistory, taskPane.getPresenter());
+          log.info("Add task pane: " + keyValue);
 
-          taskPane.revalidate();
-          taskPane.repaint();
+          view.addChartCard(taskPane, (module, error) -> {
+            if (error != null) {
+              DialogHelper.showErrorDialog("Failed to load chart: " + error.getMessage(), "Error", error);
+              return;
+            }
+            model.getChartPanes().computeIfAbsent(key, k -> new ConcurrentHashMap<>()).put(cProfile, taskPane);
 
-          ChartCardState chartCardState = UIState.INSTANCE.getChartCardStateAll(model.getComponent().name());
-          taskPane.setCollapsed(ChartCardState.EXPAND_ALL.equals(chartCardState));
+            Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
 
-          view.updateButtonStates();
-        });
+            broker.addReceiver(destinationHistory, taskPane.getPresenter());
+
+            taskPane.revalidate();
+            taskPane.repaint();
+
+            ChartCardState chartCardState = UIState.INSTANCE.getChartCardStateAll(model.getComponent().name());
+            taskPane.setCollapsed(ChartCardState.EXPAND_ALL.equals(chartCardState));
+
+            view.updateButtonStates();
+          });
+        }
       }
-    }
 
-    view.setDatesWithoutValidation(dateBegin, dateEnd);
+      view.setDatesWithoutValidation(dateBegin, dateEnd);
+    }
   }
 
   private void setCheckboxInTable(JXTableCase tableCase,
@@ -702,7 +724,7 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
     view.setEnabledButton(false, false, hasChanges, hasChanges, false);
   }
 
-  private void handleNeedSaveDesign(Message message) {
+  private void handleNeedSaveComment(Message message) {
     ProfileTaskQueryKey key = message.parameters().get("key");
     CProfile cProfile = message.parameters().get("cProfile");
     String comment = message.parameters().get("comment");
@@ -734,30 +756,30 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
         "Design name");
 
     LocalDateTime dateTime = DesignHelper.parseDesignDate(designDir);
-    String folderDate = dateTime.format(DesignHelper.getFileFormatFormatter());
     String folderName = DesignHelper.formatFolderName(dateTime);
 
-    Map<String, QueryReportData> diskRaw = model.getReportManager().getConfig(folderName, "design");
+    try {
+      DesignReportData diskDesignData = model.getReportManager().loadDesign(folderName);
 
-    Map<ProfileTaskQueryKey, QueryReportData> disk = new HashMap<>();
-    for (Map.Entry<String, QueryReportData> e : diskRaw.entrySet()) {
-      String[] p = e.getKey().split("_");
-      int profileId = Integer.parseInt(p[0]);
-      int taskId = Integer.parseInt(p[1]);
-      int queryId = Integer.parseInt(p[2]);
-      disk.put(new ProfileTaskQueryKey(profileId, taskId, queryId), e.getValue());
+      Map<ProfileTaskQueryKey, QueryReportData> disk = new HashMap<>();
+      for (Map.Entry<String, QueryReportData> e : diskDesignData.getMapReportData().entrySet()) {
+        disk.put(DesignHelper.stringToKey(e.getKey()), e.getValue());
+      }
+
+      log.info("=== DISK CONFIG ===");
+      logDetailedConfig(disk);
+      log.info("=== MEMORY CONFIG ===");
+      logDetailedConfig(model.getMapReportData());
+      log.info("=========================");
+
+      log.info("----Result-----");
+      log.info(disk.equals(model.getMapReportData()));
+
+      return !disk.equals(model.getMapReportData());
+    } catch (IOException e) {
+      log.error("Failed to load design from disk for comparison", e);
+      return true;
     }
-
-    log.info("=== DISK CONFIG ===");
-    logDetailedConfig(disk);
-    log.info("=== MEMORY CONFIG ===");
-    logDetailedConfig(model.getMapReportData());
-    log.info("=========================");
-
-    log.info("----Result-----");
-    log.info(disk.equals(model.getMapReportData()));
-
-    return !disk.equals(model.getMapReportData());
   }
 
   private void logDetailedConfig(Map<ProfileTaskQueryKey, QueryReportData> config) {

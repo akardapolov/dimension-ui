@@ -166,6 +166,7 @@ public class ReportChartPresenter implements HelperChart, MessageAction {
     DetailDashboardPanel detailPanel =
         new DetailDashboardPanel(model.getDStore(),
                                  model.getQueryInfo(),
+                                 model.getChartInfo(),
                                  model.getTableInfo(),
                                  chartMetric,
                                  seriesColorMapToUse,
@@ -268,6 +269,16 @@ public class ReportChartPresenter implements HelperChart, MessageAction {
 
   private void initializeFromState() {
     ChartKey chartKey = model.getChartKey();
+
+    RangeHistory inputRangeHistory = model.getChartInfo().getRangeHistory();
+    if (inputRangeHistory != null) {
+      UIState.INSTANCE.putHistoryRange(chartKey, inputRangeHistory);
+      if (inputRangeHistory == RangeHistory.CUSTOM) {
+        long customBegin = model.getChartInfo().getCustomBegin();
+        long customEnd = model.getChartInfo().getCustomEnd();
+        UIState.INSTANCE.putHistoryCustomRange(chartKey, new ChartRange(customBegin, customEnd));
+      }
+    }
 
     GroupFunction historyGroupFunction = UIState.INSTANCE.getHistoryGroupFunction(chartKey);
     if (historyGroupFunction != null) {

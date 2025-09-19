@@ -2,6 +2,8 @@ package ru.dimension.ui.component.module.preview.chart;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
@@ -10,8 +12,8 @@ import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.block.RealTimeConfigBlock;
 import ru.dimension.ui.component.broker.MessageBroker;
-import ru.dimension.ui.component.panel.LegendPanel;
 import ru.dimension.ui.component.panel.FunctionPanel;
+import ru.dimension.ui.component.panel.LegendPanel;
 import ru.dimension.ui.component.panel.popup.ActionPanel;
 import ru.dimension.ui.component.panel.popup.FilterPanel;
 import ru.dimension.ui.component.panel.range.RealTimeRangePanel;
@@ -32,6 +34,9 @@ public class PreviewChartView extends JPanel {
   private FilterPanel realTimeFilterPanel;
   private ActionPanel realTimeActionPanel;
 
+  @Getter
+  private JButton detailsButton;
+
   private RealTimeConfigBlock realTimeConfigBlock;
 
   @Getter
@@ -49,12 +54,14 @@ public class PreviewChartView extends JPanel {
     realTimeLegendPanel = new LegendPanel(getLabel("Legend: "));
     realTimeFilterPanel = new FilterPanel(component);
     realTimeActionPanel = new ActionPanel(component);
+    detailsButton = new JButton("Details");
 
     realTimeConfigBlock = new RealTimeConfigBlock(realTimeFunctionPanel,
                                                   realTimeRangePanel,
                                                   realTimeLegendPanel,
                                                   realTimeFilterPanel,
-                                                  realTimeActionPanel);
+                                                  realTimeActionPanel,
+                                                  detailsButton);
 
     realTimeChartPanel = new JPanel(new BorderLayout());
     realTimeConfigChart = createBaseSplitPane();
@@ -93,5 +100,9 @@ public class PreviewChartView extends JPanel {
     // Update UI
     realTimeConfigChart.revalidate();
     realTimeConfigChart.repaint();
+  }
+
+  public void setDetailsButtonAction(ActionListener listener) {
+    detailsButton.addActionListener(listener);
   }
 }

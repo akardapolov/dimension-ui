@@ -96,7 +96,7 @@ public class DescriptionPanel extends ConfigPopupPanel {
     MessageBroker broker = MessageBroker.getInstance();
     broker.sendMessage(Message.builder()
                            .destination(destination)
-                           .action(Action.NEED_TO_SAVE_DESIGN)
+                           .action(Action.NEED_TO_SAVE_COMMENT)
                            .parameter("key", key)
                            .parameter("cProfile", cProfile)
                            .parameter("comment", description.getText())

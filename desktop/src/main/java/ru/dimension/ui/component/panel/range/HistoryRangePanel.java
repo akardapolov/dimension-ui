@@ -5,17 +5,21 @@ import static ru.dimension.ui.laf.LafColorGroup.RANGE_NOT_SELECTED_FONT_COLOR;
 import static ru.dimension.ui.laf.LafColorGroup.RANGE_SELECTED_FONT_COLOR;
 
 import java.awt.Color;
+import java.beans.PropertyChangeListener;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.UIManager;
+import javax.swing.border.Border;
 import lombok.Data;
+import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.plaf.basic.CalendarHeaderHandler;
 import org.jdesktop.swingx.plaf.basic.SpinningCalendarHeaderHandler;
 import org.painlessgridbag.PainlessGridBag;
@@ -27,6 +31,7 @@ import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.view.panel.DateTimePicker;
 
 @Data
+@Log4j2
 public class HistoryRangePanel extends JPanel {
   private final JRadioButton day;
   private final JRadioButton week;
@@ -39,8 +44,13 @@ public class HistoryRangePanel extends JPanel {
   private final DateTimePicker dateTimePickerFrom;
   private final DateTimePicker dateTimePickerTo;
   private final JButton buttonApplyRange;
+  private javax.swing.Timer borderTimer;
+  private Border originalFromBorder, originalToBorder;
 
   private BiConsumer<String, RangeHistory> runAction;
+
+  private Date lastValidFrom;
+  private Date lastValidTo;
 
   public HistoryRangePanel() {
     this(null);
@@ -72,6 +82,12 @@ public class HistoryRangePanel extends JPanel {
     Map.Entry<Date, Date> range = DateHelper.getRangeDate();
     dateTimePickerFrom.setDate(range.getKey());
     dateTimePickerTo.setDate(range.getValue());
+
+    lastValidFrom = range.getKey();
+    lastValidTo = range.getValue();
+
+    originalFromBorder = dateTimePickerFrom.getBorder();
+    originalToBorder   = dateTimePickerTo.getBorder();
 
     this.configPopupPanel = new ConfigPopupPanel(this::createPopupContent);
 
@@ -125,6 +141,8 @@ public class HistoryRangePanel extends JPanel {
       if (runAction != null) runAction.accept("rangeChanged", RangeHistory.CUSTOM);
       colorButton(RangeHistory.CUSTOM);
     });
+
+    setupDateChangeListeners();
   }
 
   private JPanel createPopupContent() {
@@ -132,10 +150,9 @@ public class HistoryRangePanel extends JPanel {
     PainlessGridBag gbl = new PainlessGridBag(popupPanel, PGHelper.getPGConfig(), false);
 
     gbl.row().cell(labelFrom).cell(dateTimePickerFrom).fillX();
-    gbl.row().cell(labelTo).cell(dateTimePickerTo).fillX();
+    gbl.row().cell(labelTo)  .cell(dateTimePickerTo)  .fillX();
     gbl.row().cell(new JLabel("")).cell(buttonApplyRange).fillX();
     gbl.done();
-
     return popupPanel;
   }
 
@@ -157,5 +174,52 @@ public class HistoryRangePanel extends JPanel {
       case CUSTOM -> custom.setSelected(true);
     }
     colorButton(range);
+  }
+
+  private void setupDateChangeListeners() {
+    PropertyChangeListener dateChangeListener = evt -> {
+      if (!"date".equals(evt.getPropertyName())) {
+        return;
+      }
+
+      boolean fromChanged = evt.getSource() == dateTimePickerFrom;
+      Date newDate = (Date) evt.getNewValue();
+
+      Date candidateFrom = fromChanged ? newDate : dateTimePickerFrom.getDate();
+      Date candidateTo = fromChanged ? dateTimePickerTo.getDate() : newDate;
+
+      if (candidateTo.before(candidateFrom)) {
+        if (fromChanged) {
+          dateTimePickerFrom.setDate(lastValidFrom);
+        } else {
+          dateTimePickerTo.setDate(lastValidTo);
+        }
+
+        log.warn("Start date must be before the end date");
+        highlightWrongPicker(fromChanged);
+        return;
+      }
+
+      lastValidFrom = candidateFrom;
+      lastValidTo = candidateTo;
+    };
+
+    dateTimePickerFrom.addPropertyChangeListener(dateChangeListener);
+    dateTimePickerTo.addPropertyChangeListener(dateChangeListener);
+  }
+
+  private void highlightWrongPicker(boolean fromWrong) {
+    final DateTimePicker target = fromWrong ? dateTimePickerFrom : dateTimePickerTo;
+    target.setBorder(BorderFactory.createLineBorder(Color.RED, 2));
+    buttonApplyRange.setEnabled(false);
+
+    if (borderTimer != null) borderTimer.stop();
+    borderTimer = new javax.swing.Timer(3_000, e -> {
+      target.setBorder(fromWrong ? originalFromBorder : originalToBorder);
+      buttonApplyRange.setEnabled(true);
+      borderTimer.stop();
+    });
+    borderTimer.setRepeats(false);
+    borderTimer.start();
   }
 }

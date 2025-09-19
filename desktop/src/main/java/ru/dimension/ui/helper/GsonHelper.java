@@ -1,7 +1,6 @@
 package ru.dimension.ui.helper;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -12,7 +11,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 import javax.inject.Inject;
@@ -24,7 +22,7 @@ import ru.dimension.ui.exception.UnknownConfigClassException;
 import ru.dimension.ui.model.config.ConfigClasses;
 import ru.dimension.ui.model.config.ConfigEntity;
 import ru.dimension.ui.model.config.Table;
-import ru.dimension.ui.model.report.QueryReportData;
+import ru.dimension.ui.model.report.DesignReportData;
 
 @Log4j2
 @Singleton
@@ -61,27 +59,25 @@ public class GsonHelper {
     fileWriter.close();
   }
 
-  public void add(Map<String, QueryReportData> entity,
-                  String formattedDate) throws IOException {
-    String folderPath = "design_" + formattedDate;
-
-    String dirName = filesHelper.getDesignDir() + filesHelper.getFileSeparator() + folderPath;
-    try {
-      Files.createDirectories(Paths.get(dirName));
-    } catch (IOException ex) {
-      throw new RuntimeException(ex);
-    }
+  public void saveDesign(DesignReportData designData) throws IOException {
+    String dirName = filesHelper.getDesignDir() + filesHelper.getFileSeparator() + designData.getFolderName();
+    Files.createDirectories(Paths.get(dirName));
 
     String fileName = "design.json";
-    if (filesHelper.ifFileExistCommon(dirName, fileName)) {
-      throw new FileNameExistException("File name: " + fileName +
-                                           " already exist. Please choose another one..");
-    }
-
     FileWriter fileWriter = filesHelper.getFileWriterCommon(dirName, fileName);
-    gson.toJson(entity, fileWriter);
-
+    gson.toJson(designData, fileWriter);
     fileWriter.close();
+  }
+
+  public DesignReportData loadDesign(String folderName) throws IOException {
+    Path dirPath = Paths.get(filesHelper.getDesignDir() + filesHelper.getFileSeparator() + folderName);
+    Path file = PathHelper.searchRegularFilesStartsWith(dirPath, "design", ".json")
+        .stream().findAny().orElseThrow(() ->
+                                            new NotFoundException("Design file not found in " + dirPath));
+
+    try (FileReader fileReader = new FileReader(file.toFile())) {
+      return gson.fromJson(fileReader, DesignReportData.class);
+    }
   }
 
   public <T> void update(T entity,
@@ -178,37 +174,6 @@ public class GsonHelper {
     throw new RuntimeException("Configuration file:" + fileName +
                                    " not found in folder: " + getEntityTypeName(clazz));
   }
-
-  public Map<String, QueryReportData> getConfig(String dirName,
-                                                String fileName) {
-    Path dirPath = Paths.get(filesHelper.getDesignDir() + filesHelper.getFileSeparator() + dirName);
-
-    Path file;
-    try {
-      file = PathHelper.searchRegularFilesStartsWith(dirPath, fileName, ".json").
-          stream().findAny().orElseThrow(() ->
-                                             new NotFoundException(
-                                                 "File: " + fileName + ".json not found in " + dirPath));
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-    try (FileReader fileReader = new FileReader(file.toFile())) {
-
-      Map<String, QueryReportData> object = gson.fromJson(fileReader, new TypeToken<Map<String, QueryReportData>>() {
-      }.getType());
-
-      if (Objects.nonNull(object)) {
-        return object;
-      }
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-    throw new RuntimeException("Configuration file:" + fileName +
-                                   " not found in folder: " + dirPath);
-  }
-
 
   private <T> String getEntityTypeName(Class<T> clazz) {
     return switch (ConfigClasses.fromClass(clazz)) {

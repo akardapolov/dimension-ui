@@ -1,4 +1,4 @@
-package ru.dimension.ui.component.module.charts;
+package ru.dimension.ui.component.module.preview.charts;
 
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.log4j.Log4j2;
@@ -12,37 +12,37 @@ import ru.dimension.ui.component.broker.MessageBroker.Action;
 import ru.dimension.ui.component.broker.MessageBroker.Block;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
-import ru.dimension.ui.component.model.PanelTabType;
+import ru.dimension.ui.component.model.ChartCardState;
+import ru.dimension.ui.component.model.ChartConfigState;
+import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.module.ChartModule;
+import ru.dimension.ui.component.module.PreviewChartModule;
+import ru.dimension.ui.component.module.preview.chart.ChartDetailDialog;
 import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
-import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
-import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.RangeRealTime;
 import ru.dimension.ui.router.listener.CollectStartStopListener;
 import ru.dimension.ui.state.ChartKey;
 import ru.dimension.ui.state.SqlQueryState;
-import ru.dimension.ui.component.model.ChartCardState;
-import ru.dimension.ui.component.model.ChartLegendState;
-import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.state.UIState;
 
 @Log4j2
-public class ChartsPresenter implements MessageAction, CollectStartStopListener {
-  private final MessageBroker.Component component;
-  private final ChartsModel model;
-  private final ChartsView view;
+public class PreviewChartsPresenter implements MessageAction, CollectStartStopListener {
 
+  private final MessageBroker.Component component;
+
+  private final PreviewChartsModel model;
+  private final PreviewChartsView view;
   private final MessageBroker broker = MessageBroker.getInstance();
 
-  public ChartsPresenter(MessageBroker.Component component,
-                         ChartsModel model,
-                         ChartsView view) {
+  public PreviewChartsPresenter(MessageBroker.Component component,
+                                PreviewChartsModel model,
+                                PreviewChartsView view) {
     this.component = component;
     this.model = model;
     this.view = view;
@@ -50,52 +50,71 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
 
   @Override
   public void receive(Message message) {
+    log.info("Message received >>> " + message.destination() + " with action >>> " + message.action());
+
     switch (message.action()) {
-      case CHANGE_TAB -> handleTabChange(message);
       case REALTIME_RANGE_CHANGE -> handleRealTimeRangeChange(message);
-      case HISTORY_RANGE_CHANGE -> handleHistoryRangeChange(message);
       case ADD_CHART -> handleAddChart(message);
       case REMOVE_CHART -> handleRemoveChart(message);
-      case SHOW_HIDE_DETAIL_ALL -> handleDetailVisibilityChange(message);
       case CHART_LEGEND_STATE_ALL -> chartLegendStateAll(message);
+      case SHOW_HIDE_CONFIG_ALL -> showHideConfigState(message);
       case EXPAND_COLLAPSE_ALL -> expandCollapseAll(message);
+      case SHOW_CHART_FULL -> handleShowChartFull(message);
     }
   }
 
-  private void handleTabChange(Message message) {
-    PanelTabType panelTabType = message.parameters().get("panelTabType");
-    model.getChartPanes()
-        .forEach((key, chartMap) -> chartMap.values().forEach(chartModule -> chartModule.setActiveTab(panelTabType)));
+  private void handleShowChartFull(Message message) {
+    ChartKey chartKey = message.parameters().get("chartKey");
+    ProfileTaskQueryKey key = message.parameters().get("key");
+    Metric metric = message.parameters().get("metric");
+    QueryInfo queryInfo = message.parameters().get("queryInfo");
+    ChartInfo chartInfo = message.parameters().get("chartInfo");
+    TableInfo tableInfo = message.parameters().get("tableInfo");
+
+    ChartModule chartModule = new ChartModule(
+        component, chartKey, key, metric, queryInfo, chartInfo, tableInfo,
+        model.getSqlQueryState(), model.getDStore()
+    );
+
+    String keyValue = getKey(key, chartKey.getCProfile());
+    chartModule.setTitle(keyValue);
+
+    chartModule.initializeUI().run();
+
+    ChartDetailDialog dialog = new ChartDetailDialog(chartModule);
+    model.setChartDetailDialog(dialog);
+
+    Destination destinationRealtime = getDestination(Panel.REALTIME, chartKey);
+    Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+    broker.addReceiver(destinationRealtime, model.getChartDetailDialog().getChartModule().getPresenter());
+    broker.addReceiver(destinationHistory, model.getChartDetailDialog().getChartModule().getPresenter());
+
+    dialog.addWindowListener(new java.awt.event.WindowAdapter() {
+      @Override
+      public void windowClosed(java.awt.event.WindowEvent e) {
+
+        Destination destinationRealtime = getDestination(Panel.REALTIME, chartKey);
+        Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+        broker.deleteReceiver(destinationRealtime, model.getChartDetailDialog().getChartModule().getPresenter());
+        broker.deleteReceiver(destinationHistory, model.getChartDetailDialog().getChartModule().getPresenter());
+
+        model.setChartDetailDialog(null);
+      }
+    });
+
+    dialog.setVisible(true);
+  }
+
+  private void showHideConfigState(Message message) {
+    ChartConfigState chartConfigState = message.parameters().get("configState");
+    model.getChartPanes().forEach((key, chartMap) -> chartMap.values()
+        .forEach(chartModule -> chartModule.handleChartConfigState(chartConfigState)));
   }
 
   private void handleRealTimeRangeChange(Message message) {
     RangeRealTime realTimeRange = message.parameters().get("range");
     model.getChartPanes().forEach((key, chartMap) -> chartMap.values()
-        .forEach(chartModule -> chartModule.updateRealTimeRange(realTimeRange)));
-  }
-
-  private void handleHistoryRangeChange(Message message) {
-    RangeHistory historyRange = message.parameters().get("range");
-    ChartRange chartRange = message.parameters().get("chartRange");
-
-    if (RangeHistory.CUSTOM.equals(historyRange)) {
-      model.getChartPanes().forEach((key, chartMap) -> chartMap.values()
-          .forEach(chartModule -> chartModule.updateHistoryCustomRange(chartRange)));
-    } else {
-      model.getChartPanes().forEach((key, chartMap) -> chartMap.values()
-          .forEach(chartModule -> chartModule.updateHistoryRange(historyRange)));
-    }
-  }
-
-  private void handleDetailVisibilityChange(Message message) {
-    DetailState detailState = message.parameters().get("detailState");
-    if (model == null || model.getChartPanes() == null) {
-      return;
-    }
-
-    model.getChartPanes().forEach((key, value) -> {
-      value.values().forEach(chartModule -> chartModule.setDetailState(detailState));
-    });
+        .forEach(chartModule -> chartModule.handleRealTimeRangeUI(realTimeRange)));
   }
 
   private void chartLegendStateAll(Message message) {
@@ -134,7 +153,7 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
     SqlQueryState sqlQueryState = model.getSqlQueryState();
     DStore dStore = model.getDStore();
 
-    ChartModule taskPane = new ChartModule(component, chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
+    PreviewChartModule taskPane = new PreviewChartModule(component, chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
 
     String keyValue = getKey(key, cProfile);
     taskPane.setTitle(keyValue);
@@ -147,12 +166,6 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
         return;
       }
       model.getChartPanes().computeIfAbsent(key, k -> new ConcurrentHashMap<>()).put(cProfile, taskPane);
-
-      Destination destinationRealtime = getDestination(Panel.REALTIME, chartKey);
-      Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
-
-      broker.addReceiver(destinationRealtime, taskPane.getPresenter());
-      broker.addReceiver(destinationHistory, taskPane.getPresenter());
 
       taskPane.revalidate();
       taskPane.repaint();
@@ -167,18 +180,10 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
     Metric metric = message.parameters().get("metric");
     CProfile cProfile = metric.getYAxis();
 
-    ChartModule taskPane = model.getChartPanes().get(key).get(cProfile);
+    PreviewChartModule taskPane = model.getChartPanes().get(key).get(cProfile);
 
     try {
       logChartAction(message.action(), cProfile);
-
-      ChartKey chartKey = new ChartKey(key, cProfile);
-
-      Destination destinationRealtime = getDestination(Panel.REALTIME, chartKey);
-      Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
-
-      broker.deleteReceiver(destinationRealtime, taskPane.getPresenter());
-      broker.deleteReceiver(destinationHistory, taskPane.getPresenter());
     } finally {
       log.info("Remove task pane: " + taskPane.getTitle());
       view.removeChartCard(taskPane);
@@ -236,10 +241,19 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
         }
       }
     });
-  }
 
-  public boolean isRunning(int profileId) {
-    return model.getChartPanes().entrySet().stream().anyMatch(f -> f.getKey().getProfileId() == profileId);
+      ChartDetailDialog dialog = model.getChartDetailDialog();
+      if (dialog != null && dialog.isVisible()) {
+        ChartModule dialogChartModule = dialog.getChartModule();
+        if (dialogChartModule.getModel().getKey().equals(profileTaskQueryKey) &&
+            dialogChartModule.isReadyRealTimeUpdate()) {
+          try {
+            dialogChartModule.loadData();
+          } catch (Exception e) {
+            log.error("Error loading data in dialog", e);
+          }
+        }
+      }
   }
 
   private void logChartAction(Action action,

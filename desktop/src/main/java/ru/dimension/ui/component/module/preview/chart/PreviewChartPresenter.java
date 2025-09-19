@@ -15,9 +15,11 @@ import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageAction;
 import ru.dimension.ui.component.broker.MessageBroker;
+import ru.dimension.ui.component.broker.MessageBroker.Block;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.chart.ChartConfig;
 import ru.dimension.ui.component.chart.HelperChart;
@@ -32,8 +34,8 @@ import ru.dimension.ui.helper.FilterHelper;
 import ru.dimension.ui.helper.LogHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
-import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.chart.ChartType;
+import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
@@ -79,6 +81,8 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
 
     view.getRealTimeLegendPanel().setStateChangeConsumer(showLegend ->
                                                             handleLegendChange(ChartLegendState.SHOW.equals(showLegend)));
+
+    view.setDetailsButtonAction(e -> sendShowChartFullMessage());
 
     createRealTimeChart();
   }
@@ -220,6 +224,29 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
     boolean visibility = showLegend != null ? showLegend : true;
     updateLegendVisibility(visibility);
     UIState.INSTANCE.putShowLegend(model.getChartKey(), visibility);
+  }
+
+  private void sendShowChartFullMessage() {
+    MessageBroker broker = MessageBroker.getInstance();
+    Message message = Message.builder()
+        .destination(Destination.builder()
+                         .component(component)
+                         .module(MessageBroker.Module.CHARTS)
+                         .panel(Panel.NONE)
+                         .block(Block.NONE)
+                         .build())
+        .action(MessageBroker.Action.SHOW_CHART_FULL)
+        .parameter("chartKey", model.getChartKey())
+        .parameter("key", model.getKey())
+        .parameter("metric", realTimeMetric)
+        .parameter("queryInfo", model.getQueryInfo())
+        .parameter("chartInfo", model.getChartInfo())
+        .parameter("tableInfo", model.getTableInfo())
+        .build();
+
+    log.info("Message send >>> " + message.destination() + " with action >>> " + message.action());
+
+    broker.sendMessage(message);
   }
 
   private void updateLegendVisibility(boolean visibility) {

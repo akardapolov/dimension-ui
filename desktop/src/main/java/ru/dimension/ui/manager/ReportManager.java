@@ -1,16 +1,13 @@
 package ru.dimension.ui.manager;
 
 import java.io.IOException;
-import java.util.Map;
-import ru.dimension.ui.model.report.QueryReportData;
+import ru.dimension.ui.model.report.DesignReportData;
 
 public interface ReportManager {
 
-  void addConfig(Map<String, QueryReportData> config,
-                 String formattedDate);
+  DesignReportData loadDesign(String designName) throws IOException;
 
-  Map<String, QueryReportData> getConfig(String dirName,
-                                         String fileName);
+  void saveDesign(DesignReportData designData) throws IOException;
 
   void deleteDesign(String configName) throws IOException;
 }

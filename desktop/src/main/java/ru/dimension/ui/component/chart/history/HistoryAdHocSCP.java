@@ -27,10 +27,8 @@ import lombok.extern.log4j.Log4j2;
 import org.jfree.chart.util.IDetailPanel;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
-import ru.dimension.db.exception.SqlColMetadataException;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.chart.ChartConfig;
-import ru.dimension.ui.component.chart.ChartDataLoader;
 import ru.dimension.ui.component.chart.FunctionDataHandler;
 import ru.dimension.ui.component.chart.HelperChart;
 import ru.dimension.ui.component.chart.SCP;
@@ -40,12 +38,11 @@ import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.function.GroupFunction;
-import ru.dimension.ui.model.sql.GatherDataMode;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.SeriesType;
 
 @Log4j2
-public class HistorySCP extends SCP {
+public class HistoryAdHocSCP extends SCP {
 
   protected FunctionDataHandler dataHandler;
   @Getter
@@ -56,15 +53,15 @@ public class HistorySCP extends SCP {
   private JTextField seriesSearch;
   private TableRowSorter<?> seriesSorter;
 
-  public HistorySCP(ChartConfig config,
-                    ProfileTaskQueryKey profileTaskQueryKey) {
+  public HistoryAdHocSCP(ChartConfig config,
+                         ProfileTaskQueryKey profileTaskQueryKey) {
     super(config, profileTaskQueryKey);
   }
 
-  public HistorySCP(DStore dStore,
-                    ChartConfig config,
-                    ProfileTaskQueryKey profileTaskQueryKey,
-                    Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+  public HistoryAdHocSCP(DStore dStore,
+                         ChartConfig config,
+                         ProfileTaskQueryKey profileTaskQueryKey,
+                         Map<CProfile, LinkedHashSet<String>> topMapSelected) {
     super(config, profileTaskQueryKey);
 
     super.setDStore(dStore);
@@ -303,26 +300,6 @@ public class HistorySCP extends SCP {
   }
 
   private void loadDataHistory(ChartRange chartRange) {
-    ProfileTaskQueryKey key = new ProfileTaskQueryKey(0, 0, 0);
-
-    if (key.equals(profileTaskQueryKey)) {
-      switch (config.getQueryInfo().getGatherDataMode()) {
-        case BY_SERVER_JDBC -> {
-          log.info(GatherDataMode.BY_SERVER_JDBC.name());
-          loadDataHistoryServer(chartRange);
-        }
-        case BY_CLIENT_JDBC, BY_CLIENT_HTTP -> {
-          log.info(GatherDataMode.BY_CLIENT_JDBC.name());
-          loadDataHistoryClient(chartRange);
-        }
-      }
-      return;
-    }
-
-    loadDataHistoryCommon(chartRange, null);
-  }
-
-  private void loadDataHistoryCommon(ChartRange chartRange, Integer pullTimeout) {
     chartDataset.clear();
     Set<String> filteredSeries = new HashSet<>(series);
 
@@ -335,61 +312,17 @@ public class HistorySCP extends SCP {
         && topMapSelected.values().stream().anyMatch(set -> !set.isEmpty());
 
     double range = HelperChart.calculateRange(config.getMetric(), chartRange, config.getMaxPointsPerGraph());
-
-    if (pullTimeout != null && range / 1000 < pullTimeout) {
-      range = (double) pullTimeout * 1000;
-    }
-
     double k = HelperChart.calculateK(range, config.getMetric().getNormFunction());
 
     for (long dtBegin = chartRange.getBegin(); dtBegin <= chartRange.getEnd(); dtBegin += Math.round(range)) {
       long dtEnd = dtBegin + Math.round(range) - 1;
+
       if (applyFilter) {
         dataHandler.handleFunction(dtBegin, dtEnd, k, filteredSeries, topMapSelected, stackedChart);
       } else {
         dataHandler.handleFunction(dtBegin, dtEnd, false, dtBegin, k, filteredSeries, stackedChart);
       }
     }
-  }
-
-  private void loadDataHistoryClient(ChartRange chartRange) {
-    chartDataset.clear();
-    Set<String> filteredSeries = new HashSet<>(series);
-
-    ChartDataLoader chartDataLoader = new ChartDataLoader(
-        config.getMetric(),
-        config.getChartInfo(),
-        stackedChart,
-        dataHandler,
-        false,
-        topMapSelected
-    );
-    chartDataLoader.setSeries(filteredSeries);
-
-    double range = HelperChart.calculateRange(config.getMetric(), chartRange, config.getMaxPointsPerGraph());
-
-    if (range / 1000 < config.getChartInfo().getPullTimeoutClient()) {
-      range = (double) config.getChartInfo().getPullTimeoutClient() * 1000;
-    }
-
-    int batchSize = Math.toIntExact(Math.round((range / 1000) / config.getChartInfo().getPullTimeoutClient()));
-
-    chartDataLoader.setRange(range);
-    chartDataLoader.setBatchSize(batchSize);
-
-    try {
-      chartDataLoader.loadDataFromBdbToDeque(
-          dStore.getBlockKeyTailList(config.getQueryInfo().getName(), chartRange.getBegin(), chartRange.getEnd())
-      );
-      chartDataLoader.loadDataFromDequeToChart(chartRange.getBegin(), chartRange.getEnd());
-    } catch (BeginEndWrongOrderException | SqlColMetadataException e) {
-      log.catching(e);
-      throw new RuntimeException(e);
-    }
-  }
-
-  private void loadDataHistoryServer(ChartRange chartRange) {
-    loadDataHistoryCommon(chartRange, config.getChartInfo().getPullTimeoutServer());
   }
 
   @Override

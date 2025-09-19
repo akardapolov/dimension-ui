@@ -37,13 +37,17 @@
 ## Описание программы
 **Dimension UI** - это настольное приложение, предназначенное для сбора, хранения, визуализации и анализа данных временных рядов.
 
-![Workspace Stacked](docs/guides/user/media/workspace/workspace-stacked.png)
-![Dashboard Short](docs/guides/user/media/dashboard/dashboard-short.png)
-![Dashboard realtime filter](docs/guides/user/media/dashboard/dashboard-realtime-filter.png)
-![Dashboard history filter](docs/guides/user/media/dashboard/dashboard-history-filter.png)
-![Report](docs/guides/user/media/report/report.png)
-![Ad-hoc Analyze](docs/guides/user/media/adhoc/ad-hoc-analyze.png)
-![Ad-hoc Filter](docs/guides/user/media/adhoc/ad-hoc-filter.png)
+### **Workspace**
+![Workspace](docs/guides/user/media/workspace/workspace-short.gif)
+
+### **Dashboard**
+![Dashboard](docs/guides/user/media/dashboard/dashboard-short.gif)
+
+### **Report**
+![Report](docs/guides/user/media/report/report-short.gif)
+
+### **Ad-hoc**
+![Ad-hoc](docs/guides/user/media/adhoc/adhoc-short.gif)
 
 ### Общие сведения
 

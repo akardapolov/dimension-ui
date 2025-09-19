@@ -62,6 +62,10 @@ public class CollapseCardPanel extends JPanel {
     collapseCheckBox.setSelected(state == ChartCardState.EXPAND_ALL);
   }
 
+  public void setCollapseCheckBoxEnabled(boolean enabled) {
+    collapseCheckBox.setEnabled(enabled);
+  }
+
   public void setStateChangeConsumer(Consumer<ChartCardState> consumer) {
     this.stateChangeConsumer = consumer;
   }

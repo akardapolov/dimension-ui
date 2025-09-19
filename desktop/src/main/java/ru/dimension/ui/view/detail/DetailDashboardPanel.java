@@ -53,6 +53,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
   private JPanel mainPanel;
 
   private final QueryInfo queryInfo;
+  private final ChartInfo chartInfo;
   private final TableInfo tableInfo;
   private final ProcessType processType;
   private final Metric metric;
@@ -69,6 +70,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
 
   public DetailDashboardPanel(DStore dStore,
                               QueryInfo queryInfo,
+                              ChartInfo chartInfo,
                               TableInfo tableInfo,
                               Metric metric,
                               Map<String, Color> seriesColorMap,
@@ -77,6 +79,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
                               Map<CProfile, LinkedHashSet<String>> topMapSelected) {
     this.dStore = dStore;
     this.queryInfo = queryInfo;
+    this.chartInfo = chartInfo;
     this.tableInfo = tableInfo;
     this.metric = metric;
     this.cProfile = metric.getYAxis();
@@ -159,14 +162,13 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
         mainJTabbedPane.setEnabledAt(separatorIndex, false);
         mainJTabbedPane.setTabComponentAt(separatorIndex, createTextSeparator(range));
 
-        ChartInfo chartInfo = new ChartInfo();
-        chartInfo.setCustomBegin(begin);
-        chartInfo.setCustomEnd(end);
+        ChartInfo chartInfoCopy = chartInfo.copy();
+        chartInfoCopy.setCustomBegin(begin);
+        chartInfoCopy.setCustomEnd(end);
 
-        // TODO implement code for adhoc
         ProfileTaskQueryKey key = new ProfileTaskQueryKey(0, 0, 0);
 
-        SCP chart = new HistorySCP(dStore, buildChartConfig(chartInfo), key, actualTopMapSelected);
+        SCP chart = new HistorySCP(dStore, buildChartConfig(chartInfoCopy), key, actualTopMapSelected);
         chart.loadSeriesColor(metric, seriesColorMap);
         chart.initialize();
 
@@ -217,7 +219,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
     config.setMetric(metric);
     config.setChartInfo(chartInfo);
     config.setQueryInfo(queryInfo);
-    config.setProcessType(ProcessType.HISTORY_ANALYZE);
+    config.setProcessType(ProcessType.HISTORY);
     return config;
   }
 

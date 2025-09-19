@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.TimeZone;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.model.OrderBy;
@@ -19,6 +18,8 @@ import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.data.RangeBatchSize;
+import ru.dimension.ui.model.function.NormFunction;
+import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.RangeHistory;
@@ -149,8 +150,47 @@ public interface HelperChart {
     return chartRange;
   }
 
-  default LocalDateTime toLocalDateTimeOfEpochMilli(long ofEpochMilli) {
-    return LocalDateTime.ofInstant(Instant.ofEpochMilli(ofEpochMilli), TimeZone.getDefault().toZoneId());
+  static double calculateRange(Metric metric,
+                               ChartRange chartRange,
+                               int maxPointsPerGraph) {
+    TimeRangeFunction timeRangeFunction = metric.getTimeRangeFunction();
+    return switch (timeRangeFunction) {
+      case MINUTE -> 60 * 1000;
+      case HOUR -> 60 * 60 * 1000;
+      case DAY -> 24 * 60 * 60 * 1000;
+      case MONTH -> calculateMonthlyRange(chartRange);
+      default -> calculateAutoRange(chartRange, maxPointsPerGraph);
+    };
+  }
+
+  static double calculateK(double range,
+                           NormFunction normFunction) {
+    return switch (normFunction) {
+      case NONE -> 1.0;
+      case SECOND -> range / 1000;
+      case MINUTE -> range / (60 * 1000);
+      case HOUR -> range / (60 * 60 * 1000);
+      case DAY -> range / (24 * 60 * 60 * 1000);
+    };
+  }
+
+  static long calculateMonthlyRange(ChartRange chartRange) {
+    long totalMillis = chartRange.getEnd() - chartRange.getBegin();
+    long totalMonths = ChronoUnit.MONTHS.between(
+        Instant.ofEpochMilli(chartRange.getBegin()).atZone(ZoneId.systemDefault()).toLocalDate(),
+        Instant.ofEpochMilli(chartRange.getEnd()).atZone(ZoneId.systemDefault()).toLocalDate()
+    );
+
+    if (totalMonths == 0) {
+      return totalMillis;
+    }
+
+    return totalMillis / totalMonths;
+  }
+
+  static double calculateAutoRange(ChartRange chartRange,
+                                   int maxPointsPerGraph) {
+    return (double) (chartRange.getEnd() - chartRange.getBegin()) / maxPointsPerGraph;
   }
 
   default double getK(double range,
