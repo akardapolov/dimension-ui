@@ -9,8 +9,10 @@ import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.ActionEvent;
-import java.sql.Date;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -29,9 +31,6 @@ import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import lombok.extern.log4j.Log4j2;
-import ru.dimension.db.model.profile.CProfile;
-import ru.dimension.db.service.mapping.Mapper;
-import ru.dimension.db.sql.BatchResultSet;
 import org.jdesktop.swingx.JXCollapsiblePane;
 import org.jdesktop.swingx.JXFindBar;
 import org.jdesktop.swingx.JXPanel;
@@ -39,14 +38,18 @@ import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.action.AbstractActionExt;
 import org.jdesktop.swingx.search.AbstractSearchable;
 import org.jdesktop.swingx.search.SearchFactory;
-import ru.dimension.ui.model.info.TableInfo;
+import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.db.service.mapping.Mapper;
+import ru.dimension.db.sql.BatchResultSet;
 import ru.dimension.ui.laf.LaF;
+import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.view.detail.raw.searchable.DecoratorFactory;
 import ru.dimension.ui.view.detail.raw.searchable.MatchingTextHighlighter;
 import ru.dimension.ui.view.detail.raw.searchable.XMatchingTextHighlighter;
 
 @Log4j2
 public abstract class RawDataPanelCommon extends JPanel {
+  private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 
   private final TableInfo tableInfo;
   private final CProfile cProfile;
@@ -160,9 +163,7 @@ public abstract class RawDataPanelCommon extends JPanel {
   }
 
   protected String getDate(long l) {
-    SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-    Date date = new Date(l);
-    return dateFormat.format(date);
+    return LocalDateTime.ofInstant(Instant.ofEpochMilli(l), ZoneId.systemDefault()).format(FORMATTER);
   }
 
   private String[] getColumnHeaders() {

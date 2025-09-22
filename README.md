@@ -75,7 +75,7 @@ Key Features of **Dimension UI**:
 [Return to Contents](#Contents)
 
 ## Minimum technical requirements
-**Dimension DB** is compatible with Java 21+ and comes with a small set of dependencies.
+**Dimension DB** is compatible with Java 24+ and comes with a small set of dependencies.
 
 ### Hardware requirements
 
@@ -93,7 +93,7 @@ Table 2. Software requirements
 
 | Software | Requirements             |
 |:---------|:-------------------------|
-| Java     | Java version 21+         |
+| Java     | Java version 24+         |
 | Maven    | Not lower than version 3 |
 | Git      | Latest current version   |
 | DBase    | Latest current version   |
@@ -144,7 +144,7 @@ To compile the application into an executable jar file, do the following:
 
 - Windows Platform, run.bat
     ```shell
-    SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-17  
+    SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-24  
     SET JAVA_EXE="%JAVA_HOME%\bin\java.exe"
     chcp 65001
   

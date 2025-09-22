@@ -148,7 +148,7 @@ public class AdHocChartsPresenter implements MessageAction {
     AdHocChartModule taskPane =
         new AdHocChartModule(adHocKey, metric, queryInfo, chartInfo, tableInfo, dStore);
 
-    String keyValue = getKey(connectionInfo, tableName, cProfile);
+    String keyValue = getKey(cProfile);
 
     taskPane.setTitle(keyValue);
 
@@ -203,11 +203,10 @@ public class AdHocChartsPresenter implements MessageAction {
     }
   }
 
-  public String getKey(ConnectionInfo connectionInfo, String tableName, CProfile cProfile) {
-    String connName = connectionInfo.getName();
+  public String getKey(CProfile cProfile) {
     String columnName = cProfile.getColName();
 
-    String keyValue = String.format("Connection: %s >>> Table: %s >>> Column: %s", connName, tableName, columnName);
+    String keyValue = String.format("Column: %s", columnName);
 
     return keyValue.length() > 300 ? keyValue.substring(0, 300) + " ... " : keyValue;
   }

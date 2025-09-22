@@ -2,8 +2,6 @@ package ru.dimension.ui.component.chart;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.sql.Date;
-import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -185,12 +183,6 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
 
   public void setChartTitle(String titleText) {
     this.stackedChart.setChartTitle(titleText);
-  }
-
-  protected String getDate(long l) {
-    SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-    Date date = new Date(l);
-    return dateFormat.format(date);
   }
 
   protected void disablePlotUpdates() {

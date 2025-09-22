@@ -8,31 +8,32 @@ import com.itextpdf.tool.xml.XMLWorkerFontProvider;
 import com.itextpdf.tool.xml.XMLWorkerHelper;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
-import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
-import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.util.HashMap;
-import java.util.Map;
-import javax.imageio.ImageIO;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.module.ReportChartModule;
 import ru.dimension.ui.helper.DesignHelper;
 import ru.dimension.ui.helper.FilesHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
+
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static ru.dimension.ui.helper.FilesHelper.CONFIG_FTL_DIR_NAME;
+import static ru.dimension.ui.helper.FilesHelper.CONFIG_TTF_DIR_NAME;
 
 @Log4j2
 public class PdfReportGenerator {
@@ -43,6 +44,102 @@ public class PdfReportGenerator {
                             ProfileManager profileManager) {
     this.filesHelper = filesHelper;
     this.profileManager = profileManager;
+
+    ensureTemplateFilesExist();
+  }
+
+  private void ensureTemplateFilesExist() {
+    String folderPath = filesHelper.getTemplateDir();
+    boolean isEmpty = isFolderEmpty(folderPath);
+    File folder = new File(folderPath);
+    File[] files = folder.listFiles();
+    boolean isTTFFile = false;
+    boolean isFTLFile = false;
+
+    if (isEmpty) {
+      try {
+        loadFileToFolder("default.ftl", folderPath);
+        loadFileToFolder("arialuni.ttf", folderPath);
+      } catch (IOException ex) {
+        throw new RuntimeException(ex);
+      }
+    } else {
+      for (File file : files) {
+        if (file.getName().endsWith(".ftl")) {
+          isFTLFile = true;
+        }
+        if (file.getName().endsWith(".ttf")) {
+          isTTFFile = true;
+        }
+      }
+      try {
+        if (!isFTLFile) {
+          loadFileToFolder("default.ftl", folderPath);
+        }
+        if (!isTTFFile) {
+          loadFileToFolder("arialuni.ttf", folderPath);
+        }
+      } catch (IOException ex) {
+        throw new RuntimeException(ex);
+      }
+    }
+  }
+
+  public boolean isFolderEmpty(String folderPath) {
+    File folder = new File(folderPath);
+
+    if (folder.isDirectory()) {
+      String[] files = folder.list();
+      return (files == null || files.length == 0);
+    }
+    return true;
+  }
+
+  public void loadFileToFolder(String filename,
+                               String folderPath) throws IOException {
+    String[] fileNameSplit = filename.split("\\.");
+
+    try {
+      if (filesHelper.isJar()) {
+        java.util.List<Path> pathList = Collections.emptyList();
+        if (CONFIG_FTL_DIR_NAME.equals(fileNameSplit[1])) {
+          pathList = filesHelper.getFilePathDirectoryResourcesJar(CONFIG_FTL_DIR_NAME);
+        } else if (CONFIG_TTF_DIR_NAME.equals(fileNameSplit[1])) {
+          pathList = filesHelper.getFilePathDirectoryResourcesJar(CONFIG_TTF_DIR_NAME);
+        }
+
+        pathList.forEach(file -> {
+          Path targetPath = Path.of(folderPath, filename);
+          ClassLoader classLoader = getClass().getClassLoader();
+          try (InputStream is = classLoader.getResourceAsStream(file.toString())) {
+            if (is == null) {
+              throw new IllegalArgumentException("Resource not found: " + file);
+            }
+            Files.copy(is, targetPath, StandardCopyOption.REPLACE_EXISTING);
+          } catch (IOException e) {
+            log.catching(e);
+          }
+        });
+      } else {
+        List<Path> pathList = Collections.emptyList();
+        if (CONFIG_FTL_DIR_NAME.equals(fileNameSplit[1])) {
+          pathList = filesHelper.getFilePathDirectoryResourcesFromFS(CONFIG_FTL_DIR_NAME);
+        } else if (CONFIG_TTF_DIR_NAME.equals(fileNameSplit[1])) {
+          pathList = filesHelper.getFilePathDirectoryResourcesFromFS(CONFIG_TTF_DIR_NAME);
+        }
+
+        pathList.forEach(file -> {
+          Path targetPath = Path.of(folderPath, filename);
+          try {
+            Files.copy(file, targetPath, StandardCopyOption.REPLACE_EXISTING);
+          } catch (IOException e) {
+            log.catching(e);
+          }
+        });
+      }
+    } catch (URISyntaxException | IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public File generateHtmlReport(Map<String, Object> dataReport,

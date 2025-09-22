@@ -604,12 +604,6 @@ public class ServerRealtimeSCP extends RealtimeSCP {
     });
   }
 
-  protected String getDate(long l) {
-    SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-    Date date = new Date(l);
-    return dateFormat.format(date);
-  }
-
   private void showProgressBar() {
     BorderLayout layout = (BorderLayout) getLayout();
     if (layout.getLayoutComponent(BorderLayout.CENTER) != null) {

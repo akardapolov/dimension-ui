@@ -1,10 +1,10 @@
 package ru.dimension.ui.model.chart;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import ru.dimension.ui.helper.DateHelper;
+import ru.dimension.ui.model.date.DateLocale;
 
 @Data
 @AllArgsConstructor
@@ -17,14 +17,8 @@ public class ChartRange {
   @Override
   public String toString() {
     return "ChartRange{" +
-        "begin=" + getDate(begin) +
-        ", end=" + getDate(end) +
+        "begin=" + DateHelper.getDateFormatted(DateLocale.RU, begin) +
+        ", end=" + DateHelper.getDateFormatted(DateLocale.RU, end) +
         '}';
-  }
-
-  protected String getDate(long l) {
-    SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-    Date date = new Date(l);
-    return dateFormat.format(date);
   }
 }

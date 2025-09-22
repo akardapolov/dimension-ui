@@ -1,4 +1,4 @@
-SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-21.0.1
+SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-24.0.1
 SET JAVA_EXE="%JAVA_HOME%\bin\java.exe"
 chcp 65001
 %JAVA_EXE% -Xmx2024m -DLaF=dark -Dfile.encoding=UTF8 -jar ${project.build.finalName}-app.jar

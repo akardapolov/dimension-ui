@@ -1,5 +1,6 @@
 package ru.dimension.ui.component.module.charts;
 
+import java.beans.PropertyChangeListener;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
@@ -12,6 +13,9 @@ import ru.dimension.ui.component.broker.MessageBroker.Action;
 import ru.dimension.ui.component.broker.MessageBroker.Block;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
+import ru.dimension.ui.component.model.ChartCardState;
+import ru.dimension.ui.component.model.ChartLegendState;
+import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.module.ChartModule;
 import ru.dimension.ui.helper.DialogHelper;
@@ -27,9 +31,6 @@ import ru.dimension.ui.model.view.RangeRealTime;
 import ru.dimension.ui.router.listener.CollectStartStopListener;
 import ru.dimension.ui.state.ChartKey;
 import ru.dimension.ui.state.SqlQueryState;
-import ru.dimension.ui.component.model.ChartCardState;
-import ru.dimension.ui.component.model.ChartLegendState;
-import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.state.UIState;
 
 @Log4j2
@@ -111,15 +112,19 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
   }
 
   private void expandCollapseAll(Message message) {
-    if (model == null || model.getChartPanes() == null) {
-      return;
-    }
+    if (model == null || model.getChartPanes() == null) return;
 
     ChartCardState cardState = message.parameters().get("cardState");
+    boolean shouldCollapse = !ChartCardState.EXPAND_ALL.equals(cardState);
 
-    model.getChartPanes().forEach((key, value) -> {
-      value.values().forEach(chartModule -> chartModule.setCollapsed(ChartCardState.EXPAND_ALL.equals(cardState)));
-    });
+    model.setProgrammaticChange(true);
+    try {
+      model.getChartPanes().values().stream()
+          .flatMap(map -> map.values().stream())
+          .forEach(chartModule -> chartModule.setCollapsed(shouldCollapse));
+    } finally {
+      model.setProgrammaticChange(false);
+    }
   }
 
   private void handleAddChart(Message message) {
@@ -141,11 +146,26 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
 
     log.info("Add task pane: " + keyValue);
 
+    PropertyChangeListener collapseListener = evt -> {
+      if (!model.isProgrammaticChange() &&
+          "collapsed".equals(evt.getPropertyName()) &&
+          Boolean.FALSE.equals(evt.getNewValue())) {
+        view.centerComponentInScrollPane(taskPane);
+      }
+    };
+    taskPane.addPropertyChangeListener("collapsed", collapseListener);
+    model.getCollapseListeners().put(taskPane, collapseListener);
+
     view.addChartCard(taskPane, (module, error) -> {
       if (error != null) {
+        PropertyChangeListener listener = model.getCollapseListeners().remove(taskPane);
+        if (listener != null) {
+          taskPane.removePropertyChangeListener("collapsed", listener);
+        }
         DialogHelper.showErrorDialog("Failed to load chart: " + error.getMessage(), "Error", error);
         return;
       }
+
       model.getChartPanes().computeIfAbsent(key, k -> new ConcurrentHashMap<>()).put(cProfile, taskPane);
 
       Destination destinationRealtime = getDestination(Panel.REALTIME, chartKey);
@@ -168,6 +188,11 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
     CProfile cProfile = metric.getYAxis();
 
     ChartModule taskPane = model.getChartPanes().get(key).get(cProfile);
+
+    PropertyChangeListener listener = model.getCollapseListeners().remove(taskPane);
+    if (listener != null) {
+      taskPane.removePropertyChangeListener("collapsed", listener);
+    }
 
     try {
       logChartAction(message.action(), cProfile);

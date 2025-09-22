@@ -76,7 +76,7 @@
 [Вернуться в Оглавление](#Оглавление)
 
 ## Минимальные технические требования
-**Dimension UI** совместим с Java 21+ и поставляется с небольшим набором зависимостей.
+**Dimension UI** совместим с Java 24+ и поставляется с небольшим набором зависимостей.
 
 ### Требования к аппаратному обеспечению
 
@@ -94,7 +94,7 @@
 
 | ПО    | Требования                  |
 |:------|:----------------------------|
-| Java  | Версия Java 21+             |
+| Java  | Версия Java 24+             |
 | Maven | Не ниже 3 версии            |
 | Git   | Последняя актуальная версия |
 | DBase | Последняя актуальная версия |
@@ -115,7 +115,7 @@
 
 Для компиляции приложения в исполняемый jar-файл необходимо выполнить следующее:
 
-1. Установить на локальный компьютер JDK не ниже 21 версии, Maven и Git.
+1. Установить на локальный компьютер JDK не ниже 24 версии, Maven и Git.
     ```shell
     java -version  
     mvn -version
@@ -153,21 +153,21 @@
 
 ## Установка и настройка
 
-1. Убедитесь, что на вашем компьютере установлена JDK версии 21 или выше. Подробная инструкция по установке для вашей платформы на сайте [oracle.com](https://www.oracle.com/java/technologies/downloads/)
+1. Убедитесь, что на вашем компьютере установлена JDK версии 24 или выше. Подробная инструкция по установке для вашей платформы на сайте [oracle.com](https://www.oracle.com/java/technologies/downloads/)
 2. Загрузите исполняемый jar-файл приложения с сайта github.com или выполните локальную сборку по инструкции из раздела [Сборка проекта](#сборка-проекта)
 3. Создайте директорию для хранения конфигурации и локальной базы данных приложения.
 4. Скопируйте jar-файл в директорию, в которой создайте исполняемый файл запуска:
 
 - Платформа Windows, run.bat
     ```shell
-    SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-21
+    SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-24
     SET JAVA_EXE="%JAVA_HOME%\bin\java.exe"
     chcp 65001
     %JAVA_EXE% -Xmx1024m -DLaF=dark -Dfile.encoding=UTF8 -jar desktop-1.0-SNAPSHOT-jar-with-dependencies.jar
     ```
 - Платформа Linux, run.sh
   ```shell
-    SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-21
+    SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-24
     SET JAVA_EXE="%JAVA_HOME%\bin\java.exe" 
     chcp 65001
     %JAVA_EXE% -Xmx1024m -DLaF=dark -Dfile.encoding=UTF8 -jar desktop-1.0-SNAPSHOT-jar-with-dependencies.jar

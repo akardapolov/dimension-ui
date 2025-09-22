@@ -81,8 +81,8 @@
         <version>3.14.0</version>
         <configuration>
           <encoding>UTF-8</encoding>
-          <source>21</source>
-          <target>21</target>
+          <source>24</source>
+          <target>24</target>
           <release>21</release>
         </configuration>
       </plugin>

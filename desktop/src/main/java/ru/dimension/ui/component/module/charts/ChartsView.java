@@ -4,11 +4,18 @@ import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 import static ru.dimension.ui.laf.LafColorGroup.REPORT;
 
 import java.awt.Component;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.beans.PropertyChangeListener;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JViewport;
+import javax.swing.SwingUtilities;
 import javax.swing.border.EtchedBorder;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTaskPaneContainer;
@@ -22,6 +29,7 @@ import ru.dimension.ui.laf.LaF;
 
 @Log4j2
 public class ChartsView extends JPanel {
+  private final Map<ChartModule, PropertyChangeListener> collapseListeners = new HashMap<>();
 
   private final JXTaskPaneContainer cardContainer;
   private final JScrollPane cardScrollPane;
@@ -97,5 +105,23 @@ public class ChartsView extends JPanel {
     cardContainer.removeAll();
     cardContainer.revalidate();
     cardContainer.repaint();
+  }
+
+  void centerComponentInScrollPane(Component component) {
+    SwingUtilities.invokeLater(() -> {
+      Point componentPos = SwingUtilities.convertPoint(
+          component.getParent(),
+          component.getLocation(),
+          cardPanel
+      );
+
+      JViewport viewport = cardScrollPane.getViewport();
+      Rectangle viewRect = viewport.getViewRect();
+      int centerY = viewRect.height / 2;
+      int componentCenterY = componentPos.y + (component.getHeight() / 2);
+      int targetY = Math.max(0, componentCenterY - centerY);
+
+      viewport.setViewPosition(new Point(0, targetY));
+    });
   }
 }

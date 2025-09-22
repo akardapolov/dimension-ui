@@ -51,7 +51,7 @@ Key Features of **Dimension UI**:
 [Return to Contents](#Contents)
 
 ## Minimum technical requirements
-**Dimension DB** is compatible with Java 21+ and comes with a small set of dependencies.
+**Dimension DB** is compatible with Java 24+ and comes with a small set of dependencies.
 
 ### Hardware requirements
 
@@ -69,7 +69,7 @@ Table 2. Software requirements
 
 | Software | Requirements             |
 |:---------|:-------------------------|
-| Java     | Java version 21+         |
+| Java     | Java version 24+         |
 | Maven    | Not lower than version 3 |
 | Git      | Latest current version   |
 | DBase    | Latest current version   |
@@ -119,7 +119,7 @@ To compile the application into an executable jar file, do the following:
 
 - Windows Platform, run.bat
     ```shell
-    SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-17  
+    SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-24  
     SET JAVA_EXE="%JAVA_HOME%\bin\java.exe"
     chcp 65001
   
@@ -144,20 +144,19 @@ To start working with the application you need to run the executable file **run.
 
 The configuration of **Dimension UI** application consists of several main entities including **Profile**, **Task**, **Connection** and **Request**.
 
-- A **Profile** is a repository of information about a particular profile, including its name, a brief description and list of tasks to be performed when you start this profile. <a href="media/config/profile.gif" target="_blank"> Screencast</a>
+- A **Profile** is a repository of information about a particular profile, including its name, a brief description and list of tasks to be performed when you start this profile.
 
 ![Profile](media/config/profile.png)
 
-- **Task**, in turn, is an entity that contains a list of queries that must be executed within this task. Each task also contains the name of the request, a brief description, the connection and the frequency of queries to the remote system. <a href="media/config/task.gif" target="_blank">Screencast </a>
+- **Task**, in turn, is an entity that contains a list of queries that must be executed within this task. Each task also contains the name of the request, a brief description, the connection and the frequency of queries to the remote system.
 
 ![Task](media/config/task.png)
 
-- **Connection** is an entity that contains all the necessary information about the details of the connection to the remote JDBC system. Connection attributes: name, URL, username, password, as well as file location information and class name JDBC Driver class. <a href="media/config/connection.gif"  target="_blank">Screencast</a>
+- **Connection** is an entity that contains all the necessary information about the details of the connection to the remote JDBC system. Connection attributes: name, URL, username, password, as well as file location information and class name JDBC Driver class.
 
 ![Connection](media/config/connection.png)
 
-- **Queries** are textual descriptions of SQL queries that are sent to the server to retrieve data.
-  Each query also contains information about the name of the query, a short description, the way of filling the data (locally or on the server)  and data loading mode (direct, JDBC in real time, batch data loading from JDBC source).<a href="media/config/query.gif"  target="_blank">Screencast </a>
+- **Queries** are textual descriptions of SQL queries that are sent to the server to retrieve data. Each query also contains information about the name of the query, a short description, the way of filling the data (locally or on the server)  and data loading mode (direct, JDBC in real time, batch data loading from JDBC source).
 
 ![Query main](media/config/query-main.png)
 
@@ -168,10 +167,7 @@ Methods of filling data:
 
 Inside the query interface there are also metadata entities for the local database table and metrics.
 
-- **Metadata** contains information about the table configuration in the local DBase engine data repository according to
-  the query data. Table metadata: name, storage type (regular table or table for storing time series data), indexing type
-  (local or global), data compression, table column for time tracking, metadata of table columns.  The interface also displays the connection to the job data source in which the query is executed.
-  This is needed in order to load metadata on the query into the local storage.
+- **Metadata** contains information about the table configuration in the local DBase engine data repository according to the query data. Table metadata: name, storage type (regular table or table for storing time series data), indexing type (local or global), data compression, table column for time tracking, metadata of table columns.  The interface also displays the connection to the job data source in which the query is executed. This is needed in order to load metadata on the query into the local storage.
 
 ![Query metadata](media/config/query-metadata.png)
 
@@ -182,12 +178,11 @@ Inside the query interface there are also metadata entities for the local databa
 
 There are two modes available in the application interface: **View** and **Edit** data.
 
-- In the **View** mode the data is displayed taking into account the hierarchical structure that is formed on the basis of the profiles.
-  Each profile can contain several tasks, each of which can include several queries.  Each job is linked to a single connection, which allows you to perform multiple queries to the same data source. <a href="media/config/view.gif"  target="_blank">Screencast </a>
+- In the **View** mode the data is displayed taking into account the hierarchical structure that is formed on the basis of the profiles. Each profile can contain several tasks, each of which can include several queries.  Each job is linked to a single connection, which allows you to perform multiple queries to the same data source.
 
 ![View](media/config/view-panel.png)
 
-- In the **Edit** mode the user has the ability to create new objects, copy, delete and modify existing ones. <a href="media/config/edit.gif"  target="_blank">Screencast</a>
+- In the **Edit** mode the user has the ability to create new objects, copy, delete and modify existing ones.
 
 ![Edit](media/config/edit-panel.png)
 
@@ -201,8 +196,8 @@ The application collects data from remote systems via the JDBC protocol, HTTP (P
 
 The logic for obtaining time series data depends on where the data is collected.
 
-1. If the table data from the remote system is filled on the server, we choose the option **Collect data on the server**. The application tracks the pointer to the timestamp of the last selected record, then loads the data into the local database, that were added on the remote system.
-2. The **Collect data on the client** option allows you to collect data from the remote system and store it locally, the timestamps are tracked by the application.
+1. If the table data from the remote system is filled on the server, we choose the option **Collect data on the server** - set **Gather data sql** to **BY_SERVER_JDBC** value. The application tracks the pointer to the timestamp of the last selected record, then loads the data into the local database, that were added on the remote system.
+2. The **Collect data on the client** option allows you to collect data from the remote system and store it locally, the timestamps are tracked by the application.  Set **Gather data sql** to **BY_CLIENT_JDBC** value or **BY_CLIENT_HTTP** for Prometheus.
 
 The timestamps are tracked by a column with the data type **Timestamp**, which is defined in the settings by table. In the configuration interface, this setting is located in **Queries** -> **Metadata** -> **Timestamp drop-down list**.
 
@@ -240,11 +235,11 @@ The application supports several ways to display data:
 
 ### **Workspace** Interface
 
-* In real-time mode, data is visualized as it arrives. To display data in this mode, select the appropriate metric or query column in the **Real-time** interface. In the **Details** interface, you can choose **Count**, **Sum**, or **Average** functions. For numeric values, any of these functions can be selected; for string data, sum and average calculations are not available. &lt;a href="media/view/real-time.gif" target="_blank"&gt;Screencast&lt;/a&gt;
+* In real-time mode, data is visualized as it arrives. To display data in this mode, select the appropriate metric or query column in the **Real-time** interface. In the **Details** interface, you can choose **Count**, **Sum**, or **Average** functions. For numeric values, any of these functions can be selected; for string data, sum and average calculations are not available.
 
 ![Real-time](media/view/real-time.png)
 
-* In historical view, data is displayed for a previous observation period. To do this, select a metric or query column and specify a range in the **History** interface; when selecting the **Custom** field, a more detailed range selection is possible.&lt;a href="media/view/history.gif" target="_blank"&gt; Screencast&lt;/a&gt;
+* In historical view, data is displayed for a previous observation period. To do this, select a metric or query column and specify a range in the **History** interface; when selecting the **Custom** field, a more detailed range selection is possible.
 
 ![History](media/view/history.png)
 
@@ -270,11 +265,11 @@ Data analysis functionality is available in detail when a range is selected.
 
 By selecting a specific range, you can get the top related indicators for all other dimensions (for numeric data) and then obtain a real-time updating graph with the selected filter:
 
-![Analyze real time](media/analyze/analyze_real_time.png)
+![Analyze real time](media/analyze/real-time-analyze.png)
 
 For history, the display logic is similar, except that the data is not updated; only the selected ranges are shown.
 
-![Analyze history](media/analyze/analyze_history.png)
+![Analyze history](media/analyze/history-analyze.png)
 
 You can hide data by indicators in the legend, which is convenient when dimension indicator names are long.
 
@@ -282,7 +277,7 @@ For data analysis, the graph for each selected dimension is divided into blocks:
 
 For the **Anomaly** block, available algorithms are shown at the top of the interface (in the screenshot, this is **STAMP**); on the left, all available dimension indicators are displayed. When a value is selected from the list, the user gets a **Matrix Profile** calculation graph, where *maxima* at the top of the graph are *anomalies in the data*, and *minima* at the bottom are *repeated values in the indicators*.
 
-For the **Forecast** block, available algorithms are also shown at the top of the interface (in the screenshot, this is **ARMA**); on the left, all available dimension indicators are displayed. When a value is selected from the list, the user gets a graph with data and forecast continuation values (dashed line).
+For the **Forecast** block, available algorithms are also shown at the top of the interface (in the screenshot, this is **ARIMA**); on the left, all available dimension indicators are displayed. When a value is selected from the list, the user gets a graph with data and forecast continuation values (dashed line).
 
 ![Anomaly](media/analyze/anomaly-data.png)
 ![Forecast](media/analyze/forecast-data.png)
@@ -311,7 +306,7 @@ After the future report layout is displayed, you can edit the description, selec
 
 ### Report generation
 
-After the user has configured all necessary report parameters, they start the report generation process via the **Report** button &lt;a href="media/report/report.gif" target="_blank"&gt;Screencast&lt;/a&gt;
+After the user has configured all necessary report parameters, they start the report generation process via the **Report** button.
 
 ### Viewing the report
 
@@ -396,7 +391,7 @@ sequenceDiagram
 [Return to Table of Contents](#contents)
 
 ## Support
-Created with support of ["Innovation Promotion Fund"](https://fasie.ru/) by competition ["Code-Digital Technologies"](https://fasie.ru/press/fund/kod-dt/) - ["Results"](https://fasie.ru/press/fund/kod-dt-results/) within the framework of the national program [“Digital Economy of the Russian Federation”](https://digital.gov.ru/ru/activity/directions/858/).
+Created with support of ["Innovation Promotion Fund"](https://fasie.ru/).
 
 [Return to Table of Contents](#contents)
 

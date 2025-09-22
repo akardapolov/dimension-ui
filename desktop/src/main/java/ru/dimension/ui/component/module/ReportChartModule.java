@@ -56,7 +56,7 @@ public class ReportChartModule extends JXTaskPane {
       availableSize = this.getPreferredSize();
     }
 
-    view.setDimension(new Dimension(availableSize.width, 500));
+    view.setDimension(new Dimension(availableSize.width, 600));
 
     return () -> PGHelper.cellXYRemainder(this, view.getHistoryConfigChartDetail(), false);
   }

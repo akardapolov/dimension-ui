@@ -23,7 +23,6 @@ import ru.dimension.ui.component.chart.ChartConfig;
 import ru.dimension.ui.component.chart.HelperChart;
 import ru.dimension.ui.component.chart.SCP;
 import ru.dimension.ui.component.chart.history.HistoryAdHocSCP;
-import ru.dimension.ui.component.chart.history.HistorySCP;
 import ru.dimension.ui.component.chart.holder.DetailAndAnalyzeHolder;
 import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.model.DetailState;
@@ -127,7 +126,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
           if (SeriesType.COMMON.equals(seriesTypeChart)) {
             historyDetail = getDetail(historyChart, null, SeriesType.COMMON, null);
           } else {
-            HistorySCP historySCP = (HistorySCP) historyChart;
+            HistoryAdHocSCP historySCP = (HistoryAdHocSCP) historyChart;
             historyDetail = getDetail(historyChart,
                                       historyChart.getSeriesColorMap(),
                                       SeriesType.CUSTOM,
@@ -361,7 +360,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
             if (SeriesType.COMMON.equals(seriesTypeChart)) {
               historyDetail = getDetail(historyChart, null, SeriesType.COMMON, null);
             } else {
-              HistorySCP historySCP = (HistorySCP) historyChart;
+              HistoryAdHocSCP historySCP = (HistoryAdHocSCP) historyChart;
               historyDetail = getDetail(historyChart,
                                         historyChart.getSeriesColorMap(),
                                         SeriesType.CUSTOM,

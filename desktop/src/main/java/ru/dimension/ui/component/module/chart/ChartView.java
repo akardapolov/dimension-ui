@@ -32,7 +32,7 @@ import ru.dimension.ui.helper.GUIHelper;
 public class ChartView extends JPanel {
   private final MessageBroker.Component component;
 
-  private static Dimension dimension = new Dimension(100, 500);
+  private static Dimension dimension = new Dimension(100, 600);
 
   private int configDividerLocation = 32;
   private int chartDividerLocation = 250;

@@ -28,7 +28,7 @@
 
     <dagger2.version>2.57</dagger2.version>
 
-    <dimension-db-version>25.9.3</dimension-db-version>
+    <dimension-db-version>25.9.4</dimension-db-version>
 
     <bdb-version>5.0.73</bdb-version>
     <gson-version>2.13.1</gson-version>
@@ -287,8 +287,8 @@
         <version>3.14.0</version>
         <configuration>
           <encoding>UTF-8</encoding>
-          <source>21</source>
-          <target>21</target>
+          <source>24</source>
+          <target>24</target>
           <release>21</release>
           <annotationProcessorPaths>
             <path>

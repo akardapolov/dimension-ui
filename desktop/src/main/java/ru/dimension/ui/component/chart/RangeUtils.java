@@ -1,10 +1,8 @@
 package ru.dimension.ui.component.chart;
 
-import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 import ru.dimension.ui.helper.DateHelper;
@@ -59,16 +57,10 @@ public class RangeUtils {
 
     @Override
     public String toString() {
-      return "ChartRange{" +
+      return "TimeRange{" +
           "begin=" + DateHelper.getDateFormatted(DateLocale.RU, start) +
           ", end=" + DateHelper.getDateFormatted(DateLocale.RU, end) +
           '}';
-    }
-
-    protected String getDate(long l) {
-      SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-      Date date = new Date(l);
-      return dateFormat.format(date);
     }
   }
 
