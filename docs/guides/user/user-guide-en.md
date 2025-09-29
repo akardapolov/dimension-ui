@@ -129,7 +129,7 @@ To compile the application into an executable jar file, do the following:
   ```shell
     #!/bin/bash
   
-    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+    export JAVA_HOME=/usr/lib/jvm/java-24-openjdk-amd64
     export JAVA_EXE=$JAVA_HOME/bin/java
     export LANG=en_US.UTF-8
 

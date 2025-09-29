@@ -114,7 +114,7 @@ Table 3. Operating system requirements
 
 To compile the application into an executable jar file, do the following:
 
-1. Install JDK version 17 or higher, Maven and Git on your local computer:
+1. Install JDK version 24 or higher, Maven and Git on your local computer:
     ```shell
     java -version  
     mvn -version
@@ -154,7 +154,7 @@ To compile the application into an executable jar file, do the following:
   ```shell
     #!/bin/bash
   
-    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+    export JAVA_HOME=/usr/lib/jvm/java-24-openjdk-amd64
     export JAVA_EXE=$JAVA_HOME/bin/java
     export LANG=en_US.UTF-8
 
