@@ -34,6 +34,7 @@ import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.module.analyze.CustomAction;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
+import ru.dimension.ui.exception.SeriesExceedException;
 import ru.dimension.ui.helper.DateHelper;
 import ru.dimension.ui.helper.FilterHelper;
 import ru.dimension.ui.helper.LogHelper;
@@ -125,8 +126,19 @@ public class ChartPresenter implements HelperChart, MessageAction {
         () -> {
           isReadyRealTimeUpdate = false;
 
-          realTimeChart = createChart(AnalyzeType.REAL_TIME, null);
-          realTimeChart.initialize();
+          try {
+            realTimeChart = createChart(AnalyzeType.REAL_TIME, null);
+            realTimeChart.initialize();
+          } catch (SeriesExceedException e) {
+            log.info("Series count exceeded threshold, reinitializing chart in custom mode for " + model.getMetric().getYAxis());
+            if (realTimeChart instanceof ClientRealtimeSCP) {
+              ((ClientRealtimeSCP) realTimeChart).reinitializeChartInCustomMode();
+            } else if (realTimeChart instanceof ServerRealtimeSCP) {
+              ((ServerRealtimeSCP) realTimeChart).reinitializeChartInCustomMode();
+            }
+            // Re-initialize after switching to custom mode
+            realTimeChart.initialize();
+          }
 
           handleLegendChange(UIState.INSTANCE.getShowLegend(model.getChartKey()));
 
@@ -268,7 +280,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
     Metric chartMetric = chart.getConfig().getMetric();
 
     DetailDashboardPanel detailPanel =
-        new DetailDashboardPanel(model.getDStore(),
+        new DetailDashboardPanel(model.getChartKey(),
                                  model.getQueryInfo(),
                                  model.getChartInfo(),
                                  model.getTableInfo(),
@@ -276,6 +288,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
                                  seriesColorMapToUse,
                                  processType,
                                  seriesType,
+                                 model.getDStore(),
                                  topMapSelected);
 
     CustomAction customAction = new CustomAction() {
@@ -749,9 +762,22 @@ public class ChartPresenter implements HelperChart, MessageAction {
           long begin = end - getRangeRealTime(model.getChartInfo());
           view.getRealTimeFilterPanel().setDataSource(model.getDStore(), realTimeMetric, begin, end);
 
-          if (seriesColorMap == null) {
-            view.getRealTimeFilterPanel().clearFilterPanel();
+          if (seriesColorMap != null) {
+            realTimeChart.loadSeriesColor(realTimeMetric, seriesColorMap);
           }
+
+          try {
+            realTimeChart.initialize();
+          } catch (SeriesExceedException e) {
+            log.info("Series count exceeded threshold, reinitializing chart in custom mode for " + model.getMetric().getYAxis());
+            if (realTimeChart instanceof ClientRealtimeSCP) {
+              ((ClientRealtimeSCP) realTimeChart).reinitializeChartInCustomMode();
+            } else if (realTimeChart instanceof ServerRealtimeSCP) {
+              ((ServerRealtimeSCP) realTimeChart).reinitializeChartInCustomMode();
+            }
+            realTimeChart.initialize();
+          }
+
           view.getRealTimeFilterPanel().setSeriesColorMap(realTimeChart.getSeriesColorMap());
           view.getRealTimeFilterPanel().getMetric()
               .setGroupFunction(realTimeChart.getConfig().getMetric().getGroupFunction());

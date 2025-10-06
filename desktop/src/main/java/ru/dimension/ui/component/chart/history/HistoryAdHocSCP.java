@@ -53,11 +53,6 @@ public class HistoryAdHocSCP extends SCP {
   private JTextField seriesSearch;
   private TableRowSorter<?> seriesSorter;
 
-  public HistoryAdHocSCP(ChartConfig config,
-                         ProfileTaskQueryKey profileTaskQueryKey) {
-    super(config, profileTaskQueryKey);
-  }
-
   public HistoryAdHocSCP(DStore dStore,
                          ChartConfig config,
                          ProfileTaskQueryKey profileTaskQueryKey,
@@ -124,7 +119,7 @@ public class HistoryAdHocSCP extends SCP {
       log.error("Error fetching distinct series", e);
     }
 
-    loadDataHistory(chartRange);
+    loadDataHistoryCommon(chartRange);
 
     initializeDateAxis(chartRange.getBegin(), chartRange.getEnd());
 
@@ -253,7 +248,7 @@ public class HistoryAdHocSCP extends SCP {
             detailAndAnalyzeHolder.detailAction().cleanMainPanel();
           }
 
-          loadDataHistory(chartRange);
+          loadDataHistoryCommon(chartRange);
 
           if (detailAndAnalyzeHolder != null) {
             detailAndAnalyzeHolder.detailAction().cleanMainPanel();
@@ -299,7 +294,7 @@ public class HistoryAdHocSCP extends SCP {
     return selected;
   }
 
-  private void loadDataHistory(ChartRange chartRange) {
+  private void loadDataHistoryCommon(ChartRange chartRange) {
     chartDataset.clear();
     Set<String> filteredSeries = new HashSet<>(series);
 
@@ -312,11 +307,11 @@ public class HistoryAdHocSCP extends SCP {
         && topMapSelected.values().stream().anyMatch(set -> !set.isEmpty());
 
     double range = HelperChart.calculateRange(config.getMetric(), chartRange, config.getMaxPointsPerGraph());
+
     double k = HelperChart.calculateK(range, config.getMetric().getNormFunction());
 
     for (long dtBegin = chartRange.getBegin(); dtBegin <= chartRange.getEnd(); dtBegin += Math.round(range)) {
       long dtEnd = dtBegin + Math.round(range) - 1;
-
       if (applyFilter) {
         dataHandler.handleFunction(dtBegin, dtEnd, k, filteredSeries, topMapSelected, stackedChart);
       } else {

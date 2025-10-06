@@ -66,17 +66,29 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
 
     this.series = new LinkedHashSet<>();
 
-    createStackedChart();
-  }
-
-  protected void createStackedChart() {
     ColorHelper colorHelper = Application.getInstance().getColorHelper();
 
+    createStackedChart(colorHelper);
+    createColor(colorHelper);
+  }
+
+  protected void createStackedChart(ColorHelper colorHelper ) {
     this.stackedChart = new StackedChart(getChartPanel(this.chartDataset), colorHelper);
     this.stackedChart.setLegendFontSize(config.getLegendFontSize());
     this.stackedChart.initialize();
 
     LaF.setBackgroundAndTextColorForStackedChartPanel(LafColorGroup.CHART_PANEL, this.stackedChart);
+  }
+
+  protected void createColor(ColorHelper colorHelper) {
+    GroupFunction groupFunction = config.getMetric().getGroupFunction();
+    if (groupFunction == GroupFunction.SUM || groupFunction == GroupFunction.AVG) {
+      String columnName = config.getMetric().getYAxis().getColName();
+      Color color = colorHelper.getColor(profileTaskQueryKey.getColorProfileName(), columnName);
+
+      loadSeriesColorExternal(Map.of(columnName, color));
+      loadSeriesColorInternal(columnName);
+    }
   }
 
   protected ChartPanel getChartPanel(CategoryTableXYDatasetRealTime dataset) {
@@ -107,9 +119,6 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
       } else {
         loadSeriesColorExternal(seriesColorMap);
       }
-    } else {
-      loadSeriesColorExternal(Map.of(metric.getYAxis().getColName(), new Color(255, 93, 93)));
-      loadSeriesColorInternal(metric.getYAxis().getColName());
     }
   }
 

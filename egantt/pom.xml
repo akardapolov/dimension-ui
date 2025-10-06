@@ -68,7 +68,7 @@
         <configuration>
           <source>24</source>
           <target>24</target>
-          <release>21</release>
+          <release>24</release>
         </configuration>
       </plugin>
     </plugins>

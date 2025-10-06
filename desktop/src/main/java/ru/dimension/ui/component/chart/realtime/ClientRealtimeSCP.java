@@ -325,12 +325,12 @@ public class ClientRealtimeSCP extends RealtimeSCP {
       ChartRange chartRange = getBeginEndRange();
       List<String> distinct = fetchDistinctSeries(chartRange);
 
-      boolean useCustom = distinct.size() > THRESHOLD_SERIES;
+      boolean useCustom = seriesType == SeriesType.CUSTOM || distinct.size() > THRESHOLD_SERIES;
+
       if (useCustom) {
         seriesType = SeriesType.CUSTOM;
-        int showSeries = SHOW_SERIES;
 
-        initializeSeriesSelectableTable(distinct, showSeries);
+        initializeSeriesSelectableTable(distinct, SHOW_SERIES);
 
         series.clear();
         series.addAll(getCheckBoxSelected());

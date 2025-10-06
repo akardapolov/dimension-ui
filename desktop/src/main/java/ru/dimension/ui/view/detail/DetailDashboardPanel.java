@@ -43,6 +43,7 @@ import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.ProcessType;
 import ru.dimension.ui.model.view.SeriesType;
+import ru.dimension.ui.state.ChartKey;
 import ru.dimension.ui.view.detail.pivot.MainPivotDashboardPanel;
 import ru.dimension.ui.view.detail.raw.RawDataDashboardPanel;
 import ru.dimension.ui.view.detail.top.MainTopDashboardPanel;
@@ -52,6 +53,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
 
   private JPanel mainPanel;
 
+  private final ChartKey chartKey;
   private final QueryInfo queryInfo;
   private final ChartInfo chartInfo;
   private final TableInfo tableInfo;
@@ -68,7 +70,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
 
   private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(10);;
 
-  public DetailDashboardPanel(DStore dStore,
+  public DetailDashboardPanel(ChartKey chartKey,
                               QueryInfo queryInfo,
                               ChartInfo chartInfo,
                               TableInfo tableInfo,
@@ -76,8 +78,9 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
                               Map<String, Color> seriesColorMap,
                               ProcessType processType,
                               SeriesType seriesType,
+                              DStore dStore,
                               Map<CProfile, LinkedHashSet<String>> topMapSelected) {
-    this.dStore = dStore;
+    this.chartKey = chartKey;
     this.queryInfo = queryInfo;
     this.chartInfo = chartInfo;
     this.tableInfo = tableInfo;
@@ -87,6 +90,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
     this.seriesColorMap = seriesColorMap;
     this.processType = processType;
     this.seriesType = seriesType;
+    this.dStore = dStore;
     this.topMapSelected = topMapSelected;
 
     this.executorService = Executors.newSingleThreadExecutor();
@@ -119,10 +123,6 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
 
       try {
         JTabbedPane mainJTabbedPane = new JTabbedPane();
-
-        if (!GroupFunction.COUNT.equals(metric.getGroupFunction())) {
-          seriesColorMap.put(metric.getYAxis().getColName(), new Color(255, 93, 93));
-        }
 
         Map<CProfile, LinkedHashSet<String>> actualTopMapSelected = topMapSelected;
         if (SeriesType.CUSTOM.equals(seriesType)) {
@@ -166,9 +166,10 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
         chartInfoCopy.setCustomBegin(begin);
         chartInfoCopy.setCustomEnd(end);
 
-        ProfileTaskQueryKey key = new ProfileTaskQueryKey(0, 0, 0);
+        ChartConfig config = buildChartConfig(chartInfoCopy);
+        ProfileTaskQueryKey key = config.getChartKey().getProfileTaskQueryKey();
 
-        SCP chart = new HistorySCP(dStore, buildChartConfig(chartInfoCopy), key, actualTopMapSelected);
+        SCP chart = new HistorySCP(dStore, config, key, actualTopMapSelected, true);
         chart.loadSeriesColor(metric, seriesColorMap);
         chart.initialize();
 
@@ -214,6 +215,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
   private ChartConfig buildChartConfig(ChartInfo chartInfo) {
     ChartConfig config = new ChartConfig();
     config.setTitle("");
+    config.setChartKey(chartKey);
     config.setXAxisLabel(metric.getYAxis().getColName());
     config.setYAxisLabel("Value");
     config.setMetric(metric);

@@ -119,14 +119,23 @@ public class ColorHelper {
       log.info("Created new color profile: {}", colorProfileName);
     }
 
-    colorProfiles.put(colorProfileName, profile);
     return profile;
   }
 
   public Map<String, Color> getColorMap(String colorProfileName) {
-    ColorProfile profile = colorProfiles.computeIfAbsent(colorProfileName, this::loadOrCreateProfile);
-    Map<String, Color> colorMap = new HashMap<>();
+    ColorProfile profile = colorProfiles.get(colorProfileName);
+    if (profile == null) {
+      Object lock = profileLocks.computeIfAbsent(colorProfileName, k -> new Object());
+      synchronized (lock) {
+        profile = colorProfiles.get(colorProfileName);
+        if (profile == null) {
+          profile = loadOrCreateProfile(colorProfileName);
+          colorProfiles.put(colorProfileName, profile);
+        }
+      }
+    }
 
+    Map<String, Color> colorMap = new HashMap<>();
     if (profile.getColors() != null) {
       for (Map.Entry<String, String> entry : profile.getColors().entrySet()) {
         try {
@@ -141,19 +150,22 @@ public class ColorHelper {
 
   public Color getColor(String colorProfileName, String seriesName) {
     ColorProfile profile = colorProfiles.get(colorProfileName);
-
     if (profile == null) {
       Object lock = profileLocks.computeIfAbsent(colorProfileName, k -> new Object());
       synchronized (lock) {
         profile = colorProfiles.get(colorProfileName);
         if (profile == null) {
           profile = loadOrCreateProfile(colorProfileName);
+          colorProfiles.put(colorProfileName, profile);
         }
       }
     }
 
-    // First check if the color exists in the requested profile
-    if (profile.getColors().containsKey(seriesName)) {
+    log.info("Color profile name: {}, series name: {}, colors: {}",
+             colorProfileName, seriesName,
+             profile.getColors() != null ? (long) profile.getColors().size() : 0L);
+
+    if (profile.getColors() != null && profile.getColors().containsKey(seriesName)) {
       try {
         return Color.decode(profile.getColors().get(seriesName));
       } catch (NumberFormatException e) {
@@ -161,16 +173,13 @@ public class ColorHelper {
       }
     }
 
-    // If not found in requested profile, check default profile
     Color colorFromDefault = getColorFromDefaultProfile(seriesName);
     if (colorFromDefault != null) {
       saveColorToProfile(profile, seriesName, colorFromDefault, colorProfileName);
       return colorFromDefault;
     }
 
-    // If not found in default profile either, generate a new color
     Color newColor = ColorPaletteHelper.generateHSBBasedColor(profile);
-
     saveColorToProfile(profile, seriesName, newColor, colorProfileName);
     return newColor;
   }

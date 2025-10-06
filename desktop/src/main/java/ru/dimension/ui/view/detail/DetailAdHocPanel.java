@@ -120,10 +120,6 @@ public class DetailAdHocPanel extends JPanel implements IDetailPanel, DetailActi
       try {
         JTabbedPane mainJTabbedPane = new JTabbedPane();
 
-        if (!GroupFunction.COUNT.equals(metric.getGroupFunction())) {
-          seriesColorMap.put(metric.getYAxis().getColName(), new Color(255, 93, 93));
-        }
-
         Map<CProfile, LinkedHashSet<String>> actualTopMapSelected = topMapSelected;
         if (SeriesType.CUSTOM.equals(seriesType)) {
           if (actualTopMapSelected == null) {

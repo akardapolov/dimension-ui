@@ -22,12 +22,15 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableRowSorter;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.jfree.chart.util.IDetailPanel;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.SqlColMetadataException;
+import ru.dimension.db.model.output.BlockKeyTail;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.chart.ChartConfig;
 import ru.dimension.ui.component.chart.ChartDataLoader;
@@ -40,6 +43,8 @@ import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.function.GroupFunction;
+import ru.dimension.ui.model.function.NormFunction;
+import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.sql.GatherDataMode;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.SeriesType;
@@ -52,19 +57,25 @@ public class HistorySCP extends SCP {
   protected Map<CProfile, LinkedHashSet<String>> topMapSelected;
 
   private JXTableCase seriesSelectable;
-  private ExecutorService executorService;
   private JTextField seriesSearch;
   private TableRowSorter<?> seriesSorter;
 
-  public HistorySCP(ChartConfig config,
-                    ProfileTaskQueryKey profileTaskQueryKey) {
-    super(config, profileTaskQueryKey);
-  }
+  private boolean isDetail = false;
+
+  private final ExecutorService executorService;
 
   public HistorySCP(DStore dStore,
                     ChartConfig config,
                     ProfileTaskQueryKey profileTaskQueryKey,
                     Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+    this(dStore, config, profileTaskQueryKey, topMapSelected, false);
+  }
+
+  public HistorySCP(DStore dStore,
+                    ChartConfig config,
+                    ProfileTaskQueryKey profileTaskQueryKey,
+                    Map<CProfile, LinkedHashSet<String>> topMapSelected,
+                    boolean isDetail) {
     super(config, profileTaskQueryKey);
 
     super.setDStore(dStore);
@@ -81,6 +92,7 @@ public class HistorySCP extends SCP {
       }
     }
 
+    this.isDetail = isDetail;
     this.executorService = Executors.newSingleThreadExecutor();
   }
 
@@ -303,9 +315,12 @@ public class HistorySCP extends SCP {
   }
 
   private void loadDataHistory(ChartRange chartRange) {
-    ProfileTaskQueryKey key = new ProfileTaskQueryKey(0, 0, 0);
+    System.out.println("debug..");
+    System.out.println(config.getChartKey());
+    System.out.println(profileTaskQueryKey);
+    System.out.println(isDetail);
 
-    if (key.equals(profileTaskQueryKey)) {
+    if (isDetail) {
       switch (config.getQueryInfo().getGatherDataMode()) {
         case BY_SERVER_JDBC -> {
           log.info(GatherDataMode.BY_SERVER_JDBC.name());
@@ -313,7 +328,7 @@ public class HistorySCP extends SCP {
         }
         case BY_CLIENT_JDBC, BY_CLIENT_HTTP -> {
           log.info(GatherDataMode.BY_CLIENT_JDBC.name());
-          loadDataHistoryClient(chartRange);
+          loadDataHistoryClientExp(chartRange, config.getChartInfo().getPullTimeoutClient());
         }
       }
       return;
@@ -352,6 +367,141 @@ public class HistorySCP extends SCP {
     }
   }
 
+  private void loadDataHistoryClientExp(ChartRange chartRange, Integer pullTimeout) {
+    if (NormFunction.SECOND.equals(config.getMetric().getNormFunction())
+        && TimeRangeFunction.AUTO.equals(config.getMetric().getTimeRangeFunction())) {
+      loadDataHistoryCommonGaps(chartRange, pullTimeout);
+    } else {
+      loadDataHistoryCommon(chartRange, pullTimeout);
+    }
+  }
+
+  private void loadDataHistoryCommonGaps(ChartRange chartRange, Integer pullTimeout) {
+    log.info("Starting new history data loading algorithm for range: {} - {}", chartRange.getBegin(), chartRange.getEnd());
+    chartDataset.clear();
+    Set<String> filteredSeries = new HashSet<>(series);
+
+    if (Objects.isNull(seriesType) || SeriesType.COMMON.equals(seriesType)) {
+      dataHandler.fillSeriesData(chartRange.getBegin(), chartRange.getEnd(), filteredSeries);
+    }
+
+    boolean applyFilter = topMapSelected != null
+        && !topMapSelected.isEmpty()
+        && topMapSelected.values().stream().anyMatch(set -> !set.isEmpty());
+
+    double globalRange = HelperChart.calculateRange(config.getMetric(), chartRange, config.getMaxPointsPerGraph());
+    if (pullTimeout != null && globalRange / 1000 < pullTimeout) {
+      globalRange = (double) pullTimeout * 1000;
+    }
+    double globalK = HelperChart.calculateK(globalRange, config.getMetric().getNormFunction());
+    int batchSize = Math.toIntExact(Math.round((globalRange / 1000) / config.getChartInfo().getPullTimeoutClient()));
+
+    log.info("Global parameters calculated: globalRange={}, globalK={}, batchSize={}", globalRange, globalK, batchSize);
+
+    List<BlockKeyTail> blockKeyTails;
+    try {
+      blockKeyTails = dStore.getBlockKeyTailList(config.getQueryInfo().getName(), chartRange.getBegin(), chartRange.getEnd());
+    } catch (BeginEndWrongOrderException e) {
+      log.error("Error fetching BlockKeyTail list", e);
+      return;
+    } catch (SqlColMetadataException e) {
+      throw new RuntimeException(e);
+    }
+
+    List<ContinuousRange> continuousRanges = new ArrayList<>();
+    if (!blockKeyTails.isEmpty()) {
+      BlockKeyTail rangeStart = blockKeyTails.getFirst();
+      BlockKeyTail previousTail = blockKeyTails.getFirst();
+
+      for (int i = 1; i < blockKeyTails.size(); i++) {
+        BlockKeyTail currentTail = blockKeyTails.get(i);
+        long gap = currentTail.getKey() - previousTail.getTail();
+
+        if (gap > globalRange * GAP) {
+          continuousRanges.add(new ContinuousRange(rangeStart, previousTail));
+          log.debug("Detected continuous range: {} - {}", rangeStart.getKey(), previousTail.getTail());
+          rangeStart = currentTail;
+        }
+        previousTail = currentTail;
+      }
+      continuousRanges.add(new ContinuousRange(rangeStart, previousTail));
+      log.debug("Detected final continuous range: {} - {}", rangeStart.getKey(), previousTail.getTail());
+    }
+
+    long currentPosition = chartRange.getBegin();
+
+    for (ContinuousRange range : continuousRanges) {
+      long continuousStart = range.getStart().getKey();
+      if (currentPosition < continuousStart) {
+        log.info("Processing GAP range from {} to {}", currentPosition, continuousStart - 1);
+        processGapRange(currentPosition, continuousStart - 1, globalRange, globalK, filteredSeries, applyFilter);
+      }
+
+      long continuousEnd = range.getEnd().getTail();
+      if (continuousEnd - continuousStart > globalRange) {
+        log.info("Processing CONTINUOUS range from {} to {} via loadDataHistoryClient", continuousStart, continuousEnd);
+        loadDataHistoryForContinuousRange(new ChartRange(continuousStart, continuousEnd), globalRange, batchSize, filteredSeries);
+      } else {
+        log.info("Processing SMALL CONTINUOUS range from {} to {} via dataHandler", continuousStart, continuousEnd);
+        if (applyFilter) {
+          dataHandler.handleFunction(continuousStart, continuousEnd, globalK, filteredSeries, topMapSelected, stackedChart);
+        } else {
+          dataHandler.handleFunction(continuousStart, continuousEnd, false, continuousStart, globalK, filteredSeries, stackedChart);
+        }
+      }
+
+      currentPosition = continuousEnd + 1;
+    }
+
+    if (currentPosition <= chartRange.getEnd()) {
+      log.info("Processing FINAL GAP range from {} to {}", currentPosition, chartRange.getEnd());
+      processGapRange(currentPosition, chartRange.getEnd(), globalRange, globalK, filteredSeries, applyFilter);
+    }
+  }
+
+  private void processGapRange(long begin, long end, double range, double k, Set<String> filteredSeries, boolean applyFilter) {
+    for (long dtBegin = begin; dtBegin <= end; dtBegin += Math.round(range)) {
+      long dtEnd = dtBegin + Math.round(range) - 1;
+      if (applyFilter) {
+        dataHandler.handleFunction(dtBegin, dtEnd, k, filteredSeries, topMapSelected, stackedChart);
+      } else {
+        dataHandler.handleFunction(dtBegin, dtEnd, false, dtBegin, k, filteredSeries, stackedChart);
+      }
+    }
+  }
+
+  private void loadDataHistoryForContinuousRange(ChartRange chartRange, double range, int batchSize, Set<String> filteredSeries) {
+    ChartDataLoader chartDataLoader = new ChartDataLoader(
+        config.getMetric(),
+        config.getChartInfo(),
+        stackedChart,
+        dataHandler,
+        false,
+        topMapSelected
+    );
+    chartDataLoader.setSeries(filteredSeries);
+
+    chartDataLoader.setRange(range);
+    chartDataLoader.setBatchSize(batchSize);
+
+    try {
+      List<BlockKeyTail> localBlockKeyTails = dStore.getBlockKeyTailList(config.getQueryInfo().getName(), chartRange.getBegin(), chartRange.getEnd());
+      chartDataLoader.loadDataFromBdbToDeque(localBlockKeyTails);
+      chartDataLoader.loadDataFromDequeToChart(chartRange.getBegin(), chartRange.getEnd());
+    } catch (BeginEndWrongOrderException | SqlColMetadataException e) {
+      log.catching(e);
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Data
+  @AllArgsConstructor
+  private static class ContinuousRange {
+    private BlockKeyTail start;
+    private BlockKeyTail end;
+  }
+
+  @Deprecated
   private void loadDataHistoryClient(ChartRange chartRange) {
     chartDataset.clear();
     Set<String> filteredSeries = new HashSet<>(series);

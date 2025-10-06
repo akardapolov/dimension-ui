@@ -27,6 +27,9 @@ public abstract class RealtimeSCP extends SCP {
 
   protected List<String> getCheckBoxSelected() {
     List<String> selected = new ArrayList<>();
+    if (seriesSelectable == null) {
+      return selected;
+    }
     int modelRowCount = seriesSelectable.getDefaultTableModel().getRowCount();
     for (int modelRow = 0; modelRow < modelRowCount; modelRow++) {
       if ((Boolean) seriesSelectable.getDefaultTableModel().getValueAt(modelRow, 1)) {

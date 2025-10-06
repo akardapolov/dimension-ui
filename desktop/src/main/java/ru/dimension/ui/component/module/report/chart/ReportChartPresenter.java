@@ -164,7 +164,7 @@ public class ReportChartPresenter implements HelperChart, MessageAction {
     Metric chartMetric = chart.getConfig().getMetric();
 
     DetailDashboardPanel detailPanel =
-        new DetailDashboardPanel(model.getDStore(),
+        new DetailDashboardPanel(chart.getConfig().getChartKey(),
                                  model.getQueryInfo(),
                                  model.getChartInfo(),
                                  model.getTableInfo(),
@@ -172,6 +172,7 @@ public class ReportChartPresenter implements HelperChart, MessageAction {
                                  seriesColorMapToUse,
                                  processType,
                                  seriesType,
+                                 model.getDStore(),
                                  topMapSelected);
 
     CustomAction customAction = new CustomAction() {

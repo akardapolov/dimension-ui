@@ -94,17 +94,6 @@ public class LocalDB implements DStore {
   }
 
   @Override
-  public TProfile loadCsvTableMetadata(String fileName,
-                                       String csvSplitBy,
-                                       SProfile sProfile) {
-    try {
-      return DStore.loadCsvTableMetadata(fileName, csvSplitBy, sProfile);
-    } catch (TableNameEmptyException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @Override
   public void setTimestampColumn(String tableName,
                                  String timestampColumnName) throws TableNameEmptyException {
     DStore.setTimestampColumn(tableName, timestampColumnName);
@@ -134,15 +123,6 @@ public class LocalDB implements DStore {
                                Integer DBaseBatchSize)
       throws SqlColMetadataException, EnumByteExceedException {
     DStore.putDataJdbcBatch(tableName, resultSet, DBaseBatchSize);
-  }
-
-  @Override
-  public void putDataCsvBatch(String tableName,
-                              String fileName,
-                              String csvSplitBy,
-                              Integer DBaseBatchSize)
-      throws SqlColMetadataException {
-    DStore.putDataCsvBatch(tableName, fileName, csvSplitBy, DBaseBatchSize);
   }
 
   @Override
