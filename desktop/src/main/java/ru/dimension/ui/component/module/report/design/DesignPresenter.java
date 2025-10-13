@@ -42,6 +42,7 @@ import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.helper.DesignHelper;
 import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.helper.GUIHelper;
+import ru.dimension.ui.helper.KeyHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
@@ -436,7 +437,7 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
 
           Optional.ofNullable(cProfileReport.getComment()).ifPresent(taskPane.getModel().getDescription()::setText);
 
-          String keyValue = getKey(key, cProfile);
+          String keyValue = KeyHelper.getKey(model.getProfileManager(), key, cProfile);
           taskPane.setTitle(keyValue);
 
           log.info("Add task pane: " + keyValue);
@@ -597,21 +598,6 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
         .chartKey(chartKey).build();
   }
 
-  public String getKey(ProfileTaskQueryKey key,
-                       CProfile cProfile) {
-    ProfileManager profileManager = model.getProfileManager();
-
-    String profileName = profileManager.getProfileInfoById(key.getProfileId()).getName();
-    String taskName = profileManager.getTaskInfoById(key.getTaskId()).getName();
-    String queryName = profileManager.getQueryInfoById(key.getQueryId()).getName();
-    String columnName = cProfile.getColName();
-
-    String keyValue = String.format("Profile: %s >>> Task: %s >>> Query: %s >>> Column: %s",
-                                    profileName, taskName, queryName, columnName);
-
-    return keyValue.length() > 300 ? keyValue.substring(0, 300) + " ... " : keyValue;
-  }
-
   private void handleAddChart(Message message) {
     ProfileTaskQueryKey key = message.parameters().get("key");
     CProfile cProfile = message.parameters().get("cProfile");
@@ -669,7 +655,7 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
         model.getDStore()
     );
 
-    String keyValue = getKey(key, cProfile);
+    String keyValue = KeyHelper.getKey(model.getProfileManager(), key, cProfile);
     taskPane.setTitle(keyValue);
 
     view.addChartCard(taskPane, (module, error) -> {

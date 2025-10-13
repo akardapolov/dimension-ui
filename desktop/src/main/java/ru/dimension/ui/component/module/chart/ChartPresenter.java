@@ -33,6 +33,7 @@ import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.module.analyze.CustomAction;
+import ru.dimension.ui.component.panel.popup.RealtimeStateProvider;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.exception.SeriesExceedException;
 import ru.dimension.ui.helper.DateHelper;
@@ -162,8 +163,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
 
           view.getRealTimeFilterPanel().clearFilterPanel();
           view.getRealTimeFilterPanel().setSeriesColorMap(realTimeChart.getSeriesColorMap());
-          view.getRealTimeFilterPanel().getMetric()
-              .setGroupFunction(realTimeChart.getConfig().getMetric().getGroupFunction());
+          view.getRealTimeFilterPanel().getMetric().setGroupFunction(realTimeChart.getConfig().getMetric().getGroupFunction());
           return () -> {
             view.getRealTimeChartPanel().removeAll();
             view.getRealTimeDetailPanel().removeAll();
@@ -209,13 +209,11 @@ public class ChartPresenter implements HelperChart, MessageAction {
           }
 
           ChartRange chartRange = getChartRange(historyChart.getConfig().getChartInfo());
-          view.getHistoryFilterPanel()
-              .setDataSource(model.getDStore(), historyMetric, chartRange.getBegin(), chartRange.getEnd());
+          view.getHistoryFilterPanel().setDataSource(model.getDStore(), historyMetric, chartRange.getBegin(), chartRange.getEnd());
 
           view.getHistoryFilterPanel().clearFilterPanel();
           view.getHistoryFilterPanel().setSeriesColorMap(historyChart.getSeriesColorMap());
-          view.getHistoryFilterPanel().getMetric()
-              .setGroupFunction(historyChart.getConfig().getMetric().getGroupFunction());
+          view.getHistoryFilterPanel().getMetric().setGroupFunction(historyChart.getConfig().getMetric().getGroupFunction());
           return () -> {
             view.getHistoryChartPanel().add(historyChart, BorderLayout.CENTER);
             view.getHistoryDetailPanel().add(historyDetail, BorderLayout.CENTER);
@@ -302,7 +300,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
                                         Map<String, Color> seriesColorMap) {
         Map<String, Color> newSeriesColorMap = new HashMap<>();
         topMapSelected.values()
-            .forEach(set -> set.forEach(value -> newSeriesColorMap.put(value, seriesColorMap.get(value))));
+            .forEach(set -> set.forEach(val -> newSeriesColorMap.put(val, seriesColorMap.get(val))));
 
         detailPanel.updateSeriesColor(topMapSelected, newSeriesColorMap);
         detailPanel.setSeriesType(SeriesType.CUSTOM);
@@ -643,6 +641,36 @@ public class ChartPresenter implements HelperChart, MessageAction {
   public void initializeFilterPanels() {
     view.getRealTimeFilterPanel().initializeChartPanel(model.getChartKey(), model.getTableInfo(), Panel.REALTIME);
     view.getHistoryFilterPanel().initializeChartPanel(model.getChartKey(), model.getTableInfo(), Panel.HISTORY);
+
+    view.getRealTimeFilterPanel().setRealtimeStateProvider(new RealtimeStateProvider() {
+      @Override
+      public long provideCurrentBegin() {
+        ChartKey chartKey = model.getChartKey();
+        long end = model.getSqlQueryState().getLastTimestamp(chartKey.getProfileTaskQueryKey());
+        if (end == 0L) {
+          end = DateHelper.getNowMilli(ZoneId.systemDefault());
+        }
+        return end - getRangeRealTime(model.getChartInfo());
+      }
+
+      @Override
+      public long provideCurrentEnd() {
+        ChartKey chartKey = model.getChartKey();
+        long end = model.getSqlQueryState().getLastTimestamp(chartKey.getProfileTaskQueryKey());
+        if (end == 0L) {
+          end = DateHelper.getNowMilli(ZoneId.systemDefault());
+        }
+        return end;
+      }
+
+      @Override
+      public Map<String, Color> provideCurrentSeriesColorMap() {
+        if (realTimeChart != null) {
+          return realTimeChart.getSeriesColorMap();
+        }
+        return new HashMap<>();
+      }
+    });
   }
 
   @Override
@@ -779,8 +807,7 @@ public class ChartPresenter implements HelperChart, MessageAction {
           }
 
           view.getRealTimeFilterPanel().setSeriesColorMap(realTimeChart.getSeriesColorMap());
-          view.getRealTimeFilterPanel().getMetric()
-              .setGroupFunction(realTimeChart.getConfig().getMetric().getGroupFunction());
+          view.getRealTimeFilterPanel().getMetric().setGroupFunction(realTimeChart.getConfig().getMetric().getGroupFunction());
           return () -> {
             view.getRealTimeChartPanel().add(realTimeChart, BorderLayout.CENTER);
             view.getRealTimeDetailPanel().add(realTimeDetail, BorderLayout.CENTER);
@@ -845,15 +872,13 @@ public class ChartPresenter implements HelperChart, MessageAction {
           }
 
           ChartRange chartRange = getChartRange(historyChart.getConfig().getChartInfo());
-          view.getHistoryFilterPanel()
-              .setDataSource(model.getDStore(), historyMetric, chartRange.getBegin(), chartRange.getEnd());
+          view.getHistoryFilterPanel().setDataSource(model.getDStore(), historyMetric, chartRange.getBegin(), chartRange.getEnd());
 
           if (seriesColorMap == null) {
             view.getHistoryFilterPanel().clearFilterPanel();
           }
           view.getHistoryFilterPanel().setSeriesColorMap(historyChart.getSeriesColorMap());
-          view.getHistoryFilterPanel().getMetric()
-              .setGroupFunction(historyChart.getConfig().getMetric().getGroupFunction());
+          view.getHistoryFilterPanel().getMetric().setGroupFunction(historyChart.getConfig().getMetric().getGroupFunction());
           return () -> {
             view.getHistoryChartPanel().add(historyChart, BorderLayout.CENTER);
             view.getHistoryDetailPanel().add(historyDetail, BorderLayout.CENTER);

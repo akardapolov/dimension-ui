@@ -32,7 +32,7 @@ import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.module.ReportChartModule;
 import ru.dimension.ui.helper.DesignHelper;
 import ru.dimension.ui.helper.DialogHelper;
-import ru.dimension.ui.manager.ProfileManager;
+import ru.dimension.ui.helper.KeyHelper;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.chart.ChartType;
@@ -186,7 +186,7 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
     ReportChartModule taskPane =
         new ReportChartModule(model.getComponent(), chartKey, key, metric, queryInfo, chartInfoCopy, tableInfo, dStore);
 
-    String keyValue = getKey(key, cProfile);
+    String keyValue = KeyHelper.getKey(model.getProfileManager(), key, cProfile);
     taskPane.setTitle(keyValue);
 
     log.info("Add task pane: " + keyValue);
@@ -454,19 +454,5 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
         .forEach(cardChart -> cardChart.setCollapsed(collapseAll));
 
     view.getCollapseCard().setText(collapseAll ? "Expand all" : "Collapse all");
-  }
-
-  public String getKey(ProfileTaskQueryKey key, CProfile cProfile) {
-    ProfileManager profileManager = model.getProfileManager();
-
-    String profileName = profileManager.getProfileInfoById(key.getProfileId()).getName();
-    String taskName = profileManager.getTaskInfoById(key.getTaskId()).getName();
-    String queryName = profileManager.getQueryInfoById(key.getQueryId()).getName();
-    String columnName = cProfile.getColName();
-
-    String keyValue = String.format("Profile: %s >>> Task: %s >>> Query: %s >>> Column: %s",
-                                    profileName, taskName, queryName, columnName);
-
-    return keyValue.length() > 300 ? keyValue.substring(0, 300) + " ... " : keyValue;
   }
 }

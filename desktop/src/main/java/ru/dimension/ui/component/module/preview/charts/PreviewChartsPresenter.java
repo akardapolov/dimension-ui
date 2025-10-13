@@ -19,7 +19,7 @@ import ru.dimension.ui.component.module.ChartModule;
 import ru.dimension.ui.component.module.PreviewChartModule;
 import ru.dimension.ui.component.module.preview.chart.ChartDetailDialog;
 import ru.dimension.ui.helper.DialogHelper;
-import ru.dimension.ui.manager.ProfileManager;
+import ru.dimension.ui.helper.KeyHelper;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.QueryInfo;
@@ -76,7 +76,7 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
         model.getSqlQueryState(), model.getDStore()
     );
 
-    String keyValue = getKey(key, chartKey.getCProfile());
+    String keyValue = KeyHelper.getKey(model.getProfileManager(), key, chartKey.getCProfile());
     chartModule.setTitle(keyValue);
 
     chartModule.initializeUI().run();
@@ -114,7 +114,7 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
   private void handleRealTimeRangeChange(Message message) {
     RangeRealTime realTimeRange = message.parameters().get("range");
     model.getChartPanes().forEach((key, chartMap) -> chartMap.values()
-        .forEach(chartModule -> chartModule.handleRealTimeRangeUI(realTimeRange)));
+        .forEach(chartModule -> chartModule.handleRealTimeRange(realTimeRange)));
   }
 
   private void chartLegendStateAll(Message message) {
@@ -124,8 +124,8 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
 
     ChartLegendState chartLegendState = message.parameters().get("chartLegendState");
 
-    model.getChartPanes().forEach((key, value) -> {
-      value.values().forEach(chartModule -> chartModule.handleLegendChange(chartLegendState));
+    model.getChartPanes().forEach((key, val) -> {
+      val.values().forEach(chartModule -> chartModule.handleLegendChange(chartLegendState));
     });
   }
 
@@ -136,8 +136,8 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
 
     ChartCardState cardState = message.parameters().get("cardState");
 
-    model.getChartPanes().forEach((key, value) -> {
-      value.values().forEach(chartModule -> chartModule.setCollapsed(ChartCardState.EXPAND_ALL.equals(cardState)));
+    model.getChartPanes().forEach((key, val) -> {
+      val.values().forEach(chartModule -> chartModule.setCollapsed(ChartCardState.EXPAND_ALL.equals(cardState)));
     });
   }
 
@@ -155,7 +155,7 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
 
     PreviewChartModule taskPane = new PreviewChartModule(component, chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
 
-    String keyValue = getKey(key, cProfile);
+    String keyValue = KeyHelper.getKey(model.getProfileManager(), key, cProfile);
     taskPane.setTitle(keyValue);
 
     log.info("Add task pane: " + keyValue);
@@ -169,6 +169,10 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
 
       taskPane.revalidate();
       taskPane.repaint();
+
+      RangeRealTime rangeRealTimeGlobal = UIState.INSTANCE.getRealTimeRangeAll(component.name());
+      RangeRealTime rangeRealTime = UIState.INSTANCE.getRealTimeRange(chartKey);
+      taskPane.handleRealTimeRangeUI(rangeRealTime == null ? rangeRealTimeGlobal : rangeRealTime);
 
       ChartCardState chartCardState = UIState.INSTANCE.getChartCardStateAll(component.name());
       taskPane.setCollapsed(ChartCardState.EXPAND_ALL.equals(chartCardState));
@@ -200,20 +204,6 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
         .chartKey(chartKey).build();
   }
 
-  public String getKey(ProfileTaskQueryKey key,
-                       CProfile cProfile) {
-    ProfileManager profileManager = model.getProfileManager();
-
-    String profileName = profileManager.getProfileInfoById(key.getProfileId()).getName();
-    String taskName = profileManager.getTaskInfoById(key.getTaskId()).getName();
-    String queryName = profileManager.getQueryInfoById(key.getQueryId()).getName();
-    String columnName = cProfile.getColName();
-
-    String keyValue = String.format("Profile: %s >>> Task: %s >>> Query: %s >>> Column: %s", profileName, taskName, queryName, columnName);
-
-    return keyValue.length() > 300 ? keyValue.substring(0, 300) + " ... " : keyValue;
-  }
-
   @Override
   public void fireOnStartCollect(ProfileTaskQueryKey profileTaskQueryKey) {
     log.info("Start collect for {}", profileTaskQueryKey);
@@ -232,10 +222,10 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
       return;
     }
 
-    model.getChartPanes().get(profileTaskQueryKey).forEach((key, value) -> {
-      if (value.isReadyRealTimeUpdate()) {
+    model.getChartPanes().get(profileTaskQueryKey).forEach((key, val) -> {
+      if (val.isReadyRealTimeUpdate()) {
         try {
-          value.loadData();
+          val.loadData();
         } catch (Exception e) {
           log.error("Error loading data", e);
         }

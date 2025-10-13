@@ -76,7 +76,8 @@ public class ConnectionPoolManagerImpl implements ConnectionPoolManager {
         dataSourceMap.put(connectionInfo.getId(), basicDataSource);
       }
     } catch (ClassNotFoundException | IllegalAccessException | InstantiationException | MalformedURLException e) {
-      log.error(e.toString());
+      log.error("Failed to create data source for connection ID: {}", connectionInfo.getId(), e);
+      throw new RuntimeException("Failed to create data source: " + e.getMessage(), e);
     }
 
     return basicDataSource;
@@ -137,9 +138,9 @@ public class ConnectionPoolManagerImpl implements ConnectionPoolManager {
       throw new TimeoutConnectionException(
           "Timeout " + timeoutSeconds + " sec. is exceed to get data from: " + connectionInfo);
     } catch (Exception e) {
-      log.catching(e);
+      log.error("Failed to get connection for connection ID: {}", connectionInfo.getId(), e);
       dataSourceMap.remove(connectionInfo.getId());
-      throw new RuntimeException(e);
+      throw new RuntimeException("Failed to get connection: " + e.getMessage(), e);
     } finally {
       executor.shutdownNow();
     }

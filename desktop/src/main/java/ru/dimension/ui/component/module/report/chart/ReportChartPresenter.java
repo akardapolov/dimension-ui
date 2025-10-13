@@ -107,13 +107,11 @@ public class ReportChartPresenter implements HelperChart, MessageAction {
           }
 
           ChartRange chartRange = getChartRange(historyChart.getConfig().getChartInfo());
-          view.getHistoryFilterPanel()
-              .setDataSource(model.getDStore(), model.getMetric(), chartRange.getBegin(), chartRange.getEnd());
+          view.getHistoryFilterPanel().setDataSource(model.getDStore(), model.getMetric(), chartRange.getBegin(), chartRange.getEnd());
 
           view.getHistoryFilterPanel().clearFilterPanel();
           view.getHistoryFilterPanel().setSeriesColorMap(historyChart.getSeriesColorMap());
-          view.getHistoryFilterPanel().getMetric()
-              .setGroupFunction(historyChart.getConfig().getMetric().getGroupFunction());
+          view.getHistoryFilterPanel().getMetric().setGroupFunction(historyChart.getConfig().getMetric().getGroupFunction());
           return () -> {
             view.getHistoryChartPanel().add(historyChart, BorderLayout.CENTER);
             view.getHistoryDetailPanel().add(historyDetail, BorderLayout.CENTER);
@@ -185,7 +183,7 @@ public class ReportChartPresenter implements HelperChart, MessageAction {
                                         Map<String, Color> seriesColorMap) {
         Map<String, Color> newSeriesColorMap = new HashMap<>();
         topMapSelected.values()
-            .forEach(set -> set.forEach(value -> newSeriesColorMap.put(value, seriesColorMap.get(value))));
+            .forEach(set -> set.forEach(val -> newSeriesColorMap.put(val, seriesColorMap.get(val))));
 
         detailPanel.updateSeriesColor(topMapSelected, newSeriesColorMap);
         detailPanel.setSeriesType(SeriesType.CUSTOM);
@@ -546,15 +544,13 @@ public class ReportChartPresenter implements HelperChart, MessageAction {
           }
 
           ChartRange chartRange = getChartRange(historyChart.getConfig().getChartInfo());
-          view.getHistoryFilterPanel()
-              .setDataSource(model.getDStore(), model.getMetric(), chartRange.getBegin(), chartRange.getEnd());
+          view.getHistoryFilterPanel().setDataSource(model.getDStore(), model.getMetric(), chartRange.getBegin(), chartRange.getEnd());
 
           if (seriesColorMap == null) {
             view.getHistoryFilterPanel().clearFilterPanel();
           }
           view.getHistoryFilterPanel().setSeriesColorMap(historyChart.getSeriesColorMap());
-          view.getHistoryFilterPanel().getMetric()
-              .setGroupFunction(historyChart.getConfig().getMetric().getGroupFunction());
+          view.getHistoryFilterPanel().getMetric().setGroupFunction(historyChart.getConfig().getMetric().getGroupFunction());
           return () -> {
             view.getHistoryChartPanel().add(historyChart, BorderLayout.CENTER);
             view.getHistoryDetailPanel().add(historyDetail, BorderLayout.CENTER);

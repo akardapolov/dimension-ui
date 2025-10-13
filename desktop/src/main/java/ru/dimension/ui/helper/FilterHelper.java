@@ -48,7 +48,7 @@ public final class FilterHelper {
 
   private static void logBugForInvalidValues(CProfile profile, LinkedHashSet<String> values) {
     List<String> invalidValues = values.stream()
-        .filter(value -> value.equalsIgnoreCase(profile.getColName()))
+        .filter(v -> v.equalsIgnoreCase(profile.getColName()))
         .collect(Collectors.toList());
 
     if (!invalidValues.isEmpty()) {
@@ -58,7 +58,7 @@ public final class FilterHelper {
   }
 
   private static boolean hasValidValues(CProfile key, LinkedHashSet<String> values) {
-    return values.stream().anyMatch(value -> !value.equalsIgnoreCase(key.getColName()));
+    return values.stream().anyMatch(v -> !v.equalsIgnoreCase(key.getColName()));
   }
 
   // TODO Fast fix for wrong set filter value as metric.getYAxis().getColName()

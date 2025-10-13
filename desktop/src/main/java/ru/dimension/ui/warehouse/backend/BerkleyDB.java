@@ -1,16 +1,18 @@
 package ru.dimension.ui.warehouse.backend;
 
+import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.StoreConfig;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
@@ -36,63 +38,124 @@ public class BerkleyDB {
     this.setupStoreConfig();
   }
 
-  @SneakyThrows
   public void createDirectory() {
-    if (!Files.exists(Path.of(directory))) {
-      Files.createDirectories(Path.of(directory));
+    try {
+      if (!Files.exists(Path.of(directory))) {
+        Files.createDirectories(Path.of(directory));
+      }
+    } catch (IOException e) {
+      log.error("Failed to create directory: {}", directory, e);
+      throw new RuntimeException("Failed to create directory: " + e.getMessage(), e);
     }
   }
 
-  @SneakyThrows
   public void cleanDirectory() {
-    if (Files.exists(Path.of(directory))) {
-      Files.walk(Path.of(directory))
+    Path dirPath = Path.of(directory);
+    if (!Files.exists(dirPath)) {
+      log.info("Directory {} does not exist, nothing to clean", directory);
+      return;
+    }
+
+    try (Stream<Path> pathStream = Files.walk(dirPath)) {
+      pathStream
+          .filter(path -> !path.equals(dirPath))
           .sorted(Comparator.reverseOrder())
-          .map(Path::toFile)
-          .forEach(File::delete);
+          .forEach(path -> {
+            try {
+              Files.delete(path);
+            } catch (IOException e) {
+              throw new RuntimeException("Failed to delete: " + path, e);
+            }
+          });
+    } catch (IOException e) {
+      log.error("Failed to clean directory: {}", directory, e);
+      throw new RuntimeException("Failed to clean directory: " + e.getMessage(), e);
     }
   }
 
-  @SneakyThrows
   private void setupEnvConfig() {
-    this.envConfig = new EnvironmentConfig();
-    this.envConfig.setAllowCreate(true);
-    this.envConfig.setTransactional(false);
-    this.envConfig.setCachePercent(20);
+    try {
+      this.envConfig = new EnvironmentConfig();
+      this.envConfig.setAllowCreate(true);
+      this.envConfig.setTransactional(false);
+      this.envConfig.setCachePercent(20);
+    } catch (Exception e) {
+      log.error("Failed to setup environment configuration", e);
+      throw new RuntimeException("Failed to setup environment configuration: " + e.getMessage(), e);
+    }
   }
 
-  @SneakyThrows
   private void setupEnvironment() {
-    this.env = new Environment(new File(this.directory), envConfig);
+    try {
+      this.env = new Environment(new File(this.directory), envConfig);
+    } catch (DatabaseException e) {
+      log.error("Failed to setup environment for directory: {}", directory, e);
+      throw new RuntimeException("Failed to setup environment: " + e.getMessage(), e);
+    }
   }
 
-  @SneakyThrows
   private void setupStoreConfig() {
-    this.storeConfig = new StoreConfig();
-    this.storeConfig.setAllowCreate(true);
-    this.storeConfig.setTransactional(false);
-    this.storeConfig.setDeferredWrite(true);
+    try {
+      this.storeConfig = new StoreConfig();
+      this.storeConfig.setAllowCreate(true);
+      this.storeConfig.setTransactional(false);
+      this.storeConfig.setDeferredWrite(true);
 
-    this.store = new EntityStore(this.env, "ash.db", this.storeConfig);
+      this.store = new EntityStore(this.env, "ash.db", this.storeConfig);
+    } catch (Exception e) {
+      log.error("Failed to setup store configuration", e);
+      throw new RuntimeException("Failed to setup store configuration: " + e.getMessage(), e);
+    }
   }
 
-  @SneakyThrows
   public void closeDatabase() {
-    this.getStore().close();
-    this.getEnv().close();
+    try {
+      if (this.store != null) {
+        this.store.close();
+      }
+      if (this.env != null) {
+        this.env.close();
+      }
+    } catch (Exception e) {
+      log.error("Failed to close database", e);
+      throw new RuntimeException("Failed to close database: " + e.getMessage(), e);
+    }
   }
 
   public void syncDatabase() {
-    this.getStore().sync();
-    this.getEnv().sync();
+    try {
+      if (this.store != null) {
+        this.store.sync();
+      }
+      if (this.env != null) {
+        this.env.sync();
+      }
+    } catch (Exception e) {
+      log.error("Failed to sync database", e);
+      throw new RuntimeException("Failed to sync database: " + e.getMessage(), e);
+    }
   }
 
-  @SneakyThrows
   public void removeDirectory() {
-    Files.walk(Path.of(directory))
-        .sorted(Comparator.reverseOrder())
-        .map(Path::toFile)
-        .forEach(File::delete);
-  }
+    Path dirPath = Path.of(directory);
+    if (!Files.exists(dirPath)) {
+      log.info("Directory {} does not exist, nothing to remove", directory);
+      return;
+    }
 
+    try (Stream<Path> pathStream = Files.walk(dirPath)) {
+      pathStream
+          .sorted(Comparator.reverseOrder())
+          .forEach(path -> {
+            try {
+              Files.delete(path);
+            } catch (IOException e) {
+              throw new RuntimeException("Failed to delete: " + path, e);
+            }
+          });
+    } catch (IOException e) {
+      log.error("Failed to remove directory: {}", directory, e);
+      throw new RuntimeException("Failed to remove directory: " + e.getMessage(), e);
+    }
+  }
 }

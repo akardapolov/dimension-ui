@@ -1,7 +1,5 @@
 package ru.dimension.ui.component.module.preview.config;
 
-import static ru.dimension.ui.component.broker.MessageBroker.Component.PREVIEW;
-
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.Message;
@@ -16,6 +14,10 @@ import ru.dimension.ui.state.UIState;
 
 @Log4j2
 public class PreviewConfigPresenter {
+  private static final RangeRealTime DEFAULT_RANGE = RangeRealTime.TEN_MIN;
+  private static final boolean DEFAULT_SHOW_LEGEND = true;
+  private static final boolean DEFAULT_SHOW_CONFIG = true;
+
   private final MessageBroker.Component component;
 
   private final PreviewConfigView  view;
@@ -31,14 +33,26 @@ public class PreviewConfigPresenter {
   }
 
   private void restoreState() {
-    RangeRealTime range = UIState.INSTANCE.getRealTimeRangeAll(PREVIEW.name());
-    if (range != null) view.getRealTimeRangePanel().setSelectedRange(range);
+    RangeRealTime range = UIState.INSTANCE.getRealTimeRangeAll(component.name());
+    if (range == null) {
+      range = DEFAULT_RANGE;
+      UIState.INSTANCE.putRealTimeRangeAll(component.name(), range);
+    }
+    view.getRealTimeRangePanel().setSelectedRange(range);
 
-    Boolean showLegend = UIState.INSTANCE.getShowLegendAll(PREVIEW.name());
-    if (showLegend != null) view.getRealTimeLegendPanel().setSelected(showLegend);
+    Boolean showLegend = UIState.INSTANCE.getShowLegendAll(component.name());
+    if (showLegend == null) {
+      showLegend = DEFAULT_SHOW_LEGEND;
+      UIState.INSTANCE.putShowLegendAll(component.name(), showLegend);
+    }
+    view.getRealTimeLegendPanel().setSelected(showLegend);
 
-    Boolean showConfig = UIState.INSTANCE.getShowConfigAll(PREVIEW.name());
-    if (showConfig != null) view.getConfigShowHidePanel().setSelected(showConfig);
+    Boolean showConfig = UIState.INSTANCE.getShowConfigAll(component.name());
+    if (showConfig == null) {
+      showConfig = DEFAULT_SHOW_CONFIG;
+      UIState.INSTANCE.putShowConfigAll(component.name(), showConfig);
+    }
+    view.getConfigShowHidePanel().setSelected(showConfig);
   }
 
   private void setupListeners() {
@@ -50,27 +64,27 @@ public class PreviewConfigPresenter {
 
   private void handleRealTimeRange(RangeRealTime range) {
     log.info("PreviewConfig – real-time range changed to {}", range);
-    UIState.INSTANCE.putRealTimeRangeAll(PREVIEW.name(), range);
+    UIState.INSTANCE.putRealTimeRangeAll(component.name(), range);
     sendMessage(Action.REALTIME_RANGE_CHANGE, "range", range);
   }
 
   private void handleLegend(boolean show) {
     log.info("PreviewConfig – legend visibility {}", show);
-    UIState.INSTANCE.putShowLegendAll(PREVIEW.name(), show);
+    UIState.INSTANCE.putShowLegendAll(component.name(), show);
     sendMessage(Action.CHART_LEGEND_STATE_ALL, "chartLegendState",
                 show ? ChartLegendState.SHOW : ChartLegendState.HIDE);
   }
 
   private void handleConfig(boolean show) {
     log.info("PreviewConfig – config visibility {}", show);
-    UIState.INSTANCE.putShowConfigAll(PREVIEW.name(), show);
+    UIState.INSTANCE.putShowConfigAll(component.name(), show);
     sendMessage(Action.SHOW_HIDE_CONFIG_ALL, "configState",
                 show ? ChartConfigState.SHOW : ChartConfigState.HIDE);
   }
 
   private void handleCollapse(ChartCardState state) {
     log.info("PreviewConfig – dashboard collapse {}", state);
-    UIState.INSTANCE.putChartCardStateAll(PREVIEW.name(), state);
+    UIState.INSTANCE.putChartCardStateAll(component.name(), state);
     sendMessage(Action.EXPAND_COLLAPSE_ALL, "cardState", state);
   }
 

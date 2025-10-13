@@ -234,8 +234,8 @@ public abstract class AnalyzeTimeSeriesPanel extends JPanel implements IDetailPa
           .filter(algorithm -> algorithm.getName().equals(radioButton.getText()))
           .findFirst()
           .ifPresent(alg -> alg.getParameters()
-              .forEach((key, value) -> popupPanel.getTable().getDefaultTableModel()
-                  .addRow(new Object[]{key, value})));
+              .forEach((key, val) -> popupPanel.getTable().getDefaultTableModel()
+                  .addRow(new Object[]{key, val})));
     });
   }
 

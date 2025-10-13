@@ -315,11 +315,6 @@ public class HistorySCP extends SCP {
   }
 
   private void loadDataHistory(ChartRange chartRange) {
-    System.out.println("debug..");
-    System.out.println(config.getChartKey());
-    System.out.println(profileTaskQueryKey);
-    System.out.println(isDetail);
-
     if (isDetail) {
       switch (config.getQueryInfo().getGatherDataMode()) {
         case BY_SERVER_JDBC -> {

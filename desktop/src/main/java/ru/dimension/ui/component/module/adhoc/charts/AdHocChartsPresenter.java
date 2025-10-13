@@ -94,10 +94,10 @@ public class AdHocChartsPresenter implements MessageAction {
     DetailState detailState = message.parameters().get("detailState");
     if (model == null || model.getChartPanes() == null) return;
 
-    model.getChartPanes().forEach((key, value) -> {
+    model.getChartPanes().forEach((key, val) -> {
       String chartGlobalKey = key.getConnectionId() + "_" + key.getTableName();
       if (chartGlobalKey.equals(model.getGlobalKey())) {
-        value.values().forEach(chartModule -> chartModule.setDetailState(detailState));
+        val.values().forEach(chartModule -> chartModule.setDetailState(detailState));
       }
     });
   }
@@ -106,10 +106,10 @@ public class AdHocChartsPresenter implements MessageAction {
     if (model == null || model.getChartPanes() == null) return;
 
     ChartLegendState chartLegendState = message.parameters().get("chartLegendState");
-    model.getChartPanes().forEach((key, value) -> {
+    model.getChartPanes().forEach((key, val) -> {
       String chartGlobalKey = key.getConnectionId() + "_" + key.getTableName();
       if (chartGlobalKey.equals(model.getGlobalKey())) {
-        value.values().forEach(chartModule -> chartModule.handleLegendChange(chartLegendState));
+        val.values().forEach(chartModule -> chartModule.handleLegendChange(chartLegendState));
       }
     });
   }
@@ -118,10 +118,10 @@ public class AdHocChartsPresenter implements MessageAction {
     if (model == null || model.getChartPanes() == null) return;
 
     ChartCardState cardState = message.parameters().get("cardState");
-    model.getChartPanes().forEach((key, value) -> {
+    model.getChartPanes().forEach((key, val) -> {
       String chartGlobalKey = key.getConnectionId() + "_" + key.getTableName();
       if (chartGlobalKey.equals(model.getGlobalKey())) {
-        value.values().forEach(chartModule ->
+        val.values().forEach(chartModule ->
                                    chartModule.setCollapsed(ChartCardState.EXPAND_ALL.equals(cardState))
         );
       }

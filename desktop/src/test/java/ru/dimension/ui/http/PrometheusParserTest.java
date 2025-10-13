@@ -38,7 +38,7 @@ public class PrometheusParserTest {
 
     Map<String, List<Entry<String, Double>>> metricFamilyMap = parser.textToMetricKeyValue(resp);
 
-    metricFamilyMap.forEach((key, value) -> assertTrue(value.stream().anyMatch(f -> f.getKey().startsWith(key))));
+    metricFamilyMap.forEach((key, val) -> assertTrue(val.stream().anyMatch(f -> f.getKey().startsWith(key))));
   }
 
   private void assertEqualsMetricFamily(Map<String, MetricFamily> map) {

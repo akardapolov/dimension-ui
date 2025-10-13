@@ -40,7 +40,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-        <version>3.2.1</version>
+        <version>3.3.1</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -63,7 +63,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.9</version>
+        <version>3.12.0</version>
         <configuration>
           <overview>src/main/java/overview.html</overview>
         </configuration>
@@ -73,9 +73,9 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.14.0</version>
         <configuration>
-          <source>24</source>
-          <target>24</target>
-          <release>24</release>
+          <source>25</source>
+          <target>25</target>
+          <release>25</release>
         </configuration>
       </plugin>
     </plugins>

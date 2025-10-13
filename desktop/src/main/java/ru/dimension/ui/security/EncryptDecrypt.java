@@ -3,6 +3,7 @@ package ru.dimension.ui.security;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -22,7 +23,6 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.PBEParameterSpec;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.exception.PasswordEncryptDecryptException;
 
@@ -51,24 +51,32 @@ public class EncryptDecrypt {
   public EncryptDecrypt() {
   }
 
-  @SneakyThrows
   public String encrypt(String plainText) {
     if (plainText == null) {
       throw new PasswordEncryptDecryptException("Text for encryption could not be null.. " +
                                                     "Check password field of connProfile entity in configuration!");
     }
 
-    return encrypt(getComputerName(), plainText);
+    try {
+      return encrypt(getComputerName(), plainText);
+    } catch (Exception e) {
+      log.error("Encryption failed", e);
+      throw new PasswordEncryptDecryptException("Encryption failed: " + e.getMessage());
+    }
   }
 
-  @SneakyThrows
   public String decrypt(String encryptedText) {
     if (encryptedText == null) {
       throw new PasswordEncryptDecryptException("Text for decryption could not be null.. " +
                                                     "Check password field of connProfile entity in configuration!");
     }
 
-    return decrypt(getComputerName(), encryptedText);
+    try {
+      return decrypt(getComputerName(), encryptedText);
+    } catch (Exception e) {
+      log.error("Decryption failed", e);
+      throw new PasswordEncryptDecryptException("Decryption failed: " + e.getMessage());
+    }
   }
 
   /**
@@ -147,15 +155,19 @@ public class EncryptDecrypt {
     return plainStr;
   }
 
-  @SneakyThrows
   private String getComputerName() {
-    Map<String, String> env = System.getenv();
-    if (env.containsKey("COMPUTERNAME")) {
-      return env.get("COMPUTERNAME");
-    } else if (env.containsKey("HOSTNAME")) {
-      return env.get("HOSTNAME");
-    } else {
-      return InetAddress.getLocalHost().toString();
+    try {
+      Map<String, String> env = System.getenv();
+      if (env.containsKey("COMPUTERNAME")) {
+        return env.get("COMPUTERNAME");
+      } else if (env.containsKey("HOSTNAME")) {
+        return env.get("HOSTNAME");
+      } else {
+        return InetAddress.getLocalHost().getHostName();
+      }
+    } catch (UnknownHostException e) {
+      log.error("Failed to get computer name", e);
+      throw new PasswordEncryptDecryptException("Failed to get computer name: " + e.getMessage());
     }
   }
 }

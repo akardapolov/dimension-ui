@@ -75,7 +75,7 @@ Key Features of **Dimension UI**:
 [Return to Contents](#Contents)
 
 ## Minimum technical requirements
-**Dimension DB** is compatible with Java 24+ and comes with a small set of dependencies.
+**Dimension DB** is compatible with Java 25+ and comes with a small set of dependencies.
 
 ### Hardware requirements
 

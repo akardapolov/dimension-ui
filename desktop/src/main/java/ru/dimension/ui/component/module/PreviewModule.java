@@ -55,10 +55,10 @@ public class PreviewModule implements CollectStartStopListener {
       return;
     }
 
-    model.getChartModules().forEach((key, value) -> {
-      if (value.isReadyRealTimeUpdate()) {
+    model.getChartModules().forEach((key, val) -> {
+      if (val.isReadyRealTimeUpdate()) {
         try {
-          value.loadData();
+          val.loadData();
         } catch (Exception e) {
           log.error("Error loading data", e);
         }

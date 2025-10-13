@@ -30,8 +30,8 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>24</maven.compiler.source>
-    <maven.compiler.target>24</maven.compiler.target>
+    <maven.compiler.source>25</maven.compiler.source>
+    <maven.compiler.target>25</maven.compiler.target>
   </properties>
   <!-- Build Settings -->
   <build>
@@ -64,9 +64,9 @@
         <version>3.14.0</version>
         <configuration>
           <encoding>UTF-8</encoding>
-          <source>24</source>
-          <target>24</target>
-          <release>24</release>
+          <source>25</source>
+          <target>25</target>
+          <release>25</release>
         </configuration>
       </plugin>
     </plugins>
@@ -116,7 +116,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-source-plugin</artifactId>
-            <version>2.4</version>
+            <version>3.3.1</version>
             <executions>
               <execution>
                 <id>attach-sources</id>
@@ -129,7 +129,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>2.10.3</version>
+            <version>3.12.0</version>
             <executions>
               <execution>
                 <id>attach-javadocs</id>

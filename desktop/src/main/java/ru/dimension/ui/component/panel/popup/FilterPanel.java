@@ -24,10 +24,12 @@ import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
+import ru.dimension.ui.helper.DateHelper;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.model.column.MetricsColumnNames;
 import ru.dimension.ui.model.config.Metric;
+import ru.dimension.ui.model.date.DateLocale;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.SeriesType;
@@ -57,6 +59,8 @@ public class FilterPanel extends ConfigPopupPanel {
   private List<String> filteredFilters = new ArrayList<>();
 
   private CProfile selectedColumn;
+
+  private RealtimeStateProvider realtimeStateProvider;
 
   public FilterPanel(MessageBroker.Component component) {
     super(JPanel::new, "Filter >>", "Filter <<");
@@ -218,15 +222,28 @@ public class FilterPanel extends ConfigPopupPanel {
   private void loadFiltersForColumn(CProfile column) {
     if (dStore == null || tableInfo == null) return;
 
+    long currentBegin = this.begin;
+    long currentEnd = this.end;
+    Map<String, Color> currentSeriesColorMap = this.seriesColorMap;
+
+    if (realtimeStateProvider != null) {
+      currentBegin = realtimeStateProvider.provideCurrentBegin();
+      currentEnd = realtimeStateProvider.provideCurrentEnd();
+      currentSeriesColorMap = realtimeStateProvider.provideCurrentSeriesColorMap();
+    }
+
+    log.info(DateHelper.getDateFormatted(DateLocale.RU, currentBegin));
+    log.info(DateHelper.getDateFormatted(DateLocale.RU, currentEnd));
+
     filtersPanel.setTableInfo(tableInfo);
     filtersPanel.setMetric(metric);
     filtersPanel.setDStore(dStore);
-    filtersPanel.setBegin(begin);
-    filtersPanel.setEnd(end);
+    filtersPanel.setBegin(currentBegin);
+    filtersPanel.setEnd(currentEnd);
     filtersPanel.setSeriesType(seriesType);
-    filtersPanel.setSeriesColorMap(seriesColorMap);
+    filtersPanel.setSeriesColorMap(currentSeriesColorMap);
 
-    filtersPanel.loadData(column, seriesColorMap);
+    filtersPanel.loadData(column, currentSeriesColorMap);
   }
 
   private void filterFilters() {

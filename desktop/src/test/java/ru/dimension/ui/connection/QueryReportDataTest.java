@@ -21,8 +21,8 @@ public class QueryReportDataTest {
     mapReportData.put(new ProfileTaskQueryKey(1, 2, 3), new QueryReportData());
 
     Map<String, QueryReportData> mapString = new HashMap<>();
-    mapReportData.forEach((key, value) -> mapString
-        .put(key.getProfileId() + "_" + key.getTaskId() + "_" + key.getQueryId(), value));
+    mapReportData.forEach((key, val) -> mapString
+        .put(key.getProfileId() + "_" + key.getTaskId() + "_" + key.getQueryId(), val));
 
     GsonBuilder gsonBuilder = new GsonBuilder();
     Gson gson = gsonBuilder.setPrettyPrinting().create();

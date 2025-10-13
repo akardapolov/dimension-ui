@@ -158,9 +158,9 @@ public class HttpResponseFetcherImpl implements HttpResponseFetcher {
     // Parameters
     Map<String, String> params = httpProtocol.getParams();
     if (params != null) {
-      params.forEach((key, value) -> {
-        if (CommonUtil.isNullOrBlank(value)) {
-          requestBuilder.addParameter(key, value);
+      params.forEach((key, val) -> {
+        if (CommonUtil.isNullOrBlank(val)) {
+          requestBuilder.addParameter(key, val);
         }
       });
     }
@@ -172,10 +172,10 @@ public class HttpResponseFetcherImpl implements HttpResponseFetcher {
     // Overwrite headers with httpProtocol's headers
     Map<String, String> headers = httpProtocol.getHeaders();
     if (headers != null) {
-      headers.forEach((key, value) -> {
-        if (CommonUtil.isNullOrBlank(value)) {
+      headers.forEach((key, val) -> {
+        if (CommonUtil.isNullOrBlank(val)) {
           requestBuilder.addHeader(CollectUtil.replaceUriSpecialChar(key),
-                                   CollectUtil.replaceUriSpecialChar(value));
+                                   CollectUtil.replaceUriSpecialChar(val));
         }
       });
     }
