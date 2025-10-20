@@ -27,12 +27,14 @@ public class TaskExecutorPool {
   }
 
   public void stop(ProfileTaskQueryKey profileTaskQueryKey) {
-    taskExecutorMap.entrySet()
-        .stream()
-        .filter(f -> f.getKey().equals(profileTaskQueryKey))
-        .findAny()
-        .ifPresentOrElse(taskExecutorEntry -> taskExecutorEntry.getValue().stop(),
-                         () -> log.info("Not found running Task Executor for {}", profileTaskQueryKey));
+    TaskExecutor executor = taskExecutorMap.get(profileTaskQueryKey);
+    if (executor != null) {
+      executor.stop();
+      log.info("Stopped Task Executor for {}", profileTaskQueryKey);
+    } else {
+      log.warn("Not found running Task Executor for {}", profileTaskQueryKey);
+      log.debug("Available executors: {}", taskExecutorMap.keySet());
+    }
   }
 
   public void remove(ProfileTaskQueryKey profileTaskQueryKey) {

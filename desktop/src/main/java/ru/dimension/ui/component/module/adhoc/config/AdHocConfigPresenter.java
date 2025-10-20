@@ -11,7 +11,6 @@ import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.model.ChartLegendState;
-import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.view.RangeHistory;
@@ -43,7 +42,6 @@ public class AdHocConfigPresenter implements MessageAction {
     view.getHistoryPanel().getButtonApplyRange().addActionListener(e -> handleCustomHistoryRangeChange());
 
     view.getLegendPanel().setStateChangeConsumer(this::handleLegendVisibilityChange);
-    view.getDetailShowHidePanel().setStateChangeConsumer(this::handleDetailVisibilityChange);
     view.getCollapseCardPanel().setStateChangeConsumer(this::handleCollapseCardChange);
   }
 
@@ -59,22 +57,6 @@ public class AdHocConfigPresenter implements MessageAction {
                              .action(Action.CHART_LEGEND_STATE_ALL)
                              .parameter("globalKey", model.getGlobalKey())
                              .parameter("chartLegendState", chartLegendState)
-                             .build());
-    }
-  }
-
-  private void handleDetailVisibilityChange(DetailState detailState) {
-    log.info("Detail visibility changed to: {}", detailState);
-
-    if (model.getGlobalKey().isEmpty()) {
-      log.info("Global key is empty");
-    } else {
-      adHocStateManager.putGlobalShowDetail(model.getGlobalKey(), detailState);
-      broker.sendMessage(Message.builder()
-                             .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
-                             .action(Action.SHOW_HIDE_DETAIL_ALL)
-                             .parameter("globalKey", model.getGlobalKey())
-                             .parameter("detailState", detailState)
                              .build());
     }
   }
@@ -158,9 +140,6 @@ public class AdHocConfigPresenter implements MessageAction {
 
     boolean showLegend = adHocStateManager.getShowLegend(new AdHocKey(), globalKey);
     view.getLegendPanel().setSelected(showLegend);
-
-    DetailState detailState = adHocStateManager.getShowDetailAll(globalKey);
-    view.getDetailShowHidePanel().setDetailState(detailState);
 
     ChartCardState chartCardState = adHocStateManager.getChartCardStateAll(globalKey);
     view.getCollapseCardPanel().setState(chartCardState);

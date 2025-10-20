@@ -1,5 +1,6 @@
 package ru.dimension.ui.component.module.preview.charts;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
@@ -217,37 +218,36 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
       return;
     }
 
-    if (model.getChartPanes().get(profileTaskQueryKey) == null || model.getChartPanes().get(profileTaskQueryKey)
-        .isEmpty()) {
-      return;
-    }
+    Map<CProfile, PreviewChartModule> chartModules = model.getChartPanes().get(profileTaskQueryKey);
 
-    model.getChartPanes().get(profileTaskQueryKey).forEach((key, val) -> {
-      if (val.isReadyRealTimeUpdate()) {
-        try {
-          val.loadData();
-        } catch (Exception e) {
-          log.error("Error loading data", e);
-        }
-      }
-    });
-
-      ChartDetailDialog dialog = model.getChartDetailDialog();
-      if (dialog != null && dialog.isVisible()) {
-        ChartModule dialogChartModule = dialog.getChartModule();
-        if (dialogChartModule.getModel().getKey().equals(profileTaskQueryKey) &&
-            dialogChartModule.isReadyRealTimeUpdate()) {
+    if (chartModules != null && !chartModules.isEmpty()) {
+      chartModules.forEach((key, val) -> {
+        if (val.isReadyRealTimeUpdate()) {
           try {
-            dialogChartModule.loadData();
+            val.loadData();
           } catch (Exception e) {
-            log.error("Error loading data in dialog", e);
+            log.error("Error loading data for chart: {}", val.getTitle(), e);
           }
         }
+      });
+    }
+
+    ChartDetailDialog dialog = model.getChartDetailDialog();
+    if (dialog != null && dialog.isVisible()) {
+      ChartModule dialogChartModule = dialog.getChartModule();
+      if (dialogChartModule.getModel().getKey().equals(profileTaskQueryKey) &&
+          dialogChartModule.isReadyRealTimeUpdate()) {
+        try {
+          dialogChartModule.loadData();
+        } catch (Exception e) {
+          log.error("Error loading data in dialog", e);
+        }
       }
+    }
   }
 
   private void logChartAction(Action action,
                               CProfile cProfile) {
-    log.info("Message action: " + action + " for " + cProfile);
+    log.info("Message action: {} for {}", action, cProfile);
   }
 }

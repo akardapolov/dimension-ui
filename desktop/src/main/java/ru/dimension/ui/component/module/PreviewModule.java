@@ -51,6 +51,10 @@ public class PreviewModule implements CollectStartStopListener {
       return;
     }
 
+    if (model.getKey() != null && !model.getKey().equals(profileTaskQueryKey)) {
+      return;
+    }
+
     if (model.getChartModules().isEmpty()) {
       return;
     }

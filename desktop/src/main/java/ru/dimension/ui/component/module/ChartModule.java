@@ -8,8 +8,6 @@ import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.chart.realtime.ClientRealtimeSCP;
 import ru.dimension.ui.component.chart.realtime.ServerRealtimeSCP;
 import ru.dimension.ui.component.model.ChartLegendState;
-import ru.dimension.ui.component.model.DetailState;
-import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.module.chart.ChartModel;
 import ru.dimension.ui.component.module.chart.ChartPresenter;
 import ru.dimension.ui.component.module.chart.ChartView;
@@ -24,7 +22,6 @@ import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.RangeRealTime;
 import ru.dimension.ui.state.ChartKey;
-import ru.dimension.ui.state.SqlQueryState;
 
 @Log4j2
 public class ChartModule extends JXTaskPane {
@@ -43,7 +40,7 @@ public class ChartModule extends JXTaskPane {
                      QueryInfo queryInfo,
                      ChartInfo chartInfo,
                      TableInfo tableInfo,
-                     SqlQueryState sqlQueryState,
+                     ru.dimension.ui.state.SqlQueryState sqlQueryState,
                      DStore dStore) {
     this.model = new ChartModel(chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
     this.view = new ChartView(component);
@@ -54,7 +51,6 @@ public class ChartModule extends JXTaskPane {
 
   public Runnable initializeUI() {
     presenter.initializeCharts();
-
     return () -> PGHelper.cellXYRemainder(this, view.getTabbedPane(), false);
   }
 
@@ -72,15 +68,11 @@ public class ChartModule extends JXTaskPane {
   }
 
   public void handleLegendChange(ChartLegendState chartLegendState) {
-    presenter.handleLegendChangeAll(ChartLegendState.SHOW.equals(chartLegendState));
+    presenter.handleLegendChangeAll(chartLegendState);
   }
 
-  public void setDetailState(DetailState detailState) {
-    this.presenter.setDetailState(detailState);
-  }
-
-  public void setActiveTab(PanelTabType panelTabType) {
-    this.presenter.setActiveTab(panelTabType);
+  public void setActiveTab(MessageBroker.Panel panel) {
+    this.presenter.setActiveTab(panel);
   }
 
   public void updateRealTimeRange(RangeRealTime range) {

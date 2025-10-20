@@ -1,9 +1,9 @@
 package ru.dimension.ui.component.module.preview;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
@@ -27,7 +27,7 @@ public class PreviewModel {
   private final SqlQueryState sqlQueryState;
   private final DStore dStore;
 
-  private final Map<CProfile, PreviewChartModule> chartModules = new HashMap<>();
+  private final ConcurrentMap<CProfile, PreviewChartModule> chartModules = new ConcurrentHashMap<>();
 
   public PreviewModel(ProfileTaskQueryKey key,
                       QueryInfo queryInfo,

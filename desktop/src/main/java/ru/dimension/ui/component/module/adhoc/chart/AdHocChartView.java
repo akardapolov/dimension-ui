@@ -28,9 +28,6 @@ public class AdHocChartView {
   private int configDividerLocation = 32;
   private int chartDividerLocation = 250;
 
-  private int lastHistoryConfigDividerLocation = 32;
-  private int lastHistoryChartDividerLocation = 250;
-
   @Getter
   private JPanel panel;
 
@@ -96,8 +93,8 @@ public class AdHocChartView {
     historyConfigChartDetail.setTopComponent(historyConfigBlock);
     historyConfigChartDetail.setBottomComponent(historyChartDetailSplitPane);
 
-    historyConfigChartDetail.setDividerLocation(lastHistoryConfigDividerLocation);
-    historyChartDetailSplitPane.setDividerLocation(lastHistoryChartDividerLocation);
+    historyConfigChartDetail.setDividerLocation(configDividerLocation);
+    historyChartDetailSplitPane.setDividerLocation(chartDividerLocation);
 
     return historyConfigChartDetail;
   }
@@ -116,20 +113,5 @@ public class AdHocChartView {
     splitPane.setDividerLocation(chartDividerLocation);
     splitPane.setResizeWeight(0.5);
     return splitPane;
-  }
-
-  public void setHistoryDetailVisible(boolean visible) {
-    if (visible) {
-      historyChartDetailSplitPane.getBottomComponent().setVisible(true);
-      historyChartDetailSplitPane.setDividerLocation(lastHistoryChartDividerLocation);
-    } else {
-      historyChartDetailSplitPane.getBottomComponent().setVisible(false);
-      historyChartDetailSplitPane.setDividerLocation(1.0);
-    }
-
-    historyChartDetailSplitPane.revalidate();
-    historyChartDetailSplitPane.repaint();
-    historyConfigChartDetail.revalidate();
-    historyConfigChartDetail.repaint();
   }
 }

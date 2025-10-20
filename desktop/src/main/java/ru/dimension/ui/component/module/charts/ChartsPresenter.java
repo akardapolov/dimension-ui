@@ -1,6 +1,7 @@
 package ru.dimension.ui.component.module.charts;
 
 import java.beans.PropertyChangeListener;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
@@ -15,8 +16,6 @@ import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.model.ChartLegendState;
-import ru.dimension.ui.component.model.DetailState;
-import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.module.ChartModule;
 import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.helper.KeyHelper;
@@ -57,16 +56,16 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
       case HISTORY_RANGE_CHANGE -> handleHistoryRangeChange(message);
       case ADD_CHART -> handleAddChart(message);
       case REMOVE_CHART -> handleRemoveChart(message);
-      case SHOW_HIDE_DETAIL_ALL -> handleDetailVisibilityChange(message);
       case CHART_LEGEND_STATE_ALL -> chartLegendStateAll(message);
       case EXPAND_COLLAPSE_ALL -> expandCollapseAll(message);
     }
   }
 
   private void handleTabChange(Message message) {
-    PanelTabType panelTabType = message.parameters().get("panelTabType");
-    model.getChartPanes()
-        .forEach((key, chartMap) -> chartMap.values().forEach(chartModule -> chartModule.setActiveTab(panelTabType)));
+    MessageBroker.Panel panel = message.parameters().get("panel");
+    model.getChartPanes().values().stream()
+        .flatMap(map -> map.values().stream())
+        .forEach(chartModule -> chartModule.setActiveTab(panel));
   }
 
   private void handleRealTimeRangeChange(Message message) {
@@ -88,17 +87,6 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
     }
   }
 
-  private void handleDetailVisibilityChange(Message message) {
-    DetailState detailState = message.parameters().get("detailState");
-    if (model == null || model.getChartPanes() == null) {
-      return;
-    }
-
-    model.getChartPanes().forEach((key, val) -> {
-      val.values().forEach(chartModule -> chartModule.setDetailState(detailState));
-    });
-  }
-
   private void chartLegendStateAll(Message message) {
     if (model == null || model.getChartPanes() == null) {
       return;
@@ -112,16 +100,17 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
   }
 
   private void expandCollapseAll(Message message) {
-    if (model == null || model.getChartPanes() == null) return;
+    if (model == null || model.getChartPanes() == null) {
+      return;
+    }
 
     ChartCardState cardState = message.parameters().get("cardState");
-    boolean shouldCollapse = !ChartCardState.EXPAND_ALL.equals(cardState);
 
     model.setProgrammaticChange(true);
     try {
-      model.getChartPanes().values().stream()
-          .flatMap(map -> map.values().stream())
-          .forEach(chartModule -> chartModule.setCollapsed(shouldCollapse));
+      model.getChartPanes().forEach((key, val) -> {
+        val.values().forEach(chartModule -> chartModule.setCollapsed(ChartCardState.EXPAND_ALL.equals(cardState)));
+      });
     } finally {
       model.setProgrammaticChange(false);
     }
@@ -233,17 +222,18 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
       return;
     }
 
-    if (model.getChartPanes().get(profileTaskQueryKey) == null || model.getChartPanes().get(profileTaskQueryKey)
-        .isEmpty()) {
+    Map<CProfile, ChartModule> chartModules = model.getChartPanes().get(profileTaskQueryKey);
+
+    if (chartModules == null || chartModules.isEmpty()) {
       return;
     }
 
-    model.getChartPanes().get(profileTaskQueryKey).forEach((key, val) -> {
+    chartModules.forEach((key, val) -> {
       if (val.isReadyRealTimeUpdate()) {
         try {
           val.loadData();
         } catch (Exception e) {
-          log.error("Error loading data", e);
+          log.error("Error loading data for chart: {}", val.getTitle(), e);
         }
       }
     });

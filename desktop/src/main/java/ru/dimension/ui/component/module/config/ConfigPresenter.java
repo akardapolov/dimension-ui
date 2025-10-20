@@ -7,14 +7,13 @@ import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Action;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
-import ru.dimension.ui.component.model.PanelTabType;
+import ru.dimension.ui.component.broker.MessageBroker.Panel;
+import ru.dimension.ui.component.model.ChartCardState;
+import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.RangeRealTime;
 import ru.dimension.ui.state.UIState;
-import ru.dimension.ui.component.model.ChartCardState;
-import ru.dimension.ui.component.model.ChartLegendState;
-import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.view.panel.DateTimePicker;
 
 @Log4j2
@@ -30,23 +29,18 @@ public class ConfigPresenter {
     this.component = component;
     this.view = view;
 
-    UIState.INSTANCE.putShowDetailAll(component.name(), DetailState.SHOW);
-
     setupListeners();
   }
 
   private void setupListeners() {
-    // Handle tab selection
-    view.getSwitchToTabPanel().getRealTime().addActionListener(e -> handleTabChange(PanelTabType.REALTIME));
-    view.getSwitchToTabPanel().getHistory().addActionListener(e -> handleTabChange(PanelTabType.HISTORY));
+    view.getSwitchToTabPanel().getRealTime().addActionListener(e -> handleTabChange(Panel.REALTIME));
+    view.getSwitchToTabPanel().getHistory().addActionListener(e -> handleTabChange(Panel.HISTORY));
 
-    // Handle real-time range changes
     view.getRealTimePanel().getFiveMin().addActionListener(e -> handleRealTimeRangeChange(RangeRealTime.FIVE_MIN));
     view.getRealTimePanel().getTenMin().addActionListener(e -> handleRealTimeRangeChange(RangeRealTime.TEN_MIN));
     view.getRealTimePanel().getThirtyMin().addActionListener(e -> handleRealTimeRangeChange(RangeRealTime.THIRTY_MIN));
     view.getRealTimePanel().getSixtyMin().addActionListener(e -> handleRealTimeRangeChange(RangeRealTime.SIXTY_MIN));
 
-    // Handle history range changes
     view.getHistoryPanel().getDay().addActionListener(e -> handleHistoryRangeChange(RangeHistory.DAY));
     view.getHistoryPanel().getWeek().addActionListener(e -> handleHistoryRangeChange(RangeHistory.WEEK));
     view.getHistoryPanel().getMonth().addActionListener(e -> handleHistoryRangeChange(RangeHistory.MONTH));
@@ -54,7 +48,6 @@ public class ConfigPresenter {
     view.getHistoryPanel().getButtonApplyRange().addActionListener(e -> handleCustomHistoryRangeChange());
 
     view.getLegendPanel().setStateChangeConsumer(this::handleLegendVisibilityChange);
-    view.getDetailShowHidePanel().setStateChangeConsumer(this::handleDetailVisibilityChange);
     view.getCollapseCardPanel().setStateChangeConsumer(this::handleCollapseCardChange);
   }
 
@@ -70,20 +63,8 @@ public class ConfigPresenter {
                            .build());
   }
 
-  private void handleDetailVisibilityChange(DetailState detailState) {
-    log.info("Detail visibility changed to: {}", detailState);
-
-    UIState.INSTANCE.putShowDetailAll(component.name(), detailState);
-
-    broker.sendMessage(Message.builder()
-                           .destination(Destination.withDefault(component, Module.CHARTS))
-                           .action(Action.SHOW_HIDE_DETAIL_ALL)
-                           .parameter("detailState", detailState)
-                           .build());
-  }
-
   private void handleCollapseCardChange(ChartCardState cardState) {
-    log.info("Set card state in " + component.name() + " to: {}", cardState);
+    log.info("Set card state in {} to: {}", component.name(), cardState);
 
     UIState.INSTANCE.putChartCardStateAll(component.name(), cardState);
 
@@ -94,13 +75,13 @@ public class ConfigPresenter {
                            .build());
   }
 
-  private void handleTabChange(PanelTabType panelTabType) {
-    log.info("Tab changed to: {}", panelTabType);
+  private void handleTabChange(MessageBroker.Panel panel) {
+    log.info("Tab changed to: {}", panel);
 
     broker.sendMessage(Message.builder()
                            .destination(Destination.withDefault(component, Module.CHARTS))
                            .action(Action.CHANGE_TAB)
-                           .parameter("panelTabType", panelTabType)
+                           .parameter("panel", panel)
                            .build());
   }
 
@@ -115,21 +96,21 @@ public class ConfigPresenter {
                            .parameter("range", range)
                            .build());
 
-    handleTabChange(PanelTabType.REALTIME);
+    handleTabChange(Panel.REALTIME);
   }
 
   private void handleHistoryRangeChange(RangeHistory range) {
     ChartRange chartRange = getChartRangeFromPickers();
     log.info("History range changed to: {}", range);
     updateHistoryRange(range, chartRange);
-    handleTabChange(PanelTabType.HISTORY);
+    handleTabChange(Panel.HISTORY);
   }
 
   private void handleCustomHistoryRangeChange() {
     ChartRange chartRange = getChartRangeFromPickers();
     log.info("Custom history chart range changed to: {}", chartRange);
     updateHistoryRange(RangeHistory.CUSTOM, chartRange);
-    handleTabChange(PanelTabType.HISTORY);
+    handleTabChange(Panel.HISTORY);
 
     view.getHistoryPanel().setSelectedRange(RangeHistory.CUSTOM);
   }
@@ -144,7 +125,8 @@ public class ConfigPresenter {
     return new ChartRange(fromDate.getTime(), toDate.getTime());
   }
 
-  private void updateHistoryRange(RangeHistory range, ChartRange chartRange) {
+  private void updateHistoryRange(RangeHistory range,
+                                  ChartRange chartRange) {
     String componentName = component.name();
     UIState.INSTANCE.putHistoryCustomRangeAll(componentName, chartRange);
     UIState.INSTANCE.putHistoryRangeAll(componentName, range);

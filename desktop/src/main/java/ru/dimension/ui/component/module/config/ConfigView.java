@@ -11,7 +11,6 @@ import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTitledSeparator;
 import ru.dimension.ui.component.panel.CollapseCardPanel;
-import ru.dimension.ui.component.panel.DetailShowHidePanel;
 import ru.dimension.ui.component.panel.LegendPanel;
 import ru.dimension.ui.component.panel.SwitchToTabPanel;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
@@ -30,8 +29,6 @@ public class ConfigView extends JPanel {
   @Getter
   private final LegendPanel legendPanel;
   @Getter
-  private final DetailShowHidePanel detailShowHidePanel;
-  @Getter
   private final CollapseCardPanel collapseCardPanel;
 
   public ConfigView() {
@@ -39,7 +36,6 @@ public class ConfigView extends JPanel {
     this.realTimePanel = new RealTimeRangePanel();
     this.historyPanel = new HistoryRangePanel();
     this.legendPanel = new LegendPanel();
-    this.detailShowHidePanel = new DetailShowHidePanel();
     this.collapseCardPanel = new CollapseCardPanel();
 
     setBorder(new EtchedBorder());
@@ -58,8 +54,6 @@ public class ConfigView extends JPanel {
     add(createSection("History", historyPanel));
     add(Box.createRigidArea(new Dimension(10, 0)));
     add(createSection("Legend", legendPanel));
-    add(Box.createHorizontalGlue());
-    add(createSection("Detail", detailShowHidePanel));
     add(Box.createRigidArea(new Dimension(10, 0)));
     add(createSection("Dashboard", collapseCardPanel));
   }

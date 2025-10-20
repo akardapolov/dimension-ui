@@ -28,7 +28,6 @@ import ru.dimension.ui.component.chart.realtime.ClientRealtimeSCP;
 import ru.dimension.ui.component.chart.realtime.ServerRealtimeSCP;
 import ru.dimension.ui.component.model.ChartConfigState;
 import ru.dimension.ui.component.model.ChartLegendState;
-import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.helper.DateHelper;
 import ru.dimension.ui.helper.FilterHelper;
 import ru.dimension.ui.helper.LogHelper;
@@ -40,7 +39,6 @@ import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.sql.GatherDataMode;
-import ru.dimension.ui.model.view.AnalyzeType;
 import ru.dimension.ui.model.view.RangeRealTime;
 import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.ChartKey;
@@ -94,7 +92,7 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
         () -> {
           isReadyRealTimeUpdate = false;
 
-          realTimeChart = createChart(AnalyzeType.REAL_TIME, null);
+          realTimeChart = createChart(null);
           realTimeChart.initialize();
 
           handleLegendChange(UIState.INSTANCE.getShowLegend(model.getChartKey()));
@@ -127,8 +125,8 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
     );
   }
 
-  private SCP createChart(AnalyzeType analyzeType, Map<CProfile, LinkedHashSet<String>> topMapSelected) {
-    ChartConfig config = buildChartConfig(analyzeType);
+  private SCP createChart(Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+    ChartConfig config = buildChartConfig();
     ProfileTaskQueryKey key = model.getKey();
     SqlQueryState sqlQueryState = model.getSqlQueryState();
     DStore dStore = model.getDStore();
@@ -141,12 +139,11 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
     }
   }
 
-  private ChartConfig buildChartConfig(AnalyzeType analyzeType) {
+  private ChartConfig buildChartConfig() {
     ChartConfig config = new ChartConfig();
 
     ChartKey chartKey = new ChartKey(model.getKey(), model.getMetric().getYAxis());
-    Metric baseMetric = realTimeMetric;
-    Metric metricCopy = baseMetric.copy();
+    Metric metricCopy = realTimeMetric.copy();
     ChartInfo chartInfoCopy = model.getChartInfo().copy();
 
     GroupFunction groupFunction = UIState.INSTANCE.getRealtimeGroupFunction(chartKey);
@@ -265,7 +262,7 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
   public void receive(Message message) {
     log.info("Message received >>> " + message.destination() + " with action >>> " + message.action());
 
-    PanelTabType panelTabType = PanelTabType.valueOf(message.destination().panel().name());
+    MessageBroker.Panel panel = message.destination().panel();
 
     Map<CProfile, LinkedHashSet<String>> topMapSelected = message.parameters().get("topMapSelected");
 
@@ -274,8 +271,8 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
     Map<String, Color> seriesColorMap = message.parameters().get("seriesColorMap");
 
     switch (message.action()) {
-      case ADD_CHART_FILTER -> handleFilterChange(panelTabType, topMapSelected, seriesColorMap);
-      case REMOVE_CHART_FILTER -> handleFilterChange(panelTabType, null, seriesColorMap);
+      case ADD_CHART_FILTER -> handleFilterChange(panel, topMapSelected, seriesColorMap);
+      case REMOVE_CHART_FILTER -> handleFilterChange(panel, null, seriesColorMap);
     }
   }
 
@@ -298,12 +295,12 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
     return filteredMap;
   }
 
-  private void handleFilterChange(PanelTabType panelTabType,
+  private void handleFilterChange(MessageBroker.Panel panel,
                                   Map<CProfile, LinkedHashSet<String>> topMapSelected,
                                   Map<String, Color> seriesColorMap) {
     Map<String, Color> preservedColorMap = new HashMap<>(seriesColorMap);
 
-    if (panelTabType == PanelTabType.REALTIME) {
+    if (Panel.REALTIME.equals(panel)) {
       Map<CProfile, LinkedHashSet<String>> sanitizeTopMapSelected =
           FilterHelper.sanitizeTopMapSelected(topMapSelected, realTimeMetric);
       updateRealTimeChart(preservedColorMap, sanitizeTopMapSelected);
@@ -327,7 +324,7 @@ public class PreviewChartPresenter implements HelperChart, MessageAction {
 
           realTimeChart = null;
 
-          realTimeChart = createChart(AnalyzeType.REAL_TIME, topMapSelected);
+          realTimeChart = createChart(topMapSelected);
 
           if (seriesColorMap != null) {
             realTimeChart.loadSeriesColor(realTimeMetric, seriesColorMap);

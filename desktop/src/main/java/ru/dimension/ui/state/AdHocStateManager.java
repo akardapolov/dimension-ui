@@ -1,7 +1,6 @@
 package ru.dimension.ui.state;
 
 import ru.dimension.ui.component.model.ChartCardState;
-import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.function.GroupFunction;
@@ -33,10 +32,6 @@ public class AdHocStateManager {
     return local != null ? local : UIState.INSTANCE.getShowLegendAll(globalKey);
   }
 
-  public DetailState getShowDetailAll(String globalKey) {
-    return UIState.INSTANCE.getShowDetailAll(globalKey);
-  }
-
   public ChartCardState getChartCardStateAll(String globalKey) {
     return UIState.INSTANCE.getChartCardStateAll(globalKey);
   }
@@ -63,10 +58,6 @@ public class AdHocStateManager {
 
   public void putGlobalShowLegend(String globalKey, Boolean showLegend) {
     UIState.INSTANCE.putShowLegendAll(globalKey, showLegend);
-  }
-
-  public void putGlobalShowDetail(String globalKey, DetailState detailState) {
-    UIState.INSTANCE.putShowDetailAll(globalKey, detailState);
   }
 
   public void putGlobalChartCardState(String globalKey, ChartCardState cardState) {

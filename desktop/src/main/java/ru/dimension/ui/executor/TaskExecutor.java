@@ -39,7 +39,7 @@ public class TaskExecutor {
   private Connection connection = null;
   private final AbstractCollect loader;
 
-  private final AtomicBoolean running = new AtomicBoolean(true);
+  private final AtomicBoolean running = new AtomicBoolean(false);
   private Thread periodicTask;
   private long lastExecutionTime;
 
@@ -90,29 +90,45 @@ public class TaskExecutor {
   }
 
   public void start(long startUpTimeMillis) {
+    if (!running.compareAndSet(false, true)) {
+      log.warn("Task for query {} is already running.", queryInfo.getName());
+      return;
+    }
+
     lastExecutionTime = startUpTimeMillis;
 
-    periodicTask = Thread.ofVirtual().start(() -> {
-      try {
-        while (running.get()) {
-          run();
-          long executionTime = System.currentTimeMillis() - lastExecutionTime;
+    periodicTask = Thread.ofVirtual()
+        .name("TaskExecutor-" + profileInfo.getId() + "-" + taskInfo.getId() + "-" + queryInfo.getId())
+        .uncaughtExceptionHandler((t, e) -> log.error("Task crashed: {}", t, e))
+        .start(() -> {
+          try {
+            while (running.get()) {
+              try {
+                run();
+              } catch (Exception e) {
+                log.error("Uncaught exception in task execution loop for query {}. Task may be unstable.", queryInfo.getName(), e);
+              }
 
-          if (executionTime > (pullTimeout * 1000L)) {
-            log.warn("Task execution took too long ({}ms), more than task pull timeout", executionTime);
+              long executionTime = System.currentTimeMillis() - lastExecutionTime;
 
-            Thread.sleep(Duration.ofMillis(executionTime));
-          } else {
-            Thread.sleep(Duration.ofMillis((pullTimeout * 1000L) - executionTime));
+              if (executionTime > (pullTimeout * 1000L)) {
+                log.warn("Task execution took too long ({}ms), more than task pull timeout", executionTime);
+
+                Thread.sleep(Duration.ofMillis(executionTime));
+              } else {
+                Thread.sleep(Duration.ofMillis((pullTimeout * 1000L) - executionTime));
+              }
+
+              lastExecutionTime = System.currentTimeMillis();
+            }
+          } catch (InterruptedException e) {
+            log.info("Task for query {} was interrupted.", queryInfo.getName());
+            Thread.currentThread().interrupt();
+          } finally {
+            log.info("Task executor thread for query {} has stopped.", queryInfo.getName());
+            running.set(false);
           }
-
-          lastExecutionTime = System.currentTimeMillis();
-        }
-      } catch (InterruptedException e) {
-        log.info("Task was interrupted.", e);
-        running.set(false);
-      }
-    });
+        });
   }
 
   public void stop() {

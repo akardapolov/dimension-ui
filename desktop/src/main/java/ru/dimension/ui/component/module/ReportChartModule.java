@@ -7,7 +7,6 @@ import org.jdesktop.swingx.JXTaskPane;
 import ru.dimension.db.core.DStore;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.model.ChartLegendState;
-import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.component.module.report.chart.ReportChartModel;
 import ru.dimension.ui.component.module.report.chart.ReportChartPresenter;
 import ru.dimension.ui.component.module.report.chart.ReportChartView;
@@ -63,10 +62,6 @@ public class ReportChartModule extends JXTaskPane {
 
   public void handleLegendChange(ChartLegendState chartLegendState) {
     presenter.handleLegendChange(ChartLegendState.SHOW.equals(chartLegendState));
-  }
-
-  public void setDetailState(DetailState detailState) {
-    this.presenter.setDetailState(detailState);
   }
 
   public void updateHistoryRange(RangeHistory range) {

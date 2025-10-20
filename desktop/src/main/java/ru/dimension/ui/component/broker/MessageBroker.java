@@ -7,9 +7,9 @@ import java.util.Map;
 
 public class MessageBroker {
   public enum Component { WORKSPACE, PREVIEW, DASHBOARD, PLAYGROUND, DESIGN, ADHOC}
-  public enum Module { NONE, MANAGE, MODEL, CONFIG, CHARTS, CHART}
-  public enum Panel { NONE, REALTIME, HISTORY}
-  public enum Block { NONE, CONFIG, CHART, DETAIL}
+  public enum Module { MANAGE, MODEL, CONFIG, CHARTS, CHART, NONE}
+  public enum Panel { REALTIME, HISTORY, NONE}
+  public enum Block { CONFIG, CHART, DETAIL, NONE}
 
   public enum Action { ADD_CHART, REMOVE_CHART, REMOVE_ALL_CHART,
 
@@ -20,7 +20,6 @@ public class MessageBroker {
     REALTIME_RANGE_CHANGE,
     HISTORY_RANGE_CHANGE,
     HISTORY_CUSTOM_UI_RANGE_CHANGE,
-    SHOW_HIDE_DETAIL_ALL,
     ADD_CHART_FILTER, REMOVE_CHART_FILTER,
     SET_PROFILE_TASK_QUERY_KEY,
     NEED_TO_SAVE_COMMENT,

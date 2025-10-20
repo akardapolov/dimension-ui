@@ -2,7 +2,6 @@ package ru.dimension.ui.collector.collect;
 
 import static ru.dimension.ui.collector.collect.CollectorConstants.PARSE_JSON_PATH;
 import static ru.dimension.ui.collector.collect.CollectorConstants.PARSE_PROMETHEUS;
-import static ru.dimension.ui.collector.collect.SignConstants.RIGHT_DASH;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -31,11 +30,11 @@ import org.apache.hc.core5.http.protocol.HttpContext;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.EnumByteExceedException;
 import ru.dimension.db.exception.SqlColMetadataException;
+import ru.dimension.ui.collector.HttpLoader;
 import ru.dimension.ui.collector.collect.common.HttpProtocol;
 import ru.dimension.ui.collector.collect.prometheus.ExporterParser;
 import ru.dimension.ui.collector.collect.utils.CollectUtil;
 import ru.dimension.ui.collector.collect.utils.CommonUtil;
-import ru.dimension.ui.collector.HttpLoader;
 import ru.dimension.ui.collector.http.HttpResponseFetcher;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.info.ConnectionInfo;
@@ -46,6 +45,7 @@ import ru.dimension.ui.state.SqlQueryState;
 
 @Log4j2
 public class HttpCollect extends AbstractCollect implements HttpLoader {
+  static String RIGHT_DASH = "/";
 
   static Set<Integer> defaultSuccessStatusCodes = Stream.of(HttpStatus.SC_OK,
                                                             HttpStatus.SC_CREATED,

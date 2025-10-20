@@ -18,6 +18,7 @@ import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.cstype.CType;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageAction;
+import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.chart.ChartConfig;
 import ru.dimension.ui.component.chart.HelperChart;
@@ -25,8 +26,6 @@ import ru.dimension.ui.component.chart.SCP;
 import ru.dimension.ui.component.chart.history.HistoryAdHocSCP;
 import ru.dimension.ui.component.chart.holder.DetailAndAnalyzeHolder;
 import ru.dimension.ui.component.model.ChartLegendState;
-import ru.dimension.ui.component.model.DetailState;
-import ru.dimension.ui.component.model.PanelTabType;
 import ru.dimension.ui.component.module.analyze.CustomAction;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.helper.FilterHelper;
@@ -43,7 +42,6 @@ import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.function.NormFunction;
 import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.info.gui.ChartInfo;
-import ru.dimension.ui.model.view.ProcessType;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.AdHocStateManager;
@@ -144,8 +142,8 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
         e -> log.error("Error creating history chart", e),
         () -> createProgressBar("Creating history chart..."),
         () -> {
-          setDetailState(PanelTabType.HISTORY, adHocStateManager.getShowDetailAll(globalKey));
           updateLegendVisibility(adHocStateManager.getShowLegend(adHocKey, globalKey));
+          log.info("Creating history chart complete");
         }
     );
   }
@@ -164,10 +162,10 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
   }
 
   protected DetailAdHocPanel getDetail(SCP chart,
-                                           Map<String, Color> initialSeriesColorMap,
-                                           SeriesType seriesType,
-                                           Map<CProfile, LinkedHashSet<String>> topMapSelected) {
-    ProcessType processType = ProcessType.HISTORY;
+                                       Map<String, Color> initialSeriesColorMap,
+                                       SeriesType seriesType,
+                                       Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+    MessageBroker.Panel panel = MessageBroker.Panel.HISTORY;
     Metric chartMetric = chart.getConfig().getMetric();
 
     Map<String, Color> seriesColorMapToUse =
@@ -184,7 +182,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
                              model.getTableInfo(),
                              chartMetric,
                              seriesColorMapToUse,
-                             processType,
+                             panel,
                              seriesType,
                              topMapSelected);
 
@@ -394,7 +392,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
         },
         e -> log.error("Error updating history chart", e),
         () -> createProgressBar("Updating history chart..."),
-        () -> setDetailState(PanelTabType.HISTORY, adHocStateManager.getShowDetailAll(globalKey))
+        () -> log.info("Updating history chart complete")
     );
   }
 
@@ -427,24 +425,6 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
     view.getHistoryRangePanel().getDateTimePickerFrom().setDate(new Date(chartRange.getBegin()));
     view.getHistoryRangePanel().getDateTimePickerTo().setDate(new Date(chartRange.getEnd()));
     updateHistoryChart(null, null);
-  }
-
-  public void setDetailState(DetailState detailState) {
-    boolean showDetail = detailState == DetailState.SHOW;
-    view.setHistoryDetailVisible(showDetail);
-    if (historyChart != null) {
-      historyChart.clearSelectionRegion();
-    }
-  }
-
-  public void setDetailState(PanelTabType panelTabType, DetailState detailState) {
-    if (panelTabType == PanelTabType.HISTORY) {
-      boolean showDetail = detailState == DetailState.SHOW;
-      view.setHistoryDetailVisible(showDetail);
-      if (historyChart != null) {
-        historyChart.clearSelectionRegion();
-      }
-    }
   }
 
   public void handleLegendChange(Boolean showLegend) {
@@ -498,7 +478,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
     adHocStateManager.putTimeRangeFunction(model.getAdHocKey(), function);
     log.info("Action: " + action + " for time range function: " + function);
 
-    handleFilterChange(PanelTabType.HISTORY,
+    handleFilterChange(Panel.HISTORY,
                        model.getTopMapSelected().isEmpty() ? null : model.getTopMapSelected(),
                        model.getSeriesColorMap());
   }
@@ -506,7 +486,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
   @Override
   public void receive(Message message) {
     log.info("Message received >>> " + message.destination() + " with action >>> " + message.action());
-    PanelTabType panelTabType = PanelTabType.HISTORY;
+    MessageBroker.Panel panel = MessageBroker.Panel.HISTORY;
 
     Map<CProfile, LinkedHashSet<String>> topMapSelected = message.parameters().get("topMapSelected");
     Map<String, Color> seriesColorMap = message.parameters().get("seriesColorMap");
@@ -515,8 +495,8 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
     LogHelper.logMapSelected(topMapSelected);
 
     switch (message.action()) {
-      case ADD_CHART_FILTER -> handleFilterChange(panelTabType, topMapSelected, seriesColorMap);
-      case REMOVE_CHART_FILTER -> handleFilterChange(panelTabType, null, seriesColorMap);
+      case ADD_CHART_FILTER -> handleFilterChange(panel, topMapSelected, seriesColorMap);
+      case REMOVE_CHART_FILTER -> handleFilterChange(panel, null, seriesColorMap);
     }
   }
 
@@ -539,18 +519,18 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
     return filteredMap;
   }
 
-  private void handleFilterChange(PanelTabType panelTabType,
+  private void handleFilterChange(MessageBroker.Panel panel,
                                   Map<CProfile, LinkedHashSet<String>> topMapSelected,
                                   Map<String, Color> seriesColorMap) {
     Map<String, Color> preservedColorMap = new HashMap<>(seriesColorMap);
 
-    if (panelTabType == PanelTabType.HISTORY) {
+    if (Panel.HISTORY.equals(panel)) {
       Map<CProfile, LinkedHashSet<String>> sanitizeTopMapSelected =
           FilterHelper.sanitizeTopMapSelected(topMapSelected, historyMetric);
       updateHistoryChart(preservedColorMap, sanitizeTopMapSelected);
     }
 
-    if (panelTabType == PanelTabType.HISTORY && historyDetail != null) {
+    if (Panel.HISTORY.equals(panel) && historyDetail != null) {
       Map<CProfile, LinkedHashSet<String>> sanitizeTopMapSelected =
           FilterHelper.sanitizeTopMapSelected(topMapSelected, historyMetric);
       historyDetail.updateSeriesColor(sanitizeTopMapSelected, preservedColorMap);

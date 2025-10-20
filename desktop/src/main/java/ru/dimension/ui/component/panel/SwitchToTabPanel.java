@@ -8,7 +8,8 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import lombok.Data;
 import org.painlessgridbag.PainlessGridBag;
-import ru.dimension.ui.component.model.PanelTabType;
+import ru.dimension.ui.component.broker.MessageBroker.Panel;
+import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
 
@@ -20,8 +21,8 @@ public class SwitchToTabPanel extends JPanel {
   private final ButtonGroup buttonGroup;
 
   public SwitchToTabPanel() {
-    this.realTime = new JRadioButton(PanelTabType.REALTIME.getName(), false);
-    this.history = new JRadioButton(PanelTabType.HISTORY.getName(), false);
+    this.realTime = new JRadioButton(GUIHelper.getTabName(Panel.REALTIME), false);
+    this.history = new JRadioButton(GUIHelper.getTabName(Panel.HISTORY), false);
 
     this.buttonGroup = new ButtonGroup();
     buttonGroup.add(realTime);
@@ -41,8 +42,8 @@ public class SwitchToTabPanel extends JPanel {
     gbl.done();
   }
 
-  public void setSelectedTab(PanelTabType panelTabType) {
-    switch (panelTabType) {
+  public void setSelectedTab(Panel panel) {
+    switch (panel) {
       case REALTIME -> realTime.setSelected(true);
       case HISTORY -> history.setSelected(true);
     }

@@ -4,7 +4,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import ru.dimension.ui.component.broker.ParameterStore;
 import ru.dimension.ui.component.model.ChartCardState;
-import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.function.GroupFunction;
@@ -24,7 +23,6 @@ public enum UIState {
   private static final String HISTORY_RANGE_ALL = "HISTORY_RANGE_ALL";
   private static final String SHOW_LEGEND = "SHOW_LEGEND";
   private static final String SHOW_LEGEND_ALL = "SHOW_LEGEND_ALL";
-  private static final String SHOW_DETAIL_ALL = "SHOW_DETAIL_ALL";
   private static final String HISTORY_CUSTOM_RANGE = "HISTORY_CUSTOM_RANGE";
   private static final String HISTORY_CUSTOM_RANGE_ALL = "HISTORY_CUSTOM_RANGE_ALL";
 
@@ -112,15 +110,6 @@ public enum UIState {
   public Boolean getShowLegendAll(String key) {
     ParameterStore store = globalStateMap.get(key);
     return store != null ? store.get(SHOW_LEGEND_ALL, Boolean.class) : null;
-  }
-
-  public void putShowDetailAll(String key, DetailState showDetail) {
-    getOrCreateParameterGlobalStore(key).put(SHOW_DETAIL_ALL, showDetail);
-  }
-
-  public DetailState getShowDetailAll(String key) {
-    ParameterStore store = globalStateMap.get(key);
-    return store != null ? store.get(SHOW_DETAIL_ALL, DetailState.class) : null;
   }
 
   public void putHistoryCustomRange(ChartKey key, ChartRange range) {

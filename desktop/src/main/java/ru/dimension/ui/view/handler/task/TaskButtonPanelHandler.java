@@ -530,7 +530,7 @@ public class TaskButtonPanelHandler implements ActionListener {
     task.setName(taskPanel.getJTextFieldTask().getText());
     task.setDescription(taskPanel.getJTextFieldDescription().getText());
     task.setPullTimeout(setRadioButtonPullTimeout());
-    String selectedConnection = (String) taskPanel.getTaskConnectionComboBox().getSelectedRow().get(0);
+    String selectedConnection = (String) taskPanel.getTaskConnectionComboBox().getSelectedRow().getFirst();
 
     int connectionId = profileManager.getConnectionInfoList()
         .stream()

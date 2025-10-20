@@ -23,6 +23,7 @@ import lombok.extern.log4j.Log4j2;
 import org.jfree.chart.util.IDetailPanel;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.chart.ChartConfig;
 import ru.dimension.ui.component.chart.SCP;
 import ru.dimension.ui.component.chart.history.HistorySCP;
@@ -36,12 +37,10 @@ import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.column.DimensionValuesNames;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.date.DateLocale;
-import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
-import ru.dimension.ui.model.view.ProcessType;
 import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.ChartKey;
 import ru.dimension.ui.view.detail.pivot.MainPivotDashboardPanel;
@@ -57,10 +56,9 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
   private final QueryInfo queryInfo;
   private final ChartInfo chartInfo;
   private final TableInfo tableInfo;
-  private final ProcessType processType;
+  private final MessageBroker.Panel panel;
   private final Metric metric;
   private final CProfile cProfile;
-  private final ChartType chartType;
   private final ExecutorService executorService;
   private final Map<String, Color> seriesColorMap;
   private SeriesType seriesType;
@@ -76,7 +74,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
                               TableInfo tableInfo,
                               Metric metric,
                               Map<String, Color> seriesColorMap,
-                              ProcessType processType,
+                              MessageBroker.Panel panel,
                               SeriesType seriesType,
                               DStore dStore,
                               Map<CProfile, LinkedHashSet<String>> topMapSelected) {
@@ -86,9 +84,8 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
     this.tableInfo = tableInfo;
     this.metric = metric;
     this.cProfile = metric.getYAxis();
-    this.chartType = metric.getChartType();
     this.seriesColorMap = seriesColorMap;
-    this.processType = processType;
+    this.panel = panel;
     this.seriesType = seriesType;
     this.dStore = dStore;
     this.topMapSelected = topMapSelected;
@@ -147,7 +144,7 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
         }
 
         RawDataDashboardPanel rawDataPanel;
-        if (ProcessType.REAL_TIME.equals(processType)) {
+        if (MessageBroker.Panel.REALTIME.equals(panel)) {
           rawDataPanel = new RawDataDashboardPanel(dStore, tableInfo, cProfile, begin, end, false);
         } else {
           rawDataPanel = new RawDataDashboardPanel(dStore, tableInfo, cProfile, begin, end, true);
@@ -221,7 +218,6 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
     config.setMetric(metric);
     config.setChartInfo(chartInfo);
     config.setQueryInfo(queryInfo);
-    config.setProcessType(ProcessType.HISTORY);
     return config;
   }
 

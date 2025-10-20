@@ -39,7 +39,6 @@ import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.chart.HelperChart;
 import ru.dimension.ui.component.model.ChartCardState;
-import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.component.module.analyze.handler.TableSelectionHandler;
 import ru.dimension.ui.component.module.db.DatabaseMetadata;
 import ru.dimension.ui.component.module.db.MetadataFactory;
@@ -495,7 +494,6 @@ public class AdHocModelPresenter implements HelperChart {
       adHocStateManager.putGlobalHistoryCustomRange(globalKey, chartRange);
 
       adHocStateManager.putGlobalShowLegend(globalKey, true);
-      adHocStateManager.putGlobalShowDetail(globalKey, DetailState.SHOW);
 
       adHocStateManager.putGlobalChartCardState(globalKey, ChartCardState.COLLAPSE_ALL);
     }

@@ -44,6 +44,7 @@ import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.db.model.profile.cstype.CType;
 import ru.dimension.db.model.profile.cstype.SType;
+import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.textfield.JTextFieldCase;
@@ -537,5 +538,13 @@ public class GUIHelper {
     }
     log.warn("Icon not found: " + path);
     return null;
+  }
+
+  public static String getTabName(MessageBroker.Panel panel) {
+    return switch (panel) {
+      case REALTIME -> "Real-time";
+      case HISTORY -> "History";
+      default -> "";
+    };
   }
 }

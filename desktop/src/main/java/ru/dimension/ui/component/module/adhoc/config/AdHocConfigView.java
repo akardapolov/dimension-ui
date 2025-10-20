@@ -11,7 +11,6 @@ import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTitledSeparator;
 import ru.dimension.ui.component.panel.CollapseCardPanel;
-import ru.dimension.ui.component.panel.DetailShowHidePanel;
 import ru.dimension.ui.component.panel.LegendPanel;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.laf.LaF;
@@ -24,14 +23,11 @@ public class AdHocConfigView extends JPanel {
   @Getter
   private final LegendPanel legendPanel;
   @Getter
-  private final DetailShowHidePanel detailShowHidePanel;
-  @Getter
   private final CollapseCardPanel collapseCardPanel;
 
   public AdHocConfigView() {
     this.historyPanel = new HistoryRangePanel();
     this.legendPanel = new LegendPanel();
-    this.detailShowHidePanel = new DetailShowHidePanel();
     this.collapseCardPanel = new CollapseCardPanel();
 
     setBorder(new EtchedBorder());
@@ -46,8 +42,6 @@ public class AdHocConfigView extends JPanel {
     add(createSection("Range", historyPanel));
     add(Box.createRigidArea(new Dimension(10, 0)));
     add(createSection("Legend", legendPanel));
-    add(Box.createRigidArea(new Dimension(10, 0)));
-    add(createSection("Detail", detailShowHidePanel));
     add(Box.createRigidArea(new Dimension(10, 0)));
     add(createSection("Dashboard", collapseCardPanel));
     add(Box.createHorizontalGlue());

@@ -13,6 +13,8 @@ import ru.dimension.ui.component.broker.MessageBroker.Block;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
+import ru.dimension.ui.component.model.ChartCardState;
+import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.module.adhoc.AdHocChartModule;
 import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.helper.KeyHelper;
@@ -25,9 +27,6 @@ import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.RangeHistory;
-import ru.dimension.ui.component.model.ChartCardState;
-import ru.dimension.ui.component.model.ChartLegendState;
-import ru.dimension.ui.component.model.DetailState;
 import ru.dimension.ui.state.AdHocStateManager;
 
 @Log4j2
@@ -66,7 +65,6 @@ public class AdHocChartsPresenter implements MessageAction {
       case HISTORY_RANGE_CHANGE -> handleHistoryRangeChange(message);
       case ADD_CHART -> handleAddChart(message);
       case REMOVE_CHART -> handleRemoveChart(message);
-      case SHOW_HIDE_DETAIL_ALL -> handleDetailVisibilityChange(message);
       case CHART_LEGEND_STATE_ALL -> chartLegendStateAll(message);
       case EXPAND_COLLAPSE_ALL -> expandCollapseAll(message);
     }
@@ -86,18 +84,6 @@ public class AdHocChartsPresenter implements MessageAction {
             chartModule.updateHistoryRange(historyRange);
           }
         });
-      }
-    });
-  }
-
-  private void handleDetailVisibilityChange(Message message) {
-    DetailState detailState = message.parameters().get("detailState");
-    if (model == null || model.getChartPanes() == null) return;
-
-    model.getChartPanes().forEach((key, val) -> {
-      String chartGlobalKey = key.getConnectionId() + "_" + key.getTableName();
-      if (chartGlobalKey.equals(model.getGlobalKey())) {
-        val.values().forEach(chartModule -> chartModule.setDetailState(detailState));
       }
     });
   }
