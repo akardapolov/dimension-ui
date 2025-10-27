@@ -50,7 +50,7 @@ public class HttpServerLocal {
     @Override
     public void handle(HttpExchange httpExchange) throws IOException {
       long threadId = Thread.currentThread().threadId();
-      log.info("Handle request: " + threadId);
+      log.info("Handle request: {}", threadId);
 
       httpExchange.sendResponseHeaders(200, response.length());
       OutputStream os = httpExchange.getResponseBody();

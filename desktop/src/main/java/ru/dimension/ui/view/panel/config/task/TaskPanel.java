@@ -74,7 +74,7 @@ public class TaskPanel extends JPanel {
     this.pullTimeoutJLabel = new JLabel("Pull timeout");
     this.radioButtonPanel = new RadioButtonPanel();
 
-    Border finalBorder = GUIHelper.getBorder();
+    Border finalBorder = GUIHelper.getGrayBorder();
     this.jTextFieldDescription.setBorder(finalBorder);
     this.jTextFieldTask.setBorder(finalBorder);
     this.taskConnectionComboBox.setBorder(finalBorder);

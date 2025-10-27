@@ -28,7 +28,7 @@
 
     <dagger2.version>2.57</dagger2.version>
 
-    <dimension-db-version>25.10.4</dimension-db-version>
+    <dimension-db-version>25.10.5</dimension-db-version>
 
     <bdb-version>5.0.73</bdb-version>
     <gson-version>2.13.1</gson-version>
@@ -319,11 +319,6 @@
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.1.1</version>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>3.1.1</version>
-      </plugin>
 
       <!-- Generate run scripts from templates -->
       <plugin>
@@ -388,7 +383,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>3.6.0</version>
+        <version>3.7.1</version>
         <executions>
           <!-- Existing JAR-with-dependencies -->
           <execution>
@@ -465,7 +460,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-assembly-plugin</artifactId>
-          <version>3.1.1</version>
+          <version>3.7.1</version>
           <configuration>
             <descriptorRefs>
               <descriptorRef>jar-with-dependencies</descriptorRef>

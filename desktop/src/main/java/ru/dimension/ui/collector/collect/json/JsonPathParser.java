@@ -87,7 +87,7 @@ public class JsonPathParser {
         map.putAll(stringMap);
       } else if (objectValue instanceof String) {
         String stringValue = (String) objectValue;
-        log.info("Not supported yet for data: " + stringValue);
+        log.info("Not supported yet for data: {}", stringValue);
       }
     }
 

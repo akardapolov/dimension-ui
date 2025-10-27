@@ -81,7 +81,7 @@ public class PopupPanel extends JPanel implements CustomPopupCloseListener {
 
     contentPanel = new JPanel();
     contentPanel.setSize(textField.getWidth() + button.getWidth(), 100);
-    contentPanel.setBorder(GUIHelper.getBorder());
+    contentPanel.setBorder(GUIHelper.getGrayBorder());
     PainlessGridBag gbl = new PainlessGridBag(contentPanel, PGHelper.getPGConfig(0), false);
 
     gbl.row().cellXYRemainder(table.getJScrollPane()).fillXY();
@@ -127,7 +127,7 @@ public class PopupPanel extends JPanel implements CustomPopupCloseListener {
     contentPanel = null;
     contentPanel = new JPanel();
     contentPanel.setSize(textField.getWidth() + button.getWidth(), 100);
-    contentPanel.setBorder(GUIHelper.getBorder());
+    contentPanel.setBorder(GUIHelper.getGrayBorder());
 
     PainlessGridBag gbl = new PainlessGridBag(contentPanel, PGHelper.getPGConfig(0), false);
 

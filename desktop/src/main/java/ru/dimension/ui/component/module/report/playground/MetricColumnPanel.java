@@ -193,7 +193,7 @@ public class MetricColumnPanel extends JXTaskPane {
 
   private void addCard(ProfileTaskQueryKey key,
                        CProfile cProfile) {
-    log.info("Add card by key: " + key + " and profile: " + cProfile);
+    log.info("Add card by key: {} and profile: {}", key, cProfile);
 
     broker.sendMessage(Message.builder()
                            .destination(Destination.withDefault(component))
@@ -205,7 +205,7 @@ public class MetricColumnPanel extends JXTaskPane {
 
   private void removeCard(ProfileTaskQueryKey key,
                           CProfile cProfile) {
-    log.info("Remove card by key: " + key + " and profile: " + cProfile);
+    log.info("Remove card by key: {} and profile: {}", key, cProfile);
 
     broker.sendMessage(Message.builder()
                            .destination(Destination.withDefault(component))

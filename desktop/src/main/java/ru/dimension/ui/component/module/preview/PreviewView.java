@@ -4,14 +4,11 @@ import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 import static ru.dimension.ui.laf.LafColorGroup.CHART_PANEL;
 
 import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.Toolkit;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 import java.util.regex.PatternSyntaxException;
 import javax.swing.BorderFactory;
-import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -25,29 +22,30 @@ import javax.swing.event.TableModelEvent;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableRowSorter;
 import lombok.Getter;
+import lombok.Setter;
 import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.ui.component.block.PreviewConfigBlock;
-import ru.dimension.ui.component.module.PreviewChartModule;
+import ru.dimension.ui.component.module.preview.spi.IPreviewChart;
+import ru.dimension.ui.component.module.preview.spi.PreviewMode;
 import ru.dimension.ui.component.panel.CollapseCardPanel;
 import ru.dimension.ui.component.panel.ConfigShowHidePanel;
 import ru.dimension.ui.component.panel.LegendPanel;
+import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.component.panel.range.RealTimeRangePanel;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.model.column.ColumnNames;
-import ru.dimension.ui.model.info.ProfileInfo;
-import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
-import ru.dimension.ui.model.info.TaskInfo;
 import ru.dimension.ui.model.table.JXTableCase;
 
 @Getter
-public class PreviewView extends JDialog {
+public class PreviewView extends JPanel {
+  private final PreviewMode mode;
+
   private final PreviewModel model;
-  private final JPanel mainPanel;
   private final JSplitPane splitPane;
   private final JXTableCase columnTableCase;
 
@@ -60,10 +58,12 @@ public class PreviewView extends JDialog {
     void onCheckboxChanged(String columnName, boolean selected);
   }
 
+  @Setter
   private CheckboxChangeListener checkboxChangeListener;
 
   private final PreviewConfigBlock previewConfigBlock;
   private final RealTimeRangePanel realTimeRangePanel;
+  private final HistoryRangePanel historyRangePanel;
   private final LegendPanel realTimeLegendPanel;
   private final ConfigShowHidePanel configShowHidePanel;
   private final CollapseCardPanel collapseCardPanel;
@@ -72,33 +72,25 @@ public class PreviewView extends JDialog {
   private final JScrollPane cardScrollPane;
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-  public PreviewView(PreviewModel model) {
+  public PreviewView(PreviewMode mode,
+                     PreviewModel model) {
+    this.mode = mode;
     this.model = model;
 
-    this.mainPanel = new JPanel();
-    this.mainPanel.setBorder(new EtchedBorder());
+    this.setBorder(new EtchedBorder());
 
     this.columnTableCase = createCheckboxTableCase();
     setupColumnTableListener();
 
-    // Create search panel for columns
     JPanel columnSearchPanel = new JPanel(new BorderLayout());
     columnSearch = new JTextField();
     columnSearch.getDocument().addDocumentListener(new DocumentListener() {
       @Override
-      public void insertUpdate(DocumentEvent e) {
-        updateColumnFilter();
-      }
-
+      public void insertUpdate(DocumentEvent e) { updateColumnFilter(); }
       @Override
-      public void removeUpdate(DocumentEvent e) {
-        updateColumnFilter();
-      }
-
+      public void removeUpdate(DocumentEvent e) { updateColumnFilter(); }
       @Override
-      public void changedUpdate(DocumentEvent e) {
-        updateColumnFilter();
-      }
+      public void changedUpdate(DocumentEvent e) { updateColumnFilter(); }
     });
     columnSearch.setToolTipText("Search columns...");
     columnSearchPanel.add(columnSearch, BorderLayout.NORTH);
@@ -106,15 +98,23 @@ public class PreviewView extends JDialog {
     columnSearchPanel.setBorder(BorderFactory.createTitledBorder("Columns"));
 
     this.realTimeRangePanel = new RealTimeRangePanel(getLabel("Range: "));
+    this.historyRangePanel = new HistoryRangePanel(getLabel("Range: "));
     this.realTimeLegendPanel = new LegendPanel(getLabel("Legend: "));
     this.configShowHidePanel = new ConfigShowHidePanel(getLabel("Config: "));
     this.collapseCardPanel = new CollapseCardPanel(getLabel("Dashboard"));
-    this.previewConfigBlock = new PreviewConfigBlock(realTimeRangePanel,
+
+    JPanel rangePanel;
+    if (PreviewMode.PREVIEW.equals(mode)) {
+      rangePanel = realTimeRangePanel;
+    } else {
+      rangePanel = historyRangePanel;
+    }
+
+    this.previewConfigBlock = new PreviewConfigBlock(rangePanel,
                                                      realTimeLegendPanel,
                                                      configShowHidePanel,
                                                      collapseCardPanel);
 
-    // Initialize chart container
     this.cardContainer = new JXTaskPaneContainer();
     LaF.setBackgroundColor(CHART_PANEL, cardContainer);
     cardContainer.setBackgroundPainter(null);
@@ -123,30 +123,26 @@ public class PreviewView extends JDialog {
     GUIHelper.setScrolling(cardScrollPane);
     cardScrollPane.setViewportView(cardContainer);
 
-    LaF.setBackgroundColor(CHART_PANEL, mainPanel);
+    LaF.setBackgroundColor(CHART_PANEL, this);
 
-    PainlessGridBag gbl = new PainlessGridBag(mainPanel, PGHelper.getPGConfig(1), false);
+    PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(1), false);
 
     JPanel rightPanel = new JPanel(new BorderLayout());
     rightPanel.add(previewConfigBlock, BorderLayout.NORTH);
     rightPanel.add(cardScrollPane, BorderLayout.CENTER);
 
     splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
-                                          columnSearchPanel,
-                                          rightPanel);
-    splitPane.setDividerLocation(300);
+                               columnSearchPanel,
+                               rightPanel);
+
+    if (PreviewMode.PREVIEW.equals(mode)) {
+      splitPane.setDividerLocation(300);
+    } else if (PreviewMode.DETAIL.equals(mode)) {
+      splitPane.setDividerLocation(200);
+    }
 
     gbl.row().cell(splitPane).fillXY();
     gbl.done();
-
-    this.add(mainPanel);
-
-    ProfileInfo profileInfo = model.getProfileManager().getProfileInfoById(model.getKey().getProfileId());
-    TaskInfo taskInfo = model.getProfileManager().getTaskInfoById(model.getKey().getTaskId());
-    QueryInfo queryInfo = model.getProfileManager().getQueryInfoById(model.getKey().getQueryId());
-
-    this.setTitle("Preview realtime -> Profile: " + profileInfo.getName() + " >>> Task: " + taskInfo.getName() + " >>> Query: " + queryInfo.getName());
-    this.packConfig(false);
   }
 
   public void setColumnSelected(String columnName, boolean selected) {
@@ -180,16 +176,11 @@ public class PreviewView extends JDialog {
     });
   }
 
-  public void setCheckboxChangeListener(CheckboxChangeListener listener) {
-    this.checkboxChangeListener = listener;
-  }
-
-  public void addChartCard(PreviewChartModule taskPane,
-                           BiConsumer<PreviewChartModule, Exception> onComplete) {
+  public void addChartCard(IPreviewChart taskPane, BiConsumer<IPreviewChart, Exception> onComplete) {
     addTaskPane(taskPane);
 
     SwingTaskRunner.runWithProgress(
-        taskPane,
+        taskPane.asTaskPane(),
         executor,
         taskPane::initializeUI,
         e -> {
@@ -216,20 +207,20 @@ public class PreviewView extends JDialog {
     ignoreCheckboxEvents = false;
   }
 
-  private void addTaskPane(PreviewChartModule taskPane) {
-    cardContainer.add(taskPane);
+  private void addTaskPane(IPreviewChart taskPane) {
+    cardContainer.add(taskPane.asTaskPane());
     cardContainer.revalidate();
     cardContainer.repaint();
   }
 
-  public void removeTaskPane(PreviewChartModule taskPane) {
+  public void removeTaskPane(IPreviewChart taskPane) {
     setColumnSelected(taskPane.getTitle(), false);
-    cardContainer.remove(taskPane);
+    cardContainer.remove(taskPane.asTaskPane());
     cardContainer.revalidate();
     cardContainer.repaint();
   }
 
-  public void removeChartCard(PreviewChartModule taskPane) {
+  public void removeChartCard(IPreviewChart taskPane) {
     removeTaskPane(taskPane);
   }
 
@@ -260,14 +251,11 @@ public class PreviewView extends JDialog {
 
   private void updateColumnFilter() {
     String searchText = columnSearch.getText();
-
     if (columnTableCase == null) return;
-
     if (columnSorter == null) {
       columnSorter = new TableRowSorter<>(columnTableCase.getJxTable().getModel());
       columnTableCase.getJxTable().setRowSorter(columnSorter);
     }
-
     if (searchText == null || searchText.isEmpty()) {
       columnSorter.setRowFilter(null);
     } else {
@@ -292,19 +280,5 @@ public class PreviewView extends JDialog {
     JLabel label = new JLabel(text);
     label.setFont(label.getFont().deriveFont(java.awt.Font.BOLD));
     return label;
-  }
-
-  public void packConfig(boolean visible) {
-    this.splitPane.setDividerLocation(300);
-
-    this.setVisible(visible);
-    this.setModal(true);
-    this.setResizable(true);
-    this.pack();
-
-    this.setSize(new Dimension(Toolkit.getDefaultToolkit().getScreenSize().width - 400,
-                               Toolkit.getDefaultToolkit().getScreenSize().height - 100));
-    this.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width) / 2 - getWidth() / 2,
-                     (Toolkit.getDefaultToolkit().getScreenSize().height) / 2 - getHeight() / 2);
   }
 }

@@ -57,7 +57,7 @@ public class TemplateConnPanel extends JPanel {
     this.connectionDriver.setPrompt("Driver...");
     this.connectionDriver.setEditable(false);
 
-    Border finalBorder = GUIHelper.getBorder();
+    Border finalBorder = GUIHelper.getGrayBorder();
     this.connectionName.setBorder(finalBorder);
     this.connectionURL.setBorder(finalBorder);
     this.connectionUserName.setBorder(finalBorder);

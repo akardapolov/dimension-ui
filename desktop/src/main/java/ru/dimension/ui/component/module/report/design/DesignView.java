@@ -38,7 +38,7 @@ import org.jdesktop.swingx.plaf.basic.CalendarHeaderHandler;
 import org.jdesktop.swingx.plaf.basic.SpinningCalendarHeaderHandler;
 import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
-import ru.dimension.ui.component.module.ReportChartModule;
+import ru.dimension.ui.component.module.chart.ReportChartModule;
 import ru.dimension.ui.component.module.report.playground.MetricColumnPanel;
 import ru.dimension.ui.component.panel.CollapseCardPanel;
 import ru.dimension.ui.helper.DateHelper;

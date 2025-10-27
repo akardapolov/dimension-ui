@@ -236,7 +236,7 @@ public class ModelView extends JPanel {
   }
 
   public void showNotRunningMessage(String profileName) {
-    log.warn("Profile: " + profileName + " not started");
+    log.warn("Profile: {} not started", profileName);
   }
 
   public JXTableCase getProfileTableCase() {

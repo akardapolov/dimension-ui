@@ -261,12 +261,12 @@ public class HttpCollect extends AbstractCollect implements HttpLoader {
             // Further check if it's a Long or Double since JSON numbers could be either
             Number num = primitive.getAsNumber();
             if (num.toString().contains(".")) {
-              System.out.println(key + ": " + num.doubleValue() + " (Double)");
+              log.info("{}: {} (Double)", key, num.doubleValue());
             } else {
-              System.out.println(key + ": " + num.longValue() + " (Long)");
+              log.info("{}: {} (Long)", key, num.longValue());
             }
           } else if (primitive.getAsJsonPrimitive().isString()) {
-            System.out.println(key + ": " + primitive.getAsString() + " (String)");
+            log.info("{}: {} (String)", key, primitive.getAsString());
           }
         }
       });

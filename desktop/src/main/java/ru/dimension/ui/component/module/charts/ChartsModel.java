@@ -8,7 +8,7 @@ import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.model.ChartLegendState;
-import ru.dimension.ui.component.module.ChartModule;
+import ru.dimension.ui.component.module.chart.ChartModule;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.state.SqlQueryState;

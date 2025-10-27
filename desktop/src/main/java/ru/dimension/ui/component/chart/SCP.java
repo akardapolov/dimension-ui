@@ -190,6 +190,30 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
     stackedChart.clearSelectionRegion();
   }
 
+  public void snapshotSelectionRegion() {
+    if (this.stackedChart != null) {
+      this.stackedChart.snapshotSelectionRegion();
+    }
+  }
+
+  public void restoreSelectionRegion() {
+    if (this.stackedChart != null) {
+      this.stackedChart.restoreSelectionRegion();
+    }
+  }
+
+  public void restoreSelectionRegionAfterNextDraw() {
+    if (this.stackedChart != null) {
+      this.stackedChart.restoreSelectionRegionAfterNextDraw();
+    }
+  }
+
+  public void setLegendTitleVisible(boolean visible) {
+    if (this.stackedChart != null) {
+      this.stackedChart.setLegendTitleVisible(visible);
+    }
+  }
+
   public void setChartTitle(String titleText) {
     this.stackedChart.setChartTitle(titleText);
   }

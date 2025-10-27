@@ -34,7 +34,7 @@ import ru.dimension.ui.component.broker.MessageBroker.Block;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.model.ChartCardState;
-import ru.dimension.ui.component.module.ReportChartModule;
+import ru.dimension.ui.component.module.chart.ReportChartModule;
 import ru.dimension.ui.component.module.report.pdf.PdfReportDialog;
 import ru.dimension.ui.component.module.report.pdf.PdfReportGenerator;
 import ru.dimension.ui.component.module.report.playground.MetricColumnPanel;
@@ -105,7 +105,7 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
 
   @Override
   public void receive(Message message) {
-    log.info("Message received >>> " + message.destination() + " with action >>> " + message.action());
+    log.info("Message received >>> {} with action >>> {}", message.destination(), message.action());
 
     switch (message.action()) {
       case ADD_CHART -> handleAddChart(message);
@@ -121,9 +121,9 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
     CProfile cProfile = message.parameters().get("cProfile");
     GroupFunction groupFunction = message.parameters().get("groupFunction");
 
-    log.info("Key: " + key);
-    log.info("CProfile: " + cProfile);
-    log.info("GroupFunction: " + groupFunction);
+    log.info("Key: {}", key);
+    log.info("CProfile: {}", cProfile);
+    log.info("GroupFunction: {}", groupFunction);
 
     Optional<CProfileReport> cProfileReport = model.getMapReportData().get(key)
         .getCProfileReportList()
@@ -435,12 +435,13 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
               model.getDStore()
           );
 
-          Optional.ofNullable(cProfileReport.getComment()).ifPresent(taskPane.getModel().getDescription()::setText);
+          Optional.ofNullable(cProfileReport.getComment())
+              .ifPresent(taskPane.getModel().getDescription()::setText);
 
           String keyValue = KeyHelper.getKey(model.getProfileManager(), key, cProfile);
           taskPane.setTitle(keyValue);
 
-          log.info("Add task pane: " + keyValue);
+          log.info("Add task pane: {}", keyValue);
 
           view.addChartCard(taskPane, (module, error) -> {
             if (error != null) {
@@ -715,9 +716,9 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
     CProfile cProfile = message.parameters().get("cProfile");
     String comment = message.parameters().get("comment");
 
-    log.info("Key: " + key);
-    log.info("CProfile: " + cProfile);
-    log.info("Comment: " + comment);
+    log.info("Key: {}", key);
+    log.info("CProfile: {}", cProfile);
+    log.info("Comment: {}", comment);
 
     Optional<CProfileReport> cProfileReport = model.getMapReportData().get(key)
         .getCProfileReportList()
@@ -770,17 +771,15 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
 
   private void logDetailedConfig(Map<ProfileTaskQueryKey, QueryReportData> config) {
     for (Map.Entry<ProfileTaskQueryKey, QueryReportData> entry : config.entrySet()) {
-      log.info("Key: " + entry.getKey());
+      log.info("Key: {}", entry.getKey());
       QueryReportData data = entry.getValue();
 
       log.info("  CProfileReports:");
       for (CProfileReport cpr : data.getCProfileReportList()) {
-        log.info("    - colId: " + cpr.getColId() +
-                     ", groupFunction: " + cpr.getGroupFunction() +
-                     ", chartType: " + cpr.getChartType());
+        log.info("    - colId: {}, groupFunction: {}, chartType: {}", cpr.getColId(), cpr.getGroupFunction(), cpr.getChartType());
       }
 
-      log.info("  MetricReports: " + data.getMetricReportList().size());
+      log.info("  MetricReports: {}", data.getMetricReportList().size());
     }
   }
 

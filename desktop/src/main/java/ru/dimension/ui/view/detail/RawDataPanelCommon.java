@@ -253,7 +253,7 @@ public abstract class RawDataPanelCommon extends JPanel {
 
       this.findNext.addActionListener(e -> {
         if (e.getSource() == this.findNext) {
-          log.info("Fetch next batch of " + fetchSize + " rows..");
+          log.info("Fetch next batch of {} rows..", fetchSize);
           loadToModel(batchResultSet.next() ? batchResultSet.getObject() : Collections.emptyList());
         }
       });

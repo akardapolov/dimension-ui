@@ -150,6 +150,6 @@ public class TaskExecutor {
     Instant after = Instant.now();
 
     double range = ((double) after.toEpochMilli() - (double) before.toEpochMilli()) / 1000;
-    log.info("Task: " + taskInfo.getName() + ", Query: " + queryInfo.getName() + ", execution (sec): " + range);
+    log.info("Task: {}, Query: {}, execution (sec): {}", taskInfo.getName(), queryInfo.getName(), range);
   }
 }

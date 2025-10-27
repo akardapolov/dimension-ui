@@ -53,7 +53,7 @@ public class MultiSelectTaskPanel extends JPanel {
     pickAllBtn.setPreferredSize(new Dimension(2, 30));
     this.setBorder(new EtchedBorder());
 
-    Border finalBorder = GUIHelper.getBorder();
+    Border finalBorder = GUIHelper.getGrayBorder();
     this.taskListCase.getJxTable().setBorder(finalBorder);
     this.selectedTaskCase.getJxTable().setBorder(finalBorder);
 

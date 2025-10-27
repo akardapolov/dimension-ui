@@ -56,7 +56,7 @@ public class MultiSelectConnectionPanel extends JPanel {
     this.listCase.getJxTable().getColumnExt(0).setVisible(false);
     this.selectedCase.getJxTable().getColumnExt(0).setVisible(false);
 
-    Border finalBorder = GUIHelper.getBorder();
+    Border finalBorder = GUIHelper.getGrayBorder();
     this.listCase.getJxTable().setBorder(finalBorder);
     this.selectedCase.getJxTable().setBorder(finalBorder);
 

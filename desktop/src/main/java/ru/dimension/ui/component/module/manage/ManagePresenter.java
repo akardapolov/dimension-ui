@@ -116,7 +116,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
       }
     });
 
-    log.info("Button " + actionName + " has fired..");
+    log.info("Button {} has fired..", actionName);
   }
 
   private void actionPerformed(String actionName) {
@@ -203,7 +203,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
                   .stream()
                   .filter(f -> f.getValue().isTimeStamp())
                   .findAny()
-                  .ifPresentOrElse(csTypeEntry -> log.info("Found timestamp field: " + csTypeEntry.getKey()),
+                  .ifPresentOrElse(csTypeEntry -> log.info("Found timestamp field: {}", csTypeEntry.getKey()),
                                    () -> {
                                      profileManager.setProfileInfoStatusById(key.getProfileId(), RunStatus.NOT_RUNNING);
                                      eventListener.fireOnStopOnWorkspaceProfileView(key.getProfileId());
@@ -285,7 +285,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
 
   private void handlePreviewAction() {
     if (previewModule != null && previewModule.getModel().getKey().equals(key)) {
-      log.info("Already running preview model by key: " + key);
+      log.info("Already running preview model by key: {}", key);
     } else {
       eventListener.clearListenerPreviewByClass(PreviewModule.class);
       previewModule = new PreviewModule(key, profileManager, sqlQueryState, dStore);
@@ -302,7 +302,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
 
   @Override
   public void receive(Message message) {
-    log.info("Message received: " + message.action());
+    log.info("Message received: {}", message.action());
 
     switch (message.action()) {
       case SET_PROFILE_TASK_QUERY_KEY -> {

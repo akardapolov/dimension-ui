@@ -276,7 +276,7 @@ public class QueryMetadataHandler implements ActionListener, CommonViewHandler, 
                                                   connectionInfo.getJar(),
                                                   connectionInfo.getDriver(),
                                                   connectionInfo.getType())));
-              }, () -> log.info("Not found query by query id: " + queryId));
+              }, () -> log.info("Not found query by query id: {}", queryId));
 
           metadataQueryPanel.getQueryConnectionMetadataComboBox().setTableData(connectionData);
 

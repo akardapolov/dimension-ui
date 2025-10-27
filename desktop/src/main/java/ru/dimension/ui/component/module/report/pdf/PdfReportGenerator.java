@@ -1,5 +1,8 @@
 package ru.dimension.ui.component.module.report.pdf;
 
+import static ru.dimension.ui.helper.FilesHelper.CONFIG_FTL_DIR_NAME;
+import static ru.dimension.ui.helper.FilesHelper.CONFIG_TTF_DIR_NAME;
+
 import com.itextpdf.text.Document;
 import com.itextpdf.text.FontFactory;
 import com.itextpdf.text.PageSize;
@@ -8,17 +11,16 @@ import com.itextpdf.tool.xml.XMLWorkerFontProvider;
 import com.itextpdf.tool.xml.XMLWorkerHelper;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
-import lombok.extern.log4j.Log4j2;
-import ru.dimension.ui.component.module.ReportChartModule;
-import ru.dimension.ui.helper.DesignHelper;
-import ru.dimension.ui.helper.FilesHelper;
-import ru.dimension.ui.manager.ProfileManager;
-import ru.dimension.ui.model.ProfileTaskQueryKey;
-
-import javax.imageio.ImageIO;
-import java.awt.*;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -31,9 +33,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static ru.dimension.ui.helper.FilesHelper.CONFIG_FTL_DIR_NAME;
-import static ru.dimension.ui.helper.FilesHelper.CONFIG_TTF_DIR_NAME;
+import javax.imageio.ImageIO;
+import lombok.extern.log4j.Log4j2;
+import ru.dimension.ui.component.module.chart.ReportChartModule;
+import ru.dimension.ui.helper.DesignHelper;
+import ru.dimension.ui.helper.FilesHelper;
+import ru.dimension.ui.manager.ProfileManager;
+import ru.dimension.ui.model.ProfileTaskQueryKey;
 
 @Log4j2
 public class PdfReportGenerator {

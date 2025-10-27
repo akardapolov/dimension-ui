@@ -3,7 +3,6 @@ package ru.dimension.ui.helper;
 import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 import static ru.dimension.ui.laf.LafColorGroup.TABLE_FONT_COLOR;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -26,13 +25,14 @@ import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JViewport;
 import javax.swing.ListSelectionModel;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
 import javax.swing.border.Border;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.EtchedBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellEditor;
@@ -125,23 +125,7 @@ public class GUIHelper {
     return jScrollPane;
   }
 
-  public static JScrollPane getTextInJScrollPane(JTextArea jTextArea) {
-    JPanel other = new JPanel(new BorderLayout());
-    other.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
 
-    return new JScrollPane(jTextArea);
-  }
-
-  public static JTextArea getJTextArea(int rows,
-                                       int columns) {
-    JTextArea jTextArea = new JTextArea(rows, columns);
-    jTextArea.setFont(new Font("Serif", Font.ITALIC, 16));
-    jTextArea.setLineWrap(true);
-    jTextArea.setAutoscrolls(true);
-    jTextArea.setEditable(true);
-
-    return jTextArea;
-  }
 
   public static JXTextArea getJXTextArea(int rows,
                                          int columns) {
@@ -434,7 +418,21 @@ public class GUIHelper {
     jSplitPane.revalidate();
   }
 
-  public static Border getBorder() {
+  public static Border getEtchedBorder() {
+    Border inner = new EtchedBorder();
+    Border outer = new EmptyBorder(2, 2, 2, 2);
+
+    return BorderFactory.createCompoundBorder(inner, outer);
+  }
+
+  public static Border getConfigureBorder(int inset) {
+    Border inner = new EtchedBorder();
+    Border outer = new EmptyBorder(inset, inset, inset, inset);
+
+    return BorderFactory.createCompoundBorder(inner, outer);
+  }
+
+  public static Border getGrayBorder() {
     Border inner = BorderFactory.createEmptyBorder(2, 6, 2, 0);
     Border outer = BorderFactory.createMatteBorder(1, 1, 1, 1, Color.LIGHT_GRAY);
 
@@ -536,7 +534,7 @@ public class GUIHelper {
     if (url != null) {
       return new ImageIcon(url);
     }
-    log.warn("Icon not found: " + path);
+    log.warn("Icon not found: {}", path);
     return null;
   }
 
@@ -544,6 +542,7 @@ public class GUIHelper {
     return switch (panel) {
       case REALTIME -> "Real-time";
       case HISTORY -> "History";
+      case INSIGHT -> "Insight";
       default -> "";
     };
   }

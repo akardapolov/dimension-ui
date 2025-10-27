@@ -373,10 +373,7 @@ public class GanttPopupPanel extends GanttCommon {
           selectedSet.remove(filterValue);
         }
 
-        Destination destination =
-            panelType == Panel.REALTIME ?
-                getDestination(component, Panel.REALTIME, chartKey) :
-                getDestination(component, Panel.HISTORY, chartKey);
+        Destination destination = getDestination(component, panelType, chartKey);
 
         if (topMapSelected.isEmpty() || topMapSelected.values().stream().allMatch(LinkedHashSet::isEmpty)) {
           sendFilterMessage(destination, Action.REMOVE_CHART_FILTER);
@@ -409,7 +406,7 @@ public class GanttPopupPanel extends GanttCommon {
     }
 
     private void sendFilterMessage(Destination destination, Action action) {
-      log.info("Message send to " + destination + " with action: " + action);
+      log.info("Message send to {} with action: {}", destination, action);
 
       LogHelper.logMapSelected(topMapSelected);
 

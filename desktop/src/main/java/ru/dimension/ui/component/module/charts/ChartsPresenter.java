@@ -16,7 +16,7 @@ import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.model.ChartLegendState;
-import ru.dimension.ui.component.module.ChartModule;
+import ru.dimension.ui.component.module.chart.ChartModule;
 import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.helper.KeyHelper;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
@@ -133,7 +133,7 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
     String keyValue = KeyHelper.getKey(model.getProfileManager(), key, cProfile);
     taskPane.setTitle(keyValue);
 
-    log.info("Add task pane: " + keyValue);
+    log.info("Add task pane: {}", keyValue);
 
     PropertyChangeListener collapseListener = evt -> {
       if (!model.isProgrammaticChange() &&
@@ -159,9 +159,11 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
 
       Destination destinationRealtime = getDestination(Panel.REALTIME, chartKey);
       Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+      Destination destinationInsight = getDestination(Panel.INSIGHT, chartKey);
 
       broker.addReceiver(destinationRealtime, taskPane.getPresenter());
       broker.addReceiver(destinationHistory, taskPane.getPresenter());
+      broker.addReceiver(destinationInsight, taskPane.getPresenter());
 
       taskPane.revalidate();
       taskPane.repaint();
@@ -190,21 +192,23 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
 
       Destination destinationRealtime = getDestination(Panel.REALTIME, chartKey);
       Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+      Destination destinationInsight = getDestination(Panel.INSIGHT, chartKey);
 
       broker.deleteReceiver(destinationRealtime, taskPane.getPresenter());
       broker.deleteReceiver(destinationHistory, taskPane.getPresenter());
+      broker.deleteReceiver(destinationInsight, taskPane.getPresenter());
     } finally {
-      log.info("Remove task pane: " + taskPane.getTitle());
+      log.info("Remove task pane: {}", taskPane.getTitle());
       view.removeChartCard(taskPane);
       model.getChartPanes().get(key).remove(cProfile);
     }
   }
 
-  private Destination getDestination(Panel realtime,
+  private Destination getDestination(Panel panel,
                                      ChartKey chartKey) {
     return Destination.builder().component(component)
         .module(Module.CHART)
-        .panel(realtime)
+        .panel(panel)
         .block(Block.CHART)
         .chartKey(chartKey).build();
   }
@@ -245,6 +249,6 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
 
   private void logChartAction(Action action,
                               CProfile cProfile) {
-    log.info("Message action: " + action + " for " + cProfile);
+    log.info("Message action: {} for {}", action, cProfile);
   }
 }

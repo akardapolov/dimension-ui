@@ -15,7 +15,7 @@ public interface JdbcLoader {
                           Logger log) {
     long sysdate = 0;
 
-    log.info("Query to get sysdate: " + statement);
+    log.info("Query to get sysdate: {}", statement);
 
     try (PreparedStatement ps = connection.prepareStatement(statement)) {
       try (ResultSet rs = ps.executeQuery()) {

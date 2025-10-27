@@ -13,7 +13,7 @@ import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.chart.HelperChart;
 import ru.dimension.ui.component.module.ChartsModule;
-import ru.dimension.ui.component.module.ConfigureModule;
+import ru.dimension.ui.component.module.ConfigModule;
 import ru.dimension.ui.component.module.ManageModule;
 import ru.dimension.ui.component.module.ModelModule;
 import ru.dimension.ui.executor.TaskExecutorPool;
@@ -48,7 +48,7 @@ public class WorkspaceComponent implements HelperChart, ProfileStartStopListener
 
   private ManageModule manageModule;
   private ModelModule modelModule;
-  private ConfigureModule configureModule;
+  private ConfigModule configModule;
   private ChartsModule chartsModule;
 
   private final MessageBroker broker = MessageBroker.getInstance();
@@ -84,12 +84,12 @@ public class WorkspaceComponent implements HelperChart, ProfileStartStopListener
                                     taskExecutorPool, connectionPoolManager, httpResponseFetcher, sqlQueryState,
                                     collector, dStore);
     modelModule = new ModelModule(component, profileManager);
-    configureModule = new ConfigureModule(component);
+    configModule = new ConfigModule(component);
     chartsModule = new ChartsModule(component, profileManager, sqlQueryState, dStore);
 
     manageConfigSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
     manageConfigSplitPane.setLeftComponent(manageModule.getView());
-    manageConfigSplitPane.setRightComponent(configureModule.getView());
+    manageConfigSplitPane.setRightComponent(configModule.getView());
     manageConfigSplitPane.setDividerLocation(0.2);
     manageConfigSplitPane.setResizeWeight(0.2);
 

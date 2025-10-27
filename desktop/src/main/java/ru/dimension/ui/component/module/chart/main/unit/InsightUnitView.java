@@ -1,0 +1,93 @@
+package ru.dimension.ui.component.module.chart.main.unit;
+
+import java.awt.BorderLayout;
+import java.awt.Font;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JSplitPane;
+import lombok.Getter;
+import lombok.extern.log4j.Log4j2;
+import ru.dimension.ui.component.block.HistoryConfigBlock;
+import ru.dimension.ui.component.broker.MessageBroker;
+import ru.dimension.ui.component.module.base.BaseUnitView;
+import ru.dimension.ui.component.panel.FunctionPanel;
+import ru.dimension.ui.component.panel.LegendPanel;
+import ru.dimension.ui.component.panel.function.NormFunctionPanel;
+import ru.dimension.ui.component.panel.function.TimeRangeFunctionPanel;
+import ru.dimension.ui.component.panel.popup.ActionPanel;
+import ru.dimension.ui.component.panel.popup.FilterPanel;
+import ru.dimension.ui.component.panel.range.HistoryRangePanel;
+
+@Log4j2
+public class InsightUnitView extends BaseUnitView {
+
+  private int configDividerLocation = 32;
+  private int chartDividerLocation = 250;
+
+  private final MessageBroker.Component component;
+
+  @Getter
+  private final FunctionPanel insightFunctionPanel;
+  @Getter
+  private final TimeRangeFunctionPanel insightTimeRangeFunctionPanel;
+  @Getter
+  private final NormFunctionPanel insightNormFunctionPanel;
+  @Getter
+  private final HistoryRangePanel insightRangePanel;
+  @Getter
+  private final LegendPanel insightLegendPanel;
+  @Getter
+  private final FilterPanel insightFilterPanel;
+  @Getter
+  private final ActionPanel insightActionPanel;
+
+  @Getter
+  private final HistoryConfigBlock insightConfigBlock;
+
+  public InsightUnitView(MessageBroker.Component component) {
+    super(LayoutMode.CONFIG_CHART_DETAIL);
+    this.component = component;
+
+    this.insightTimeRangeFunctionPanel = new TimeRangeFunctionPanel();
+    this.insightNormFunctionPanel = new NormFunctionPanel();
+    this.insightFunctionPanel = new FunctionPanel(getBoldLabel("Group: "), insightTimeRangeFunctionPanel, insightNormFunctionPanel);
+    this.insightRangePanel = new HistoryRangePanel(getBoldLabel("Range: "));
+    this.insightLegendPanel = new LegendPanel(getBoldLabel("Legend: "));
+    this.insightFilterPanel = new FilterPanel(component);
+    this.insightActionPanel = new ActionPanel(component);
+
+    this.insightConfigBlock = new HistoryConfigBlock(insightFunctionPanel,
+                                                     insightRangePanel,
+                                                     insightLegendPanel,
+                                                     insightFilterPanel,
+                                                     insightActionPanel);
+
+    getConfigPanel().setLayout(new BorderLayout());
+    getConfigPanel().add(insightConfigBlock, BorderLayout.CENTER);
+
+    getConfigChartSplitPane().setDividerLocation(configDividerLocation);
+    getChartDetailSplitPane().setDividerLocation(chartDividerLocation);
+  }
+
+  private JLabel getBoldLabel(String text) {
+    JLabel label = new JLabel(text);
+    label.setFont(label.getFont().deriveFont(Font.BOLD));
+    return label;
+  }
+
+  public java.awt.Component getRootComponent() {
+    return getConfigChartSplitPane();
+  }
+
+  public JPanel getInsightChartPanel() {
+    return getChartPanel();
+  }
+
+  public JSplitPane getInsightChartDetailSplitPane() {
+    return getChartDetailSplitPane();
+  }
+
+  public JSplitPane getInsightConfigChartDetail() {
+    return getConfigChartSplitPane();
+  }
+}

@@ -13,7 +13,7 @@ import javax.swing.border.EtchedBorder;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.painlessgridbag.PainlessGridBag;
-import ru.dimension.ui.component.module.PreviewChartModule;
+import ru.dimension.ui.component.module.chart.PRChartModule;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
@@ -47,8 +47,8 @@ public class PreviewChartsView extends JPanel {
     gbl.done();
   }
 
-  public void addChartCard(PreviewChartModule taskPane,
-                           BiConsumer<PreviewChartModule, Exception> onComplete) {
+  public void addChartCard(PRChartModule taskPane,
+                           BiConsumer<PRChartModule, Exception> onComplete) {
 
     addTaskPane(taskPane);
 
@@ -65,7 +65,7 @@ public class PreviewChartsView extends JPanel {
     );
   }
 
-  public void removeChartCard(PreviewChartModule taskPane) {
+  public void removeChartCard(PRChartModule taskPane) {
     if (taskPane != null) {
       cardContainer.remove(taskPane);
       cardContainer.revalidate();
@@ -73,19 +73,19 @@ public class PreviewChartsView extends JPanel {
     }
 
     for (Component comp : cardContainer.getComponents()) {
-      if (comp instanceof PreviewChartModule chartModule) {
-        log.info("Task pane: " + chartModule.getTitle());
+      if (comp instanceof PRChartModule chartModule) {
+        log.info("Task pane: {}", chartModule.getTitle());
       }
     }
   }
 
-  private void addTaskPane(PreviewChartModule taskPane) {
+  private void addTaskPane(PRChartModule taskPane) {
     cardContainer.add(taskPane);
     cardContainer.revalidate();
     cardContainer.repaint();
   }
 
-  private void removeTaskPane(PreviewChartModule taskPane) {
+  private void removeTaskPane(PRChartModule taskPane) {
     cardContainer.remove(taskPane);
     cardContainer.revalidate();
     cardContainer.repaint();

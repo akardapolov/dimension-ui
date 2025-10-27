@@ -142,7 +142,7 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
 
     this.checkboxConfig = checkboxConfig;
 
-    Border finalBorder = GUIHelper.getBorder();
+    Border finalBorder = GUIHelper.getGrayBorder();
     this.profileCase.getJxTable().setBorder(finalBorder);
     this.taskCase.getJxTable().setBorder(finalBorder);
     this.connectionCase.getJxTable().setBorder(finalBorder);
@@ -206,7 +206,7 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
 
   public void showConfig(int id) {
     try {
-      log.info("Profile id to view: " + id);
+      log.info("Profile id to view: {}", id);
 
       if (profileCase.getJxTable().getSelectedRowCount() > 0) {
         int rowIndex = getRowIndexForIdColumnFromModel(ProfileColumnNames.ID.getColName(), id);

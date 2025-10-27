@@ -60,7 +60,7 @@ public class CategoryTableXYDatasetRealTime extends CategoryTableXYDataset {
     LocalDateTime dateBeginExpected = LocalDateTime.ofInstant(Instant.ofEpochMilli(begin),
                                                               TimeZone.getDefault().toZoneId());
 
-    for (int i = 0; i < (imax - 1); i++) {
+    for (int i = 0; i < imax; i++) {
       try {
         Double xValue = (Double) getX(0, i);
         LocalDateTime dateBeginCurrent = LocalDateTime.ofInstant(Instant.ofEpochMilli(xValue.longValue()),
@@ -75,8 +75,13 @@ public class CategoryTableXYDatasetRealTime extends CategoryTableXYDataset {
       }
     }
 
+    if (listToDelete.isEmpty()) {
+      log.info("Deleted 0 values from dataset");
+      return;
+    }
+
     listToDelete.forEach(xValue -> getSeriesNames().forEach((index, seriesName) -> remove(xValue, seriesName)));
 
-    log.info("Deleted " + listToDelete.size() + " values from dataset");
+    log.info("Deleted {} values from dataset", listToDelete.size());
   }
 }

@@ -216,7 +216,7 @@ public abstract class HandlerMock {
     scheduledExecutor.scheduleAtFixedRate(() -> {
       Window[] windows = Window.getWindows();
       if (windows != null && windows.length > 0) {
-        log.info("Found " + windows.length + " window(s) " + windows[0].getClass().getSuperclass());
+        log.info("Found {} window(s) {}", windows.length, windows[0].getClass().getSuperclass());
 
         for (int i = windows.length - 1; i >= 0; i--) {
           try {

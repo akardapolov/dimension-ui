@@ -2,13 +2,10 @@ package ru.dimension.ui.component.block;
 
 import static ru.dimension.ui.laf.LafColorGroup.CHART_PANEL;
 
-import java.awt.FlowLayout;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
+import java.util.List;
+import javax.swing.JButton;
 import javax.swing.border.EtchedBorder;
+import ru.dimension.ui.component.block.base.AbstractConfigBlock;
 import ru.dimension.ui.component.panel.FunctionPanel;
 import ru.dimension.ui.component.panel.LegendPanel;
 import ru.dimension.ui.component.panel.popup.ActionPanel;
@@ -17,30 +14,14 @@ import ru.dimension.ui.component.panel.popup.FilterPanel;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.laf.LaF;
 
-public class HistoryConfigBlock extends JPanel {
-  private final FunctionPanel functionPanel;
-  private final HistoryRangePanel historyPanel;
-  private final LegendPanel legendPanel;
-  private final FilterPanel filterPanel;
-  private final ActionPanel actionPanel;
-  private final DescriptionPanel descriptionPanel;
+public class HistoryConfigBlock extends AbstractConfigBlock {
 
   public HistoryConfigBlock(FunctionPanel functionPanel,
                             HistoryRangePanel historyPanel,
                             LegendPanel legendPanel,
                             FilterPanel filterPanel,
                             ActionPanel actionPanel) {
-    this.functionPanel = functionPanel;
-    this.historyPanel = historyPanel;
-    this.legendPanel = legendPanel;
-    this.filterPanel = filterPanel;
-    this.actionPanel = actionPanel;
-    this.descriptionPanel = null;
-
-    setBorder(new EtchedBorder());
-    LaF.setBackgroundConfigPanel(CHART_PANEL, this);
-    setLayout(new GridBagLayout());
-    initComponents();
+    this(functionPanel, historyPanel, legendPanel, filterPanel, actionPanel, null, null);
   }
 
   public HistoryConfigBlock(FunctionPanel functionPanel,
@@ -49,72 +30,38 @@ public class HistoryConfigBlock extends JPanel {
                             FilterPanel filterPanel,
                             ActionPanel actionPanel,
                             DescriptionPanel descriptionPanel) {
-    this.functionPanel    = functionPanel;
-    this.historyPanel     = historyPanel;
-    this.legendPanel      = legendPanel;
-    this.filterPanel      = filterPanel;
-    this.actionPanel      = actionPanel;
-    this.descriptionPanel = descriptionPanel;
+    this(functionPanel, historyPanel, legendPanel, filterPanel, actionPanel, descriptionPanel, null);
+  }
+
+  public HistoryConfigBlock(FunctionPanel functionPanel,
+                            HistoryRangePanel historyPanel,
+                            LegendPanel legendPanel,
+                            FilterPanel filterPanel,
+                            ActionPanel actionPanel,
+                            JButton detailsButton) {
+    this(functionPanel, historyPanel, legendPanel, filterPanel, actionPanel, null, detailsButton);
+  }
+
+  public HistoryConfigBlock(FunctionPanel functionPanel,
+                            HistoryRangePanel historyPanel,
+                            LegendPanel legendPanel,
+                            FilterPanel filterPanel,
+                            ActionPanel actionPanel,
+                            DescriptionPanel descriptionPanel,
+                            JButton detailsButton) {
+    super(AbstractConfigBlock.Spec.builder()
+              .leftItems(List.of(
+                  AbstractConfigBlock.Item.builder().component(functionPanel).weightx(2.0 / 15).build(),
+                  AbstractConfigBlock.Item.builder().component(historyPanel).weightx(2.0 / 15).build(),
+                  AbstractConfigBlock.Item.builder().component(legendPanel).weightx(1.0 / 15).build()
+              ))
+              .rightItems(descriptionPanel == null
+                              ? List.of(filterPanel, actionPanel)
+                              : List.of(filterPanel, actionPanel, descriptionPanel))
+              .trailing(detailsButton)
+              .build());
 
     setBorder(new EtchedBorder());
     LaF.setBackgroundConfigPanel(CHART_PANEL, this);
-    setLayout(new GridBagLayout());
-    initComponents6();
-  }
-
-  private void initComponents() {
-    JPanel containerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
-    LaF.setBackgroundConfigPanel(CHART_PANEL, containerPanel);
-    containerPanel.add(filterPanel);
-    containerPanel.add(actionPanel);
-
-    GridBagConstraints gbc = new GridBagConstraints();
-    gbc.fill = GridBagConstraints.HORIZONTAL;
-    gbc.anchor = GridBagConstraints.WEST;
-    gbc.insets = new Insets(2, 4, 2, 4);
-
-    gbc.gridx = 0;
-    gbc.gridy = 0;
-    gbc.weightx = 2.0 / 15;
-    add(functionPanel, gbc);
-
-    gbc.gridx = 1;
-    gbc.weightx = 2.0 / 15;
-    add(historyPanel, gbc);
-
-    gbc.gridx = 2;
-    gbc.weightx = 1.0 / 15;
-    add(legendPanel, gbc);
-
-    gbc.gridx = 3;
-    gbc.gridwidth = 2;
-    add(containerPanel, gbc);
-
-    gbc.gridx = 4;
-    gbc.weightx = 10.0 / 15;
-    gbc.fill = GridBagConstraints.BOTH;
-    add(new JLabel(), gbc);
-  }
-
-  private void initComponents6() {
-    JPanel containerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
-    LaF.setBackgroundConfigPanel(CHART_PANEL, containerPanel);
-    containerPanel.add(filterPanel);
-    containerPanel.add(actionPanel);
-    containerPanel.add(descriptionPanel);
-
-    GridBagConstraints gbc = new GridBagConstraints();
-    gbc.fill = GridBagConstraints.HORIZONTAL;
-    gbc.anchor = GridBagConstraints.WEST;
-    gbc.insets = new Insets(2, 4, 2, 4);
-
-    gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 2.0 / 15; add(functionPanel, gbc);
-    gbc.gridx = 1;            gbc.weightx = 2.0 / 15; add(historyPanel, gbc);
-    gbc.gridx = 2;            gbc.weightx = 1.0 / 15; add(legendPanel, gbc);
-
-    gbc.gridx = 3; gbc.gridwidth = 3; add(containerPanel, gbc); // 3 columns now
-
-    gbc.gridx = 5; gbc.weightx = 10.0 / 15; gbc.fill = GridBagConstraints.BOTH;
-    add(new JLabel(), gbc);
   }
 }

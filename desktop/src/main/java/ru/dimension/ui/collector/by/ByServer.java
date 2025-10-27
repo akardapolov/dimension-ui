@@ -51,7 +51,7 @@ public class ByServer implements ByTarget {
     ps.setTimestamp(1, new Timestamp(begin));
     ps.setTimestamp(2, new Timestamp(end));
 
-    log.info("By server: " + profileTaskQueryKey + " begin: " + toLocalDateTime(begin) + " end: " + toLocalDateTime(end));
+    log.info("By server: {} begin: {} end: {}", profileTaskQueryKey, toLocalDateTime(begin), toLocalDateTime(end));
 
     return ps;
   }

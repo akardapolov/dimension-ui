@@ -73,8 +73,8 @@ public class CollectorImpl implements Collector, JdbcLoader, HttpLoader {
 
       sqlQueryState.initializeLastTimestamp(profileTaskQueryKey, serverDateTime);
 
-      log.info("Server timestamp for: " + profileTaskQueryKey + " is: " + toLocalDateTime(serverDateTime));
-      log.info("Last timestamp for: " + profileTaskQueryKey + " is: " + toLocalDateTime(sqlQueryState.getLastTimestamp(profileTaskQueryKey)));
+      log.info("Server timestamp for: {} is: {}", profileTaskQueryKey, toLocalDateTime(serverDateTime));
+      log.info("Last timestamp for: {} is: {}", profileTaskQueryKey, toLocalDateTime(sqlQueryState.getLastTimestamp(profileTaskQueryKey)));
 
     } catch (Exception e) {
       log.catching(e);

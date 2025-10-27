@@ -183,7 +183,7 @@ public class AdHocChartsPresenter implements MessageAction {
       Destination destination = getDestination(adHocKey);
       broker.deleteReceiver(destination, taskPane.getPresenter());
     } finally {
-      log.info("Remove task pane: " + taskPane.getTitle());
+      log.info("Remove task pane: {}", taskPane.getTitle());
       view.removeChartCard(adHocTabKey, taskPane);
       model.getChartPanes().get(adHocKey).remove(cProfile);
     }

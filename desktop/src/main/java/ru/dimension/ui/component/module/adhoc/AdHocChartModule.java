@@ -1,5 +1,7 @@
 package ru.dimension.ui.component.module.adhoc;
 
+import javax.swing.BorderFactory;
+import javax.swing.JComponent;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTaskPane;
@@ -35,12 +37,14 @@ public class AdHocChartModule extends JXTaskPane {
     this.view = new AdHocChartView();
     this.presenter = new AdHocChartPresenter(model, view);
 
+    ((JComponent) getContentPane()).setBorder(BorderFactory.createEmptyBorder());
+
     this.setAnimated(false);
   }
 
   public Runnable initializeUI() {
     presenter.initializeChart();
-    return () -> PGHelper.cellXYRemainder(this, view.getPanel(), false);
+    return () -> PGHelper.cellXYRemainder(this, view.getPanel(), 1, false);
   }
 
   public void handleLegendChange(ChartLegendState chartLegendState) {

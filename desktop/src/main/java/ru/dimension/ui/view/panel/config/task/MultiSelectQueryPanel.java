@@ -60,7 +60,7 @@ public class MultiSelectQueryPanel extends JPanel {
 
     this.setBorder(new EtchedBorder());
 
-    Border finalBorder = GUIHelper.getBorder();
+    Border finalBorder = GUIHelper.getGrayBorder();
     this.queryListCase.getJxTable().setBorder(finalBorder);
     this.selectedQueryCase.getJxTable().setBorder(finalBorder);
 

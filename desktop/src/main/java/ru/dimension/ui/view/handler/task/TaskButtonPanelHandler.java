@@ -407,7 +407,7 @@ public class TaskButtonPanelHandler implements ActionListener {
         .toList();
 
     if (connDriver != null) {
-      log.info("Connection's " + connName + " driver: " + connDriver);
+      log.info("Connection's {} driver: {}", connName, connDriver);
 
       // Configuration
       multiSelectQueryPanel.getQueryListCase().getDefaultTableModel().getDataVector().removeAllElements();

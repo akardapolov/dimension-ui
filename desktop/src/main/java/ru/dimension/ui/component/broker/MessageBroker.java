@@ -8,7 +8,7 @@ import java.util.Map;
 public class MessageBroker {
   public enum Component { WORKSPACE, PREVIEW, DASHBOARD, PLAYGROUND, DESIGN, ADHOC}
   public enum Module { MANAGE, MODEL, CONFIG, CHARTS, CHART, NONE}
-  public enum Panel { REALTIME, HISTORY, NONE}
+  public enum Panel { REALTIME, HISTORY, INSIGHT, NONE}
   public enum Block { CONFIG, CHART, DETAIL, NONE}
 
   public enum Action { ADD_CHART, REMOVE_CHART, REMOVE_ALL_CHART,

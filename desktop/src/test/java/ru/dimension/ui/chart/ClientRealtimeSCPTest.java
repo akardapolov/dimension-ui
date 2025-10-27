@@ -43,7 +43,7 @@ public class ClientRealtimeSCPTest extends AbstractBackendTest {
 
     initialDataLoad(tProfile, profileTaskQueryKey);
 
-    log.info("Last timestamp is: " + sqlQueryState.getLastTimestamp(profileTaskQueryKey));
+    log.info("Last timestamp is: {}", sqlQueryState.getLastTimestamp(profileTaskQueryKey));
   }
 
   @Test

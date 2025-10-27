@@ -53,7 +53,7 @@ public class MetricQueryPanel extends JPanel {
     this.chartType = chartType;
     this.configMetricCase = configMetricCase;
 
-    Border finalBorder = GUIHelper.getBorder();
+    Border finalBorder = GUIHelper.getGrayBorder();
     this.nameMetric.setBorder(finalBorder);
     this.xTextFile.setBorder(finalBorder);
     this.yComboBox.setBorder(finalBorder);

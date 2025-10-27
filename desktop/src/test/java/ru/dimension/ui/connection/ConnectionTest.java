@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import ru.dimension.ui.model.info.ConnectionInfo;
 
-
 @Log4j2
 @Disabled
 public class ConnectionTest {
@@ -44,7 +43,7 @@ public class ConnectionTest {
       rsmd = rs.getMetaData();
 
       for (int i = 1; i <= rsmd.getColumnCount(); i++) {
-        System.out.println(rsmd.getColumnName(i).toUpperCase());
+        log.info(rsmd.getColumnName(i).toUpperCase());
       }
 
       rs.close();

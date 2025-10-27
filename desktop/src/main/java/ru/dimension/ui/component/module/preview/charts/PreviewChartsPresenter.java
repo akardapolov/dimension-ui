@@ -16,9 +16,9 @@ import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.model.ChartConfigState;
 import ru.dimension.ui.component.model.ChartLegendState;
-import ru.dimension.ui.component.module.ChartModule;
-import ru.dimension.ui.component.module.PreviewChartModule;
-import ru.dimension.ui.component.module.preview.chart.ChartDetailDialog;
+import ru.dimension.ui.component.module.chart.ChartModule;
+import ru.dimension.ui.component.module.chart.PRChartModule;
+import ru.dimension.ui.component.module.chart.dialog.ChartDetailDialog;
 import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.helper.KeyHelper;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
@@ -51,7 +51,7 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
 
   @Override
   public void receive(Message message) {
-    log.info("Message received >>> " + message.destination() + " with action >>> " + message.action());
+    log.info("Message received >>> {} with action >>> {}", message.destination(), message.action());
 
     switch (message.action()) {
       case REALTIME_RANGE_CHANGE -> handleRealTimeRangeChange(message);
@@ -154,12 +154,12 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
     SqlQueryState sqlQueryState = model.getSqlQueryState();
     DStore dStore = model.getDStore();
 
-    PreviewChartModule taskPane = new PreviewChartModule(component, chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
+    PRChartModule taskPane = new PRChartModule(component, chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
 
     String keyValue = KeyHelper.getKey(model.getProfileManager(), key, cProfile);
     taskPane.setTitle(keyValue);
 
-    log.info("Add task pane: " + keyValue);
+    log.info("Add task pane: {}", keyValue);
 
     view.addChartCard(taskPane, (module, error) -> {
       if (error != null) {
@@ -185,22 +185,22 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
     Metric metric = message.parameters().get("metric");
     CProfile cProfile = metric.getYAxis();
 
-    PreviewChartModule taskPane = model.getChartPanes().get(key).get(cProfile);
+    PRChartModule taskPane = model.getChartPanes().get(key).get(cProfile);
 
     try {
       logChartAction(message.action(), cProfile);
     } finally {
-      log.info("Remove task pane: " + taskPane.getTitle());
+      log.info("Remove task pane: {}", taskPane.getTitle());
       view.removeChartCard(taskPane);
       model.getChartPanes().get(key).remove(cProfile);
     }
   }
 
-  private Destination getDestination(Panel realtime,
+  private Destination getDestination(Panel panel,
                                      ChartKey chartKey) {
     return Destination.builder().component(component)
         .module(Module.CHART)
-        .panel(realtime)
+        .panel(panel)
         .block(Block.CHART)
         .chartKey(chartKey).build();
   }
@@ -218,7 +218,7 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
       return;
     }
 
-    Map<CProfile, PreviewChartModule> chartModules = model.getChartPanes().get(profileTaskQueryKey);
+    Map<CProfile, PRChartModule> chartModules = model.getChartPanes().get(profileTaskQueryKey);
 
     if (chartModules != null && !chartModules.isEmpty()) {
       chartModules.forEach((key, val) -> {
@@ -235,7 +235,7 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
     ChartDetailDialog dialog = model.getChartDetailDialog();
     if (dialog != null && dialog.isVisible()) {
       ChartModule dialogChartModule = dialog.getChartModule();
-      if (dialogChartModule.getModel().getKey().equals(profileTaskQueryKey) &&
+      if (dialogChartModule.getPresenter().getModel().getKey().equals(profileTaskQueryKey) &&
           dialogChartModule.isReadyRealTimeUpdate()) {
         try {
           dialogChartModule.loadData();

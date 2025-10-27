@@ -60,7 +60,7 @@ public class MainQueryPanel extends JPanel {
     this.queryGatherDataComboBox.setEnabled(false);
     this.labelGatherDataSql = new JLabel("Gather data SQL");
 
-    this.finalBorder = GUIHelper.getBorder();
+    this.finalBorder = GUIHelper.getGrayBorder();
     this.queryName.setBorder(finalBorder);
     this.queryDescription.setBorder(finalBorder);
     this.queryGatherDataComboBox.setBorder(finalBorder);

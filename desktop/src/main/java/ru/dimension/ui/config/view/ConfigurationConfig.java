@@ -108,7 +108,7 @@ public class ConfigurationConfig {
   public JXTextArea getTemplateTaskDescription() {
     JXTextArea taskDescription = new JXTextArea("Task description...");
     taskDescription.setEditable(false);
-    taskDescription.setBorder(GUIHelper.getBorder());
+    taskDescription.setBorder(GUIHelper.getGrayBorder());
     taskDescription.setRows(12);
     taskDescription.setColumns(1);
     taskDescription.setLineWrap(true);
@@ -121,7 +121,7 @@ public class ConfigurationConfig {
   public JXTextArea getTemplateQueryDescription() {
     JXTextArea queryDescription = new JXTextArea("Query description...");
     queryDescription.setEditable(false);
-    queryDescription.setBorder(GUIHelper.getBorder());
+    queryDescription.setBorder(GUIHelper.getGrayBorder());
     queryDescription.setRows(12);
     queryDescription.setColumns(1);
     queryDescription.setLineWrap(true);
@@ -157,7 +157,7 @@ public class ConfigurationConfig {
     RSyntaxTextArea textArea = new RSyntaxTextArea(15, 1);
     textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
     textArea.setCodeFoldingEnabled(true);
-    textArea.setBorder(GUIHelper.getBorder());
+    textArea.setBorder(GUIHelper.getGrayBorder());
     textArea.setBackground(LaF.getBackgroundColor(LafColorGroup.TEXTAREA, LaF.getLafType()));
     textArea.setLineWrap(true);
     textArea.setAutoscrolls(true);
@@ -422,7 +422,7 @@ public class ConfigurationConfig {
     RSyntaxTextArea textArea = new RSyntaxTextArea(5, 60);
     textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
     textArea.setCodeFoldingEnabled(true);
-    textArea.setBorder(GUIHelper.getBorder());
+    textArea.setBorder(GUIHelper.getGrayBorder());
     textArea.setBackground(LaF.getBackgroundColor(LafColorGroup.TEXTAREA, LaF.getLafType()));
 
     return textArea;

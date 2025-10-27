@@ -249,7 +249,7 @@ public class TemplatePresenter extends WindowAdapter
           templateConnCase.getJxTable().setRowSelectionInterval(0, 0);
           templateQueryCase.getJxTable().setRowSelectionInterval(0, 0);
 
-          log.info("Task ID: " + taskId);
+          log.info("Task ID: {}", taskId);
         }
 
         if (e.getSource() == templateConnCase.getJxTable().getSelectionModel()) {

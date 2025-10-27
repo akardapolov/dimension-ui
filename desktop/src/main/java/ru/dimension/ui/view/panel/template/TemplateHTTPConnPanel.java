@@ -51,7 +51,7 @@ public class TemplateHTTPConnPanel extends JPanel {
     this.parseRadioButtonPanel = new ParseRadioButtonPanel();
     this.parseRadioButtonPanel.setButtonNotView();
 
-    Border finalBorder = GUIHelper.getBorder();
+    Border finalBorder = GUIHelper.getGrayBorder();
     this.connectionName.setBorder(finalBorder);
     this.connectionURL.setBorder(finalBorder);
 

@@ -41,13 +41,15 @@ public final class DialogHelper {
   }
 
   private static String buildErrorMessage(String errorMessage, Throwable exception) {
-    StringWriter stringWriter = new StringWriter();
-    try (PrintWriter printWriter = new PrintWriter(stringWriter)) {
-      printWriter.println(errorMessage);
-      printWriter.print("Exception is: ");
-      exception.printStackTrace(printWriter);
-    }
-    return stringWriter.toString();
+    StringBuilder sb = new StringBuilder();
+    sb.append(errorMessage).append("\n");
+    sb.append("Exception is: ");
+
+    StringWriter sw = new StringWriter();
+    exception.printStackTrace(new PrintWriter(sw));
+    sb.append(sw);
+
+    return sb.toString();
   }
 
   private static void showScrollableMessageDialog(Component parentComponent,

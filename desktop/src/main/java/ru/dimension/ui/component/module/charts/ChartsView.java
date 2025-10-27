@@ -21,7 +21,7 @@ import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.jdesktop.swingx.VerticalLayout;
 import org.painlessgridbag.PainlessGridBag;
-import ru.dimension.ui.component.module.ChartModule;
+import ru.dimension.ui.component.module.chart.ChartModule;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
@@ -84,7 +84,7 @@ public class ChartsView extends JPanel {
 
     for (Component comp : cardContainer.getComponents()) {
       if (comp instanceof ChartModule chartModule) {
-        log.info("Task pane: " + chartModule.getTitle());
+        log.info("Task pane: {}", chartModule.getTitle());
       }
     }
   }

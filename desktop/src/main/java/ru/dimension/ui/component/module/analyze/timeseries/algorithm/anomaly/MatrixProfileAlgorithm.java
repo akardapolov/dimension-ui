@@ -24,7 +24,7 @@ public class MatrixProfileAlgorithm extends TimeSeriesAlgorithm<double[][]> {
   public double[][] analyze(String value,
                             Long begin,
                             Long end) {
-    log.info("Run analyze by value: " + value);
+    log.info("Run analyze by value: {}", value);
     this.begin = begin;
     this.end = end;
 

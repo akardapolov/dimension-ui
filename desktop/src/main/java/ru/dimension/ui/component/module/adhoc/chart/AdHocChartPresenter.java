@@ -476,7 +476,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
 
   private void handleHistoryTimeRangeFunctionChange(String action, TimeRangeFunction function) {
     adHocStateManager.putTimeRangeFunction(model.getAdHocKey(), function);
-    log.info("Action: " + action + " for time range function: " + function);
+    log.info("Action: {} for time range function: {}", action, function);
 
     handleFilterChange(Panel.HISTORY,
                        model.getTopMapSelected().isEmpty() ? null : model.getTopMapSelected(),
@@ -485,7 +485,7 @@ public class AdHocChartPresenter implements HelperChart, MessageAction {
 
   @Override
   public void receive(Message message) {
-    log.info("Message received >>> " + message.destination() + " with action >>> " + message.action());
+    log.info("Message received >>> {} with action >>> {}", message.destination(), message.action());
     MessageBroker.Panel panel = MessageBroker.Panel.HISTORY;
 
     Map<CProfile, LinkedHashSet<String>> topMapSelected = message.parameters().get("topMapSelected");

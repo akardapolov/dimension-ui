@@ -29,7 +29,7 @@ import ru.dimension.ui.component.broker.MessageBroker.Block;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.model.ChartCardState;
-import ru.dimension.ui.component.module.ReportChartModule;
+import ru.dimension.ui.component.module.chart.ReportChartModule;
 import ru.dimension.ui.helper.DesignHelper;
 import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.helper.KeyHelper;
@@ -189,7 +189,7 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
     String keyValue = KeyHelper.getKey(model.getProfileManager(), key, cProfile);
     taskPane.setTitle(keyValue);
 
-    log.info("Add task pane: " + keyValue);
+    log.info("Add task pane: {}", keyValue);
 
     view.addChartCard(taskPane, (module, error) -> {
       if (error != null) {
@@ -233,7 +233,7 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
 
       model.getChartPanes().get(key).remove(cProfile);
     } finally {
-      log.info("Remove task pane: " + taskPane.getTitle());
+      log.info("Remove task pane: {}", taskPane.getTitle());
       view.removeChartCard(taskPane);
       if (model.getChartPanes().get(key).isEmpty()) {
         model.getChartPanes().remove(key);
@@ -253,7 +253,7 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
 
   private void logChartAction(Action action,
                               CProfile cProfile) {
-    log.info("Message action: " + action + " for " + cProfile);
+    log.info("Message action: {} for {}", action, cProfile);
   }
 
   private void handleQueryEditorChange(ChangeEvent e) {

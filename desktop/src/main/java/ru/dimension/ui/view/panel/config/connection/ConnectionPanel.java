@@ -103,7 +103,7 @@ public class ConnectionPanel extends JPanel {
 
     this.connectionTemplateCase = connectionTemplateCase;
 
-    Border finalBorder = GUIHelper.getBorder();
+    Border finalBorder = GUIHelper.getGrayBorder();
     this.jTextFieldConnectionName.setBorder(finalBorder);
     this.jTextFieldConnectionURL.setBorder(finalBorder);
     this.jTextFieldConnectionUserName.setBorder(finalBorder);

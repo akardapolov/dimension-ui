@@ -217,7 +217,7 @@ public class TaskSelectionHandler extends MouseListenerImpl
         Object connDriver = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(4);
 
         if (connDriver != null) {
-          log.info("Connection's " + connName + " driver: " + connDriver);
+          log.info("Connection's {} driver: {}", connName, connDriver);
           fillAvailableQueryList(connDriver.toString());
         }
         fillConnectionCheckboxIsSelected(isSelected);
@@ -521,7 +521,7 @@ public class TaskSelectionHandler extends MouseListenerImpl
           Object connDriver = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(4);
 
           if (connDriver != null) {
-            log.info("Connection's " + connName + " driver: " + connDriver);
+            log.info("Connection's {} driver: {}", connName, connDriver);
             fillAvailableQueryList(connDriver.toString());
           }
           fillConnectionCheckboxIsSelected(isSelected);

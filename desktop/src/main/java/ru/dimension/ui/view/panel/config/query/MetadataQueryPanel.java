@@ -90,7 +90,7 @@ public class MetadataQueryPanel extends JPanel {
     this.tableIndex.setEnabled(false);
     AutoCompleteDecorator.decorate(this.tableIndex);
 
-    this.finalBorder = GUIHelper.getBorder();
+    this.finalBorder = GUIHelper.getGrayBorder();
     this.configMetadataCase.getJxTable().setBorder(finalBorder);
     this.queryConnectionMetadataComboBox.setBorder(finalBorder);
     this.timestampComboBox.setBorder(finalBorder);

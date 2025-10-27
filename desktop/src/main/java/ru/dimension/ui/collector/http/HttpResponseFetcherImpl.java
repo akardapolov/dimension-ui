@@ -69,7 +69,7 @@ public class HttpResponseFetcherImpl implements HttpResponseFetcher {
       int statusCode = response.getCode();
       log.debug("http response status: {}", statusCode);
       if (!checkSuccessInvoke(httpProtocol, statusCode)) {
-        log.error("StatusCode " + statusCode);
+        log.error("StatusCode {}", statusCode);
         return resp;
       }
       return EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);

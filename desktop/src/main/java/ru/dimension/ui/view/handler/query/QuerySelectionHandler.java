@@ -197,7 +197,7 @@ public class QuerySelectionHandler extends MouseListenerImpl implements ListSele
                                                                  connectionInfo.getDriver(),
                                                                  connectionInfo.getType())));
                              },
-                             () -> log.info("Not found query by query id: " + queryId));
+                             () -> log.info("Not found query by query id: {}", queryId));
 
         metadataQueryPanel.getEditMetadata().setEnabled(true);
         metadataQueryPanel.getQueryConnectionMetadataComboBox().setTableData(connectionData);

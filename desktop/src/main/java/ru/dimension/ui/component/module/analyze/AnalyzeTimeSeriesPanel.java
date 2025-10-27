@@ -121,7 +121,7 @@ public abstract class AnalyzeTimeSeriesPanel extends JPanel implements IDetailPa
   }
 
   protected void runAction(String value) {
-    log.info("Run action fired " + value);
+    log.info("Run action fired {}", value);
 
     if (hideSettings) jspSettingsChart.setDividerLocation(0);
 
@@ -130,12 +130,12 @@ public abstract class AnalyzeTimeSeriesPanel extends JPanel implements IDetailPa
         .forEach(algorithm -> {
           if (jrbListAlgorithm.stream()
               .anyMatch(jrb -> jrb.getText().equals(algorithm.getName()) & jrb.isSelected())) {
-            log.info("Radio button for algorithm: " + algorithm.getName() + " loaded and selected");
+            log.info("Radio button for algorithm: {} loaded and selected", algorithm.getName());
 
             processAlgorithmWithHandling(algorithm, value);
             this.value = value;
           } else {
-            log.warn("Algorithm " + algorithm.getName() + " in UI radio button has not selected");
+            log.warn("Algorithm {} in UI radio button has not selected", algorithm.getName());
           }
         });
   }
@@ -286,6 +286,6 @@ public abstract class AnalyzeTimeSeriesPanel extends JPanel implements IDetailPa
     this.begin = begin;
     this.end = end;
 
-    log.info("Begin: " + this.begin + " End: " + this.end);
+    log.info("Begin: {} End: {}", this.begin, this.end);
   }
 }

@@ -72,7 +72,7 @@ public class CountHandler extends FunctionHandler {
       long x;
 
       if (isClientRealTime) {
-        x = sColumnList.isEmpty() ? finalX : sColumnList.get(0).getKey();
+        x = sColumnList.isEmpty() ? finalX : sColumnList.getFirst().getKey();
       } else {
         x = finalX;
       }

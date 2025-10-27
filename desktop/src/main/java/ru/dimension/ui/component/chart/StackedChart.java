@@ -8,6 +8,8 @@ import static ru.dimension.ui.laf.LafColorGroup.CHART_HISTORY_YEAR_FONT;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.Shape;
+import java.awt.geom.Rectangle2D;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Map;
@@ -23,9 +25,12 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.PeriodAxis;
 import org.jfree.chart.axis.PeriodAxisLabelInfo;
+import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.block.BlockBorder;
 import org.jfree.chart.block.BlockContainer;
 import org.jfree.chart.block.BorderArrangement;
+import org.jfree.chart.event.ChartProgressEvent;
+import org.jfree.chart.event.ChartProgressListener;
 import org.jfree.chart.labels.StandardXYToolTipGenerator;
 import org.jfree.chart.panel.selectionhandler.EntitySelectionManager;
 import org.jfree.chart.panel.selectionhandler.MouseClickSelectionHandler;
@@ -83,6 +88,9 @@ public class StackedChart implements SelectionChangeListener<XYCursor>, DynamicC
   private DatasetSelectionExtension<XYCursor> datasetExtension;
 
   private final ColorHelper colorHelper;
+
+  private Double selDomainStart = null;
+  private Double selDomainEnd = null;
 
   public StackedChart(ChartPanel chartPanel,
                       ColorHelper colorHelper) {
@@ -410,6 +418,107 @@ public class StackedChart implements SelectionChangeListener<XYCursor>, DynamicC
     }
 
     chartPanel.repaint();
+  }
+
+  public void snapshotSelectionRegion() {
+    try {
+      Shape sel = chartPanel.getSelectionShape();
+      if (sel == null) {
+        selDomainStart = selDomainEnd = null;
+        return;
+      }
+
+      Rectangle2D selBounds = sel.getBounds2D();
+      Rectangle2D dataArea = chartPanel.getScreenDataArea();
+      if (dataArea == null) {
+        selDomainStart = selDomainEnd = null;
+        return;
+      }
+
+      double left = Math.max(selBounds.getMinX(), dataArea.getMinX());
+      double right = Math.min(selBounds.getMaxX(), dataArea.getMaxX());
+      if (right < left) {
+        left = selBounds.getMinX();
+        right = selBounds.getMaxX();
+      }
+
+      ValueAxis domainAxis = xyPlot.getDomainAxis();
+      RectangleEdge domainEdge = xyPlot.getDomainAxisEdge();
+
+      double v1 = domainAxis.java2DToValue(left, dataArea, domainEdge);
+      double v2 = domainAxis.java2DToValue(right, dataArea, domainEdge);
+
+      selDomainStart = Math.min(v1, v2);
+      selDomainEnd = Math.max(v1, v2);
+    } catch (Exception e) {
+      log.warn("Snapshot selection region failed", e);
+      selDomainStart = selDomainEnd = null;
+    }
+  }
+
+  public boolean hasSelectionSnapshot() {
+    return selDomainStart != null && selDomainEnd != null;
+  }
+
+  public void restoreSelectionRegion() {
+    try {
+      if (!hasSelectionSnapshot()) {
+        return;
+      }
+      Rectangle2D dataArea = chartPanel.getScreenDataArea();
+      if (dataArea == null) {
+        return; // no info yet
+      }
+
+      ValueAxis domainAxis = xyPlot.getDomainAxis();
+      RectangleEdge domainEdge = xyPlot.getDomainAxisEdge();
+
+      double x1 = domainAxis.valueToJava2D(selDomainStart, dataArea, domainEdge);
+      double x2 = domainAxis.valueToJava2D(selDomainEnd, dataArea, domainEdge);
+      double minX = Math.min(x1, x2);
+      double width = Math.abs(x2 - x1);
+      if (width < 1) width = 1;
+
+      Rectangle2D rect = new Rectangle2D.Double(minX, dataArea.getMinY(), width, dataArea.getHeight());
+
+      chartPanel.setSelectionShape(rect);
+
+      if (selectionManager != null) {
+        selectionManager.select(rect);
+      }
+
+      chartPanel.repaint();
+    } catch (Exception e) {
+      log.warn("Restore selection region failed", e);
+    }
+  }
+
+  public void restoreSelectionRegionAfterNextDraw() {
+    if (!hasSelectionSnapshot()) return;
+
+    ChartProgressListener once = new ChartProgressListener() {
+      @Override
+      public void chartProgress(ChartProgressEvent event) {
+        if (event.getType() == ChartProgressEvent.DRAWING_FINISHED) {
+          try {
+            jFreeChart.removeProgressListener(this);
+            restoreSelectionRegion();
+          } catch (Exception e) {
+            log.warn("Restore selection region after next draw failed", e);
+          }
+        }
+      }
+    };
+
+    jFreeChart.addProgressListener(once);
+    chartPanel.repaint();
+  }
+
+  public void setLegendTitleVisible(boolean visible) {
+    if (legendTitle != null) {
+      legendTitle.setVisible(visible);
+      jFreeChart.fireChartChanged();
+    }
   }
 
   @Override

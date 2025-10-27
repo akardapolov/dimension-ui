@@ -43,13 +43,11 @@ public class HttpServerLocalCacheTest extends HandlerMock {
 
     int i = 0;
     for (TimeRange range : ranges) {
-      System.out.println("Range: " +
-                             RangeUtils.toLocalDateTime(range.getStart()) + " - " +
-                             RangeUtils.toLocalDateTime(range.getEnd()));
+      log.info("Range: {} - {}", RangeUtils.toLocalDateTime(range.getStart()), RangeUtils.toLocalDateTime(range.getEnd()));
       i++;
     }
 
-    System.out.println("Count: " + i);
+    log.info("Count: {}", i);
   }
 
 }

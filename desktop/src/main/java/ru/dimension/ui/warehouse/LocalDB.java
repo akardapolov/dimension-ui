@@ -256,14 +256,14 @@ public class LocalDB implements DStore {
       try {
         this.berkleyDB.getStore().close();
       } catch (DatabaseException dbe) {
-        log.error("Error closing store: " + dbe);
+        log.error("Error closing store: {}", String.valueOf(dbe));
       }
     }
     if (this.berkleyDB.getEnv() != null) {
       try {
         this.berkleyDB.getEnv().close();
       } catch (DatabaseException dbe) {
-        log.error("Error closing env: " + dbe);
+        log.error("Error closing env: {}", String.valueOf(dbe));
       }
     }
   }

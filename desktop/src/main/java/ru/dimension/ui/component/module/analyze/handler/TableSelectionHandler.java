@@ -130,7 +130,7 @@ public class TableSelectionHandler extends MouseListenerImpl implements ListSele
   }
 
   private void runAction(String name) {
-    log.info("Run action with name: " + name);
+    log.info("Run action with name: {}", name);
 
     if (schemaCatalogCBox != null) {
       String selectedSchemaCatalog = (String) schemaCatalogCBox.getSelectedItem();
@@ -151,7 +151,7 @@ public class TableSelectionHandler extends MouseListenerImpl implements ListSele
 
   @Override
   public void keyReleased(KeyEvent e) {
-    log.info("Action keyReleased: " + KeyEvent.getKeyText(e.getKeyCode()));
+    log.info("Action keyReleased: {}", KeyEvent.getKeyText(e.getKeyCode()));
     if (jxTableCase.isBlockRunAction()) {
       return;
     }

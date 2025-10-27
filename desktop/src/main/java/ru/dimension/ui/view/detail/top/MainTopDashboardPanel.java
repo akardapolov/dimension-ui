@@ -123,7 +123,7 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
             }
           });
 
-      if (jScrollPaneList.size() != 0) {
+      if (!jScrollPaneList.isEmpty()) {
         int columns = 3;
         int rows = (int) Math.ceil((double) jScrollPaneList.size() / columns);
 

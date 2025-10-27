@@ -8,7 +8,7 @@ import lombok.Data;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
-import ru.dimension.ui.component.module.ReportChartModule;
+import ru.dimension.ui.component.module.chart.ReportChartModule;
 import ru.dimension.ui.helper.FilesHelper;
 import ru.dimension.ui.manager.ConfigurationManager;
 import ru.dimension.ui.manager.ProfileManager;

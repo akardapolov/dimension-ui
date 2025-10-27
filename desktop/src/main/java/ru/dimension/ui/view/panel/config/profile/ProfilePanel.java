@@ -76,7 +76,7 @@ public class ProfilePanel extends JPanel {
     taskList.forEach(taskIn -> multiSelectTaskPanel.getTaskListCase().getDefaultTableModel()
         .addRow(new Object[]{taskIn.getId(), taskIn.getName()}));
 
-    Border finalBorder = GUIHelper.getBorder();
+    Border finalBorder = GUIHelper.getGrayBorder();
     jTextFieldDescription.setBorder(finalBorder);
     jTextFieldProfile.setBorder(finalBorder);
 
