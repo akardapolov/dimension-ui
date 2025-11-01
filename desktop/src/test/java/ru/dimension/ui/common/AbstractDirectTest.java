@@ -39,8 +39,8 @@ public abstract class AbstractDirectTest {
   static File databaseDir;
   protected BerkleyDB berkleyDB;
 
-  protected DBaseConfig fBaseConfig;
-  protected DBase fBase;
+  protected DBaseConfig dBaseConfig;
+  protected DBase dBase;
   protected DStore dStore;
 
   protected String tableNamePrometheus = "direct_table_prometheus_test";
@@ -55,9 +55,9 @@ public abstract class AbstractDirectTest {
   public void initBackendAndLoad() throws IOException {
     berkleyDB = new BerkleyDB(databaseDir.getAbsolutePath());
 
-    fBaseConfig = new DBaseConfig().setConfigDirectory(databaseDir.getAbsolutePath());
-    fBase = new DBase(fBaseConfig, berkleyDB.getStore());
-    dStore = fBase.getDStore();
+    dBaseConfig = new DBaseConfig().setConfigDirectory(databaseDir.getAbsolutePath());
+    dBase = new DBase(dBaseConfig, berkleyDB.getStore());
+    dStore = dBase.getDStore();
 
     response = getTestData("response", "spring_boot_prometheus.json");
     parser = new ExporterParser();
@@ -68,7 +68,7 @@ public abstract class AbstractDirectTest {
   }
 
   protected void loadMetadataForTable(SProfile sProfile) {
-    dStore = fBase.getDStore();
+    dStore = dBase.getDStore();
 
     try {
       tProfile = loadTableMetadata(sProfile);

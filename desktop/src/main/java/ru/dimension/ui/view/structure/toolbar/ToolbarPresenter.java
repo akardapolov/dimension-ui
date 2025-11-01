@@ -2,9 +2,9 @@ package ru.dimension.ui.view.structure.toolbar;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.router.Router;
 import ru.dimension.ui.router.listener.ToolbarListener;

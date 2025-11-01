@@ -26,8 +26,8 @@ public class ConnectionEditHandlerTest extends HandlerMock {
     connectionExpectedNew = objectMapper.readValue(getTestData("connection_new_edit.json"), Connection.class);
     connectionExpectedCopy = objectMapper.readValue(getTestData("connection_copy_edit.json"), Connection.class);
 
-    String passEncNew = encryptDecrypt.get().encrypt(connectionExpectedNew.getPassword());
-    String passEncCopy = encryptDecrypt.get().encrypt(connectionExpectedNew.getPassword());
+    String passEncNew = encryptDecryptLazy.get().encrypt(connectionExpectedNew.getPassword());
+    String passEncCopy = encryptDecryptLazy.get().encrypt(connectionExpectedNew.getPassword());
 
     connectionExpectedNew.setPassword(passEncNew);
     connectionExpectedCopy.setPassword(passEncCopy);

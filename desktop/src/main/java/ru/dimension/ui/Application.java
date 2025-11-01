@@ -1,7 +1,8 @@
 package ru.dimension.ui;
 
 import lombok.extern.log4j.Log4j2;
-import ru.dimension.ui.config.MainComponent;
+import ru.dimension.di.ServiceLocator;
+import ru.dimension.ui.config.DIConfig;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LaFType;
 import ru.dimension.ui.prompt.Internationalization;
@@ -9,12 +10,6 @@ import ru.dimension.ui.view.BaseFrame;
 
 @Log4j2
 public class Application {
-
-  private static MainComponent mainComponent;
-
-  public static MainComponent getInstance() {
-    return mainComponent;
-  }
 
   /**
    * Use LaF parameter in VM option to enable dark, light or default theme
@@ -51,9 +46,9 @@ public class Application {
       log.catching(e);
     }
 
-    mainComponent = ru.dimension.ui.config.DaggerMainComponent.create();
+    DIConfig.init();
 
-    BaseFrame baseFrame = mainComponent.createBaseFrame();
+    BaseFrame baseFrame = ServiceLocator.get(BaseFrame.class);
     baseFrame.setVisible(true);
   }
 }

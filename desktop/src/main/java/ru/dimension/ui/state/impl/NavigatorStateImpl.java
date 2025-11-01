@@ -1,7 +1,7 @@
 package ru.dimension.ui.state.impl;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.state.NavigatorState;
 

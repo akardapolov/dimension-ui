@@ -2,9 +2,9 @@ package ru.dimension.ui.view.panel.config.profile;
 
 import java.util.List;
 import java.util.ResourceBundle;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.Border;

@@ -15,13 +15,13 @@ import ru.dimension.ui.state.SqlQueryState;
 public class PHChartModel extends ChartModel {
 
   public PHChartModel(ChartKey chartKey,
-                      ProfileTaskQueryKey key,
+                      Object key,
                       Metric metric,
                       QueryInfo queryInfo,
                       ChartInfo chartInfo,
                       TableInfo tableInfo,
                       SqlQueryState sqlQueryState,
                       DStore dStore) {
-    super(chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
+    super(chartKey, (ProfileTaskQueryKey) key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
   }
 }

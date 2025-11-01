@@ -21,7 +21,7 @@ import ru.dimension.ui.state.SqlQueryState;
 @Log4j2
 public class PreviewModel {
   private final RunMode runMode;
-  private final ProfileTaskQueryKey key;
+  private final Object key;
   private final QueryInfo queryInfo;
   private final ChartInfo chartInfo;
   private final TableInfo tableInfo;
@@ -42,7 +42,7 @@ public class PreviewModel {
   }
 
   public PreviewModel(RunMode runMode,
-                      ProfileTaskQueryKey key,
+                      Object key,
                       Metric metric,
                       QueryInfo queryInfo,
                       ChartInfo chartInfo,

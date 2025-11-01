@@ -5,13 +5,12 @@ import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.extras.FlatAnimatedLafChange;
 import com.formdev.flatlaf.util.SystemInfo;
-import dagger.Lazy;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import javax.swing.Box;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
@@ -31,17 +30,13 @@ import ru.dimension.ui.model.view.ToolbarButtonState;
 @Singleton
 public class ToolbarViewImpl extends JToolBar implements ToolbarView {
 
-  private final Lazy<ToolbarPresenter> toolbarPresenter;
   private final JButton toolbarConfigButton;
   private final JButton toolbarTemplateButton;
   private final LookAndFeelsComboBox lookAndFeelComboBox;
 
-
   @Inject
-  public ToolbarViewImpl(@Named("toolbarPresenter") Lazy<ToolbarPresenter> toolbarPresenter,
-                         @Named("toolbarConfigButton") JButton toolbarConfigButton,
+  public ToolbarViewImpl(@Named("toolbarConfigButton") JButton toolbarConfigButton,
                          @Named("toolbarTemplateButton") JButton toolbarTemplateButton) {
-    this.toolbarPresenter = toolbarPresenter;
     this.toolbarConfigButton = toolbarConfigButton;
     this.toolbarTemplateButton = toolbarTemplateButton;
 
@@ -91,9 +86,9 @@ public class ToolbarViewImpl extends JToolBar implements ToolbarView {
   }
 
   @Override
-  public void bindPresenter() {
-    this.toolbarConfigButton.addActionListener(this.toolbarPresenter.get());
-    this.toolbarTemplateButton.addActionListener(this.toolbarPresenter.get());
+  public void bindPresenter(ToolbarPresenter presenter) {
+    this.toolbarConfigButton.addActionListener(presenter);
+    this.toolbarTemplateButton.addActionListener(presenter);
   }
 
   @Override

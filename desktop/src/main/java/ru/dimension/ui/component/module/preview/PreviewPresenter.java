@@ -16,6 +16,7 @@ import ru.dimension.ui.component.module.preview.spi.IRealTimePreviewChart;
 import ru.dimension.ui.component.module.preview.spi.PreviewChartFactory;
 import ru.dimension.ui.component.module.preview.spi.PreviewMode;
 import ru.dimension.ui.component.module.preview.spi.RunMode;
+import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.config.Metric;
@@ -25,6 +26,7 @@ import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.RangeRealTime;
+import ru.dimension.ui.state.AdHocStateManager;
 import ru.dimension.ui.state.ChartKey;
 import ru.dimension.ui.state.SqlQueryState;
 import ru.dimension.ui.state.UIState;
@@ -121,7 +123,7 @@ public class PreviewPresenter {
   }
 
   public void handleHistoryRangeChange(String action, RangeHistory range) {
-    if (mode != PreviewMode.DETAIL) return;
+    if (mode == PreviewMode.PREVIEW) return;
     log.info("Preview history range changed to: {}", range);
 
     UIState.INSTANCE.putHistoryRangeAll(component.name(), range);
@@ -256,17 +258,20 @@ public class PreviewPresenter {
 
   private void addChartModule(Metric metricIn) {
     Metric metric = metricIn.copy();
-
-    ProfileTaskQueryKey key = model.getKey();
-    ChartKey chartKey = new ChartKey(key, metric.getYAxis());
-
+    Object key = model.getKey();
     RunMode runMode = model.getRunMode();
     GroupFunction groupFunction = null;
+    ChartKey chartKey = null;
 
-    if (RunMode.REALTIME.equals(runMode)) {
-      groupFunction = UIState.INSTANCE.getRealtimeGroupFunction(chartKey);
-    } else if (RunMode.HISTORY.equals(runMode)) {
-      groupFunction = UIState.INSTANCE.getHistoryGroupFunction(chartKey);
+    if (key instanceof ProfileTaskQueryKey ptk) {
+      chartKey = new ChartKey(ptk, metric.getYAxis());
+      if (RunMode.REALTIME.equals(runMode)) {
+        groupFunction = UIState.INSTANCE.getRealtimeGroupFunction(chartKey);
+      } else if (RunMode.HISTORY.equals(runMode)) {
+        groupFunction = UIState.INSTANCE.getHistoryGroupFunction(chartKey);
+      }
+    } else if (key instanceof AdHocKey adHocKey) {
+      groupFunction = AdHocStateManager.getInstance().getHistoryGroupFunction(adHocKey);
     }
 
     if (groupFunction != null) {

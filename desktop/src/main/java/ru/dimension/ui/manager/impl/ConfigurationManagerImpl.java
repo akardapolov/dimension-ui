@@ -2,8 +2,8 @@ package ru.dimension.ui.manager.impl;
 
 import java.io.IOException;
 import java.util.List;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.helper.GsonHelper;
 import ru.dimension.ui.manager.ConfigurationManager;

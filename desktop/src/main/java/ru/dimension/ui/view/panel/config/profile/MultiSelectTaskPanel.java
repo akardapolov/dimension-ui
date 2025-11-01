@@ -2,7 +2,7 @@ package ru.dimension.ui.view.panel.config.profile;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import javax.inject.Named;
+import jakarta.inject.Named;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;

@@ -1,6 +1,3 @@
 package ru.dimension.ui.view;
 
-public interface BaseView {
-
-  void bindPresenter();
-}
+public interface BaseView {}

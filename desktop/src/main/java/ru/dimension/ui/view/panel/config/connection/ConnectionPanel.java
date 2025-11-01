@@ -5,9 +5,9 @@ import static ru.dimension.ui.model.view.tab.ConnectionTypeTabPane.JDBC;
 
 import java.awt.Dimension;
 import java.util.ResourceBundle;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;

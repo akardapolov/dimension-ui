@@ -26,9 +26,8 @@
     <slf4j.version>2.0.17</slf4j.version>
     <log4j2.version>2.25.1</log4j2.version>
 
-    <dagger2.version>2.57</dagger2.version>
-
-    <dimension-db-version>25.10.5</dimension-db-version>
+    <dimension-db-version>${revision}</dimension-db-version>
+    <dimension-di-version>${revision}</dimension-di-version>
 
     <bdb-version>5.0.73</bdb-version>
     <gson-version>2.13.1</gson-version>
@@ -58,19 +57,6 @@
       <groupId>com.workday</groupId>
       <artifactId>timeseries-forecast</artifactId>
       <version>${revision}</version>
-    </dependency>
-
-    <!--Dagger2-->
-    <dependency>
-      <groupId>com.google.dagger</groupId>
-      <artifactId>dagger</artifactId>
-      <version>${dagger2.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.google.dagger</groupId>
-      <artifactId>dagger-compiler</artifactId>
-      <version>${dagger2.version}</version>
-      <scope>provided</scope>
     </dependency>
 
     <!--Log4j2 logger-->
@@ -131,6 +117,12 @@
       <groupId>ru.dimension</groupId>
       <artifactId>db</artifactId>
       <version>${dimension-db-version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>ru.dimension</groupId>
+      <artifactId>di</artifactId>
+      <version>${dimension-di-version}</version>
     </dependency>
 
     <dependency>
@@ -291,11 +283,6 @@
           <target>25</target>
           <release>25</release>
           <annotationProcessorPaths>
-            <path>
-              <groupId>com.google.dagger</groupId>
-              <artifactId>dagger-compiler</artifactId>
-              <version>${dagger2.version}</version>
-            </path>
             <path>
               <groupId>org.projectlombok</groupId>
               <artifactId>lombok</artifactId>

@@ -100,14 +100,14 @@ public class ReportChartPresenter extends BaseUnitPresenter<ReportChartView>
 
           if (seriesColorMap != null && topMapSelected != null) {
             Map<String, Color> filterSeriesColorMap = getFilterSeriesColorMap(metric, seriesColorMap, topMapSelected);
-            detail = buildDetail(chart, filterSeriesColorMap, SeriesType.CUSTOM, topMapSelected);
+            detail = buildDetail(chart, filterSeriesColorMap, SeriesType.CUSTOM, topMapSelected, true);
           } else {
             SeriesType seriesTypeChart = chart.getSeriesType();
             if (SeriesType.COMMON.equals(seriesTypeChart)) {
-              detail = buildDetail(chart, null, SeriesType.COMMON, null);
+              detail = buildDetail(chart, null, SeriesType.COMMON, null, true);
             } else {
               HistorySCP historySCP = (HistorySCP) chart;
-              detail = buildDetail(chart, chart.getSeriesColorMap(), SeriesType.CUSTOM, historySCP.getTopMapSelected());
+              detail = buildDetail(chart, chart.getSeriesColorMap(), SeriesType.CUSTOM, historySCP.getTopMapSelected(), true);
             }
           }
 

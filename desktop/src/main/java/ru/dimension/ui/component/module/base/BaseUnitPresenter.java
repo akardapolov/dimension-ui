@@ -114,6 +114,14 @@ public abstract class BaseUnitPresenter<V extends UnitView> implements UnitPrese
                                              Map<String, Color> initialSeriesColorMap,
                                              SeriesType seriesType,
                                              Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+    return buildDetail(chart, initialSeriesColorMap, seriesType, topMapSelected, false);
+  }
+
+  protected DetailDashboardPanel buildDetail(SCP chart,
+                                             Map<String, Color> initialSeriesColorMap,
+                                             SeriesType seriesType,
+                                             Map<CProfile, LinkedHashSet<String>> topMapSelected,
+                                             boolean withInsightTab) {
     Map<String, Color> seriesColorMapToUse = initialSeriesColorMap != null ?
         initialSeriesColorMap : chart.getSeriesColorMap();
 
@@ -135,7 +143,8 @@ public abstract class BaseUnitPresenter<V extends UnitView> implements UnitPrese
                                  seriesType,
                                  model.getSqlQueryState(),
                                  model.getDStore(),
-                                 topMapSelected);
+                                 topMapSelected,
+                                 withInsightTab);
 
     CustomAction customAction = new CustomAction() {
       @Override

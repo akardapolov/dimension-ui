@@ -1,8 +1,8 @@
 package ru.dimension.ui.view.structure.progressbar;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.model.view.ProgressbarState;
 import ru.dimension.ui.router.event.EventListener;

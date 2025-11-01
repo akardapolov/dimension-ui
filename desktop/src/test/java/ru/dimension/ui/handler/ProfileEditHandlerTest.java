@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.log4j.Log4j2;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import ru.dimension.ui.exception.NotFoundException;
@@ -41,7 +40,7 @@ public class ProfileEditHandlerTest extends HandlerMock {
 
     // Connection
     connectionExpectedNew = objectMapper.readValue(getTestData("connection_new_edit.json"), Connection.class);
-    String passEncNew = encryptDecrypt.get().encrypt(connectionExpectedNew.getPassword());
+    String passEncNew = encryptDecryptLazy.get().encrypt(connectionExpectedNew.getPassword());
     connectionExpectedNew.setPassword(passEncNew);
 
     createConnectionTest(connectionExpectedNew);
@@ -108,7 +107,7 @@ public class ProfileEditHandlerTest extends HandlerMock {
                  String.format("Name %s already exists, please enter another one.", profileName));
   }
 
-  private void createNewTestData(@NotNull Profile profile) {
+  private void createNewTestData(Profile profile) {
     buttonProfilePanelMock.getBtnNew().doClick();
     profilePanelLazy.get().getJTextFieldProfile().setText(profile.getName());
     profilePanelLazy.get().getJTextFieldDescription().setText(profile.getDescription());

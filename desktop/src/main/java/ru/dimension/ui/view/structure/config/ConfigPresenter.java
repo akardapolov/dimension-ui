@@ -5,9 +5,9 @@ import static ru.dimension.ui.model.config.ConfigClasses.Query;
 
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.type.ConnectionType;

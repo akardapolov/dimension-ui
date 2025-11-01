@@ -45,7 +45,7 @@ public class TaskEditHandlerTest extends HandlerMock {
 
     // Connection
     connectionExpectedNew = objectMapper.readValue(getTestData("connection_new_edit.json"), Connection.class);
-    String passEncNew = encryptDecrypt.get().encrypt(connectionExpectedNew.getPassword());
+    String passEncNew = encryptDecryptLazy.get().encrypt(connectionExpectedNew.getPassword());
     connectionExpectedNew.setPassword(passEncNew);
 
     createConnectionTest(connectionExpectedNew);

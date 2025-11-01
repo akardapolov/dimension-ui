@@ -1,29 +1,21 @@
 package ru.dimension.ui.view.structure.progressbar;
 
-import dagger.Lazy;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
+import java.awt.KeyboardFocusManager;
+import java.awt.Window;
 import javax.swing.JDialog;
-import javax.swing.JFrame;
 import javax.swing.JProgressBar;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.model.view.ProgressbarState;
-import ru.dimension.ui.view.BaseFrame;
 import ru.dimension.ui.view.structure.ProgressbarView;
 
 @Log4j2
 @Singleton
 public class ProgressbarViewImpl extends JDialog implements ProgressbarView {
 
-  private final Lazy<ProgressbarPresenter> profilePresenter;
-  private final Lazy<BaseFrame> jFrame;
-
   @Inject
-  public ProgressbarViewImpl(Lazy<BaseFrame> jFrame,
-                             Lazy<ProgressbarPresenter> profilePresenter) {
-    this.jFrame = jFrame;
-    this.profilePresenter = profilePresenter;
-
+  public ProgressbarViewImpl() {
     this.setTitle("Progress..");
     this.setVisible(false);
   }
@@ -48,16 +40,17 @@ public class ProgressbarViewImpl extends JDialog implements ProgressbarView {
 
     this.setContentPane(progressBar);
 
-    JFrame jFrameLocal = jFrame.get();
-    int x = (jFrameLocal.getX() + jFrameLocal.getWidth() / 2) - 150;
-    int y = (jFrameLocal.getY() + jFrameLocal.getHeight() / 2) - 25;
+    Window activeWindow = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
+
+    int x = (activeWindow.getX() + activeWindow.getWidth() / 2) - 150;
+    int y = (activeWindow.getY() + activeWindow.getHeight() / 2) - 25;
     this.setBounds(x, y, 300, 80);
     this.setVisible(true);
   }
 
   @Override
-  public void bindPresenter() {
-    profilePresenter.get();
+  public void bindPresenter(ProgressbarPresenter presenter) {
+    log.info("Bind presenter");
   }
 
 }

@@ -10,6 +10,7 @@ import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.module.adhoc.chart.AdHocChartModel;
 import ru.dimension.ui.component.module.adhoc.chart.AdHocChartPresenter;
 import ru.dimension.ui.component.module.adhoc.chart.AdHocChartView;
+import ru.dimension.ui.component.module.adhoc.chart.unit.AdHocHistoryUnitView;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.chart.ChartRange;
@@ -26,6 +27,7 @@ public class AdHocChartModule extends JXTaskPane {
   private final AdHocChartView view;
   @Getter
   private final AdHocChartPresenter presenter;
+  private final AdHocHistoryUnitView historyUnitView;
 
   public AdHocChartModule(AdHocKey adHocKey,
                           Metric metric,
@@ -34,8 +36,9 @@ public class AdHocChartModule extends JXTaskPane {
                           TableInfo tableInfo,
                           DStore dStore) {
     this.model = new AdHocChartModel(adHocKey, metric, queryInfo, chartInfo, tableInfo, dStore);
-    this.view = new AdHocChartView();
-    this.presenter = new AdHocChartPresenter(model, view);
+    this.historyUnitView = new AdHocHistoryUnitView();
+    this.view = new AdHocChartView(this.historyUnitView);
+    this.presenter = new AdHocChartPresenter(model, this.historyUnitView);
 
     ((JComponent) getContentPane()).setBorder(BorderFactory.createEmptyBorder());
 

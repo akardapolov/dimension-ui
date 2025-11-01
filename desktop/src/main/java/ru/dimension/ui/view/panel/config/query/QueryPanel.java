@@ -1,9 +1,9 @@
 package ru.dimension.ui.view.panel.config.query;
 
 import java.awt.event.KeyEvent;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import lombok.Data;

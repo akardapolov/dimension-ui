@@ -17,7 +17,6 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableRowSorter;
 import lombok.extern.log4j.Log4j2;
-import org.jetbrains.annotations.NotNull;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.SqlColMetadataException;
@@ -266,7 +265,6 @@ public class ClientRealtimeSCP extends RealtimeSCP {
     }
   }
 
-  @NotNull
   private ChartRange getBeginEndRange() {
     long serverDateTime = System.currentTimeMillis() - config.getQueryInfo().getDeltaLocalServerTime();
     long beginRange = serverDateTime - getRangeRealTime(config.getChartInfo());

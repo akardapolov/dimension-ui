@@ -7,6 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import jakarta.inject.Inject;
 import javax.swing.JPanel;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,6 +19,7 @@ import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.plot.PlotOrientation;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.output.StackedColumn;
+import ru.dimension.di.ServiceLocator;
 import ru.dimension.ui.Application;
 import ru.dimension.ui.component.chart.holder.DetailAndAnalyzeHolder;
 import ru.dimension.ui.exception.NotFoundException;
@@ -54,6 +56,8 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
 
   protected DetailAndAnalyzeHolder detailAndAnalyzeHolder;
 
+  private final ColorHelper colorHelper;
+
   public SCP(ChartConfig config,
              ProfileTaskQueryKey profileTaskQueryKey) {
     this.config = config;
@@ -66,7 +70,7 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
 
     this.series = new LinkedHashSet<>();
 
-    ColorHelper colorHelper = Application.getInstance().getColorHelper();
+    this.colorHelper = ServiceLocator.get(ColorHelper.class);
 
     createStackedChart(colorHelper);
     createColor(colorHelper);

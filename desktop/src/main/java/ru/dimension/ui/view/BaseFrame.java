@@ -7,9 +7,9 @@ import java.awt.Dimension;
 import java.awt.HeadlessException;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -38,6 +38,10 @@ import ru.dimension.ui.view.structure.ConfigView;
 import ru.dimension.ui.view.structure.ProgressbarView;
 import ru.dimension.ui.view.structure.TemplateView;
 import ru.dimension.ui.view.structure.ToolbarView;
+import ru.dimension.ui.view.structure.config.ConfigPresenter;
+import ru.dimension.ui.view.structure.progressbar.ProgressbarPresenter;
+import ru.dimension.ui.view.structure.template.TemplatePresenter;
+import ru.dimension.ui.view.structure.toolbar.ToolbarPresenter;
 
 @Log4j2
 @Singleton
@@ -76,9 +80,13 @@ public class BaseFrame extends JFrame {
   @Inject
   public BaseFrame(@Named("mainTabPane") JTabbedPane mainTabPane,
                    @Named("toolbarView") ToolbarView toolbarView,
+                   @Named("toolbarPresenter") ToolbarPresenter toolbarPresenter,
                    @Named("configView") ConfigView configView,
+                   @Named("configPresenter") ConfigPresenter configPresenter,
                    @Named("templateView") TemplateView templateView,
+                   @Named("templatePresenter") TemplatePresenter templatePresenter,
                    @Named("progressbarView") ProgressbarView progressbarView,
+                   @Named("progressbarPresenter") ProgressbarPresenter progressbarPresenter,
                    @Named("profileManager") ProfileManager profileManager,
                    @Named("taskExecutorPool") TaskExecutorPool taskExecutorPool,
                    @Named("sqlQueryState") SqlQueryState sqlQueryState,
@@ -94,16 +102,16 @@ public class BaseFrame extends JFrame {
     this.mainTabPane = mainTabPane;
 
     this.toolbarView = toolbarView;
-    this.toolbarView.bindPresenter();
+    this.toolbarView.bindPresenter(toolbarPresenter);
 
     this.configView = configView;
-    this.configView.bindPresenter();
+    this.configView.bindPresenter(configPresenter);
 
     this.templateView = templateView;
-    this.templateView.bindPresenter();
+    this.templateView.bindPresenter(templatePresenter);
 
     this.progressbarView = progressbarView;
-    this.progressbarView.bindPresenter();
+    this.progressbarView.bindPresenter(progressbarPresenter);
 
     this.profileManager = profileManager;
     this.taskExecutorPool = taskExecutorPool;

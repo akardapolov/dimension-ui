@@ -3,7 +3,7 @@ package ru.dimension.ui.view.panel.config.task;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Font;
-import javax.inject.Named;
+import jakarta.inject.Named;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;

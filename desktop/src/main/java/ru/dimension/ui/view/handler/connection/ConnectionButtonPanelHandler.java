@@ -1,6 +1,7 @@
 package ru.dimension.ui.view.handler.connection;
 
-import dagger.Lazy;
+import java.awt.KeyboardFocusManager;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -12,9 +13,9 @@ import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import javax.swing.AbstractAction;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
@@ -71,7 +72,6 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
   private ConnectionInfo oldFileConnection;
 
   private final JFileChooser jarFC;
-  private final Lazy<BaseFrame> jFrame;
   private ExecutorService executor = Executors.newSingleThreadExecutor();
   private final ResourceBundle bundleDefault;
   private ConnectionTypeTabPane openedTab;
@@ -88,8 +88,7 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
                                       @Named("connectionConfigPanel") ConnectionPanel connectionPanel,
                                       @Named("connectionButtonPanel") ButtonPanel connectionButtonPanel,
                                       @Named("jTabbedPaneConfig") ConfigTab configTab,
-                                      @Named("checkboxConfig") JCheckBox checkboxConfig,
-                                      Lazy<BaseFrame> jFrame) {
+                                      @Named("checkboxConfig") JCheckBox checkboxConfig) {
 
     this.profileManager = profileManager;
     this.encryptDecrypt = encryptDecrypt;
@@ -105,7 +104,6 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
     this.connectionButtonPanel = connectionButtonPanel;
     this.configTab = configTab;
     this.checkboxConfig = checkboxConfig;
-    this.jFrame = jFrame;
     this.jarFC = new JFileChooser();
 
     this.openedTab = ConnectionTypeTabPane.JDBC;
@@ -122,7 +120,9 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
       connectionPanel.getJarButton().setEnabled(false);
       connectionPanel.getJTextFieldConnectionJar().requestFocus();
 
-      int returnVal = jarFC.showOpenDialog(jFrame.get());
+      Window activeWindow = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
+
+      int returnVal = jarFC.showOpenDialog(activeWindow);
       if (returnVal == JFileChooser.APPROVE_OPTION) {
         File file = jarFC.getSelectedFile();
         connectionPanel.getJTextFieldConnectionJar().setText(file.getAbsolutePath());

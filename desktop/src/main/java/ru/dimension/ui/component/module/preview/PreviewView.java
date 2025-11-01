@@ -139,6 +139,8 @@ public class PreviewView extends JPanel {
       splitPane.setDividerLocation(300);
     } else if (PreviewMode.DETAIL.equals(mode)) {
       splitPane.setDividerLocation(200);
+    } else if (PreviewMode.ADHOC.equals(mode)) {
+        splitPane.setDividerLocation(200);
     }
 
     gbl.row().cell(splitPane).fillXY();

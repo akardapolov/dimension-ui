@@ -92,12 +92,13 @@
 
 Таблица 2. Требования к программному обеспечению
 
-| ПО    | Требования                  |
-|:------|:----------------------------|
-| Java  | Версия Java 25+             |
-| Maven | Не ниже 3 версии            |
-| Git   | Последняя актуальная версия |
-| DBase | Последняя актуальная версия |
+| ПО           | Требования                  |
+|:-------------|:----------------------------|
+| Java         | Версия Java 25+             |
+| Maven        | Не ниже 3 версии            |
+| Git          | Последняя актуальная версия |
+| Dimension-DB | Последняя актуальная версия |
+| Dimension-DI | Последняя актуальная версия |
 
 ### Требования к операционному обеспечению
 
@@ -113,61 +114,66 @@
 
 #### Сборка проекта
 
-Для компиляции приложения в исполняемый jar-файл необходимо выполнить следующее:
+Для компиляции приложения в исполняемый jar-файл необходимо выполнить следующие шаги:
 
-1. Установить на локальный компьютер JDK не ниже 24 версии, Maven и Git.
+1. Установите JDK версии 25 или выше, Maven и Git на ваш локальный компьютер:
     ```shell
     java -version  
     mvn -version
     git --version 
     ``` 
+2. Приложение `Dimension-UI` зависит от `Dimension-DI` и `Dimension-DB`, которые должны быть установлены первыми:
 
-2. Загрузить исходные коды приложения БД **Dimension DB** (репозитории проекта на [**GitFlic**](https://gitflic.ru/project/akardapolov/dimension-db) и [**GitHub**](https://github.com/akardapolov/dimension-db)) на локальный компьютер с помощью Git и выполнить сборку и установку последней версии БД в локальный репозиторий Maven
     ```shell
-    git clone <url системы хранения исходных кодов>
-    cd fbase
-    mvn clean compile
+    git clone <URL Dimension-DI>
+    cd dimension-di
+    mvn clean install
+    ```
+    ```shell
+    git clone <URL Dimension-DB>
+    cd dimension-db
     mvn clean install
     ```
 
-3. Загрузить исходные коды приложения на локальный компьютер с помощью Git
+3. Загрузите исходный код приложения на ваш локальный компьютер с помощью Git:
+
     ```shell
-    git clone <url системы хранения исходных кодов>
+    git clone <URL Dimension-UI>
     cd dimension-ui
     ```
-
-4. Выполнить компиляцию и установку модулей проекта с помощью Maven
+   
+4. Скомпилируйте и установите модули проекта с помощью Maven
    ```shell
     mvn clean compile
     mvn clean install -U
    ```
 
-5. Выполнить команду Maven для сборки исполняемого jar-файла с запуском тестов
+5. Выполните команду Maven для сборки исполняемого jar-файла с запуском тестов:
     ```shell
-     mvn clean package -DskipTests=false
+     mvn clean package
     ```
 
-Исполняемый jar-файл вида `desktop-<VERSION>-SNAPSHOT-jar-with-dependencies.jar` будет располагаться по относительному пути desktop/target
+Исполняемый jar-файл со скриптами запуска в Windows/Linux будет в архиве `dimension-ui-<VERSION>.zip` по относительному пути desktop/target
 
 [Вернуться в Оглавление](#Оглавление)
 
 ## Установка и настройка
 
-1. Убедитесь, что на вашем компьютере установлена JDK версии 24 или выше. Подробная инструкция по установке для вашей платформы на сайте [oracle.com](https://www.oracle.com/java/technologies/downloads/)
+1. Убедитесь, что на вашем компьютере установлена JDK версии 25 или выше. Подробная инструкция по установке для вашей платформы на сайте [oracle.com](https://www.oracle.com/java/technologies/downloads/)
 2. Загрузите исполняемый jar-файл приложения с сайта github.com или выполните локальную сборку по инструкции из раздела [Сборка проекта](#сборка-проекта)
 3. Создайте директорию для хранения конфигурации и локальной базы данных приложения.
 4. Скопируйте jar-файл в директорию, в которой создайте исполняемый файл запуска:
 
 - Платформа Windows, run.bat
     ```shell
-    SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-24
+    SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-25
     SET JAVA_EXE="%JAVA_HOME%\bin\java.exe"
     chcp 65001
     %JAVA_EXE% -Xmx1024m -DLaF=dark -Dfile.encoding=UTF8 -jar desktop-1.0-SNAPSHOT-jar-with-dependencies.jar
     ```
 - Платформа Linux, run.sh
   ```shell
-    SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-24
+    SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-25
     SET JAVA_EXE="%JAVA_HOME%\bin\java.exe" 
     chcp 65001
     %JAVA_EXE% -Xmx1024m -DLaF=dark -Dfile.encoding=UTF8 -jar desktop-1.0-SNAPSHOT-jar-with-dependencies.jar

@@ -16,6 +16,7 @@ import ru.dimension.ui.component.module.preview.spi.PreviewChartFactory;
 import ru.dimension.ui.component.module.preview.spi.PreviewMode;
 import ru.dimension.ui.component.module.preview.spi.RunMode;
 import ru.dimension.ui.manager.ProfileManager;
+import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.ProfileInfo;
@@ -87,6 +88,24 @@ public class PreviewModule implements CollectStartStopListener {
     this.presenter = new PreviewPresenter(model, previewView, PreviewMode.DETAIL, factory);
   }
 
+  public PreviewModule(RunMode runMode,
+                       AdHocKey key,
+                       Metric metric,
+                       QueryInfo queryInfo,
+                       ChartInfo chartInfo,
+                       TableInfo tableInfo,
+                       DStore dStore,
+                       DetailChartContext detailContext) {
+    this.model = new PreviewModel(runMode, key, metric, queryInfo, chartInfo, tableInfo, null, dStore);
+
+    PreviewView previewView = new PreviewView(PreviewMode.ADHOC, model);
+
+    this.container = new PreviewPanelContainer(previewView);
+
+    PreviewChartFactory factory = PreviewChartFactory.historyAdHoc(detailContext);
+    this.presenter = new PreviewPresenter(model, previewView, PreviewMode.ADHOC, factory);
+  }
+
   public void show() {
     this.container.show();
   }
@@ -105,7 +124,7 @@ public class PreviewModule implements CollectStartStopListener {
     log.info("Stop collect for {}", profileTaskQueryKey);
 
     if (model == null || model.getChartModules() == null) return;
-    if (model.getKey() != null && !model.getKey().equals(profileTaskQueryKey)) return;
+    if (model.getKey() instanceof ProfileTaskQueryKey && !model.getKey().equals(profileTaskQueryKey)) return;
     if (model.getChartModules().isEmpty()) return;
 
     model.getChartModules().forEach((cProfile, chart) -> {

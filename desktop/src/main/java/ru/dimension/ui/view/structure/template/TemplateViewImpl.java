@@ -1,12 +1,11 @@
 package ru.dimension.ui.view.structure.template;
 
-import dagger.Lazy;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.Toolkit;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -25,18 +24,14 @@ import ru.dimension.ui.model.config.Query;
 import ru.dimension.ui.model.config.Task;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.tab.ConnectionTypeTabPane;
-import ru.dimension.ui.view.BaseFrame;
-import ru.dimension.ui.view.structure.TemplateView;
-import ru.dimension.ui.view.tab.ConnTypeTab;
 import ru.dimension.ui.view.panel.template.TemplateConnPanel;
 import ru.dimension.ui.view.panel.template.TemplateHTTPConnPanel;
+import ru.dimension.ui.view.structure.TemplateView;
+import ru.dimension.ui.view.tab.ConnTypeTab;
 
 @Log4j2
 @Singleton
 public class TemplateViewImpl extends JDialog implements TemplateView {
-
-  private final Lazy<BaseFrame> jFrame;
-  private final Lazy<TemplatePresenter> templatePresenter;
 
   private final JButton templateLoadJButton;
 
@@ -60,9 +55,7 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
   private final JTabbedPane connectionTabPane;
 
   @Inject
-  public TemplateViewImpl(Lazy<BaseFrame> jFrame,
-                          Lazy<TemplatePresenter> templatePresenter,
-                          @Named("templateLoadJButton") JButton templateLoadJButton,
+  public TemplateViewImpl(@Named("templateLoadJButton") JButton templateLoadJButton,
                           @Named("templateTaskCase") JXTableCase templateTaskCase,
                           @Named("templateConnCase") JXTableCase templateConnCase,
                           @Named("templateQueryCase") JXTableCase templateQueryCase,
@@ -73,8 +66,6 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
                           @Named("templateTaskDescription") JXTextArea taskDescription,
                           @Named("templateQueryDescription") JXTextArea queryDescription,
                           @Named("templateQueryText") RSyntaxTextArea queryText) {
-    this.jFrame = jFrame;
-    this.templatePresenter = templatePresenter;
 
     this.templateLoadJButton = templateLoadJButton;
 
@@ -224,12 +215,12 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
   }
 
   @Override
-  public void bindPresenter() {
-    addWindowListener(templatePresenter.get());
+  public void bindPresenter(TemplatePresenter templatePresenter) {
+    addWindowListener(templatePresenter);
 
-    this.templatePresenter.get().fillModel(Task.class);
-    this.templatePresenter.get().fillModel(Connection.class);
-    this.templatePresenter.get().fillModel(Query.class);
+    templatePresenter.fillModel(Task.class);
+    templatePresenter.fillModel(Connection.class);
+    templatePresenter.fillModel(Query.class);
   }
 
   @Override

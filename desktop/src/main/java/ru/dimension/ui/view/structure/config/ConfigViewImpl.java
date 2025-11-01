@@ -1,12 +1,11 @@
 package ru.dimension.ui.view.structure.config;
 
-import dagger.Lazy;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.awt.Dimension;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -19,40 +18,36 @@ import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.GUIHelper.ActiveColumnCellRenderer;
 import ru.dimension.ui.helper.PGHelper;
-import ru.dimension.ui.model.table.JXTableCase;
-import ru.dimension.ui.view.BaseFrame;
-import ru.dimension.ui.view.handler.profile.MultiSelectTaskHandler;
-import ru.dimension.ui.view.handler.profile.ProfileButtonPanelHandler;
-import ru.dimension.ui.view.handler.profile.ProfileSelectionHandler;
-import ru.dimension.ui.view.handler.task.MultiSelectQueryHandler;
-import ru.dimension.ui.view.handler.task.TaskButtonPanelHandler;
-import ru.dimension.ui.view.handler.task.TaskSelectionHandler;
-import ru.dimension.ui.view.panel.config.connection.ConnectionPanel;
-import ru.dimension.ui.view.panel.config.profile.ProfilePanel;
-import ru.dimension.ui.view.structure.ConfigView;
-import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.model.column.ProfileColumnNames;
 import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.config.Profile;
 import ru.dimension.ui.model.config.Query;
 import ru.dimension.ui.model.config.Task;
+import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.view.handler.connection.ConnectionButtonPanelHandler;
 import ru.dimension.ui.view.handler.connection.ConnectionSelectionHandler;
 import ru.dimension.ui.view.handler.connection.ConnectionTemplateTableHandler;
+import ru.dimension.ui.view.handler.profile.MultiSelectTaskHandler;
+import ru.dimension.ui.view.handler.profile.ProfileButtonPanelHandler;
+import ru.dimension.ui.view.handler.profile.ProfileSelectionHandler;
 import ru.dimension.ui.view.handler.query.QueryButtonPanelHandler;
 import ru.dimension.ui.view.handler.query.QueryMetadataHandler;
 import ru.dimension.ui.view.handler.query.QueryMetricButtonPanelHandler;
 import ru.dimension.ui.view.handler.query.QueryMetricHandler;
 import ru.dimension.ui.view.handler.query.QuerySelectionHandler;
+import ru.dimension.ui.view.handler.task.MultiSelectQueryHandler;
+import ru.dimension.ui.view.handler.task.TaskButtonPanelHandler;
+import ru.dimension.ui.view.handler.task.TaskSelectionHandler;
+import ru.dimension.ui.view.panel.config.connection.ConnectionPanel;
+import ru.dimension.ui.view.panel.config.profile.ProfilePanel;
 import ru.dimension.ui.view.panel.config.query.QueryPanel;
 import ru.dimension.ui.view.panel.config.task.TaskPanel;
+import ru.dimension.ui.view.structure.ConfigView;
+import ru.dimension.ui.view.tab.ConfigTab;
 
 @Log4j2
 @Singleton
 public class ConfigViewImpl extends JDialog implements ConfigView {
-
-  private final Lazy<BaseFrame> jFrame;
-  private final Lazy<ConfigPresenter> configPresenter;
 
   private final JXTableCase profileCase;
   private final JXTableCase taskCase;
@@ -84,9 +79,7 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
   private final JCheckBox checkboxConfig;
 
   @Inject
-  public ConfigViewImpl(Lazy<BaseFrame> jFrame,
-                        Lazy<ConfigPresenter> configPresenter,
-                        @Named("profileSelectionHandler") ProfileSelectionHandler profileSelectionHandler,
+  public ConfigViewImpl(@Named("profileSelectionHandler") ProfileSelectionHandler profileSelectionHandler,
                         @Named("taskSelectionHandler") TaskSelectionHandler taskSelectionHandler,
                         @Named("connectionSelectionHandler") ConnectionSelectionHandler connectionSelectionHandler,
                         @Named("querySelectionHandler") QuerySelectionHandler querySelectionHandler,
@@ -110,8 +103,6 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
                         @Named("multiSelectTaskHandler") MultiSelectTaskHandler multiSelectTaskHandler,
                         @Named("multiSelectQueryHandler") MultiSelectQueryHandler multiSelectQueryHandler,
                         @Named("checkboxConfig") JCheckBox checkboxConfig) {
-    this.jFrame = jFrame;
-    this.configPresenter = configPresenter;
 
     this.profileCase = profileCase;
     this.taskCase = taskCase;
@@ -233,24 +224,24 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
   }
 
   @Override
-  public void bindPresenter() {
-    configPresenter.get().fillProfileModel(Profile.class);
+  public void bindPresenter(ConfigPresenter configPresenter) {
+    configPresenter.fillProfileModel(Profile.class);
     profileCase.getJxTable().getColumnExt(0).setVisible(false);
     profileCase.getJxTable().getColumnModel().getColumn(0).setCellRenderer(new ActiveColumnCellRenderer());
 
-    configPresenter.get().fillProfileModel(Task.class);
+    configPresenter.fillProfileModel(Task.class);
     taskCase.getJxTable().getColumnExt(0).setVisible(false);
     taskCase.getJxTable().getColumnModel().getColumn(0).setCellRenderer(new ActiveColumnCellRenderer());
 
-    configPresenter.get().fillProfileModel(Connection.class);
+    configPresenter.fillProfileModel(Connection.class);
     connectionCase.getJxTable().getColumnExt(0).setVisible(false);
     connectionCase.getJxTable().getColumnModel().getColumn(0)
         .setCellRenderer(new ActiveColumnCellRenderer());
 
-    configPresenter.get().fillProfileModel(Query.class);
+    configPresenter.fillProfileModel(Query.class);
     queryCase.getJxTable().getColumnExt(0).setVisible(false);
     queryCase.getJxTable().getColumnModel().getColumn(0).setCellRenderer(new ActiveColumnCellRenderer());
-    addWindowListener(configPresenter.get());
+    addWindowListener(configPresenter);
   }
 
   private void packConfig(boolean visible) {

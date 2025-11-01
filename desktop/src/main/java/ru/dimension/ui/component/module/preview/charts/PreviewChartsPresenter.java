@@ -1,5 +1,6 @@
 package ru.dimension.ui.component.module.preview.charts;
 
+import java.awt.event.WindowAdapter;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.log4j.Log4j2;
@@ -87,8 +88,10 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
 
     Destination destinationRealtime = getDestination(Panel.REALTIME, chartKey);
     Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+    Destination destinationInsight = getDestination(Panel.INSIGHT, chartKey);
     broker.addReceiver(destinationRealtime, model.getChartDetailDialog().getChartModule().getPresenter());
     broker.addReceiver(destinationHistory, model.getChartDetailDialog().getChartModule().getPresenter());
+    broker.addReceiver(destinationInsight, model.getChartDetailDialog().getChartModule().getPresenter());
 
     dialog.addWindowListener(new java.awt.event.WindowAdapter() {
       @Override
@@ -96,8 +99,10 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
 
         Destination destinationRealtime = getDestination(Panel.REALTIME, chartKey);
         Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+        Destination destinationInsight = getDestination(Panel.HISTORY, chartKey);
         broker.deleteReceiver(destinationRealtime, model.getChartDetailDialog().getChartModule().getPresenter());
         broker.deleteReceiver(destinationHistory, model.getChartDetailDialog().getChartModule().getPresenter());
+        broker.deleteReceiver(destinationInsight, model.getChartDetailDialog().getChartModule().getPresenter());
 
         model.setChartDetailDialog(null);
       }

@@ -75,7 +75,7 @@ Key Features of **Dimension UI**:
 [Return to Contents](#Contents)
 
 ## Minimum technical requirements
-**Dimension DB** is compatible with Java 25+ and comes with a small set of dependencies.
+**Dimension UI** is compatible with Java 25+ and comes with a small set of dependencies.
 
 ### Hardware requirements
 
@@ -91,12 +91,13 @@ Table 1. Hardware requirements
 
 Table 2. Software requirements
 
-| Software | Requirements             |
-|:---------|:-------------------------|
-| Java     | Java version 24+         |
-| Maven    | Not lower than version 3 |
-| Git      | Latest current version   |
-| DBase    | Latest current version   |
+| Software     | Requirements             |
+|:-------------|:-------------------------|
+| Java         | Java version 25+         |
+| Maven        | Not lower than version 3 |
+| Git          | Latest current version   |
+| Dimension-DB | Latest current version   |
+| Dimension-DI | Latest current version   |
 
 ### Operating system requirements
 
@@ -114,29 +115,44 @@ Table 3. Operating system requirements
 
 To compile the application into an executable jar file, do the following:
 
-1. Install JDK version 24 or higher, Maven and Git on your local computer:
+1. Install JDK version 25 or higher, Maven and Git on your local computer:
     ```shell
     java -version  
     mvn -version
     git --version 
     ``` 
-2. Download the source codes of the application to your local computer using Git:
+2. The `Dimension-UI` application depends on `Dimension-DI` and `Dimension-DB`, which must be installed first:
 
     ```shell
-    git clone <url>
+    git clone <Dimension-DI URL>
+    cd dimension-di
+    mvn clean install
+    ```
+    ```shell
+    git clone <Dimension-DB URL>
+    cd dimension-db
+    mvn clean install
+    ```
+
+3. Download the source codes of the application to your local computer using Git:
+
+    ```shell
+    git clone <Dimension-UI URL>
     cd dimension-ui
     ```
 
-3. Compile and install modules for project using Maven:
+4. Compile and install modules for project using Maven:
     ```shell
     mvn clean compile
     mvn clean install -U
    ```
 
-4. Execute the Maven command to build an executable jar file with tests running:
+5. Execute the Maven command to build an executable jar file with tests running:
     ```shell
      mvn clean package
     ```
+
+The executable jar file with launch scripts for Windows/Linux will be in the `dimension-ui-<VERSION>.zip` archive at the relative path desktop/target
 
 [Return to Contents](#contents)
 
@@ -144,7 +160,7 @@ To compile the application into an executable jar file, do the following:
 
 - Windows Platform, run.bat
     ```shell
-    SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-24  
+    SET JAVA_HOME=C:\PROGRAM FILES\JAVA\jdk-25  
     SET JAVA_EXE="%JAVA_HOME%\bin\java.exe"
     chcp 65001
   
@@ -154,7 +170,7 @@ To compile the application into an executable jar file, do the following:
   ```shell
     #!/bin/bash
   
-    export JAVA_HOME=/usr/lib/jvm/java-24-openjdk-amd64
+    export JAVA_HOME=/usr/lib/jvm/java-25-openjdk-amd64
     export JAVA_EXE=$JAVA_HOME/bin/java
     export LANG=en_US.UTF-8
 
