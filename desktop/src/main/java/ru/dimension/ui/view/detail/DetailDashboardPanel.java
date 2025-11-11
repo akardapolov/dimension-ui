@@ -1,7 +1,5 @@
 package ru.dimension.ui.view.detail;
 
-import static ru.dimension.ui.laf.LafColorGroup.REPORT;
-
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -18,7 +16,6 @@ import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JTabbedPane;
 import javax.swing.SwingConstants;
@@ -27,8 +24,6 @@ import javax.swing.border.EtchedBorder;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTaskPane;
-import org.jdesktop.swingx.JXTaskPaneContainer;
-import org.jdesktop.swingx.VerticalLayout;
 import org.jfree.chart.util.IDetailPanel;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
@@ -38,17 +33,13 @@ import ru.dimension.ui.component.chart.SCP;
 import ru.dimension.ui.component.chart.history.HistorySCP;
 import ru.dimension.ui.component.module.PreviewModule;
 import ru.dimension.ui.component.module.analyze.DetailAction;
-import ru.dimension.ui.component.module.analyze.timeseries.AnalyzeAnomalyPanel;
-import ru.dimension.ui.component.module.analyze.timeseries.AnalyzeForecastPanel;
 import ru.dimension.ui.component.module.api.UnitView;
 import ru.dimension.ui.component.module.chart.main.unit.HistoryUnitView;
 import ru.dimension.ui.component.module.chart.preview.DetailChartContext;
 import ru.dimension.ui.component.module.chart.report.ReportChartView;
 import ru.dimension.ui.component.module.preview.spi.RunMode;
 import ru.dimension.ui.helper.DateHelper;
-import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.ProgressBarHelper;
-import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.column.DimensionValuesNames;
 import ru.dimension.ui.model.config.Metric;
@@ -61,6 +52,7 @@ import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.ChartKey;
 import ru.dimension.ui.state.SqlQueryState;
+import ru.dimension.ui.view.detail.insight.InsightPanel;
 import ru.dimension.ui.view.detail.pivot.MainPivotDashboardPanel;
 import ru.dimension.ui.view.detail.raw.RawDataDashboardPanel;
 import ru.dimension.ui.view.detail.top.MainTopDashboardPanel;
@@ -220,43 +212,9 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
         chart.loadSeriesColor(metric, seriesColorMap);
         chart.initialize();
 
-        AnalyzeAnomalyPanel anomalyPanel =
-            new AnalyzeAnomalyPanel(GUIHelper.getJXTableCase(6, getTableColumnNames()),
-                                    chart.getSeriesColorMap(),
-                                    chart.getChartDataset());
-        anomalyPanel.hideSettings();
+        InsightPanel insightPanel = new InsightPanel(chart);
 
-        AnalyzeForecastPanel forecastPanel =
-            new AnalyzeForecastPanel(GUIHelper.getJXTableCase(6, getTableColumnNames()),
-                                     chart.getSeriesColorMap(),
-                                     chart.getChartDataset());
-        forecastPanel.hideSettings();
-
-        Dimension dimension = new Dimension(100, 200);
-
-        JXTaskPaneContainer container = new JXTaskPaneContainer();
-        LaF.setBackgroundColor(REPORT, container);
-        container.setBackgroundPainter(null);
-
-        chart.setPreferredSize(dimension);
-        chart.setMaximumSize(dimension);
-
-        chart.setBorder(GUIHelper.getConfigureBorder(1));
-        anomalyPanel.setBorder(GUIHelper.getConfigureBorder(1));
-        forecastPanel.setBorder(GUIHelper.getConfigureBorder(1));
-
-        container.add(createTaskPane("Data", chart));
-        container.add(createTaskPane("Anomaly", anomalyPanel));
-        container.add(createTaskPane("Forecast", forecastPanel));
-
-        JPanel cardPanel = new JPanel(new VerticalLayout());
-        LaF.setBackgroundColor(REPORT, cardPanel);
-        cardPanel.add(container);
-
-        JScrollPane scroll = new JScrollPane(cardPanel);
-        GUIHelper.setScrolling(scroll);
-
-        SwingUtilities.invokeLater(() -> sourceTabbedPane.setComponentAt(selectedIndex, scroll));
+        SwingUtilities.invokeLater(() -> sourceTabbedPane.setComponentAt(selectedIndex, insightPanel));
 
       } catch (Exception ex) {
         log.catching(ex);

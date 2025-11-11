@@ -1,7 +1,5 @@
 package ru.dimension.ui.view.detail;
 
-import static ru.dimension.ui.laf.LafColorGroup.REPORT;
-
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -16,15 +14,11 @@ import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
-import javax.swing.JTabbedPane;
 import javax.swing.SwingConstants;
 import javax.swing.border.EtchedBorder;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTaskPane;
-import org.jdesktop.swingx.JXTaskPaneContainer;
-import org.jdesktop.swingx.VerticalLayout;
 import org.jfree.chart.util.IDetailPanel;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
@@ -32,21 +26,16 @@ import ru.dimension.ui.component.chart.ChartConfig;
 import ru.dimension.ui.component.chart.SCP;
 import ru.dimension.ui.component.chart.history.HistorySCP;
 import ru.dimension.ui.component.module.analyze.DetailAction;
-import ru.dimension.ui.component.module.analyze.timeseries.AnalyzeAnomalyPanel;
-import ru.dimension.ui.component.module.analyze.timeseries.AnalyzeForecastPanel;
-import ru.dimension.ui.helper.DateHelper;
-import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.ProgressBarHelper;
-import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.column.DimensionValuesNames;
 import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.date.DateLocale;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.ChartKey;
+import ru.dimension.ui.view.detail.insight.InsightPanel;
 
 @Log4j2
 public class DetailInsightPanel extends JPanel implements IDetailPanel, DetailAction {
@@ -133,58 +122,16 @@ public class DetailInsightPanel extends JPanel implements IDetailPanel, DetailAc
       ChartConfig config = buildChartConfig(chartInfoCopy);
       ProfileTaskQueryKey key = config.getChartKey().getProfileTaskQueryKey();
 
-      // Data
       SCP chart = new HistorySCP(dStore, config, key, actualTopMapSelected, true);
       chart.loadSeriesColor(metric, seriesColorMap);
       chart.initialize();
 
-      // Anomaly
-      AnalyzeAnomalyPanel anomalyPanel =
-          new AnalyzeAnomalyPanel(GUIHelper.getJXTableCase(6, getTableColumnNames()),
-                                  chart.getSeriesColorMap(),
-                                  chart.getChartDataset());
-      anomalyPanel.hideSettings();
-
-      // Forecast
-      AnalyzeForecastPanel forecastPanel =
-          new AnalyzeForecastPanel(GUIHelper.getJXTableCase(6, getTableColumnNames()),
-                                   chart.getSeriesColorMap(),
-                                   chart.getChartDataset());
-      forecastPanel.hideSettings();
-
-      String rangeText = DateHelper.getDateFormattedRange(DateLocale.RU, begin, end, false);
-
-      JXTaskPaneContainer container = new JXTaskPaneContainer();
-      LaF.setBackgroundColor(REPORT, container);
-      container.setBackgroundPainter(null);
-
-      chart.setPreferredSize(dimension);
-      chart.setMaximumSize(dimension);
-
-      chart.setBorder(GUIHelper.getConfigureBorder(1));
-      anomalyPanel.setBorder(GUIHelper.getConfigureBorder(1));
-      forecastPanel.setBorder(GUIHelper.getConfigureBorder(1));
-
-      container.add(createTaskPane("Data", chart));
-      container.add(createTaskPane("Anomaly", anomalyPanel));
-      container.add(createTaskPane("Forecast", forecastPanel));
-
-      JPanel cardPanel = new JPanel(new VerticalLayout());
-      LaF.setBackgroundColor(REPORT, cardPanel);
-      cardPanel.add(container);
-
-      JScrollPane scroll = new JScrollPane(cardPanel);
-      GUIHelper.setScrolling(scroll);
-
-      JTabbedPane tabs = new JTabbedPane();
-      int idx = tabs.getTabCount();
-      tabs.addTab("", scroll);
-      tabs.setTabComponentAt(idx, createTextSeparator(rangeText));
+      InsightPanel insightPanel = new InsightPanel(chart, dimension);
 
       mainPanel.removeAll();
-      mainPanel.repaint();
+      mainPanel.add(insightPanel);
       mainPanel.revalidate();
-      mainPanel.add(tabs);
+      mainPanel.repaint();
 
     } catch (Exception ex) {
       log.catching(ex);
