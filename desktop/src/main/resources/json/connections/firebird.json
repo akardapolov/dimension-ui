@@ -1,0 +1,10 @@
+{
+  "userName": "SYSDBA",
+  "password": "masterkey",
+  "url": "jdbc:firebirdsql://localhost:3050//firebird/data/testrs.fdb?charSet=UTF-8",
+  "jar": "C:\\Users\\.temp\\jaybird-6.0.3.jar",
+  "driver": "org.firebirdsql.jdbc.FBDriver",
+  "type": "JDBC",
+  "id": 1008,
+  "name": "Firebird"
+}

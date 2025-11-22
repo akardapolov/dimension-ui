@@ -261,21 +261,25 @@ public class QuerySelectionHandler extends MouseListenerImpl implements ListSele
         GUIHelper.disableButton(metricQueryPanel.getMetricQueryButtonPanel(), !isSelected);
 
         if (queryCase.getDefaultTableModel().getRowCount() > 0) {
-          // TODO check it
+          // Logic to enable/disable metadata buttons based on task assignment
           profileManager.getTaskInfoList()
               .stream()
               .flatMap(t -> t.getQueryInfoList().stream())
               .distinct()
-              .filter(f -> f == queryInfo.getId())
+              .filter(id -> Objects.equals(id, queryInfo.getId()))
               .findAny()
-                            /*.ifPresentOrElse(q -> {
-                                        metadataQueryPanel.getEditMetadata().setEnabled(true);
-                                        metadataQueryPanel.getLoadMetadata().setEnabled(true);
-                                    },
-                                    () -> {
-                                        metadataQueryPanel.getEditMetadata().setEnabled(false);
-                                        metadataQueryPanel.getLoadMetadata().setEnabled(false);
-                                    })*/;
+              .ifPresentOrElse(
+                  // Case: Query is assigned to a task
+                  q -> {
+                    metadataQueryPanel.getEditMetadata().setEnabled(!isSelected);
+                    metadataQueryPanel.getLoadMetadata().setEnabled(!isSelected);
+                  },
+                  // Case: Query is NOT assigned to a task (cannot load metadata without connection)
+                  () -> {
+                    metadataQueryPanel.getEditMetadata().setEnabled(false);
+                    metadataQueryPanel.getLoadMetadata().setEnabled(false);
+                  }
+              );
         }
       }
     }

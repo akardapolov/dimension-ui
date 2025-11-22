@@ -58,6 +58,8 @@ public class AdHocDatabaseManagerImpl implements AdHocDatabaseManager {
           dStoreMap.putIfAbsent(connectionInfo.getId(), getDBase(dBaseConfig, BType.MYSQL, connectionInfo).getDStore());
       case DUCKDB ->
           dStoreMap.putIfAbsent(connectionInfo.getId(), getDBase(dBaseConfig, BType.DUCKDB, connectionInfo).getDStore());
+      case FIREBIRD ->
+          dStoreMap.putIfAbsent(connectionInfo.getId(), getDBase(dBaseConfig, BType.FIREBIRD, connectionInfo).getDStore());
       default -> throw new RuntimeException("Not supported database: " + connectionInfo.getDbType());
     }
   }

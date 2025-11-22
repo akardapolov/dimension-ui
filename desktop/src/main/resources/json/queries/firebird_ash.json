@@ -1,0 +1,9 @@
+{
+  "text": "SELECT \n    CURRENT_TIMESTAMP AS SAMPLE_TIME,\n\tA.MON$ATTACHMENT_ID AS SESSION_ID,\n    A.MON$USER AS USERNAME,\n    A.MON$REMOTE_ADDRESS AS IP_ADDRESS,\n    A.MON$REMOTE_PROCESS AS APP_NAME,\n    S.MON$SQL_TEXT AS CURRENT_QUERY,\n    CASE S.MON$STATE \n        WHEN 0 THEN 'IDLE'\n        WHEN 1 THEN 'ACTIVE'\n        ELSE 'OTHER' \n    END AS STATUS,\n    S.MON$TIMESTAMP AS QUERY_START_TIME,\n    -- Calculate duration in seconds (Works in FB 3.0+)\n    DATEDIFF(SECOND, S.MON$TIMESTAMP, CURRENT_TIMESTAMP) AS DURATION_SECONDS\nFROM \n    MON$ATTACHMENTS A\nJOIN \n    MON$STATEMENTS S ON A.MON$ATTACHMENT_ID = S.MON$ATTACHMENT_ID\nWHERE \n    S.MON$STATE = 1 -- Filter only currently executing (Active) queries\nORDER BY \n    S.MON$TIMESTAMP ASC",
+  "description": "Firebird Active Session History (via MON$ tables)",
+  "gatherDataMode": "BY_CLIENT_JDBC",
+  "loadDataMode": "JDBC_REAL_TIME",
+  "metricList": [],
+  "id": 1008,
+  "name": "Firebird ASH"
+}

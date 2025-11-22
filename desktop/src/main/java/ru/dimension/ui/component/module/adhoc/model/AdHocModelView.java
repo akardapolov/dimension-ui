@@ -3,10 +3,14 @@ package ru.dimension.ui.component.module.adhoc.model;
 import static ru.dimension.ui.laf.LafColorGroup.CONFIG_PANEL;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.util.regex.PatternSyntaxException;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.RowFilter;
@@ -18,9 +22,7 @@ import javax.swing.table.TableRowSorter;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTitledSeparator;
-import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.ui.helper.GUIHelper;
-import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.column.ConnectionColumnNames;
@@ -69,18 +71,53 @@ public class AdHocModelView extends JPanel {
     LaF.setBackgroundConfigPanel(CONFIG_PANEL, this);
     this.setBorder(new EtchedBorder());
 
-    PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(), false);
-
     initTabbedPanes();
 
-    gbl.row().cell(new JXTitledSeparator("Connection")).fillX();
-    gbl.row().cell(connectionCase.getJScrollPane()).fillX();
-    gbl.row().cell(new JXTitledSeparator("Schema/Catalog")).fillX();
-    gbl.row().cell(schemaCatalogCBox).fillX();
-    gbl.row().cell(tableViewPane).fillX();
-    gbl.row().cell(timeStampColumnMetricPane).fillXY();
+    setLayout(new GridBagLayout());
+    GridBagConstraints gbc = new GridBagConstraints();
+    Dimension zeroSize = new Dimension(0, 0);
+    int gridY = 0;
 
-    gbl.done();
+    // --- Common Constraints ---
+    gbc.gridx = 0;
+    gbc.weightx = 1.0;
+
+    // --- Connection & Schema/Catalog Section (30% total) ---
+    // The connection table's scroll pane gets the weight, the rest take preferred height.
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.0;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    add(new JXTitledSeparator("Connection"), gbc);
+
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.2; // This block gets 20% of the vertical space.
+    gbc.fill = GridBagConstraints.BOTH;
+    JScrollPane connectionScrollPane = connectionCase.getJScrollPane();
+    connectionScrollPane.setPreferredSize(zeroSize);
+    add(connectionScrollPane, gbc);
+
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.0;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    add(new JXTitledSeparator("Schema/Catalog"), gbc);
+
+    gbc.gridy = gridY++;
+    // No vertical weight for the combo box, it takes its preferred height.
+    add(schemaCatalogCBox, gbc);
+
+    // --- Table/View Section (30%) ---
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.3; // This block gets 30% of the vertical space.
+    gbc.fill = GridBagConstraints.BOTH;
+    tableViewPane.setPreferredSize(zeroSize);
+    add(tableViewPane, gbc);
+
+    // --- Timestamp/Column Section (40%) ---
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.5; // This block gets the remaining 40% of vertical space.
+    gbc.fill = GridBagConstraints.BOTH;
+    timeStampColumnMetricPane.setPreferredSize(zeroSize);
+    add(timeStampColumnMetricPane, gbc);
   }
 
   private void initTabbedPanes() {

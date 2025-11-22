@@ -7,6 +7,7 @@ public enum DBType {
   CLICKHOUSE("clickhouse", "SELECT now()"),
   MYSQL("mysql", "SELECT now()"),
   DUCKDB("duckdb", "SELECT now()"),
+  FIREBIRD("firebird", "SELECT CURRENT_TIMESTAMP FROM RDB$DATABASE"),
   HTTP("https?://", ""),
   UNKNOWN("", "");
 

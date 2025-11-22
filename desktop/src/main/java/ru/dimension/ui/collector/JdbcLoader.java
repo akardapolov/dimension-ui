@@ -4,8 +4,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Date;
 import org.apache.logging.log4j.Logger;
 
 public interface JdbcLoader {
@@ -22,10 +26,20 @@ public interface JdbcLoader {
         while (rs.next()) {
           Object obj = rs.getObject(1);
 
-          if (obj instanceof Timestamp ts) {
-            sysdate = ts.getTime();
-          } else if (obj instanceof LocalDateTime dt) {
-            sysdate = dt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+          if (obj == null) {
+            continue;
+          }
+
+          log.info("DB returned class: {}", obj.getClass().getName());
+
+          switch (obj) {
+            case Timestamp      ts ->     sysdate = ts.getTime();
+            case OffsetDateTime odt ->    sysdate = odt.toInstant().toEpochMilli();
+            case LocalDateTime  ldt ->    sysdate = ldt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+            case ZonedDateTime  zdt ->    sysdate = zdt.toInstant().toEpochMilli();
+            case Instant        inst ->   sysdate = inst.toEpochMilli();
+            case Date           date ->   sysdate = date.getTime();
+            default -> log.warn("Unknown date object type: {} - Value: {}", obj.getClass().getName(), obj);
           }
         }
       } catch (Exception eRs) {

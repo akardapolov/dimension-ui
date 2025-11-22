@@ -1,0 +1,10 @@
+{
+  "description": "Firebird active session history task",
+  "pullTimeout": 3,
+  "connectionId": 1008,
+  "queryList": [
+    1008
+  ],
+  "id": 1008,
+  "name": "Firebird Task"
+}

@@ -228,9 +228,6 @@ public class AdHocModelPresenter implements HelperChart {
   }
 
   private void handleColumnSelection(boolean selected, int row) {
-    /*JXTable columnTable = view.getColumnCase().getJxTable();
-    int modelRow = columnTable.convertRowIndexToModel(row); // Convert view row to model row*/
-
     if (tProfile == null) {
       DialogHelper.showMessageDialog(null, "Table metadata not loaded", "Error");
       view.getColumnCase().getDefaultTableModel().setValueAt(false, row, ColumnNames.PICK.ordinal());
@@ -476,6 +473,14 @@ public class AdHocModelPresenter implements HelperChart {
       chartRange = getChartRange(dStore, tableInfo.getTableName(), chartInfo);
       rangeHistory = chartInfo.getRangeHistory();
 
+      if (RangeHistory.CUSTOM.equals(chartInfo.getRangeHistory())) {
+       if (chartRange.getBegin() == chartRange.getEnd()) {
+         log.warn("Here the custom begin and end are identical. "
+                      + "Fix it to add 1 second to the end of range");
+         chartRange.setEnd(chartRange.getBegin() + 1000L);
+       }
+      }
+
       isEmptyRange = true;
     }
 
@@ -584,6 +589,7 @@ public class AdHocModelPresenter implements HelperChart {
     return switch (dbType) {
       case ORACLE -> "SELECT * FROM " + tableName + " WHERE ROWNUM = 1";
       case MSSQL -> "SELECT TOP 1 * FROM " + tableName;
+      case FIREBIRD -> "SELECT FIRST 1 * FROM " + tableName;
       default -> "SELECT * FROM " + tableName + " LIMIT 1";
     };
   }
@@ -639,6 +645,7 @@ public class AdHocModelPresenter implements HelperChart {
       case MSSQL -> BType.MSSQL;
       case MYSQL -> BType.MYSQL;
       case DUCKDB -> BType.DUCKDB;
+      case FIREBIRD -> BType.FIREBIRD;
       default -> throw new IllegalArgumentException("Unsupported DB type: " + dbType);
     });
     return sProfile;
@@ -743,6 +750,7 @@ public class AdHocModelPresenter implements HelperChart {
     return switch (connectionInfo.getDbType()) {
       case POSTGRES, ORACLE, MSSQL -> dbMetadata.getSchemas(metaData);
       case CLICKHOUSE, DUCKDB, MYSQL -> dbMetadata.getCatalogs(metaData);
+      case FIREBIRD -> new ArrayList<>();
       default -> new ArrayList<>();
     };
   }

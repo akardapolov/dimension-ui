@@ -2,22 +2,23 @@ package ru.dimension.ui.component.module.model;
 
 import static ru.dimension.ui.laf.LafColorGroup.CONFIG_PANEL;
 
+import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.util.List;
 import java.util.function.Supplier;
 import javax.swing.DefaultCellEditor;
 import javax.swing.JCheckBox;
-import javax.swing.JComponent;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.border.EtchedBorder;
 import javax.swing.table.TableColumn;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTitledSeparator;
-import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.helper.GUIHelper;
-import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.config.Metric;
@@ -50,19 +51,67 @@ public class ModelView extends JPanel {
     LaF.setBackgroundConfigPanel(CONFIG_PANEL, this);
     this.setBorder(new EtchedBorder());
 
-    PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(), false);
+    setLayout(new GridBagLayout());
+    GridBagConstraints gbc = new GridBagConstraints();
 
-    addSection(gbl, "Profile", profileTableCase.getJScrollPane());
-    addSection(gbl, "Task", taskTableCase.getJScrollPane());
-    addSection(gbl, "Query", queryTableCase.getJScrollPane());
+    // Fix: By setting a zero preferred size, we force GridBagLayout
+    // to rely on the 'weighty' constraint for distributing space, even on the initial layout.
+    Dimension zeroSize = new Dimension(0, 0);
+    int gridY = 0;
 
+    // --- Common Constraints ---
+    gbc.gridx = 0;
+    gbc.weightx = 1.0;
+
+    // --- Profile Section ---
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.0;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    add(new JXTitledSeparator("Profile"), gbc);
+
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.15; // This component gets 15% of the vertical space.
+    gbc.fill = GridBagConstraints.BOTH;
+    JScrollPane profileScrollPane = profileTableCase.getJScrollPane();
+    profileScrollPane.setPreferredSize(zeroSize);
+    add(profileScrollPane, gbc);
+
+    // --- Task Section ---
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.0;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    add(new JXTitledSeparator("Task"), gbc);
+
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.15; // This component gets 15% of the vertical space.
+    gbc.fill = GridBagConstraints.BOTH;
+    JScrollPane taskScrollPane = taskTableCase.getJScrollPane();
+    taskScrollPane.setPreferredSize(zeroSize);
+    add(taskScrollPane, gbc);
+
+    // --- Query Section ---
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.0;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    add(new JXTitledSeparator("Query"), gbc);
+
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.15; // This component gets 15% of the vertical space.
+    gbc.fill = GridBagConstraints.BOTH;
+    JScrollPane queryScrollPane = queryTableCase.getJScrollPane();
+    queryScrollPane.setPreferredSize(zeroSize);
+    add(queryScrollPane, gbc);
+
+    // --- Tabbed Pane Section ---
     JTabbedPane tabbedPane = new JTabbedPane();
     tabbedPane.addTab("Columns", columnTableCase.getJScrollPane());
     tabbedPane.addTab("Metrics", metricTableCase.getJScrollPane());
+    tabbedPane.setPreferredSize(zeroSize);
 
-    gbl.row().cellXYRemainder(tabbedPane).fillXY();
-
-    gbl.done();
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.55; // This component gets the remaining 55% of vertical space.
+    gbc.fill = GridBagConstraints.BOTH;
+    add(tabbedPane, gbc);
   }
 
   private JXTableCase createBasicTableCase() {
@@ -75,11 +124,11 @@ public class ModelView extends JPanel {
 
   private JXTableCase createCheckboxTableCase() {
     JXTableCase jxTableCase = GUIHelper.getJXTableCaseCheckBoxAdHoc(10,
-                                                               new String[]{
-                                                                   ColumnNames.ID.getColName(),
-                                                                   ColumnNames.NAME.getColName(),
-                                                                   ColumnNames.PICK.getColName()
-                                                               }, ColumnNames.PICK.ordinal());
+                                                                    new String[]{
+                                                                        ColumnNames.ID.getColName(),
+                                                                        ColumnNames.NAME.getColName(),
+                                                                        ColumnNames.PICK.getColName()
+                                                                    }, ColumnNames.PICK.ordinal());
 
     jxTableCase.getJxTable().getColumnExt(ColumnNames.ID.ordinal()).setVisible(false);
 
@@ -102,12 +151,7 @@ public class ModelView extends JPanel {
     }
   }
 
-  private void addSection(PainlessGridBag gbl,
-                          String title,
-                          JComponent component) {
-    gbl.row().cell(new JXTitledSeparator(title)).fillX();
-    gbl.row().cell(component).fillX();
-  }
+  // The 'addSection' helper method is no longer needed and has been removed.
 
   public void updateTaskTable(List<TaskInfo> taskInfoList) {
     taskTableCase.clearTable();

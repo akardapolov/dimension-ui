@@ -494,6 +494,8 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
       return DBType.MYSQL;
     } else if (url.contains(DBType.DUCKDB.getUrlPattern())) {
       return DBType.DUCKDB;
+    } else if (url.contains(DBType.FIREBIRD.getUrlPattern())) {
+      return DBType.FIREBIRD;
     } else {
       return DBType.UNKNOWN;
     }
