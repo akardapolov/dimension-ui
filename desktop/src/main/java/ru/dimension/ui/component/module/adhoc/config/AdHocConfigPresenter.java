@@ -32,6 +32,10 @@ public class AdHocConfigPresenter implements MessageAction {
     this.view = view;
 
     setupListeners();
+
+    model.setGlobalKey("");
+    resetConfigUIToDefaults();
+    setConfigControlsEnabled(false);
   }
 
   private void setupListeners() {
@@ -49,45 +53,60 @@ public class AdHocConfigPresenter implements MessageAction {
     log.info("Legend visibility changed to: {}", chartLegendState);
 
     if (model.getGlobalKey().isEmpty()) {
-      log.info("Global key is empty");
-    } else {
-      adHocStateManager.putGlobalShowLegend(model.getGlobalKey(), ChartLegendState.SHOW.equals(chartLegendState));
-      broker.sendMessage(Message.builder()
-                             .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
-                             .action(Action.CHART_LEGEND_STATE_ALL)
-                             .parameter("globalKey", model.getGlobalKey())
-                             .parameter("chartLegendState", chartLegendState)
-                             .build());
+      log.debug("Skip legend change: globalKey is empty (no active ad-hoc tab)");
+      return;
     }
+
+    adHocStateManager.putGlobalShowLegend(model.getGlobalKey(), ChartLegendState.SHOW.equals(chartLegendState));
+
+    broker.sendMessage(Message.builder()
+                           .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
+                           .action(Action.CHART_LEGEND_STATE_ALL)
+                           .parameter("globalKey", model.getGlobalKey())
+                           .parameter("chartLegendState", chartLegendState)
+                           .build());
   }
 
   private void handleCollapseCardChange(ChartCardState cardState) {
     log.info("Set card state in ad-hoc to: {}", cardState);
 
     if (model.getGlobalKey().isEmpty()) {
-      log.info("Global key is empty");
-    } else {
-      adHocStateManager.putGlobalChartCardState(model.getGlobalKey(), cardState);
-      broker.sendMessage(Message.builder()
-                             .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
-                             .action(Action.EXPAND_COLLAPSE_ALL)
-                             .parameter("globalKey", model.getGlobalKey())
-                             .parameter("cardState", cardState)
-                             .build());
+      log.debug("Skip collapse/expand: globalKey is empty (no active ad-hoc tab)");
+      return;
     }
+
+    adHocStateManager.putGlobalChartCardState(model.getGlobalKey(), cardState);
+
+    broker.sendMessage(Message.builder()
+                           .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
+                           .action(Action.EXPAND_COLLAPSE_ALL)
+                           .parameter("globalKey", model.getGlobalKey())
+                           .parameter("cardState", cardState)
+                           .build());
   }
 
   private void handleHistoryRangeChange(RangeHistory range) {
     ChartRange chartRange = getChartRangeFromPickers();
     log.info("History range changed to: {}", range);
+
+    if (model.getGlobalKey().isEmpty()) {
+      log.debug("Skip history range change: globalKey is empty (no active ad-hoc tab)");
+      return;
+    }
+
     updateHistoryRange(range, chartRange);
   }
 
   private void handleCustomHistoryRangeChange() {
     ChartRange chartRange = getChartRangeFromPickers();
     log.info("Custom history chart range changed to: {}", chartRange);
-    updateHistoryRange(RangeHistory.CUSTOM, chartRange);
 
+    if (model.getGlobalKey().isEmpty()) {
+      log.debug("Skip custom range apply: globalKey is empty (no active ad-hoc tab)");
+      return;
+    }
+
+    updateHistoryRange(RangeHistory.CUSTOM, chartRange);
     view.getHistoryPanel().setSelectedRange(RangeHistory.CUSTOM);
   }
 
@@ -103,19 +122,20 @@ public class AdHocConfigPresenter implements MessageAction {
 
   private void updateHistoryRange(RangeHistory range, ChartRange chartRange) {
     if (model.getGlobalKey().isEmpty()) {
-      log.info("Global key is empty");
-    } else {
-      adHocStateManager.putGlobalHistoryCustomRange(model.getGlobalKey(), chartRange);
-      adHocStateManager.putGlobalHistoryRange(model.getGlobalKey(), range);
-
-      broker.sendMessage(Message.builder()
-                             .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
-                             .action(Action.HISTORY_RANGE_CHANGE)
-                             .parameter("globalKey", model.getGlobalKey())
-                             .parameter("range", range)
-                             .parameter("chartRange", chartRange)
-                             .build());
+      log.debug("Skip updateHistoryRange: globalKey is empty (no active ad-hoc tab)");
+      return;
     }
+
+    adHocStateManager.putGlobalHistoryCustomRange(model.getGlobalKey(), chartRange);
+    adHocStateManager.putGlobalHistoryRange(model.getGlobalKey(), range);
+
+    broker.sendMessage(Message.builder()
+                           .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
+                           .action(Action.HISTORY_RANGE_CHANGE)
+                           .parameter("globalKey", model.getGlobalKey())
+                           .parameter("range", range)
+                           .parameter("chartRange", chartRange)
+                           .build());
   }
 
   @Override
@@ -129,19 +149,71 @@ public class AdHocConfigPresenter implements MessageAction {
     log.info("Message action {}", message.action());
 
     String globalKey = message.parameters().get("globalKey");
+
+    if (globalKey == null || globalKey.isBlank()) {
+      model.setGlobalKey("");
+      resetConfigUIToDefaults();
+      setConfigControlsEnabled(false);
+      return;
+    }
+
+    setConfigControlsEnabled(true);
     model.setGlobalKey(globalKey);
 
     ChartRange chartRange = adHocStateManager.getCustomChartRange(new AdHocKey(), globalKey);
-    view.getHistoryPanel().getDateTimePickerFrom().setDate(new Date(chartRange.getBegin()));
-    view.getHistoryPanel().getDateTimePickerTo().setDate(new Date(chartRange.getEnd()));
+    if (chartRange == null) {
+      long end = System.currentTimeMillis();
+      chartRange = new ChartRange(end - 24L * 60L * 60L * 1000L, end);
+      adHocStateManager.putGlobalHistoryCustomRange(globalKey, chartRange);
+    }
+    view.getHistoryPanel().getDateTimePickerFrom().setDate(new java.util.Date(chartRange.getBegin()));
+    view.getHistoryPanel().getDateTimePickerTo().setDate(new java.util.Date(chartRange.getEnd()));
 
     RangeHistory rangeHistory = adHocStateManager.getHistoryRange(new AdHocKey(), globalKey);
+    if (rangeHistory == null) {
+      rangeHistory = RangeHistory.DAY;
+      adHocStateManager.putGlobalHistoryRange(globalKey, rangeHistory);
+    }
     view.getHistoryPanel().setSelectedRange(rangeHistory);
 
-    boolean showLegend = adHocStateManager.getShowLegend(new AdHocKey(), globalKey);
+    Boolean showLegend = adHocStateManager.getShowLegend(new AdHocKey(), globalKey);
+    if (showLegend == null) {
+      showLegend = true;
+      adHocStateManager.putGlobalShowLegend(globalKey, true);
+    }
     view.getLegendPanel().setSelected(showLegend);
 
     ChartCardState chartCardState = adHocStateManager.getChartCardStateAll(globalKey);
+    if (chartCardState == null) {
+      chartCardState = ChartCardState.COLLAPSE_ALL;
+      adHocStateManager.putGlobalChartCardState(globalKey, chartCardState);
+    }
     view.getCollapseCardPanel().setState(chartCardState);
+  }
+
+  private void resetConfigUIToDefaults() {
+    view.getHistoryPanel().setSelectedRange(RangeHistory.DAY);
+
+    Date now = new Date();
+    view.getHistoryPanel().getDateTimePickerTo().setDate(now);
+    view.getHistoryPanel().getDateTimePickerFrom().setDate(new Date(now.getTime() - 24L * 60L * 60L * 1000L));
+
+    view.getLegendPanel().setSelected(true);
+    view.getCollapseCardPanel().setState(ChartCardState.COLLAPSE_ALL);
+  }
+
+  private void setPanelEnabledRecursively(java.awt.Component c, boolean enabled) {
+    c.setEnabled(enabled);
+    if (c instanceof java.awt.Container container) {
+      for (java.awt.Component child : container.getComponents()) {
+        setPanelEnabledRecursively(child, enabled);
+      }
+    }
+  }
+
+  private void setConfigControlsEnabled(boolean enabled) {
+    setPanelEnabledRecursively(view.getHistoryPanel(), enabled);
+    setPanelEnabledRecursively(view.getLegendPanel(), enabled);
+    setPanelEnabledRecursively(view.getCollapseCardPanel(), enabled);
   }
 }

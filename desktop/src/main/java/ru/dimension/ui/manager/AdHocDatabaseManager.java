@@ -8,4 +8,6 @@ public interface AdHocDatabaseManager {
   void createDataBase(ConnectionInfo connectionInfo);
 
   DStore getDataBase(ConnectionInfo connectionInfo);
+
+  void removeDataBase(int connectionId);
 }

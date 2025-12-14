@@ -1,5 +1,6 @@
 package ru.dimension.ui.component.module.adhoc;
 
+import jakarta.inject.Inject;
 import lombok.Getter;
 import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.Message;
@@ -20,6 +21,7 @@ public class AdHocConfigModule implements MessageAction {
 
   private final MessageBroker broker = MessageBroker.getInstance();
 
+  @Inject
   public AdHocConfigModule() {
     model = new AdHocConfigModel();
     view = new AdHocConfigView();

@@ -37,9 +37,7 @@ import org.jdesktop.swingx.VerticalLayout;
 import org.jdesktop.swingx.plaf.basic.CalendarHeaderHandler;
 import org.jdesktop.swingx.plaf.basic.SpinningCalendarHeaderHandler;
 import org.painlessgridbag.PainlessGridBag;
-import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.module.chart.ReportChartModule;
-import ru.dimension.ui.component.module.report.playground.MetricColumnPanel;
 import ru.dimension.ui.component.panel.CollapseCardPanel;
 import ru.dimension.ui.helper.DateHelper;
 import ru.dimension.ui.helper.DesignHelper;
@@ -48,7 +46,6 @@ import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
-import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.RangeHistory;
@@ -455,19 +452,5 @@ public class DesignView extends JPanel {
     saveButton.setEnabled(save);
     reportButton.setEnabled(report);
     deleteButton.setEnabled(delete);
-  }
-
-  public MetricColumnPanel getCardComponent(ProfileTaskQueryKey key) {
-    return Arrays.stream(cardContainer.getComponents())
-        .filter(MetricColumnPanel.class::isInstance)
-        .map(MetricColumnPanel.class::cast)
-        .filter(card -> key.equals(card.getKey()))
-        .findFirst()
-        .orElseGet(() -> new MetricColumnPanel(
-            Component.DESIGN,
-            key,
-            model.getProfileManager(),
-            collapseCard,
-            cardContainer));
   }
 }

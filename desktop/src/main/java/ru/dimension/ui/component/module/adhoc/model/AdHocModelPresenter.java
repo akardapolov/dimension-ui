@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -77,6 +78,7 @@ public class AdHocModelPresenter implements HelperChart {
   private final JXTableCase timestampCase;
   private final JXTableCase columnCase;
   private final AtomicBoolean running = new AtomicBoolean(false);
+  private final AtomicBoolean removingConnection = new AtomicBoolean(false);
 
   private Thread periodicTask;
   private java.sql.Connection connection;
@@ -103,6 +105,87 @@ public class AdHocModelPresenter implements HelperChart {
 
   public void loadConnections() {
     loadModel(Connection.class);
+  }
+
+  public void addConnection(int connectionId, String connectionName, ConnectionType type) {
+    if (type == null || type.equals(ConnectionType.JDBC)) {
+      SwingUtilities.invokeLater(() ->
+                                     connectionCase.addRow(new Object[]{connectionId, connectionName})
+      );
+      log.info("Added connection to AdHoc model: id={}, name={}", connectionId, connectionName);
+    }
+  }
+
+  public void removeConnection(int connectionId) {
+    SwingUtilities.invokeLater(() -> {
+      removingConnection.set(true);
+      try {
+        boolean isCurrentConnection = (currentConnectionId == connectionId);
+
+        if (isCurrentConnection) {
+          removeAllChartsForConnection(connectionId);
+
+          clearUIElements();
+
+          releaseConnection(connectionId);
+
+          tProfile = null;
+          dStore = null;
+          connection = null;
+          currentConnectionId = 0;
+          connectionName = "";
+        } else {
+          removeAllChartsForConnection(connectionId);
+          releaseConnection(connectionId);
+        }
+
+        model.clearSelectionState(connectionId);
+
+        DefaultTableModel tableModel = connectionCase.getDefaultTableModel();
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+          int id = (int) tableModel.getValueAt(i, 0);
+          if (id == connectionId) {
+            tableModel.removeRow(i);
+            log.info("Removed connection from AdHoc model: id={}", connectionId);
+            break;
+          }
+        }
+
+        if (isCurrentConnection && connectionCase.getJxTable().getRowCount() > 0) {
+          connectionCase.getJxTable().clearSelection();
+        }
+      } finally {
+        removingConnection.set(false);
+      }
+    });
+  }
+
+  private void removeAllChartsForConnection(int connectionId) {
+    Map<String, Set<Integer>> selectionState = model.getSelectionStateForConnection(connectionId);
+
+    if (selectionState.isEmpty()) {
+      log.info("No charts to remove for connection: {}", connectionId);
+      return;
+    }
+
+    broker.sendMessage(Message.builder()
+                           .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
+                           .action(Action.REMOVE_ALL_CHARTS_FOR_CONNECTION)
+                           .parameter("connectionId", connectionId)
+                           .build());
+
+    log.info("Sent remove all charts message for connection: {}", connectionId);
+  }
+
+  private void releaseConnection(int connectionId) {
+    try {
+      model.getAdHocDatabaseManager().removeDataBase(connectionId);
+      model.getConnectionPoolManager().removeConnection(connectionId);
+
+      log.info("Released connection pool resources for connectionId: {}", connectionId);
+    } catch (Exception e) {
+      log.error("Error releasing connection for connectionId: {}", connectionId, e);
+    }
   }
 
   private void setupListeners() {
@@ -474,11 +557,11 @@ public class AdHocModelPresenter implements HelperChart {
       rangeHistory = chartInfo.getRangeHistory();
 
       if (RangeHistory.CUSTOM.equals(chartInfo.getRangeHistory())) {
-       if (chartRange.getBegin() == chartRange.getEnd()) {
-         log.warn("Here the custom begin and end are identical. "
-                      + "Fix it to add 1 second to the end of range");
-         chartRange.setEnd(chartRange.getBegin() + 1000L);
-       }
+        if (chartRange.getBegin() == chartRange.getEnd()) {
+          log.warn("Here the custom begin and end are identical. "
+                       + "Fix it to add 1 second to the end of range");
+          chartRange.setEnd(chartRange.getBegin() + 1000L);
+        }
       }
 
       isEmptyRange = true;
@@ -656,11 +739,23 @@ public class AdHocModelPresenter implements HelperChart {
   }
 
   private void reloadTables() {
-    if (running.get()) {
+    if (running.get() || removingConnection.get()) {
       return;
     }
+
+    if (connection == null) {
+      log.debug("Connection is null, skipping reloadTables");
+      return;
+    }
+
     int connectionId = GUIHelper.getIdByColumnName(connectionCase, ConnectionColumnNames.ID.getColName());
     if (connectionId <= 0) {
+      return;
+    }
+
+    ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(connectionId);
+    if (connectionInfo == null) {
+      log.debug("ConnectionInfo is null for connectionId: {}, skipping reloadTables", connectionId);
       return;
     }
 
@@ -672,7 +767,6 @@ public class AdHocModelPresenter implements HelperChart {
 
     periodicTask = Thread.ofVirtual().start(() -> {
       try {
-        ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(connectionId);
         DatabaseMetaData metaData = connection.getMetaData();
         processSchema(connectionInfo, metaData);
       } catch (Exception e) {
@@ -696,6 +790,11 @@ public class AdHocModelPresenter implements HelperChart {
 
     try {
       ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(connectionId);
+      if (connectionInfo == null) {
+        log.warn("ConnectionInfo is null for connectionId: {}", connectionId);
+        return;
+      }
+
       model.getAdHocDatabaseManager().createDataBase(connectionInfo);
       connection = model.getConnectionPoolManager().getDatasource(connectionInfo).getConnection();
       DatabaseMetaData metaData = connection.getMetaData();
@@ -710,6 +809,11 @@ public class AdHocModelPresenter implements HelperChart {
 
   private void processSchema(ConnectionInfo connectionInfo,
                              DatabaseMetaData metaData) {
+    if (connectionInfo == null) {
+      log.warn("ConnectionInfo is null, skipping processSchema");
+      return;
+    }
+
     log.info("Start schema processing");
     String selectedSchemaCatalog = (String) schemaCatalogCBox.getSelectedItem();
     schemaCatalogCBox.setEnabled(false);
@@ -837,6 +941,42 @@ public class AdHocModelPresenter implements HelperChart {
           viewCase.getJxTable().getSelectionModel(), ColumnNames.NAME.getColName());
       default -> "";
     };
+  }
+
+  public void clearSelectionForGlobalKey(Message message) {
+    String globalKey = message.parameters().get("globalKey");
+    if (globalKey == null || globalKey.isBlank()) return;
+
+    String[] parts = globalKey.split("_", 2);
+    if (parts.length != 2) return;
+
+    int connectionId;
+    try {
+      connectionId = Integer.parseInt(parts[0]);
+    } catch (NumberFormatException e) {
+      return;
+    }
+    String tableName = parts[1];
+
+    model.setTableOrViewSelected(connectionId, tableName, false);
+
+    for (Integer colId : model.getSelectedColumns(connectionId, tableName)) {
+      model.setColumnSelected(connectionId, tableName, colId, false);
+    }
+
+    SwingUtilities.invokeLater(() -> {
+      updateTableCheckboxState(view.getTableCase(), tableName, false);
+      updateTableCheckboxState(view.getViewCase(), tableName, false);
+
+      if (tProfile != null && tableName.equals(tProfile.getTableName())) {
+        DefaultTableModel m = view.getColumnCase().getDefaultTableModel();
+        for (int i = 0; i < m.getRowCount(); i++) {
+          m.setValueAt(false, i, ColumnNames.PICK.ordinal());
+        }
+      }
+
+      view.getTimestampCase().getJxTable().clearSelection();
+    });
   }
 
   private void clearColumnAndTimestamp() {

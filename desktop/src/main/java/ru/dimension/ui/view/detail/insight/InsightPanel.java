@@ -1,4 +1,3 @@
-// filename: src/main/java/ru/dimension/ui/view/detail/insight/InsightPanel.java
 package ru.dimension.ui.view.detail.insight;
 
 import java.awt.BorderLayout;

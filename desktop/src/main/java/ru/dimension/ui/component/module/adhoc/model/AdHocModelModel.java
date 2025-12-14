@@ -77,6 +77,16 @@ public class AdHocModelModel {
     if (tableMap == null) return new HashSet<>();
 
     Set<Integer> columns = tableMap.get(schemaDotTableOrView);
-    return columns != null ? columns : new HashSet<>();
+    return columns != null ? new HashSet<>(columns) : new HashSet<>();
+  }
+
+  public Map<String, Set<Integer>> getSelectionStateForConnection(int connectionId) {
+    Map<String, Set<Integer>> tableMap = selectionState.get(connectionId);
+    return tableMap != null ? new HashMap<>(tableMap) : new HashMap<>();
+  }
+
+  public void clearSelectionState(int connectionId) {
+    selectionState.remove(connectionId);
+    log.info("Cleared selection state for connection: {}", connectionId);
   }
 }

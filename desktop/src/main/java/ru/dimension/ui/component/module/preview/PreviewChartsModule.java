@@ -1,8 +1,10 @@
 package ru.dimension.ui.component.module.preview;
 
+import jakarta.inject.Inject;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
+import ru.dimension.di.Assisted;
 import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
@@ -23,7 +25,8 @@ public class PreviewChartsModule {
 
   private final MessageBroker broker = MessageBroker.getInstance();
 
-  public PreviewChartsModule(MessageBroker.Component component,
+  @Inject
+  public PreviewChartsModule(@Assisted MessageBroker.Component component,
                              ProfileManager profileManager,
                              SqlQueryState sqlQueryState,
                              DStore dStore) {

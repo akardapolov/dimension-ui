@@ -1,9 +1,11 @@
 package ru.dimension.ui.component.module;
 
+import jakarta.inject.Inject;
 import java.awt.Component;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
+import ru.dimension.di.Assisted;
 import ru.dimension.ui.component.module.chart.preview.DetailChartContext;
 import ru.dimension.ui.component.module.preview.PreviewModel;
 import ru.dimension.ui.component.module.preview.PreviewPresenter;
@@ -34,15 +36,9 @@ public class PreviewModule implements CollectStartStopListener {
   private final IPreviewContainer container;
   private final PreviewPresenter presenter;
 
-  public PreviewModule(ProfileTaskQueryKey key,
-                       ProfileManager profileManager,
-                       SqlQueryState sqlQueryState,
-                       DStore dStore) {
-    this(PreviewMode.PREVIEW, key, profileManager, sqlQueryState, dStore);
-  }
-
-  public PreviewModule(PreviewMode mode,
-                       ProfileTaskQueryKey key,
+  @Inject
+  public PreviewModule(@Assisted PreviewMode mode,
+                       @Assisted ProfileTaskQueryKey key,
                        ProfileManager profileManager,
                        SqlQueryState sqlQueryState,
                        DStore dStore) {

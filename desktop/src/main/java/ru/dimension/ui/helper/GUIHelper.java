@@ -66,6 +66,9 @@ public class GUIHelper {
     jxTable.setShowVerticalLines(true);
     jxTable.setShowHorizontalLines(true);
 
+    jxTable.getTableHeader().setPreferredSize(new Dimension(1, 16));
+    jxTable.getTableHeader().setMinimumSize(new Dimension(1, 16));
+
     return jxTable;
   }
 

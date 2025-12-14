@@ -16,6 +16,7 @@ import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
+import ru.dimension.di.ServiceLocator;
 import ru.dimension.ui.collector.Collector;
 import ru.dimension.ui.collector.http.HttpResponseFetcher;
 import ru.dimension.ui.component.AdHocComponent;
@@ -88,7 +89,6 @@ public class BaseFrame extends JFrame {
                    @Named("progressbarView") ProgressbarView progressbarView,
                    @Named("progressbarPresenter") ProgressbarPresenter progressbarPresenter,
                    @Named("profileManager") ProfileManager profileManager,
-                   @Named("taskExecutorPool") TaskExecutorPool taskExecutorPool,
                    @Named("sqlQueryState") SqlQueryState sqlQueryState,
                    @Named("eventListener") EventListener eventListener,
                    @Named("configurationManager") ConfigurationManager configurationManager,
@@ -98,6 +98,7 @@ public class BaseFrame extends JFrame {
                    @Named("reportManager") ReportManager reportManager,
                    @Named("collector") Collector collector,
                    @Named("localDB") DStore dStore,
+                   TaskExecutorPool taskExecutorPool,
                    FilesHelper filesHelper) throws HeadlessException {
     this.mainTabPane = mainTabPane;
 
@@ -114,7 +115,6 @@ public class BaseFrame extends JFrame {
     this.progressbarView.bindPresenter(progressbarPresenter);
 
     this.profileManager = profileManager;
-    this.taskExecutorPool = taskExecutorPool;
 
     this.sqlQueryState = sqlQueryState;
     this.eventListener = eventListener;
@@ -125,6 +125,7 @@ public class BaseFrame extends JFrame {
     this.httpResponseFetcher = httpResponseFetcher;
     this.collector = collector;
     this.dStore = dStore;
+    this.taskExecutorPool = taskExecutorPool;
     this.filesHelper = filesHelper;
 
     this.setTitle("Dimension UI");
@@ -174,32 +175,24 @@ public class BaseFrame extends JFrame {
   }
 
   private WorkspaceComponent createWorkspaceComponent() {
-    WorkspaceComponent component = new WorkspaceComponent(eventListener, profileManager,
-                                                          taskExecutorPool, connectionPoolManager,
-                                                          httpResponseFetcher, sqlQueryState,
-                                                          collector, dStore);
-    eventListener.addProfileStartStopListener(component);
-    return component;
+    WorkspaceComponent workspace = ServiceLocator.get(WorkspaceComponent.class);
+
+    eventListener.addProfileStartStopListener(workspace);
+    return workspace;
   }
 
   private DashboardComponent createDashboardComponent() {
-    DashboardComponent component = new DashboardComponent(profileManager, eventListener, sqlQueryState, dStore);
-    eventListener.addProfileStartStopListener(component);
-    return component;
+    DashboardComponent dashboard = ServiceLocator.get(DashboardComponent.class);
+    eventListener.addProfileStartStopListener(dashboard);
+    return dashboard;
   }
 
   private ReportComponent createReportComponent() {
-    return new ReportComponent(profileManager, configurationManager, reportManager, filesHelper, dStore);
+    return ServiceLocator.get(ReportComponent.class);
   }
 
   private AdHocComponent createAdHocComponent() {
-    return new AdHocComponent(
-        profileManager,
-        configurationManager,
-        eventListener,
-        connectionPoolManager,
-        adHocDatabaseManager
-    );
+    return ServiceLocator.get(AdHocComponent.class);
   }
 
   private JPanel createComponentPanel(JComponent component) {

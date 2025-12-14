@@ -6,12 +6,14 @@ import java.util.List;
 import java.util.Map;
 
 public class MessageBroker {
-  public enum Component { WORKSPACE, PREVIEW, DASHBOARD, PLAYGROUND, DESIGN, ADHOC}
+  public enum Component { CONFIGURATION, WORKSPACE, PREVIEW, DASHBOARD, PLAYGROUND, DESIGN, ADHOC}
   public enum Module { MANAGE, MODEL, CONFIG, CHARTS, CHART, NONE}
   public enum Panel { REALTIME, HISTORY, INSIGHT, NONE}
   public enum Block { CONFIG, CHART, DETAIL, NONE}
 
-  public enum Action { ADD_CHART, REMOVE_CHART, REMOVE_ALL_CHART,
+  public enum Action { ADD_CHART, REMOVE_CHART,
+    REMOVE_ALL_CHART,
+    REMOVE_ALL_CHARTS_FOR_CONNECTION,
 
     SET_CHECKBOX_COLUMN, SET_CHECKBOX_METRIC,
     EXPAND_COLLAPSE_ALL, CHART_LEGEND_STATE_ALL,
@@ -25,7 +27,9 @@ public class MessageBroker {
     NEED_TO_SAVE_COMMENT,
     NEED_TO_SAVE_GROUP_FUNCTION,
     NEED_TO_UPDATE_LIST_DESIGN,
-    SHOW_CHART_FULL
+    SHOW_CHART_FULL,
+    REMOVE_ADHOC_TAB,
+    CLEAR_SELECTION_FOR_GLOBAL_KEY
   }
 
   private final Map<Destination, List<MessageAction>> receivers = new HashMap<>();

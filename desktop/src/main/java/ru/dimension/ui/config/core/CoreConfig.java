@@ -15,6 +15,7 @@ import ru.dimension.ui.collector.CollectorImpl;
 import ru.dimension.ui.collector.collect.prometheus.ExporterParser;
 import ru.dimension.ui.collector.http.HttpResponseFetcher;
 import ru.dimension.ui.collector.http.HttpResponseFetcherImpl;
+import ru.dimension.ui.executor.TaskExecutorPool;
 import ru.dimension.ui.helper.ColorHelper;
 import ru.dimension.ui.helper.FilesHelper;
 import ru.dimension.ui.helper.ReportHelper;
@@ -38,8 +39,6 @@ public final class CoreConfig {
         .provideNamed(ScheduledExecutorService.class, "executorService", ServiceLocator.singleton(
             () -> Executors.newScheduledThreadPool(10)
         ))
-        .provideNamed(ru.dimension.ui.executor.TaskExecutorPool.class, "taskExecutorPool",
-                      ServiceLocator.singleton(ru.dimension.ui.executor.TaskExecutorPool::new))
 
         // File/Gson/Report helpers
         .provide(FilesHelper.class, ServiceLocator.singleton(

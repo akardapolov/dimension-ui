@@ -11,6 +11,34 @@ import javax.swing.JTabbedPane;
 import javax.swing.border.EtchedBorder;
 import ru.dimension.di.DimensionDI;
 import ru.dimension.di.ServiceLocator;
+import ru.dimension.ui.component.module.ChartsModule;
+import ru.dimension.ui.component.module.ConfigModule;
+import ru.dimension.ui.component.module.ManageModule;
+import ru.dimension.ui.component.module.ModelModule;
+import ru.dimension.ui.component.module.PreviewModule;
+import ru.dimension.ui.component.module.adhoc.AdHocChartsModule;
+import ru.dimension.ui.component.module.adhoc.AdHocConfigModule;
+import ru.dimension.ui.component.module.adhoc.AdHocModelModule;
+import ru.dimension.ui.component.module.factory.AdHocChartsModuleFactory;
+import ru.dimension.ui.component.module.factory.AdHocConfigModuleFactory;
+import ru.dimension.ui.component.module.factory.AdHocModelModuleFactory;
+import ru.dimension.ui.component.module.factory.ChartsModuleFactory;
+import ru.dimension.ui.component.module.factory.ConfigModuleFactory;
+import ru.dimension.ui.component.module.factory.DesignModuleFactory;
+import ru.dimension.ui.component.module.factory.ManageModuleFactory;
+import ru.dimension.ui.component.module.factory.ManageModulePresenterFactory;
+import ru.dimension.ui.component.module.factory.MetricColumnPanelFactory;
+import ru.dimension.ui.component.module.factory.ModelModuleFactory;
+import ru.dimension.ui.component.module.factory.PlaygroundModuleFactory;
+import ru.dimension.ui.component.module.factory.PreviewChartsModuleFactory;
+import ru.dimension.ui.component.module.factory.PreviewConfigModuleFactory;
+import ru.dimension.ui.component.module.factory.PreviewModuleFactory;
+import ru.dimension.ui.component.module.manage.ManagePresenter;
+import ru.dimension.ui.component.module.preview.PreviewChartsModule;
+import ru.dimension.ui.component.module.preview.PreviewConfigModule;
+import ru.dimension.ui.component.module.report.DesignModule;
+import ru.dimension.ui.component.module.report.PlaygroundModule;
+import ru.dimension.ui.component.module.report.playground.MetricColumnPanel;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
@@ -61,6 +89,28 @@ public final class UIBaseConfig {
           jButton.setToolTipText("List of templates");
           jButton.setBorder(ru.dimension.ui.helper.GUIHelper.getBorderForButton(LaF.getColorBorder(LafColorGroup.BORDER)));
           return jButton;
-        }));
+        }))
+
+        // Workspace Module Factories
+        .bindFactory(ModelModuleFactory.class, ModelModule.class)
+        .bindFactory(ManageModuleFactory.class, ManageModule.class)
+        .bindFactory(ConfigModuleFactory.class, ConfigModule.class)
+        .bindFactory(ChartsModuleFactory.class, ChartsModule.class)
+        .bindFactory(ManageModulePresenterFactory.class, ManagePresenter.class)
+
+        // Dashboard/Preview Module Factories
+        .bindFactory(PreviewConfigModuleFactory.class, PreviewConfigModule.class)
+        .bindFactory(PreviewChartsModuleFactory.class, PreviewChartsModule.class)
+
+        // Report Module Factories
+        .bindFactory(PlaygroundModuleFactory.class, PlaygroundModule.class)
+        .bindFactory(DesignModuleFactory.class, DesignModule.class)
+        .bindFactory(MetricColumnPanelFactory.class, MetricColumnPanel.class)
+
+        // AdHoc Module Factories
+        .bindFactory(AdHocModelModuleFactory.class, AdHocModelModule.class)
+        .bindFactory(AdHocConfigModuleFactory.class, AdHocConfigModule.class)
+        .bindFactory(AdHocChartsModuleFactory.class, AdHocChartsModule.class)
+        .bindFactory(PreviewModuleFactory.class, PreviewModule.class);
   }
 }

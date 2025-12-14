@@ -6,7 +6,6 @@ import static ru.dimension.ui.laf.LafColorGroup.REPORT;
 
 import java.beans.PropertyChangeListener;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +26,6 @@ import javax.swing.UIManager;
 import javax.swing.border.EtchedBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import javax.swing.table.TableColumn;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.log4j.Log4j2;
@@ -36,8 +34,8 @@ import org.jdesktop.swingx.JXTitledSeparator;
 import org.jdesktop.swingx.VerticalLayout;
 import org.jdesktop.swingx.plaf.basic.CalendarHeaderHandler;
 import org.jdesktop.swingx.plaf.basic.SpinningCalendarHeaderHandler;
+import org.jdesktop.swingx.table.TableColumnExt;
 import org.painlessgridbag.PainlessGridBag;
-import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.module.chart.ReportChartModule;
 import ru.dimension.ui.component.panel.CollapseCardPanel;
 import ru.dimension.ui.exception.NotFoundException;
@@ -50,8 +48,8 @@ import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
+import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.column.ProfileColumnNames;
-import ru.dimension.ui.model.column.QueryColumnNames;
 import ru.dimension.ui.model.column.TaskColumnNames;
 import ru.dimension.ui.model.config.Profile;
 import ru.dimension.ui.model.info.QueryInfo;
@@ -208,13 +206,19 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
                                     });
   }
 
+  /**
+   * Query table uses ColumnNames order: ID, NAME, PICK (PICK last/right).
+   */
   private JXTableCase createQueryTable() {
-    return GUIHelper.getJXTableCaseCheckBox(5,
-                                            new String[]{
-                                                QueryColumnNames.ID.getColName(),
-                                                QueryColumnNames.PICK.getColName(),
-                                                QueryColumnNames.NAME.getColName()
-                                            }, QUERY_PICK_COLUMN_INDEX);
+    return GUIHelper.getJXTableCaseCheckBox(
+        5,
+        new String[]{
+            ColumnNames.ID.getColName(),
+            ColumnNames.NAME.getColName(),
+            ColumnNames.PICK.getColName()
+        },
+        ColumnNames.PICK.ordinal()
+    );
   }
 
   private JCheckBox createCollapseCheckBox() {
@@ -282,10 +286,14 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
   }
 
   private void configureQueryTableColumns() {
-    queryReportCase.getJxTable().getColumnExt(0).setVisible(false);
-    TableColumn col = queryReportCase.getJxTable().getColumnModel().getColumn(0);
-    col.setMinWidth(MIN_COLUMN_WIDTH);
-    col.setMaxWidth(MAX_COLUMN_WIDTH);
+    TableColumnExt pickExt = queryReportCase.getJxTable()
+        .getColumnExt(ColumnNames.PICK.ordinal());
+    pickExt.setMinWidth(MIN_COLUMN_WIDTH);
+    pickExt.setMaxWidth(MAX_COLUMN_WIDTH);
+
+    queryReportCase.getJxTable()
+        .getColumnExt(ColumnNames.ID.ordinal())
+        .setVisible(false);
   }
 
   private void setupLayout() {
@@ -364,38 +372,16 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
   }
 
   public ProfileTaskQueryKey getProfileTaskQueryKey() {
-    int profileId = getSelectedId(profileReportCase, ProfileColumnNames.ID.getColName());
-    int taskId = getSelectedId(taskReportCase, TaskColumnNames.ID.getColName());
-    int queryId = getSelectedId(queryReportCase, QueryColumnNames.ID.getColName());
+    int profileId = (int) profileReportCase.getDefaultTableModel()
+        .getValueAt(profileReportCase.getJxTable().getSelectedRow(), 0);
+
+    int taskId = (int) taskReportCase.getDefaultTableModel()
+        .getValueAt(taskReportCase.getJxTable().getSelectedRow(), 0);
+
+    int queryId = (int) queryReportCase.getDefaultTableModel()
+        .getValueAt(queryReportCase.getJxTable().getSelectedRow(), ColumnNames.ID.ordinal());
+
     return new ProfileTaskQueryKey(profileId, taskId, queryId);
-  }
-
-  private int getSelectedId(JXTableCase tableCase,
-                            String columnName) {
-    int selectedRow = tableCase.getJxTable().getSelectedRow();
-    int columnIndex = tableCase.getDefaultTableModel().findColumn(columnName);
-    return (int) tableCase.getDefaultTableModel().getValueAt(selectedRow, columnIndex);
-  }
-
-  public MetricColumnPanel getCardComponent(ProfileTaskQueryKey key) {
-    return Arrays.stream(cardContainer.getComponents())
-        .filter(MetricColumnPanel.class::isInstance)
-        .map(MetricColumnPanel.class::cast)
-        .filter(card -> key.equals(card.getKey()))
-        .findFirst()
-        .orElseGet(() -> new MetricColumnPanel(
-            Component.PLAYGROUND,
-            key,
-            model.getProfileManager(),
-            collapseCard,
-            cardContainer));
-  }
-
-  public boolean isVisibleCard(ProfileTaskQueryKey key) {
-    return Arrays.stream(cardContainer.getComponents())
-        .filter(MetricColumnPanel.class::isInstance)
-        .map(MetricColumnPanel.class::cast)
-        .anyMatch(card -> key.equals(card.getKey()));
   }
 
   private JXTaskPaneContainer initContainerCard() {
@@ -571,21 +557,21 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
     });
   }
 
-  private void addQueryToTable(int row,
-                               QueryInfo queryInfo) {
+  private void addQueryToTable(int row, QueryInfo queryInfo) {
     queryReportCase.getDefaultTableModel().addRow(new Object[0]);
-    queryReportCase.getJxTable().setValueAt(false, row, 0);
-    queryReportCase.getDefaultTableModel().setValueAt(queryInfo.getId(), row, 0);
-    queryReportCase.getDefaultTableModel().setValueAt(queryInfo.getName(), row, QUERY_NAME_COLUMN_INDEX);
+
+    queryReportCase.getDefaultTableModel().setValueAt(queryInfo.getId(), row, ColumnNames.ID.ordinal());
+    queryReportCase.getDefaultTableModel().setValueAt(queryInfo.getName(), row, ColumnNames.NAME.ordinal());
+    queryReportCase.getDefaultTableModel().setValueAt(false, row, ColumnNames.PICK.ordinal());
   }
 
   private void loadAllQueries() {
     List<QueryInfo> queryList = model.getProfileManager().getQueryInfoList();
     for (int i = 0; i < queryList.size(); i++) {
       queryReportCase.getDefaultTableModel().addRow(new Object[0]);
-      queryReportCase.getDefaultTableModel().setValueAt(false, i, QUERY_PICK_COLUMN_INDEX);
-      queryReportCase.getDefaultTableModel().setValueAt(queryList.get(i).getId(), i, 0);
-      queryReportCase.getDefaultTableModel().setValueAt(queryList.get(i).getName(), i, QUERY_NAME_COLUMN_INDEX);
+      queryReportCase.getDefaultTableModel().setValueAt(queryList.get(i).getId(), i, ColumnNames.ID.ordinal());
+      queryReportCase.getDefaultTableModel().setValueAt(queryList.get(i).getName(), i, ColumnNames.NAME.ordinal());
+      queryReportCase.getDefaultTableModel().setValueAt(false, i, ColumnNames.PICK.ordinal());
     }
   }
 
@@ -602,7 +588,8 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
       return;
     }
 
-    int profileId = getSelectedId(profileReportCase, ProfileColumnNames.ID.getColName());
+    int profileId = (int) profileReportCase.getDefaultTableModel()
+        .getValueAt(profileReportCase.getJxTable().getSelectedRow(), 0);
     int taskId = getSelectedTaskId();
 
     for (ProfileTaskQueryKey key : model.getMapReportData().keySet()) {
@@ -614,16 +601,11 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
 
   private void markQueryIfSelected(ProfileTaskQueryKey key) {
     for (int row = 0; row < queryReportCase.getJxTable().getRowCount(); row++) {
-      int queryId = getQueryIdAtRow(row);
+      int queryId = (int) queryReportCase.getDefaultTableModel()
+          .getValueAt(row, ColumnNames.ID.ordinal());
       if (queryId == key.getQueryId()) {
-        queryReportCase.getJxTable().setValueAt(true, row, 0);
+        queryReportCase.getJxTable().setValueAt(true, row, ColumnNames.PICK.ordinal());
       }
     }
-  }
-
-  private int getQueryIdAtRow(int row) {
-    return (int) queryReportCase.getDefaultTableModel()
-        .getValueAt(row, queryReportCase.getDefaultTableModel()
-            .findColumn(QueryColumnNames.ID.getColName()));
   }
 }

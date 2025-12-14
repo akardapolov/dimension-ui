@@ -4,6 +4,8 @@ import static ru.dimension.ui.model.sql.GatherDataMode.BY_CLIENT_HTTP;
 import static ru.dimension.ui.model.sql.GatherDataMode.BY_CLIENT_JDBC;
 import static ru.dimension.ui.model.sql.GatherDataMode.BY_SERVER_JDBC;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.Connection;
@@ -13,12 +15,15 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import javax.swing.JButton;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
+import ru.dimension.di.Assisted;
 import ru.dimension.ui.collector.Collector;
 import ru.dimension.ui.collector.http.HttpResponseFetcher;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageAction;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.module.PreviewModule;
+import ru.dimension.ui.component.module.factory.PreviewModuleFactory;
+import ru.dimension.ui.component.module.preview.spi.PreviewMode;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.executor.TaskExecutor;
 import ru.dimension.ui.executor.TaskExecutorPool;
@@ -53,14 +58,15 @@ public class ManagePresenter implements ActionListener, MessageAction {
 
   private final ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(1);
 
-  private final MessageBroker broker = MessageBroker.getInstance();
-
   private ProfileTaskQueryKey key = new ProfileTaskQueryKey();
 
+  private final PreviewModuleFactory previewModuleFactory;
   private PreviewModule previewModule;
 
-  public ManagePresenter(MessageBroker.Component component,
-                         ManageView view,
+  @Inject
+  public ManagePresenter(@Assisted MessageBroker.Component component,
+                         @Assisted ManageView view,
+                         PreviewModuleFactory previewModuleFactory,
                          EventListener eventListener,
                          ProfileManager profileManager,
                          TaskExecutorPool taskExecutorPool,
@@ -71,6 +77,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
                          DStore dStore) {
     this.component = component;
     this.view = view;
+    this.previewModuleFactory = previewModuleFactory;
 
     this.eventListener = eventListener;
     this.profileManager = profileManager;
@@ -288,7 +295,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
       log.info("Already running preview model by key: {}", key);
     } else {
       eventListener.clearListenerPreviewByClass(PreviewModule.class);
-      previewModule = new PreviewModule(key, profileManager, sqlQueryState, dStore);
+      previewModule = previewModuleFactory.create(PreviewMode.PREVIEW, key);
       eventListener.addCollectStartStopPreviewListener(key, previewModule);
     }
 

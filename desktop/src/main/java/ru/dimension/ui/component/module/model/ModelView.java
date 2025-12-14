@@ -13,6 +13,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.border.EtchedBorder;
+import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
@@ -151,7 +152,44 @@ public class ModelView extends JPanel {
     }
   }
 
-  // The 'addSection' helper method is no longer needed and has been removed.
+  public int getSelectedProfileId() {
+    int selectedRow = profileTableCase.getJxTable().getSelectedRow();
+    if (selectedRow >= 0) {
+      Object idObj = profileTableCase.getDefaultTableModel().getValueAt(selectedRow, ColumnNames.ID.ordinal());
+      if (idObj instanceof Integer) {
+        return (Integer) idObj;
+      } else {
+        return Integer.parseInt(idObj.toString());
+      }
+    }
+    return -1;
+  }
+
+  public void removeProfileFromTable(int profileId) {
+    DefaultTableModel model = profileTableCase.getDefaultTableModel();
+    for (int row = 0; row < model.getRowCount(); row++) {
+      Object idObj = model.getValueAt(row, ColumnNames.ID.ordinal());
+      int id;
+      if (idObj instanceof Integer) {
+        id = (Integer) idObj;
+      } else {
+        id = Integer.parseInt(idObj.toString());
+      }
+      if (id == profileId) {
+        model.removeRow(row);
+        log.info("Removed profile row with id={}", profileId);
+        break;
+      }
+    }
+  }
+
+  public void clearAllSelections() {
+    profileTableCase.getJxTable().clearSelection();
+    taskTableCase.clearTable();
+    queryTableCase.clearTable();
+    columnTableCase.clearTable();
+    metricTableCase.clearTable();
+  }
 
   public void updateTaskTable(List<TaskInfo> taskInfoList) {
     taskTableCase.clearTable();

@@ -1,5 +1,8 @@
 package ru.dimension.ui.view.handler.connection;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.awt.KeyboardFocusManager;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
@@ -13,9 +16,6 @@ import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-import jakarta.inject.Inject;
-import jakarta.inject.Named;
-import jakarta.inject.Singleton;
 import javax.swing.AbstractAction;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
@@ -29,6 +29,9 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import lombok.extern.log4j.Log4j2;
 import org.apache.hc.core5.http.Method;
+import ru.dimension.ui.bus.EventBus;
+import ru.dimension.ui.bus.event.ConnectionAddEvent;
+import ru.dimension.ui.bus.event.ConnectionRemoveEvent;
 import ru.dimension.ui.exception.EmptyNameException;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.exception.NotSelectedRowException;
@@ -46,7 +49,6 @@ import ru.dimension.ui.model.view.tab.ConnectionTypeTabPane;
 import ru.dimension.ui.prompt.Internationalization;
 import ru.dimension.ui.router.event.EventListener;
 import ru.dimension.ui.security.EncryptDecrypt;
-import ru.dimension.ui.view.BaseFrame;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.connection.ConnectionPanel;
 import ru.dimension.ui.view.tab.ConfigTab;
@@ -57,6 +59,7 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
 
   private final ProfileManager profileManager;
   private final EventListener eventListener;
+  private final EventBus eventBus;
   private final JXTableCase profileCase;
   private final JXTableCase taskCase;
   private final JXTableCase connectionCase;
@@ -88,10 +91,12 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
                                       @Named("connectionConfigPanel") ConnectionPanel connectionPanel,
                                       @Named("connectionButtonPanel") ButtonPanel connectionButtonPanel,
                                       @Named("jTabbedPaneConfig") ConfigTab configTab,
-                                      @Named("checkboxConfig") JCheckBox checkboxConfig) {
+                                      @Named("checkboxConfig") JCheckBox checkboxConfig,
+                                      EventBus eventBus) {
 
     this.profileManager = profileManager;
     this.encryptDecrypt = encryptDecrypt;
+    this.eventBus = eventBus;
 
     this.bundleDefault = Internationalization.getInternationalizationBundle();
 
@@ -262,6 +267,8 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
             }
             profileManager.deleteConnection(connection.getId(), connection.getName());
 
+            eventBus.publish(new ConnectionRemoveEvent(connectionId));
+
             clearConnectionCase();
 
             profileManager.getConnectionInfoList().forEach(connectionInfo -> {
@@ -399,6 +406,8 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
 
           profileManager.addConnection(saveConnection);
 
+          eventBus.publish(new ConnectionAddEvent(saveConnection.getId(), saveConnection.getName(), saveConnection.getType()));
+
           clearConnectionCase();
 
           int selection = 0;
@@ -474,6 +483,10 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
           if (!oldConnection.getName().equals(newConnectionName)) {
             deleteConnectionById(connectionId);
             profileManager.addConnection(editConnection);
+
+            eventBus.publish(new ConnectionRemoveEvent(connectionId));
+            eventBus.publish(new ConnectionAddEvent(editConnection.getId(), editConnection.getName(), editConnection.getType()));
+
             if (openedTab.equals(ConnectionTypeTabPane.HTTP)) {
               for (int rowQuery = 0; rowQuery < queryCase.getJxTable().getRowCount(); rowQuery++) {
                 String nameQuery = queryCase.getDefaultTableModel().getValueAt(rowQuery, 1).toString();

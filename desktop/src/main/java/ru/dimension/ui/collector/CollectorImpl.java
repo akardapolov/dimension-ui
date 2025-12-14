@@ -41,7 +41,7 @@ public class CollectorImpl implements Collector, JdbcLoader, HttpLoader {
   public CollectorImpl(@Named("localDB") DStore dStore,
                        @Named("sqlQueryState") SqlQueryState sqlQueryState,
                        @Named("profileManager") ProfileManager profileManager,
-                       @Named("taskExecutorPool") TaskExecutorPool taskExecutorPool,
+                       TaskExecutorPool taskExecutorPool,
                        @Named("exporterParser") ExporterParser exporterParser,
                        @Named("httpResponseFetcher") HttpResponseFetcher httpResponseFetcher) {
     this.dStore = dStore;

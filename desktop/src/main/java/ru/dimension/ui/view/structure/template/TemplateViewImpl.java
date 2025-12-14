@@ -6,12 +6,19 @@ import jakarta.inject.Singleton;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowEvent;
+import javax.swing.AbstractAction;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JRootPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
+import javax.swing.KeyStroke;
 import javax.swing.border.EtchedBorder;
 import lombok.extern.log4j.Log4j2;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -102,7 +109,7 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
     gbl.done();
 
     this.setTitle("Templates");
-
+    this.setEscToClose();
     this.packTemplate(false);
   }
 
@@ -234,7 +241,6 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
   }
 
   private void packTemplate(boolean visible) {
-    this.setVisible(visible);
     this.setModal(true);
     this.setResizable(true);
     this.pack();
@@ -243,6 +249,26 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
                                Toolkit.getDefaultToolkit().getScreenSize().height - 100));
     this.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width) / 2 - getWidth() / 2,
                      (Toolkit.getDefaultToolkit().getScreenSize().height) / 2 - getHeight() / 2);
+
+    this.setVisible(visible);
   }
 
+  private void setEscToClose() {
+    setDefaultCloseOperation(JDialog.HIDE_ON_CLOSE);
+
+    final String actionKey = "TEMPLATE_DIALOG_CLOSE_ON_ESC";
+    JRootPane root = getRootPane();
+
+    root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+        .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), actionKey);
+
+    root.getActionMap().put(actionKey, new AbstractAction() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        TemplateViewImpl.this.dispatchEvent(
+            new WindowEvent(TemplateViewImpl.this, WindowEvent.WINDOW_CLOSING)
+        );
+      }
+    });
+  }
 }

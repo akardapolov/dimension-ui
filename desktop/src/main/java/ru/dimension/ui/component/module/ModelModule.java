@@ -1,31 +1,46 @@
 package ru.dimension.ui.component.module;
 
+import jakarta.inject.Inject;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
-import ru.dimension.ui.component.broker.Message;
-import ru.dimension.ui.component.broker.MessageAction;
+import ru.dimension.di.Assisted;
+import ru.dimension.ui.bus.EventBus;
+import ru.dimension.ui.bus.event.ProfileAddEvent;
+import ru.dimension.ui.bus.event.ProfileRemoveEvent;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.module.model.ModelModel;
 import ru.dimension.ui.component.module.model.ModelPresenter;
 import ru.dimension.ui.component.module.model.ModelView;
+import ru.dimension.ui.helper.event.EventRouteRegistry;
+import ru.dimension.ui.helper.event.EventUtils;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.column.ColumnNames;
 
 @Log4j2
-public class ModelModule implements MessageAction {
+public class ModelModule {
 
   private final ModelModel model;
   @Getter
   private final ModelView view;
   private final ModelPresenter presenter;
 
-  public ModelModule(MessageBroker.Component component,
-                     ProfileManager profileManager) {
-    model = new ModelModel(profileManager);
+  private final EventRouteRegistry eventRegistry;
+
+  @Inject
+  public ModelModule(@Assisted MessageBroker.Component component,
+                     ProfileManager profileManager,
+                     EventBus eventBus) {
+    model = new ModelModel(profileManager, eventBus);
     view = new ModelView();
     presenter = new ModelPresenter(component, model, view);
 
+    this.eventRegistry = EventRouteRegistry.forComponent(component, EventUtils::getComponent)
+        .routeGlobal(ProfileAddEvent.class, this::fireProfileAdd)
+        .routeGlobal(ProfileRemoveEvent.class, this::handleProfileRemove)
+        .register(eventBus);
+
     setupSelectionListeners();
+
     presenter.initializeModel();
   }
 
@@ -71,13 +86,13 @@ public class ModelModule implements MessageAction {
     });
   }
 
-  @Override
-  public void receive(Message message) {
-    switch (message.action()) {
-      case SET_CHECKBOX_COLUMN -> {
-        log.info("Set checkbox for column: ");
-      }
-    }
+  public void fireProfileAdd(ProfileAddEvent event) {
+    log.info("Received {} via MBassador in ModelModule", event);
+    presenter.initializePartialModel();
   }
 
+  public void handleProfileRemove(ProfileRemoveEvent event) {
+    log.info("ModelModule received ProfileRemoveEvent: profileId={}", event.profileId());
+    presenter.handleProfileRemoval(event.profileId());
+  }
 }

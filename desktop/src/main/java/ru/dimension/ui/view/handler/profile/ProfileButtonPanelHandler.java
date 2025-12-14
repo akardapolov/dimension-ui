@@ -24,6 +24,9 @@ import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 import lombok.extern.log4j.Log4j2;
+import ru.dimension.ui.bus.EventBus;
+import ru.dimension.ui.bus.event.ProfileAddEvent; // Imported
+import ru.dimension.ui.bus.event.ProfileRemoveEvent;
 import ru.dimension.ui.exception.EmptyNameException;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.exception.NotSelectedRowException;
@@ -42,6 +45,7 @@ import ru.dimension.ui.model.info.TaskInfo;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.handler.LifeCycleStatus;
+import ru.dimension.ui.model.RunStatus;
 import ru.dimension.ui.prompt.Internationalization;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.tab.ConfigTab;
@@ -52,6 +56,7 @@ public class ProfileButtonPanelHandler implements ActionListener {
 
   private final ProfileManager profileManager;
   private final TemplateManager templateManager;
+  private final EventBus eventBus;
 
   private final JXTableCase profileCase;
   private final JXTableCase taskCase;
@@ -69,6 +74,7 @@ public class ProfileButtonPanelHandler implements ActionListener {
   @Inject
   public ProfileButtonPanelHandler(@Named("profileManager") ProfileManager profileManager,
                                    @Named("templateManager") TemplateManager templateManager,
+                                   @Named("eventBus") EventBus eventBus,
                                    @Named("profileConfigCase") JXTableCase profileCase,
                                    @Named("taskConfigCase") JXTableCase taskCase,
                                    @Named("connectionConfigCase") JXTableCase connectionCase,
@@ -77,10 +83,10 @@ public class ProfileButtonPanelHandler implements ActionListener {
                                    @Named("profileConfigPanel") ProfilePanel profilePanel,
                                    @Named("multiSelectPanel") MultiSelectTaskPanel multiSelectTaskPanel,
                                    @Named("profileButtonPanel") ButtonPanel profileButtonPanel,
-                                   @Named("checkboxConfig") JCheckBox checkboxConfig
-  ) {
+                                   @Named("checkboxConfig") JCheckBox checkboxConfig) {
     this.profileManager = profileManager;
     this.templateManager = templateManager;
+    this.eventBus = eventBus;
 
     this.profileCase = profileCase;
     this.taskCase = taskCase;
@@ -122,6 +128,16 @@ public class ProfileButtonPanelHandler implements ActionListener {
 
     this.status = LifeCycleStatus.NONE;
 
+    checkProfilesExistAndToggleCheckbox();
+  }
+
+  private void checkProfilesExistAndToggleCheckbox() {
+    if (profileManager.getProfileInfoList().isEmpty()) {
+      checkboxConfig.setSelected(false);
+      checkboxConfig.setEnabled(false);
+    } else {
+      checkboxConfig.setEnabled(true);
+    }
   }
 
   @Override
@@ -166,24 +182,37 @@ public class ProfileButtonPanelHandler implements ActionListener {
                                       "General Error", JOptionPane.ERROR_MESSAGE);
       } else {
         int profileId = getSelectedProfileId();
+        ProfileInfo profile = profileManager.getProfileInfoById(profileId);
+        if (Objects.isNull(profile)) {
+          throw new NotFoundException("Not found profile: " + profileId);
+        }
+
+        // Check if profile is currently running - deletion not allowed
+        if (isProfileRunning(profile)) {
+          JOptionPane.showMessageDialog(null,
+                                        "Cannot delete profile '" + profile.getName() + "' while it is running. Please stop the profile first.",
+                                        "Deletion Not Allowed", JOptionPane.WARNING_MESSAGE);
+          return;
+        }
+
         int input = JOptionPane.showConfirmDialog(new JDialog(),// 0=yes, 1=no, 2=cancel
                                                   "Do you want to delete configuration: "
-                                                      + profileCase.getDefaultTableModel()
-                                                      .getValueAt(profileCase.getJxTable().getSelectedRow(), 1) + "?");
+                                                      + profile.getName() + "?");
         if (input == 0) {
-          ProfileInfo profile = profileManager.getProfileInfoById(profileId);
-          if (Objects.isNull(profile)) {
-            throw new NotFoundException("Not found profile: " + profileId);
-          }
           profileManager.deleteProfile(profile.getId(), profile.getName());
 
           clearProfileCase();
           profileManager.getProfileInfoList().forEach(profileInfo -> profileCase.getDefaultTableModel()
               .addRow(new Object[]{profileInfo.getId(), profileInfo.getName()}));
 
-          if (profileCase.getJxTable().getSelectedRow() > 0) {
+          if (profileCase.getJxTable().getRowCount() > 0) {
             profileCase.getJxTable().setRowSelectionInterval(0, 0);
+          } else {
+            checkboxConfig.setSelected(false);
+            checkboxConfig.setEnabled(false);
           }
+
+          eventBus.publish(new ProfileRemoveEvent(profileId));
         }
       }
     } else if (e.getSource() == profileButtonPanel.getBtnEdit()) {
@@ -234,6 +263,10 @@ public class ProfileButtonPanelHandler implements ActionListener {
           setPanelView(true);
           profileCase.getJxTable().setRowSelectionInterval(selection - 1, selection - 1);
           multiSelectTaskPanel.getJTabbedPaneTask().setSelectedIndex(0);
+
+          checkboxConfig.setEnabled(true);
+          eventBus.publish(new ProfileAddEvent());
+
         } else {
           throw new EmptyNameException("The name field is empty");
         }
@@ -269,7 +302,6 @@ public class ProfileButtonPanelHandler implements ActionListener {
       }
 
     } else if (e.getSource() == profileButtonPanel.getBtnCancel()) {
-
       if (profileCase.getJxTable().getSelectedRowCount() > 0) {
         int profileId = getSelectedProfileId();
         ProfileInfo profile = profileManager.getProfileInfoById(profileId);
@@ -318,6 +350,10 @@ public class ProfileButtonPanelHandler implements ActionListener {
             .addRow(new Object[]{taskInfo.getId(), taskInfo.getName()}));
       }
     }
+  }
+
+  private boolean isProfileRunning(ProfileInfo profile) {
+    return profile.getStatus() == RunStatus.RUNNING;
   }
 
   private void newEmptyPanel() {
@@ -583,5 +619,3 @@ public class ProfileButtonPanelHandler implements ActionListener {
     return isExist;
   }
 }
-
-

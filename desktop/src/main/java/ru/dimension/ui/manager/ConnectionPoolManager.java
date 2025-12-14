@@ -15,4 +15,6 @@ public interface ConnectionPoolManager {
   Connection getConnection(ConnectionInfo connectionInfo) throws SQLException;
 
   Connection getConnection(ConnectionInfo connectionInfo, ProfileTaskKey profileTaskKey) throws SQLException;
+
+  void removeConnection(int connectionId);
 }

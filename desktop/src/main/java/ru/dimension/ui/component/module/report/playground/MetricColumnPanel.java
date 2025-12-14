@@ -1,5 +1,6 @@
 package ru.dimension.ui.component.module.report.playground;
 
+import jakarta.inject.Inject;
 import java.awt.Component;
 import java.util.Arrays;
 import java.util.List;
@@ -16,16 +17,16 @@ import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTaskPane;
 import org.jdesktop.swingx.JXTaskPaneContainer;
 import ru.dimension.db.model.profile.CProfile;
-import ru.dimension.ui.component.broker.Destination;
-import ru.dimension.ui.component.broker.Message;
+import ru.dimension.di.Assisted;
+import ru.dimension.ui.bus.EventBus;
 import ru.dimension.ui.component.broker.MessageBroker;
-import ru.dimension.ui.component.broker.MessageBroker.Action;
+import ru.dimension.ui.component.module.report.event.AddChartEvent;
+import ru.dimension.ui.component.module.report.event.RemoveChartEvent;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
-import ru.dimension.ui.model.column.MetricsColumnNames;
-import ru.dimension.ui.model.column.QueryColumnNames;
+import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
@@ -48,13 +49,15 @@ public class MetricColumnPanel extends JXTaskPane {
 
   private boolean collapseAll = true;
 
-  private final MessageBroker broker = MessageBroker.getInstance();
+  private final EventBus eventBus;
 
-  public MetricColumnPanel(MessageBroker.Component component,
-                           ProfileTaskQueryKey key,
+  @Inject
+  public MetricColumnPanel(@Assisted MessageBroker.Component component,
+                           @Assisted ProfileTaskQueryKey key,
+                           @Assisted JCheckBox collapseCard,
+                           @Assisted JXTaskPaneContainer container,
                            ProfileManager profileManager,
-                           JCheckBox collapseCard,
-                           JXTaskPaneContainer container) {
+                           EventBus eventBus) {
 
     this.component = component;
     this.key = key;
@@ -62,6 +65,9 @@ public class MetricColumnPanel extends JXTaskPane {
     this.profileManager = profileManager;
     this.collapseCard = collapseCard;
     this.container = container;
+    this.eventBus = eventBus;
+
+    // ... Rest of the constructor code remains exactly the same ...
 
     this.addPropertyChangeListener(propertyChangeEvent -> {
       if (!isCollapsed()) {
@@ -85,34 +91,34 @@ public class MetricColumnPanel extends JXTaskPane {
       }
     });
 
-    jtcMetric = GUIHelper.getJXTableCaseCheckBox(3,
-                                                 new String[]{MetricsColumnNames.ID.getColName(),
-                                                     MetricsColumnNames.PICK.getColName(),
-                                                     MetricsColumnNames.METRIC_NAME.getColName()}, 1);
-    jtcMetric.getJxTable().getColumnExt(0).setVisible(false);
+    String[] headers = new String[]{
+        ColumnNames.ID.getColName(),
+        ColumnNames.NAME.getColName(),
+        ColumnNames.PICK.getColName()
+    };
 
-    TableColumn colM = jtcMetric.getJxTable().getColumnModel().getColumn(0);
-    colM.setMinWidth(30);
-    colM.setMaxWidth(35);
+    jtcMetric = GUIHelper.getJXTableCaseCheckBox(
+        ColumnNames.values().length,
+        headers,
+        ColumnNames.PICK.ordinal()
+    );
 
-    jtcColumn = GUIHelper.getJXTableCaseCheckBox(3,
-                                                 new String[]{QueryColumnNames.ID.getColName(),
-                                                     MetricsColumnNames.PICK.getColName(),
-                                                     MetricsColumnNames.COLUMN_NAME.getColName()}, 1);
-    jtcColumn.getJxTable().getColumnExt(0).setVisible(false);
+    jtcColumn = GUIHelper.getJXTableCaseCheckBox(
+        ColumnNames.values().length,
+        headers,
+        ColumnNames.PICK.ordinal()
+    );
 
-    TableColumn colC = jtcColumn.getJxTable().getColumnModel().getColumn(0);
-    colC.setMinWidth(30);
-    colC.setMaxWidth(35);
+    jtcMetric.getJxTable().getColumnExt(ColumnNames.ID.ordinal()).setVisible(false);
+    jtcColumn.getJxTable().getColumnExt(ColumnNames.ID.ordinal()).setVisible(false);
 
     JTabbedPane tabbedPane = new JTabbedPane();
     tabbedPane.addTab("Columns", jtcColumn.getJScrollPane());
     tabbedPane.addTab("Metrics", jtcMetric.getJScrollPane());
-
     this.add(tabbedPane);
 
     this.mEditor = new DefaultCellEditor(new JCheckBox());
-    this.jtcMetric.getJxTable().getColumnModel().getColumn(0).setCellEditor(mEditor);
+    configurePickColumn(jtcMetric, mEditor);
 
     mEditor.addCellEditorListener(new CellEditorListener() {
       @Override
@@ -123,36 +129,37 @@ public class MetricColumnPanel extends JXTaskPane {
         TableCellEditor editor = (TableCellEditor) e.getSource();
         Boolean mValue = (Boolean) editor.getCellEditorValue();
 
-        if (mValue) {
-          Metric metric = metricList
-              .stream().filter(f -> f.getName()
-                  .equals(jtcMetric.getDefaultTableModel()
-                              .getValueAt(jtcMetric.getJxTable().getSelectedRow(), 2)))
-              .findAny()
-              .orElseThrow(() -> new NotFoundException("Not found metric"));
+        int viewRow = jtcMetric.getJxTable().getSelectedRow();
+        if (viewRow < 0) {
+          return;
+        }
+        int modelRow = jtcMetric.getJxTable().convertRowIndexToModel(viewRow);
 
+        Object nameObj = jtcMetric.getDefaultTableModel()
+            .getValueAt(modelRow, ColumnNames.NAME.ordinal());
+
+        final String metricName = (String) nameObj;
+
+        Metric metric = metricList.stream()
+            .filter(f -> f.getName().equals(metricName))
+            .findAny()
+            .orElseThrow(() -> new NotFoundException("Not found metric"));
+
+        if (Boolean.TRUE.equals(mValue)) {
           addCard(key, metric.getYAxis());
-
         } else {
-          Metric metric = metricList
-              .stream().filter(f -> f.getName()
-                  .equals(jtcMetric.getDefaultTableModel()
-                              .getValueAt(jtcMetric.getJxTable().getSelectedRow(), 2)))
-              .findAny()
-              .orElseThrow(() -> new NotFoundException("Not found metric"));
-
           removeCard(key, metric.getYAxis());
         }
       }
 
       @Override
       public void editingCanceled(ChangeEvent changeEvent) {
-
+        // no-op
       }
     });
 
     this.cEditor = new DefaultCellEditor(new JCheckBox());
-    this.jtcColumn.getJxTable().getColumnModel().getColumn(0).setCellEditor(cEditor);
+    configurePickColumn(jtcColumn, cEditor);
 
     cEditor.addCellEditorListener(new CellEditorListener() {
       @Override
@@ -164,54 +171,58 @@ public class MetricColumnPanel extends JXTaskPane {
         TableCellEditor editor = (TableCellEditor) e.getSource();
         Boolean cValue = (Boolean) editor.getCellEditorValue();
 
-        if (cValue) {
-          CProfile cProfile = cProfileList
-              .stream()
-              .filter(f -> f.getColName().equals(jtcColumn.getDefaultTableModel()
-                                                     .getValueAt(jtcColumn.getJxTable().getSelectedRow(), 2)))
-              .findAny()
-              .orElseThrow(() -> new NotFoundException("Not found column profile"));
+        int viewRow = jtcColumn.getJxTable().getSelectedRow();
+        if (viewRow < 0) {
+          return;
+        }
+        int modelRow = jtcColumn.getJxTable().convertRowIndexToModel(viewRow);
 
+        Object nameObj = jtcColumn.getDefaultTableModel()
+            .getValueAt(modelRow, ColumnNames.NAME.ordinal());
+
+        final String colName = (String) nameObj;
+
+        CProfile cProfile = cProfileList.stream()
+            .filter(f -> f.getColName().equals(colName))
+            .findAny()
+            .orElseThrow(() -> new NotFoundException("Not found column profile"));
+
+        if (Boolean.TRUE.equals(cValue)) {
           addCard(key, cProfile);
         } else {
-          CProfile cProfile = cProfileList
-              .stream()
-              .filter(f -> f.getColName().equals(jtcColumn.getDefaultTableModel()
-                                                     .getValueAt(jtcColumn.getJxTable().getSelectedRow(), 2)))
-              .findAny()
-              .orElseThrow(() -> new NotFoundException("Not found column profile"));
-
           removeCard(key, cProfile);
         }
       }
 
       @Override
       public void editingCanceled(ChangeEvent changeEvent) {
+        // no-op
       }
     });
   }
 
-  private void addCard(ProfileTaskQueryKey key,
-                       CProfile cProfile) {
-    log.info("Add card by key: {} and profile: {}", key, cProfile);
+  // ... Rest of the methods (configurePickColumn, addCard, removeCard) remain the same ...
+  private void configurePickColumn(JXTableCase tableCase, DefaultCellEditor editor) {
+    int pickViewIndex = tableCase.getJxTable().convertColumnIndexToView(ColumnNames.PICK.ordinal());
+    if (pickViewIndex < 0) {
+      throw new IllegalStateException("PICK column is not visible");
+    }
 
-    broker.sendMessage(Message.builder()
-                           .destination(Destination.withDefault(component))
-                           .action(Action.ADD_CHART)
-                           .parameter("key", key)
-                           .parameter("cProfile", cProfile)
-                           .build());
+    TableColumn pickCol = tableCase.getJxTable().getColumnModel().getColumn(pickViewIndex);
+    pickCol.setMinWidth(30);
+    pickCol.setMaxWidth(35);
+    pickCol.setCellEditor(editor);
   }
 
-  private void removeCard(ProfileTaskQueryKey key,
-                          CProfile cProfile) {
+  private void addCard(ProfileTaskQueryKey key, CProfile cProfile) {
+    log.info("Add card by key: {} and profile: {}", key, cProfile);
+
+    eventBus.publish(new AddChartEvent(component, key, cProfile));
+  }
+
+  private void removeCard(ProfileTaskQueryKey key, CProfile cProfile) {
     log.info("Remove card by key: {} and profile: {}", key, cProfile);
 
-    broker.sendMessage(Message.builder()
-                           .destination(Destination.withDefault(component))
-                           .action(Action.REMOVE_CHART)
-                           .parameter("key", key)
-                           .parameter("cProfile", cProfile)
-                           .build());
+    eventBus.publish(new RemoveChartEvent(component, key, cProfile));
   }
 }

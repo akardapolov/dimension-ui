@@ -74,4 +74,25 @@ public class AdHocDatabaseManagerImpl implements AdHocDatabaseManager {
   public DStore getDataBase(ConnectionInfo connectionInfo) {
     return dStoreMap.get(connectionInfo.getId());
   }
+
+  @Override
+  public void removeDataBase(int connectionId) {
+    log.info("Removing database for connectionId: {}", connectionId);
+
+    DStore dStore = dStoreMap.remove(connectionId);
+    if (dStore != null) {
+      try {
+        dStore.syncBackendDb();
+        dStore.closeBackendDb();
+        log.info("Closed DStore for connectionId: {}", connectionId);
+      } catch (Exception e) {
+        log.error("Error closing DStore for connectionId: {}", connectionId, e);
+      }
+    }
+
+    // Optionally clean up the config directory
+    filesHelper.deleteExternalDirectory(String.valueOf(connectionId));
+
+    log.info("Successfully removed database resources for connectionId: {}", connectionId);
+  }
 }

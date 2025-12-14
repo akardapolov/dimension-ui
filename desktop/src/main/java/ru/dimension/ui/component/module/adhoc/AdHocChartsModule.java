@@ -1,5 +1,6 @@
 package ru.dimension.ui.component.module.adhoc;
 
+import jakarta.inject.Inject;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.broker.Destination;
@@ -24,6 +25,7 @@ public class AdHocChartsModule {
 
   private final MessageBroker broker = MessageBroker.getInstance();
 
+  @Inject
   public AdHocChartsModule(ProfileManager profileManager,
                            ConnectionPoolManager connectionPoolManager,
                            AdHocDatabaseManager adHocDatabaseManager) {

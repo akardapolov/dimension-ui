@@ -125,6 +125,54 @@ public class ConnectionPoolManagerImpl implements ConnectionPoolManager {
     return taskConnections.get(profileTaskKey);
   }
 
+  @Override
+  public void removeConnection(int connectionId) {
+    log.info("Removing connection pool resources for connectionId: {}", connectionId);
+
+    // Close and remove connections from connectionMap
+    List<Connection> connections = connectionMap.remove(connectionId);
+    if (connections != null) {
+      for (Connection conn : connections) {
+        closeConnectionSafely(conn, connectionId);
+      }
+      log.info("Closed {} connections from connectionMap for connectionId: {}", connections.size(), connectionId);
+    }
+
+    // Close and remove connections from connectionForTaskMap
+    Map<ProfileTaskKey, Connection> taskConnections = connectionForTaskMap.remove(connectionId);
+    if (taskConnections != null) {
+      for (Map.Entry<ProfileTaskKey, Connection> entry : taskConnections.entrySet()) {
+        closeConnectionSafely(entry.getValue(), connectionId);
+      }
+      log.info("Closed {} task connections for connectionId: {}", taskConnections.size(), connectionId);
+    }
+
+    // Close and remove BasicDataSource
+    BasicDataSource dataSource = dataSourceMap.remove(connectionId);
+    if (dataSource != null) {
+      try {
+        dataSource.close();
+        log.info("Closed BasicDataSource for connectionId: {}", connectionId);
+      } catch (SQLException e) {
+        log.error("Error closing BasicDataSource for connectionId: {}", connectionId, e);
+      }
+    }
+
+    log.info("Successfully removed all connection pool resources for connectionId: {}", connectionId);
+  }
+
+  private void closeConnectionSafely(Connection connection, int connectionId) {
+    if (connection != null) {
+      try {
+        if (!connection.isClosed()) {
+          connection.close();
+        }
+      } catch (SQLException e) {
+        log.error("Error closing connection for connectionId: {}", connectionId, e);
+      }
+    }
+  }
+
   private Connection futureExecutionWithTimeout(int timeoutSeconds,
                                                 ConnectionInfo connectionInfo) {
     ExecutorService executor = Executors.newSingleThreadExecutor();

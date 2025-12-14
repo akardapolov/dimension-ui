@@ -1,6 +1,9 @@
 package ru.dimension.ui.component.module.adhoc.charts;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
@@ -44,6 +47,8 @@ public class AdHocChartsPresenter implements MessageAction {
     this.view = view;
 
     view.setTabChangeListener(this::handleTabChange);
+    view.setTabChangeListener(this::handleTabChange);
+    view.setTabCloseListener(this::handleTabClose);
   }
 
   private void handleTabChange(String globalKey) {
@@ -56,15 +61,62 @@ public class AdHocChartsPresenter implements MessageAction {
     }
   }
 
+  private void handleTabClose(String tabKey, String globalKey) {
+    removeAllChartsForGlobalKey(globalKey);
+
+    view.removeTabByKey(tabKey);
+
+    broker.sendMessage(Message.builder()
+                           .destination(Destination.withDefault(Component.ADHOC, Module.MODEL))
+                           .action(MessageBroker.Action.CLEAR_SELECTION_FOR_GLOBAL_KEY)
+                           .parameter("globalKey", globalKey)
+                           .build());
+
+    String newGlobalKey = view.getSelectedGlobalKeyOrNull();
+
+    broker.sendMessage(Message.builder()
+                           .destination(Destination.withDefault(Component.ADHOC, Module.CONFIG))
+                           .action(MessageBroker.Action.HISTORY_CUSTOM_UI_RANGE_CHANGE)
+                           .parameter("globalKey", newGlobalKey == null ? "" : newGlobalKey)
+                           .build());
+  }
+
+  private void removeAllChartsForGlobalKey(String globalKey) {
+    if (globalKey == null || globalKey.isBlank()) return;
+
+    List<AdHocKey> keysToRemove = new ArrayList<>();
+
+    model.getChartPanes().forEach((adHocKey, chartMap) -> {
+      String chartGlobalKey = adHocKey.getConnectionId() + "_" + adHocKey.getTableName();
+      if (globalKey.equals(chartGlobalKey)) {
+        chartMap.forEach((cProfile, taskPane) -> {
+          try {
+            broker.deleteReceiver(getDestination(adHocKey), taskPane.getPresenter());
+          } catch (Exception e) {
+            log.warn("Failed to delete receiver for {}", taskPane.getTitle(), e);
+          }
+        });
+        keysToRemove.add(adHocKey);
+      }
+    });
+
+    keysToRemove.forEach(model.getChartPanes()::remove);
+
+    view.removeAllChartsByGlobalKey(globalKey);
+  }
+
   @Override
   public void receive(Message message) {
     String globalKey = message.parameters().get("globalKey");
-    model.setGlobalKey(globalKey);
+    if (globalKey != null) {
+      model.setGlobalKey(globalKey);
+    }
 
     switch (message.action()) {
       case HISTORY_RANGE_CHANGE -> handleHistoryRangeChange(message);
       case ADD_CHART -> handleAddChart(message);
       case REMOVE_CHART -> handleRemoveChart(message);
+      case REMOVE_ALL_CHARTS_FOR_CONNECTION -> handleRemoveAllChartsForConnection(message);
       case CHART_LEGEND_STATE_ALL -> chartLegendStateAll(message);
       case EXPAND_COLLAPSE_ALL -> expandCollapseAll(message);
     }
@@ -108,7 +160,7 @@ public class AdHocChartsPresenter implements MessageAction {
       String chartGlobalKey = key.getConnectionId() + "_" + key.getTableName();
       if (chartGlobalKey.equals(model.getGlobalKey())) {
         val.values().forEach(chartModule ->
-                                   chartModule.setCollapsed(ChartCardState.EXPAND_ALL.equals(cardState))
+                                 chartModule.setCollapsed(ChartCardState.EXPAND_ALL.equals(cardState))
         );
       }
     });
@@ -144,6 +196,7 @@ public class AdHocChartsPresenter implements MessageAction {
     view.addChartCard(
         adHocTabKey,
         globalKey,
+        connectionInfo.getId(),
         taskPane,
         (module, error) -> {
           if (error != null) {
@@ -177,7 +230,17 @@ public class AdHocChartsPresenter implements MessageAction {
     AdHocKey adHocKey = new AdHocKey(connectionInfo.getId(), tableName, cProfile.getColId());
     String adHocTabKey = getAdHocTabKey(connectionInfo, activeTab, tableName);
 
-    AdHocChartModule taskPane = model.getChartPanes().get(adHocKey).get(cProfile);
+    ConcurrentMap<CProfile, AdHocChartModule> chartMap = model.getChartPanes().get(adHocKey);
+    if (chartMap == null) {
+      log.warn("No chart map found for adHocKey: {}", adHocKey);
+      return;
+    }
+
+    AdHocChartModule taskPane = chartMap.get(cProfile);
+    if (taskPane == null) {
+      log.warn("No task pane found for cProfile: {}", cProfile);
+      return;
+    }
 
     try {
       Destination destination = getDestination(adHocKey);
@@ -185,8 +248,43 @@ public class AdHocChartsPresenter implements MessageAction {
     } finally {
       log.info("Remove task pane: {}", taskPane.getTitle());
       view.removeChartCard(adHocTabKey, taskPane);
-      model.getChartPanes().get(adHocKey).remove(cProfile);
+      chartMap.remove(cProfile);
+
+      if (chartMap.isEmpty()) {
+        model.getChartPanes().remove(adHocKey);
+      }
     }
+  }
+
+  private void handleRemoveAllChartsForConnection(Message message) {
+    int connectionId = message.parameters().get("connectionId");
+    log.info("Removing all charts for connectionId: {}", connectionId);
+
+    List<AdHocKey> keysToRemove = new ArrayList<>();
+
+    model.getChartPanes().forEach((adHocKey, chartMap) -> {
+      if (adHocKey.getConnectionId() == connectionId) {
+        keysToRemove.add(adHocKey);
+
+        chartMap.forEach((cProfile, taskPane) -> {
+          try {
+            Destination destination = getDestination(adHocKey);
+            broker.deleteReceiver(destination, taskPane.getPresenter());
+            log.info("Removed receiver for task pane: {}", taskPane.getTitle());
+          } catch (Exception e) {
+            log.error("Error removing receiver for task pane: {}", taskPane.getTitle(), e);
+          }
+        });
+      }
+    });
+
+    for (AdHocKey key : keysToRemove) {
+      model.getChartPanes().remove(key);
+    }
+
+    view.removeAllChartsByConnectionId(connectionId);
+
+    log.info("Removed all charts for connectionId: {}. Removed {} chart groups.", connectionId, keysToRemove.size());
   }
 
   public String getKey(CProfile cProfile) {

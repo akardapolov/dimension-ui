@@ -5,6 +5,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -20,22 +21,25 @@ import javax.swing.table.TableCellEditor;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
-import ru.dimension.ui.component.broker.Destination;
-import ru.dimension.ui.component.broker.Message;
-import ru.dimension.ui.component.broker.MessageAction;
+import ru.dimension.ui.bus.EventBus;
 import ru.dimension.ui.component.broker.MessageBroker;
-import ru.dimension.ui.component.broker.MessageBroker.Action;
-import ru.dimension.ui.component.broker.MessageBroker.Block;
-import ru.dimension.ui.component.broker.MessageBroker.Module;
-import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.module.chart.ReportChartModule;
+import ru.dimension.ui.component.module.factory.MetricColumnPanelFactory;
+import ru.dimension.ui.component.module.report.event.AddChartEvent;
+import ru.dimension.ui.component.module.report.event.RemoveChartEvent;
+import ru.dimension.ui.component.module.report.event.SaveCommentEvent;
+import ru.dimension.ui.component.module.report.event.SaveGroupFunctionEvent;
+import ru.dimension.ui.component.module.report.event.UpdateDesignListEvent;
 import ru.dimension.ui.helper.DesignHelper;
 import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.helper.KeyHelper;
+import ru.dimension.ui.helper.event.EventRouteRegistry;
+import ru.dimension.ui.helper.event.EventUtils;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.chart.ChartType;
+import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.info.ProfileInfo;
@@ -51,17 +55,32 @@ import ru.dimension.ui.state.ChartKey;
 import ru.dimension.ui.state.UIState;
 
 @Log4j2
-public class PlaygroundPresenter implements ActionListener, MessageAction {
+public class PlaygroundPresenter implements ActionListener {
   private final PlaygroundModel model;
   private PlaygroundView view;
 
-  private final MessageBroker broker = MessageBroker.getInstance();
+  private final EventBus eventBus;
+  private final EventRouteRegistry eventRouter;
+  private final MetricColumnPanelFactory metricColumnPanelFactory;
 
   private static final ExecutorService virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
-  public PlaygroundPresenter(PlaygroundModel model, PlaygroundView view) {
+  public PlaygroundPresenter(PlaygroundModel model,
+                             PlaygroundView view,
+                             EventBus eventBus,
+                             MetricColumnPanelFactory metricColumnPanelFactory) {
     this.model = model;
     this.view = view;
+    this.eventBus = eventBus;
+    this.metricColumnPanelFactory = metricColumnPanelFactory;
+
+    this.eventRouter = EventRouteRegistry
+        .forComponent(MessageBroker.Component.PLAYGROUND, EventUtils::getComponent)
+        .route(AddChartEvent.class,          this::handleAddChart)
+        .route(RemoveChartEvent.class,       this::handleRemoveChart)
+        .route(SaveCommentEvent.class,       this::handleNeedSaveComment)
+        .route(SaveGroupFunctionEvent.class, this::handleNeedSaveGroupFunction)
+        .register(eventBus);
 
     setupEventHandlers();
   }
@@ -78,8 +97,7 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
     });
 
     this.view.getQueryReportCase().getJxTable()
-        .getColumnModel()
-        .getColumn(0)
+        .getColumnExt(ColumnNames.PICK.getColName())
         .setCellEditor(view.getQueryEditor());
 
     this.view.getCollapseCard().addActionListener(this);
@@ -100,20 +118,10 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
         .forEach(cardChart -> cardChart.setCollapsed(collapseAll));
   }
 
-  @Override
-  public void receive(Message message) {
-    switch (message.action()) {
-      case ADD_CHART -> handleAddChart(message);
-      case REMOVE_CHART -> handleRemoveChart(message);
-      case NEED_TO_SAVE_COMMENT -> handleNeedSaveComment(message);
-      case NEED_TO_SAVE_GROUP_FUNCTION -> handleNeedSaveGroupFunction(message);
-    }
-  }
-
-  private void handleNeedSaveComment(Message message) {
-    ProfileTaskQueryKey key = message.parameters().get("key");
-    CProfile cProfile = message.parameters().get("cProfile");
-    String comment = message.parameters().get("comment");
+  private void handleNeedSaveComment(SaveCommentEvent event) {
+    ProfileTaskQueryKey key = event.getKey();
+    CProfile cProfile = event.getCProfile();
+    String comment = event.getComment();
 
     Optional<CProfileReport> cProfileReport = model.getMapReportData().get(key)
         .getCProfileReportList()
@@ -126,10 +134,10 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
     view.getSaveButton().setEnabled(true);
   }
 
-  private void handleNeedSaveGroupFunction(Message message) {
-    ProfileTaskQueryKey key = message.parameters().get("key");
-    CProfile cProfile = message.parameters().get("cProfile");
-    GroupFunction groupFunction = message.parameters().get("groupFunction");
+  private void handleNeedSaveGroupFunction(SaveGroupFunctionEvent event) {
+    ProfileTaskQueryKey key = event.getKey();
+    CProfile cProfile = event.getCProfile();
+    GroupFunction groupFunction = event.getGroupFunction();
 
     Optional<CProfileReport> cProfileReport = model.getMapReportData().get(key)
         .getCProfileReportList()
@@ -147,9 +155,9 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
     view.getSaveButton().setEnabled(true);
   }
 
-  private void handleAddChart(Message message) {
-    ProfileTaskQueryKey key = message.parameters().get("key");
-    CProfile cProfile = message.parameters().get("cProfile");
+  private void handleAddChart(AddChartEvent event) {
+    ProfileTaskQueryKey key = event.getKey();
+    CProfile cProfile = event.getCProfile();
     ChartKey chartKey = new ChartKey(key, cProfile);
 
     QueryInfo queryInfo = model.getProfileManager().getQueryInfoById(key.getQueryId());
@@ -198,10 +206,6 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
       }
       model.getChartPanes().computeIfAbsent(key, k -> new ConcurrentHashMap<>()).put(cProfile, taskPane);
 
-      Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
-
-      broker.addReceiver(destinationHistory, taskPane.getPresenter());
-
       taskPane.revalidate();
       taskPane.repaint();
 
@@ -212,9 +216,9 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
     });
   }
 
-  private void handleRemoveChart(Message message) {
-    ProfileTaskQueryKey key = message.parameters().get("key");
-    CProfile cProfile = message.parameters().get("cProfile");
+  private void handleRemoveChart(RemoveChartEvent event) {
+    ProfileTaskQueryKey key = event.getKey();
+    CProfile cProfile = event.getCProfile();
 
     QueryReportData reportData = model.getMapReportData().get(key);
     if (reportData != null) {
@@ -224,36 +228,18 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
     ReportChartModule taskPane = model.getChartPanes().get(key).get(cProfile);
 
     try {
-      logChartAction(message.action(), cProfile);
-
-      ChartKey chartKey = new ChartKey(key, cProfile);
-
-      Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
-      broker.deleteReceiver(destinationHistory, taskPane.getPresenter());
-
+      log.info("Remove chart: {}", cProfile);
       model.getChartPanes().get(key).remove(cProfile);
     } finally {
-      log.info("Remove task pane: {}", taskPane.getTitle());
-      view.removeChartCard(taskPane);
+      if (taskPane != null) {
+        log.info("Remove task pane: {}", taskPane.getTitle());
+        view.removeChartCard(taskPane);
+      }
       if (model.getChartPanes().get(key).isEmpty()) {
         model.getChartPanes().remove(key);
       }
       view.updateButtonStates();
     }
-  }
-
-  private Destination getDestination(Panel panel,
-                                     ChartKey chartKey) {
-    return Destination.builder().component(MessageBroker.Component.PLAYGROUND)
-        .module(Module.CHART)
-        .panel(panel)
-        .block(Block.CHART)
-        .chartKey(chartKey).build();
-  }
-
-  private void logChartAction(Action action,
-                              CProfile cProfile) {
-    log.info("Message action: {} for {}", action, cProfile);
   }
 
   private void handleQueryEditorChange(ChangeEvent e) {
@@ -279,7 +265,7 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
     TableInfo tableInfo = model.getProfileManager().getTableInfoByTableName(query.getName());
 
     List<CProfile> cProfileList = tableInfo.getCProfiles();
-    MetricColumnPanel cardMetricCol = view.getCardComponent(key);
+    MetricColumnPanel cardMetricCol = getCardComponent(key);
 
     cardMetricCol.setTitle(query.getName());
     cardMetricCol.setToolTipText(createCardTitle(profile.getName(), task.getName(), ""));
@@ -293,8 +279,8 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
   }
 
   public void removeQueryCard(ProfileTaskQueryKey key) {
-    if (view.isVisibleCard(key)) {
-      view.getCardContainer().remove(view.getCardComponent(key));
+    if (isVisibleCard(key)) {
+      view.getCardContainer().remove(getCardComponent(key));
       view.getCardContainer().revalidate();
       view.getCardContainer().repaint();
 
@@ -307,9 +293,7 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
     }
   }
 
-  private String createCardTitle(String profileName,
-                                 String taskName,
-                                 String queryName) {
+  private String createCardTitle(String profileName, String taskName, String queryName) {
     if (!queryName.equals("")) {
       return "<html><b>Profile:</b> " + profileName + " <br>"
           + "  <b>Task:</b> " + taskName + " <br>"
@@ -320,28 +304,35 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
     }
   }
 
-  private void initializeMetricTable(MetricColumnPanel cardMetricCol,
-                                     List<Metric> metricList) {
+  private void initializeMetricTable(MetricColumnPanel cardMetricCol, List<Metric> metricList) {
     cardMetricCol.getJtcMetric().getDefaultTableModel().getDataVector().removeAllElements();
     cardMetricCol.getJtcMetric().getDefaultTableModel().fireTableDataChanged();
 
-    if (metricList.size() != 0) {
+    if (metricList != null && !metricList.isEmpty()) {
       for (Metric m : metricList) {
-        cardMetricCol.getJtcMetric().getDefaultTableModel().addRow(new Object[]{m.getId(), false, m.getName()});
+        cardMetricCol.getJtcMetric().getDefaultTableModel().addRow(new Object[]{
+            m.getId(),
+            m.getName(),
+            Boolean.FALSE
+        });
       }
     }
   }
 
-  private void initializeColumnTable(MetricColumnPanel cardMetricCol,
-                                     List<CProfile> cProfileList) {
+  private void initializeColumnTable(MetricColumnPanel cardMetricCol, List<CProfile> cProfileList) {
     cardMetricCol.getJtcColumn().getDefaultTableModel().getDataVector().removeAllElements();
     cardMetricCol.getJtcColumn().getDefaultTableModel().fireTableDataChanged();
 
     if (cProfileList != null) {
       cProfileList.stream()
           .filter(f -> !f.getCsType().isTimeStamp())
-          .forEach(c -> cardMetricCol.getJtcColumn().getDefaultTableModel()
-              .addRow(new Object[]{c.getColId(), false, c.getColName()}));
+          .forEach(c -> {
+            cardMetricCol.getJtcColumn().getDefaultTableModel().addRow(new Object[]{
+                c.getColId(),
+                c.getColName(),
+                Boolean.FALSE
+            });
+          });
     }
   }
 
@@ -393,7 +384,7 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
       } catch (Exception e) {
         log.error("Failed to save design", e);
         javax.swing.SwingUtilities.invokeLater(() ->
-                                                   DialogHelper.showErrorDialog("Failed to save design: " + e.getMessage(),"Error", e));
+                                                   DialogHelper.showErrorDialog("Failed to save design: " + e.getMessage(), "Error", e));
       } finally {
         view.updateButtonStates();
         log.info("Design saved: {}", DesignHelper.formatFolderName(now));
@@ -401,11 +392,7 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
         view.getSaveButton().setEnabled(true);
         view.getSaveButton().setText("Save design");
 
-        broker.sendMessage(Message.builder()
-                               .destination(Destination.withDefault(MessageBroker.Component.DESIGN))
-                               .action(Action.NEED_TO_UPDATE_LIST_DESIGN)
-                               .parameter("designName", DesignHelper.formatDesignName(now))
-                               .build());
+        eventBus.publish(new UpdateDesignListEvent(DesignHelper.formatDesignName(now)));
       }
     });
   }
@@ -413,9 +400,6 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
   private void handleClear() {
     model.getChartPanes().forEach((key, innerMap) -> {
       innerMap.forEach((cProfile, chartModule) -> {
-        ChartKey chartKey = new ChartKey(key, cProfile);
-        Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
-        broker.deleteReceiver(destinationHistory, chartModule.getPresenter());
         view.removeChartCard(chartModule);
       });
     });
@@ -427,8 +411,14 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
 
     model.getMapReportData().clear();
 
-    for (int row = 0; row < view.getQueryReportCase().getJxTable().getRowCount(); row++) {
-      view.getQueryReportCase().getJxTable().setValueAt(false, row, 0);
+    var table = view.getQueryReportCase().getJxTable();
+    int pickModelIndex = ColumnNames.PICK.ordinal();
+    int pickViewIndex = table.convertColumnIndexToView(pickModelIndex);
+
+    if (pickViewIndex >= 0) {
+      for (int row = 0; row < table.getRowCount(); row++) {
+        table.setValueAt(false, row, pickViewIndex);
+      }
     }
 
     view.updateButtonStates();
@@ -454,5 +444,24 @@ public class PlaygroundPresenter implements ActionListener, MessageAction {
         .forEach(cardChart -> cardChart.setCollapsed(collapseAll));
 
     view.getCollapseCard().setText(collapseAll ? "Expand all" : "Collapse all");
+  }
+
+  private MetricColumnPanel getCardComponent(ProfileTaskQueryKey key) {
+    return Arrays.stream(view.getCardContainer().getComponents())
+        .filter(MetricColumnPanel.class::isInstance)
+        .map(MetricColumnPanel.class::cast)
+        .filter(card -> key.equals(card.getKey()))
+        .findFirst()
+        .orElseGet(() -> metricColumnPanelFactory.create(MessageBroker.Component.PLAYGROUND,
+                                                         key,
+                                                         view.getCollapseCard(),
+                                                         view.getCardContainer()));
+  }
+
+  public boolean isVisibleCard(ProfileTaskQueryKey key) {
+    return Arrays.stream(view.getCardContainer().getComponents())
+        .filter(MetricColumnPanel.class::isInstance)
+        .map(MetricColumnPanel.class::cast)
+        .anyMatch(card -> key.equals(card.getKey()));
   }
 }

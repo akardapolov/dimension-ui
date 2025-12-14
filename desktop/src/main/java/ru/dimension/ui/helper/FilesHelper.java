@@ -87,6 +87,20 @@ public class FilesHelper {
     }
   }
 
+  public void deleteExternalDirectory(String directoryName) {
+    Path path = Paths.get(externalDir + fileSeparator + directoryName);
+    if (Files.exists(path)) {
+      boolean deleted = deleteDirectory(path.toFile());
+      if (deleted) {
+        log.info("Successfully deleted external directory: {}", directoryName);
+      } else {
+        log.warn("Failed to delete external directory: {}", directoryName);
+      }
+    } else {
+      log.debug("External directory does not exist, nothing to delete: {}", directoryName);
+    }
+  }
+
   public void createConfigDirectory(String directoryName) throws IOException {
     Path newPath = Paths.get(configDir + fileSeparator + directoryName);
     if (!Files.exists(newPath)) {
@@ -255,7 +269,7 @@ public class FilesHelper {
     deleteDirectory(Paths.get(databaseDir).toFile());
   }
 
-  boolean deleteDirectory(File directoryToBeDeleted) {
+  public boolean deleteDirectory(File directoryToBeDeleted) {
     File[] allContents = directoryToBeDeleted.listFiles();
     if (allContents != null) {
       for (File file : allContents) {

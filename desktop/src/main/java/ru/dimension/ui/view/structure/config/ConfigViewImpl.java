@@ -5,11 +5,17 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.awt.Dimension;
 import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowEvent;
+import javax.swing.AbstractAction;
 import javax.swing.JCheckBox;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JRootPane;
+import javax.swing.KeyStroke;
 import javax.swing.border.Border;
 import javax.swing.border.EtchedBorder;
 import lombok.extern.log4j.Log4j2;
@@ -146,7 +152,7 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
     gbl.done();
 
     this.setTitle("Configuration");
-
+    this.setEscToClose();
     this.packConfig(false);
   }
 
@@ -245,7 +251,6 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
   }
 
   private void packConfig(boolean visible) {
-    this.setVisible(visible);
     this.setModal(true);
     this.setResizable(true);
     this.pack();
@@ -254,6 +259,26 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
                                Toolkit.getDefaultToolkit().getScreenSize().height - 100));
     this.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width) / 2 - getWidth() / 2,
                      (Toolkit.getDefaultToolkit().getScreenSize().height) / 2 - getHeight() / 2);
+
+    this.setVisible(visible);
   }
 
+  private void setEscToClose() {
+    setDefaultCloseOperation(JDialog.HIDE_ON_CLOSE);
+
+    final String actionKey = "CONFIG_DIALOG_CLOSE_ON_ESC";
+    JRootPane root = getRootPane();
+
+    root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+        .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), actionKey);
+
+    root.getActionMap().put(actionKey, new AbstractAction() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        ConfigViewImpl.this.dispatchEvent(
+            new WindowEvent(ConfigViewImpl.this, WindowEvent.WINDOW_CLOSING)
+        );
+      }
+    });
+  }
 }

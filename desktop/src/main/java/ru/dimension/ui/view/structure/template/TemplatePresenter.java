@@ -45,6 +45,9 @@ import ru.dimension.ui.model.config.Task;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.tab.ConnectionTypeTabPane;
+import ru.dimension.ui.bus.EventBus;
+import ru.dimension.ui.bus.event.ConnectionAddEvent;
+import ru.dimension.ui.bus.event.ProfileAddEvent;
 import ru.dimension.ui.router.listener.TemplateListener;
 import ru.dimension.ui.security.EncryptDecrypt;
 import ru.dimension.ui.view.structure.TemplateView;
@@ -67,6 +70,7 @@ public class TemplatePresenter extends WindowAdapter
 
   private final TemplateView templateView;
   private final EventListener eventListener;
+  private final EventBus eventBus;
   private final ProfileManager profileManager;
   private final ConfigurationManager configurationManager;
   private final TemplateManager templateManager;
@@ -95,6 +99,7 @@ public class TemplatePresenter extends WindowAdapter
   @Inject
   public TemplatePresenter(@Named("templateView") TemplateView templateView,
                            @Named("eventListener") EventListener eventListener,
+                           @Named("eventBus") EventBus eventBus,
                            @Named("profileManager") ProfileManager profileManager,
                            @Named("configurationManager") ConfigurationManager configurationManager,
                            @Named("templateManager") TemplateManager templateManager,
@@ -114,6 +119,7 @@ public class TemplatePresenter extends WindowAdapter
                            @Named("templateQueryText") RSyntaxTextArea queryText) {
     this.templateView = templateView;
     this.eventListener = eventListener;
+    this.eventBus = eventBus;
     this.profileManager = profileManager;
     this.configurationManager = configurationManager;
     this.templateManager = templateManager;
@@ -162,7 +168,6 @@ public class TemplatePresenter extends WindowAdapter
     this.templateEditPanel.getConnUserName().addKeyListener(this);
     this.templateEditPanel.getConnPassword().addKeyListener(this);
     this.templateEditPanel.getConnUrl().addKeyListener(this);
-
   }
 
   @Override
@@ -307,7 +312,6 @@ public class TemplatePresenter extends WindowAdapter
     if (ConfigClasses.Query.equals(ConfigClasses.fromClass(clazz))) {
       log.info("Query..");
     }
-
   }
 
   @Override
@@ -499,6 +503,8 @@ public class TemplatePresenter extends WindowAdapter
 
         configurationManager.addConfig(connection, Connection.class);
 
+        eventBus.publish(new ConnectionAddEvent(connection.getId(), connection.getName(), connection.getType()));
+
         // Save task
         int taskMaxId = configurationManager.getConfigList(Task.class)
             .stream()
@@ -531,19 +537,17 @@ public class TemplatePresenter extends WindowAdapter
 
         profileManager.updateCache();
 
-        eventListener.fireProfileAdd();
+        eventBus.publish(new ProfileAddEvent());
 
         templateEditPanel.setVisible(false);
       } else {
         throw new EmptyNameException("The name field is empty");
       }
-
     }
   }
 
   private <T> void raiseAnErrorIfEntityExist(Class<? extends ConfigEntity> clazz,
                                              String entityName) {
-    // Check profile name
     configurationManager.getConfigList(clazz)
         .stream()
         .filter(f -> f.getName().equalsIgnoreCase(entityName))
@@ -557,7 +561,6 @@ public class TemplatePresenter extends WindowAdapter
 
   private <T> void changeStatusIfEntityExist(Class<? extends ConfigEntity> clazz,
                                              String entityName) {
-    // Check profile name
     configurationManager.getConfigList(clazz)
         .stream()
         .filter(f -> f.getName().trim().equalsIgnoreCase(entityName.trim()))
@@ -595,7 +598,6 @@ public class TemplatePresenter extends WindowAdapter
         text = text + arr;
       }
       templateEditPanel.getStatusQuery().setText(text);
-
     }
   }
 
@@ -617,9 +619,7 @@ public class TemplatePresenter extends WindowAdapter
         && !templateEditPanel.getStatusQuery().isVisible()) {
       templateEditPanel.getTemplateSaveJButton().setEnabled(true);
     }
-
   }
-
 
   @Override
   public void focusGained(FocusEvent focusEvent) {
@@ -632,28 +632,22 @@ public class TemplatePresenter extends WindowAdapter
     changeStatusIfEntityExist(Connection.class, templateEditPanel.getConnName().getText());
   }
 
-
   @Override
   public void editingStopped(ChangeEvent e) {
-    // завершение редактирования ячейки
     DefaultTableModel defaultTableModel = templateEditPanel.getTemplateQueryCase().getDefaultTableModel();
     arrText.clear();
     for (int rowIndex = 0; rowIndex < defaultTableModel.getRowCount(); rowIndex++) {
       String queryName = (String) defaultTableModel.getValueAt(rowIndex, 1);
       changeStatusIfEntityExist(Query.class, queryName);
     }
-
   }
 
   @Override
   public void editingCanceled(ChangeEvent e) {
-    // отмена редактирования ячейки
   }
-
 
   @Override
   public void keyTyped(KeyEvent keyEvent) {
-
   }
 
   @Override
@@ -682,6 +676,5 @@ public class TemplatePresenter extends WindowAdapter
 
   @Override
   public void keyReleased(KeyEvent keyEvent) {
-
   }
 }

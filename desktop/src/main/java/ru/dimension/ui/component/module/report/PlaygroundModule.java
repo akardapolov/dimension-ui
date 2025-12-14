@@ -1,8 +1,11 @@
 package ru.dimension.ui.component.module.report;
 
+import jakarta.inject.Inject;
 import lombok.Getter;
 import ru.dimension.db.core.DStore;
+import ru.dimension.ui.bus.EventBus;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
+import ru.dimension.ui.component.module.factory.MetricColumnPanelFactory;
 import ru.dimension.ui.component.module.report.playground.PlaygroundModel;
 import ru.dimension.ui.component.module.report.playground.PlaygroundPresenter;
 import ru.dimension.ui.component.module.report.playground.PlaygroundView;
@@ -19,11 +22,14 @@ public class PlaygroundModule {
   @Getter
   private final PlaygroundPresenter presenter;
 
+  @Inject
   public PlaygroundModule(ProfileManager profileManager,
                           ConfigurationManager configurationManager,
                           ReportManager reportManager,
                           FilesHelper filesHelper,
-                          DStore dStore) {
+                          EventBus eventBus,
+                          DStore dStore,
+                          MetricColumnPanelFactory metricColumnPanelFactory) {
     Component component = Component.PLAYGROUND;
     this.model = new PlaygroundModel(component,
                                      profileManager,
@@ -32,6 +38,6 @@ public class PlaygroundModule {
                                      filesHelper,
                                      dStore);
     this.view = new PlaygroundView(model);
-    this.presenter = new PlaygroundPresenter(model, view);
+    this.presenter = new PlaygroundPresenter(model, view, eventBus, metricColumnPanelFactory);
   }
 }

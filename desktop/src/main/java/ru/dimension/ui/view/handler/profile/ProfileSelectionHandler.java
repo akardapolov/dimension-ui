@@ -10,7 +10,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import javax.swing.JCheckBox;
-import javax.swing.JOptionPane;
+// JOptionPane import removed as it is no longer used here
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -212,6 +212,16 @@ public class ProfileSelectionHandler extends MouseListenerImpl
     taskCase.getDefaultTableModel().fireTableDataChanged();
 
     if (isSelected) {
+      if (profileId == -1) {
+        if (profileCase.getJxTable().getRowCount() > 0) {
+          profileCase.getJxTable().setRowSelectionInterval(0, 0);
+        } else {
+          checkboxConfig.setSelected(false);
+          checkboxConfig.setEnabled(false);
+        }
+        return;
+      }
+
       if (profileId >= 0) {
         profileManager.getProfileInfoById(profileId).getTaskInfoList()
             .forEach(taskId -> {
@@ -230,14 +240,10 @@ public class ProfileSelectionHandler extends MouseListenerImpl
           queryCase.getDefaultTableModel().getDataVector().removeAllElements();
           queryCase.getDefaultTableModel().fireTableDataChanged();
         }
-      } else {
-        JOptionPane.showMessageDialog(null, "Profile is not selected", "General Error",
-                                      JOptionPane.ERROR_MESSAGE);
       }
     } else {
       profileManager.getTaskInfoList()
           .forEach(e -> taskCase.getDefaultTableModel().addRow(new Object[]{e.getId(), e.getName()}));
-
     }
   }
 
@@ -310,7 +316,3 @@ public class ProfileSelectionHandler extends MouseListenerImpl
     }
   }
 }
-
-
-
-

@@ -4,6 +4,8 @@ import ru.dimension.di.DimensionDI;
 import ru.dimension.di.ServiceLocator;
 import ru.dimension.ui.router.Router;
 import ru.dimension.ui.router.RouterImpl;
+import ru.dimension.ui.bus.EventBus;
+import ru.dimension.ui.bus.EventBusImpl;
 import ru.dimension.ui.router.event.EventListener;
 import ru.dimension.ui.router.event.EventListenerImpl;
 import ru.dimension.ui.security.EncryptDecrypt;
@@ -22,6 +24,9 @@ public final class RoutingSecurityStateConfig {
         // Router
         .bindNamed(Router.class, "router", RouterImpl.class)
         .bindNamed(EventListener.class, "eventListener", EventListenerImpl.class)
+
+        // MBassador Event Bus
+        .bindNamed(EventBus.class, "eventBus", EventBusImpl.class)
 
         // Security
         .provideNamed(EncryptDecrypt.class, "encryptDecrypt", ServiceLocator.singleton(EncryptDecrypt::new))
