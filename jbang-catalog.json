@@ -1,0 +1,15 @@
+{
+  "aliases": {
+    "dimension-ui": {
+      "script-ref": "https://github.com/akardapolov/dimension-ui/releases/download/25.12.2/dimension-ui-25.12.2-app.jar",
+      "runtime-options": [
+        "-Xmx2024m"
+      ],
+      "properties": {
+        "LaF": "light",
+        "file.encoding": "UTF8"
+      },
+      "java": "25+"
+    }
+  }
+}
