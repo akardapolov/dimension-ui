@@ -40,6 +40,7 @@ public abstract class GanttPanel extends GanttCommon {
 
     initUI();
   }
+
   @Override
   protected JXTable loadGantt(CProfile firstLevelGroupBy,
                               List<GanttColumn> ganttColumnList,
@@ -64,12 +65,20 @@ public abstract class GanttPanel extends GanttCommon {
     setTableHeaderFont(ganttTable, new Font("Arial", Font.BOLD, 14));
     setTooltipAndPercent(ganttTable);
 
-    ganttTable.getJXTable().setShowVerticalLines(true);
-    ganttTable.getJXTable().setShowHorizontalLines(true);
-    ganttTable.getJXTable().setBackground(LaF.getBackgroundColor(TABLE_BACKGROUND, LaF.getLafType()));
-    ganttTable.getJXTable().setForeground(LaF.getBackgroundColor(TABLE_FONT, LaF.getLafType()));
+    JXTable jxTable = ganttTable.getJXTable();
 
-    return ganttTable.getJXTable();
+    jxTable.setShowGrid(true);
+    jxTable.setShowVerticalLines(true);
+    jxTable.setShowHorizontalLines(true);
+
+    jxTable.setGridColor(Color.GRAY);
+
+    jxTable.setIntercellSpacing(new java.awt.Dimension(1, 1));
+
+    jxTable.setBackground(LaF.getBackgroundColor(TABLE_BACKGROUND, LaF.getLafType()));
+    jxTable.setForeground(LaF.getBackgroundColor(TABLE_FONT, LaF.getLafType()));
+
+    return jxTable;
   }
 
   protected abstract JScrollPane loadDimensionTop();

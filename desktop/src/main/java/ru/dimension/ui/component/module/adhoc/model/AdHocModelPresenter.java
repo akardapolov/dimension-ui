@@ -285,28 +285,29 @@ public class AdHocModelPresenter implements HelperChart {
 
   private void unselectAllColumnsForTable(String fullTableName) {
     Set<Integer> columnIds = model.getSelectedColumns(currentConnectionId, fullTableName);
-
     for (int columnId : columnIds) {
       model.setColumnSelected(currentConnectionId, fullTableName, columnId, false);
     }
 
     if (tProfile != null && fullTableName.equals(tProfile.getTableName())) {
       DefaultTableModel tableModel = columnCase.getDefaultTableModel();
-
-      List<Integer> cProfileIdsToRemove = new ArrayList<>();
       for (int i = 0; i < tableModel.getRowCount(); i++) {
-        Boolean isSelected = (Boolean) tableModel.getValueAt(i, ColumnNames.PICK.ordinal());
-        if (isSelected != null && isSelected) {
-          int cProfileId = (int) tableModel.getValueAt(i, ColumnNames.ID.ordinal());
-          cProfileIdsToRemove.add(cProfileId);
-        }
         tableModel.setValueAt(false, i, ColumnNames.PICK.ordinal());
       }
+    }
 
-      String tableName = tProfile != null ? tProfile.getTableName() : "";
-      for (int cProfileId : cProfileIdsToRemove) {
-        removeChart(tableName, cProfileId);
+    try {
+      ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(currentConnectionId);
+      if (connectionInfo != null) {
+        String globalKey = KeyHelper.getGlobalKey(connectionInfo, fullTableName);
+        broker.sendMessage(Message.builder()
+                               .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
+                               .action(Action.REMOVE_ALL_CHARTS_FOR_TABLE_OR_VIEW)
+                               .parameter("globalKey", globalKey)
+                               .build());
       }
+    } catch (Exception e) {
+      log.error("Failed to remove charts for table {}", fullTableName, e);
     }
   }
 
@@ -943,7 +944,7 @@ public class AdHocModelPresenter implements HelperChart {
     };
   }
 
-  public void clearSelectionForGlobalKey(Message message) {
+  public void clearSelectionForTableOrView(Message message) {
     String globalKey = message.parameters().get("globalKey");
     if (globalKey == null || globalKey.isBlank()) return;
 

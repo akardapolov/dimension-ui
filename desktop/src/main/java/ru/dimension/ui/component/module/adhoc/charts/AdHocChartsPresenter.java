@@ -68,7 +68,7 @@ public class AdHocChartsPresenter implements MessageAction {
 
     broker.sendMessage(Message.builder()
                            .destination(Destination.withDefault(Component.ADHOC, Module.MODEL))
-                           .action(MessageBroker.Action.CLEAR_SELECTION_FOR_GLOBAL_KEY)
+                           .action(MessageBroker.Action.CLEAR_SELECTION_FOR_TABLE_OR_VIEW)
                            .parameter("globalKey", globalKey)
                            .build());
 
@@ -117,9 +117,15 @@ public class AdHocChartsPresenter implements MessageAction {
       case ADD_CHART -> handleAddChart(message);
       case REMOVE_CHART -> handleRemoveChart(message);
       case REMOVE_ALL_CHARTS_FOR_CONNECTION -> handleRemoveAllChartsForConnection(message);
+      case REMOVE_ALL_CHARTS_FOR_TABLE_OR_VIEW -> handleRemoveAllChartsForTableOrView(message);
       case CHART_LEGEND_STATE_ALL -> chartLegendStateAll(message);
       case EXPAND_COLLAPSE_ALL -> expandCollapseAll(message);
     }
+  }
+
+  private void handleRemoveAllChartsForTableOrView(Message message) {
+    String globalKey = message.parameters().get("globalKey");
+    removeAllChartsForGlobalKey(globalKey);
   }
 
   private void handleHistoryRangeChange(Message message) {

@@ -28,6 +28,7 @@
 
     <dimension-db-version>${revision}</dimension-db-version>
     <dimension-di-version>${revision}</dimension-di-version>
+    <dimension-tt-version>${revision}</dimension-tt-version>
 
     <bdb-version>5.0.73</bdb-version>
     <gson-version>2.13.1</gson-version>
@@ -123,6 +124,12 @@
       <groupId>ru.dimension</groupId>
       <artifactId>di</artifactId>
       <version>${dimension-di-version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>ru.dimension</groupId>
+      <artifactId>tt</artifactId>
+      <version>${dimension-tt-version}</version>
     </dependency>
 
     <dependency>

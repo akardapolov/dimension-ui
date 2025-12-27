@@ -27,9 +27,9 @@ import javax.swing.JScrollPane;
 import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
 import ru.dimension.db.model.output.GanttColumnCount;
 import ru.dimension.db.model.profile.CProfile;
-import org.jdesktop.swingx.JXTable;
 import ru.dimension.ui.model.gantt.DrawingScale;
 import ru.dimension.ui.model.info.TableInfo;
 
@@ -67,11 +67,13 @@ public abstract class GanttPivotCommon extends JPanel {
   protected abstract void initUI();
 
   protected JScrollPane getJScrollPane(JXTable jxTable) {
-    JScrollPane jScrollPane = new JScrollPane(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+    JScrollPane jScrollPane = new JScrollPane(
+        ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+        ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
+    );
     jScrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
     jScrollPane.setViewportView(jxTable);
     jScrollPane.setVerticalScrollBar(jScrollPane.getVerticalScrollBar());
-
     return jScrollPane;
   }
 
@@ -88,7 +90,7 @@ public abstract class GanttPivotCommon extends JPanel {
 
     double countPerEntry = me.getGantt().values().stream().mapToInt(Integer::intValue).sum();
 
-    double percent = round(countPerEntry / countOfEntries * 100, 2);
+    double percent = (countOfEntries == 0) ? 0.0 : round(countPerEntry / countOfEntries * 100, 2);
 
     String percentText = "" + percent + "%";
     String keyAndPercentText = me.getKey() + " " + percentText;
@@ -104,17 +106,18 @@ public abstract class GanttPivotCommon extends JPanel {
     }
 
     if (percent < 0.6) {
-      // Show only percent
-      helper.createActivityEntry(new StringBuffer(percentText), new Date(0), new Date(100), BasicPainterModule.BASIC_STRING_PAINTER, TEXT_PAINTER, textLayer);
-      helper.createActivityEntry(keyAndPercentText, new Date(0), new Date(100), String.valueOf(random.nextLong()), part);
+      helper.createActivityEntry(new StringBuffer(percentText), new Date(0), new Date(100),
+                                 BasicPainterModule.BASIC_STRING_PAINTER, TEXT_PAINTER, textLayer);
+      helper.createActivityEntry(keyAndPercentText, new Date(0), new Date(100),
+                                 String.valueOf(random.nextLong()), part);
 
       state.addDrawingPart(part);
       state.addDrawingPart(textLayer);
       return state;
     }
 
-    final boolean[] isBreak = {false};
-    final long[] start = {0};
+    final boolean[] isBreak = { false };
+    final long[] start = { 0 };
 
     drawingScale.setScale(getScale(drawingScale.getScaleToggle(), percent));
 
@@ -125,9 +128,8 @@ public abstract class GanttPivotCommon extends JPanel {
             String keyString = entry.getKey();
             double value = entry.getValue();
 
-            // Show only not zero activities.
             if (value != 0) {
-              double currentGroupPercentNotScale = (value / countPerEntry) * percent;
+              double currentGroupPercentNotScale = (countPerEntry == 0) ? 0 : (value / countPerEntry) * percent;
               double currentGroupPercent = currentGroupPercentNotScale * drawingScale.getScale();
 
               if (currentGroupPercent < 1.0 && currentGroupPercent >= 0.6) {
@@ -136,7 +138,6 @@ public abstract class GanttPivotCommon extends JPanel {
 
               long currGroupPercentL = (long) round(currentGroupPercent, 0);
 
-              // Set tooltip
               final StringBuffer o = new StringBuffer();
               {
                 o.append("<HTML>");
@@ -145,23 +146,19 @@ public abstract class GanttPivotCommon extends JPanel {
                 o.append("</HTML>");
               }
 
-              // Exit when previous egantt < than current egantt graph
               if (drawingScale.getPercentPrev() != 0 &&
                   (start[0] + currGroupPercentL) > drawingScale.getPercentPrev()) {
                 currGroupPercentL = drawingScale.getPercentPrev() - start[0];
-                helper.createActivityEntry(o, new Date(start[0]), new Date(
-                    start[0] + currGroupPercentL), keyString, part);
+                helper.createActivityEntry(o, new Date(start[0]), new Date(start[0] + currGroupPercentL), keyString, part);
                 start[0] = start[0] + currGroupPercentL;
                 isBreak[0] = true;
               }
 
-              // If row only one
               if (!isBreak[0]) {
                 if (currentGroupPercent == 100) {
                   helper.createActivityEntry(o, new Date(start[0]), new Date(currGroupPercentL), keyString, part);
                 } else {
-                  helper.createActivityEntry(o, new Date(start[0]), new Date(
-                      start[0] + currGroupPercentL), keyString, part);
+                  helper.createActivityEntry(o, new Date(start[0]), new Date(start[0] + currGroupPercentL), keyString, part);
                   start[0] = start[0] + currGroupPercentL;
                 }
               }
@@ -169,9 +166,10 @@ public abstract class GanttPivotCommon extends JPanel {
           }
         });
 
-    // Show percent
-    helper.createActivityEntry(new StringBuffer(percentText), new Date(start[0]), new Date(100), BasicPainterModule.BASIC_STRING_PAINTER, TEXT_PAINTER, textLayer);
-    helper.createActivityEntry(keyAndPercentText, new Date(start[0]), new Date(100), String.valueOf(random.nextLong()), part);
+    helper.createActivityEntry(new StringBuffer(percentText), new Date(start[0]), new Date(100),
+                               BasicPainterModule.BASIC_STRING_PAINTER, TEXT_PAINTER, textLayer);
+    helper.createActivityEntry(keyAndPercentText, new Date(start[0]), new Date(100),
+                               String.valueOf(random.nextLong()), part);
 
     state.addDrawingPart(part);
     state.addDrawingPart(textLayer);
@@ -181,8 +179,118 @@ public abstract class GanttPivotCommon extends JPanel {
     return state;
   }
 
-  static public double round(double d,
-                             int decimalPlace) {
+  protected DrawingState createDrawingStateSum(DrawingScale drawingScale,
+                                               GanttDrawingPartHelper helper,
+                                               String entryKey,
+                                               Map<String, Double> values,
+                                               double totalOfAllEntries) {
+
+    Random random = new SecureRandom();
+
+    BasicDrawingState state = helper.createDrawingState();
+    ListDrawingPart part = helper.createDrawingPart(false);
+    ListDrawingPart textLayer = helper.createDrawingPart(true);
+
+    double sumPerEntry = values.values().stream().mapToDouble(Double::doubleValue).sum();
+    double percent = (totalOfAllEntries == 0.0d) ? 0.0d : round(sumPerEntry / totalOfAllEntries * 100, 2);
+
+    String percentText = "" + percent + "%";
+    String keyAndPercentText = entryKey + " " + percentText;
+
+    if (drawingScale.getPercentPrev() == 0) {
+      if (percent > 70) {
+        drawingScale.setScaleToggle(0);
+      } else if (percent < 70 && percent > 30) {
+        drawingScale.setScaleToggle(1);
+      } else if (percent < 30) {
+        drawingScale.setScaleToggle(2);
+      }
+    }
+
+    if (percent < 0.6) {
+      helper.createActivityEntry(new StringBuffer(percentText), new Date(0), new Date(100),
+                                 BasicPainterModule.BASIC_STRING_PAINTER, TEXT_PAINTER, textLayer);
+      helper.createActivityEntry(keyAndPercentText, new Date(0), new Date(100),
+                                 String.valueOf(random.nextLong()), part);
+
+      state.addDrawingPart(part);
+      state.addDrawingPart(textLayer);
+      return state;
+    }
+
+    final boolean[] isBreak = { false };
+    final long[] start = { 0 };
+
+    drawingScale.setScale(getScale(drawingScale.getScaleToggle(), percent));
+
+    values.entrySet().stream()
+        .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
+        .forEach(entry -> {
+          if (!isBreak[0]) {
+            String keyString = entry.getKey();
+            double value = entry.getValue();
+
+            if (value != 0.0d) {
+              double currentGroupPercentNotScale = (sumPerEntry == 0.0d) ? 0.0d : (value / sumPerEntry) * percent;
+              double currentGroupPercent = currentGroupPercentNotScale * drawingScale.getScale();
+
+              if (currentGroupPercent < 1.0 && currentGroupPercent >= 0.6) {
+                currentGroupPercent = round(currentGroupPercent, 0);
+              }
+
+              long currGroupPercentL = (long) round(currentGroupPercent, 0);
+
+              final StringBuffer o = new StringBuffer();
+              {
+                o.append("<HTML>");
+                o.append("<b>").append(keyString).append(" ")
+                    .append(round(currentGroupPercentNotScale, 2)).append("%").append("</b>");
+                o.append("<br/>").append("sum=").append(formatSum(value));
+                o.append("</HTML>");
+              }
+
+              if (drawingScale.getPercentPrev() != 0 &&
+                  (start[0] + currGroupPercentL) > drawingScale.getPercentPrev()) {
+                currGroupPercentL = drawingScale.getPercentPrev() - start[0];
+                helper.createActivityEntry(o, new Date(start[0]), new Date(start[0] + currGroupPercentL), keyString, part);
+                start[0] = start[0] + currGroupPercentL;
+                isBreak[0] = true;
+              }
+
+              if (!isBreak[0]) {
+                if (currentGroupPercent == 100) {
+                  helper.createActivityEntry(o, new Date(start[0]), new Date(currGroupPercentL), keyString, part);
+                } else {
+                  helper.createActivityEntry(o, new Date(start[0]), new Date(start[0] + currGroupPercentL), keyString, part);
+                  start[0] = start[0] + currGroupPercentL;
+                }
+              }
+            }
+          }
+        });
+
+    helper.createActivityEntry(new StringBuffer(percentText), new Date(start[0]), new Date(100),
+                               BasicPainterModule.BASIC_STRING_PAINTER, TEXT_PAINTER, textLayer);
+    helper.createActivityEntry(keyAndPercentText, new Date(start[0]), new Date(100),
+                               String.valueOf(random.nextLong()), part);
+
+    state.addDrawingPart(part);
+    state.addDrawingPart(textLayer);
+
+    drawingScale.setPercentPrev(start[0]);
+
+    return state;
+  }
+
+  private static String formatSum(double v) {
+    if (Double.isNaN(v) || Double.isInfinite(v)) {
+      return "0";
+    }
+    BigDecimal bd = BigDecimal.valueOf(v).setScale(4, RoundingMode.HALF_UP).stripTrailingZeros();
+    return bd.toPlainString();
+  }
+
+  public static double round(double d, int decimalPlace) {
     BigDecimal bd;
     try {
       bd = new BigDecimal(Double.toString(d));
@@ -193,8 +301,7 @@ public abstract class GanttPivotCommon extends JPanel {
     }
   }
 
-  static public double getScale(int scaleToggle,
-                                double percent) {
+  public static double getScale(int scaleToggle, double percent) {
     return switch (scaleToggle) {
       case 0 -> 125 / (percent + 51);
       case 1 -> 147 / (percent + 51);
@@ -226,8 +333,7 @@ public abstract class GanttPivotCommon extends JPanel {
     BasicPainterContext graphics = new BasicPainterContext();
     graphics.setPaint(Color.BLACK);
     graphics.put(textPainter, new Font(null, Font.BOLD, 10));
-    gantttable.getDrawingContext().put(textPainter,
-                                       ContextResources.GRAPHICS_CONTEXT, graphics);
+    gantttable.getDrawingContext().put(textPainter, ContextResources.GRAPHICS_CONTEXT, graphics);
   }
 
   protected static void setGanttTableParameters(int visibleRowCount,
@@ -251,13 +357,11 @@ public abstract class GanttPivotCommon extends JPanel {
     ganttColumnList.sort((g1, g2) -> {
       Integer g1Int = g1.getGantt().values().stream().mapToInt(Integer::intValue).sum();
       Integer g2Int = g2.getGantt().values().stream().mapToInt(Integer::intValue).sum();
-
       return g2Int.compareTo(g1Int);
     });
   }
 
-  protected void setTableHeaderFont(GanttTable ganttTable,
-                                    Font font) {
+  protected void setTableHeaderFont(GanttTable ganttTable, Font font) {
     ganttTable.getJXTable().getTableHeader().setFont(font);
   }
 }

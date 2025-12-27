@@ -60,7 +60,7 @@ public class AdHocModelModule implements MessageAction {
   @Override
   public void receive(Message message) {
     switch (message.action()) {
-      case CLEAR_SELECTION_FOR_GLOBAL_KEY -> presenter.clearSelectionForGlobalKey(message);
+      case CLEAR_SELECTION_FOR_TABLE_OR_VIEW -> presenter.clearSelectionForTableOrView(message);
     }
   }
 

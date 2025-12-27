@@ -5,331 +5,254 @@ import static ru.dimension.ui.laf.LafColorGroup.CONFIG_PANEL;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.util.List;
-import java.util.function.Supplier;
-import javax.swing.DefaultCellEditor;
-import javax.swing.JCheckBox;
+import java.util.Collections;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.border.EtchedBorder;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableColumn;
+import javax.swing.event.TableModelEvent;
+
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTitledSeparator;
-import ru.dimension.db.model.profile.CProfile;
-import ru.dimension.ui.helper.GUIHelper;
+import ru.dimension.tt.api.TT;
+import ru.dimension.tt.api.TTRegistry;
+import ru.dimension.tt.swing.TTTable;
+import ru.dimension.tt.swing.TableUi;
+import ru.dimension.tt.swing.icon.RowIconProvider;
+import ru.dimension.tt.swingx.JXTableTables;
+import ru.dimension.ui.component.module.model.icon.ModelIconProviders;
+import ru.dimension.ui.component.module.model.row.Rows.*;
 import ru.dimension.ui.laf.LaF;
-import ru.dimension.ui.model.column.ColumnNames;
-import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.info.ProfileInfo;
-import ru.dimension.ui.model.info.QueryInfo;
-import ru.dimension.ui.model.info.TableInfo;
-import ru.dimension.ui.model.info.TaskInfo;
-import ru.dimension.ui.model.table.JXTableCase;
 
 @Log4j2
 public class ModelView extends JPanel {
 
-  private final JXTableCase profileTableCase;
-  private final JXTableCase taskTableCase;
-  private final JXTableCase queryTableCase;
-  private final JXTableCase columnTableCase;
-  private final JXTableCase metricTableCase;
+  private final TTTable<ProfileRow, JXTable> profileTable;
+  private final TTTable<TaskRow, JXTable> taskTable;
+  private final TTTable<QueryRow, JXTable> queryTable;
+  private final TTTable<ColumnRow, JXTable> columnTable;
+  private final TTTable<MetricRow, JXTable> metricTable;
 
   public ModelView() {
-    this.profileTableCase = createBasicTableCase();
-    this.taskTableCase = createBasicTableCase();
-    this.queryTableCase = createBasicTableCase();
-    this.columnTableCase = createCheckboxTableCase();
-    this.metricTableCase = createCheckboxTableCase();
+    TTRegistry registry = TT.builder()
+        .scanPackages("ru.dimension.ui.component.module.model.row")
+        .build();
+
+    // Create tables with icons
+    this.profileTable = createBasicTableWithIcon(
+        registry, ProfileRow.class, ModelIconProviders.forProfileRow());
+    this.taskTable = createBasicTableWithIcon(
+        registry, TaskRow.class, ModelIconProviders.forTaskRow());
+    this.queryTable = createBasicTableWithIcon(
+        registry, QueryRow.class, ModelIconProviders.forQueryRow());
+    this.columnTable = createCheckBoxTableWithIcon(
+        registry, ColumnRow.class, ModelIconProviders.forColumnRow());
+    this.metricTable = createCheckBoxTableWithIcon(
+        registry, MetricRow.class, ModelIconProviders.forMetricRow());
 
     setupLayout();
   }
 
-  private void setupLayout() {
-    LaF.setBackgroundConfigPanel(CONFIG_PANEL, this);
-    this.setBorder(new EtchedBorder());
+  // --- Getters ---
+  public TTTable<ProfileRow, JXTable> getProfileTable() { return profileTable; }
+  public TTTable<TaskRow, JXTable>    getTaskTable()    { return taskTable; }
+  public TTTable<QueryRow, JXTable>   getQueryTable()   { return queryTable; }
+  public TTTable<ColumnRow, JXTable>  getColumnTable()  { return columnTable; }
+  public TTTable<MetricRow, JXTable>  getMetricTable()  { return metricTable; }
 
-    setLayout(new GridBagLayout());
-    GridBagConstraints gbc = new GridBagConstraints();
+  // --- Listener Registration ---
 
-    // Fix: By setting a zero preferred size, we force GridBagLayout
-    // to rely on the 'weighty' constraint for distributing space, even on the initial layout.
-    Dimension zeroSize = new Dimension(0, 0);
-    int gridY = 0;
-
-    // --- Common Constraints ---
-    gbc.gridx = 0;
-    gbc.weightx = 1.0;
-
-    // --- Profile Section ---
-    gbc.gridy = gridY++;
-    gbc.weighty = 0.0;
-    gbc.fill = GridBagConstraints.HORIZONTAL;
-    add(new JXTitledSeparator("Profile"), gbc);
-
-    gbc.gridy = gridY++;
-    gbc.weighty = 0.15; // This component gets 15% of the vertical space.
-    gbc.fill = GridBagConstraints.BOTH;
-    JScrollPane profileScrollPane = profileTableCase.getJScrollPane();
-    profileScrollPane.setPreferredSize(zeroSize);
-    add(profileScrollPane, gbc);
-
-    // --- Task Section ---
-    gbc.gridy = gridY++;
-    gbc.weighty = 0.0;
-    gbc.fill = GridBagConstraints.HORIZONTAL;
-    add(new JXTitledSeparator("Task"), gbc);
-
-    gbc.gridy = gridY++;
-    gbc.weighty = 0.15; // This component gets 15% of the vertical space.
-    gbc.fill = GridBagConstraints.BOTH;
-    JScrollPane taskScrollPane = taskTableCase.getJScrollPane();
-    taskScrollPane.setPreferredSize(zeroSize);
-    add(taskScrollPane, gbc);
-
-    // --- Query Section ---
-    gbc.gridy = gridY++;
-    gbc.weighty = 0.0;
-    gbc.fill = GridBagConstraints.HORIZONTAL;
-    add(new JXTitledSeparator("Query"), gbc);
-
-    gbc.gridy = gridY++;
-    gbc.weighty = 0.15; // This component gets 15% of the vertical space.
-    gbc.fill = GridBagConstraints.BOTH;
-    JScrollPane queryScrollPane = queryTableCase.getJScrollPane();
-    queryScrollPane.setPreferredSize(zeroSize);
-    add(queryScrollPane, gbc);
-
-    // --- Tabbed Pane Section ---
-    JTabbedPane tabbedPane = new JTabbedPane();
-    tabbedPane.addTab("Columns", columnTableCase.getJScrollPane());
-    tabbedPane.addTab("Metrics", metricTableCase.getJScrollPane());
-    tabbedPane.setPreferredSize(zeroSize);
-
-    gbc.gridy = gridY++;
-    gbc.weighty = 0.55; // This component gets the remaining 55% of vertical space.
-    gbc.fill = GridBagConstraints.BOTH;
-    add(tabbedPane, gbc);
+  public void setColumnToggleListener(ModelHandler<ColumnRow> handler) {
+    setupTableListener(columnTable, "pick", handler);
   }
 
-  private JXTableCase createBasicTableCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(7,
-                                                       new String[]{ColumnNames.ID.getColName(),
-                                                           ColumnNames.NAME.getColName()});
-    jxTableCase.getJxTable().getColumnExt(ColumnNames.ID.ordinal()).setVisible(false);
-    return jxTableCase;
+  public void setMetricToggleListener(ModelHandler<MetricRow> handler) {
+    setupTableListener(metricTable, "pick", handler);
   }
 
-  private JXTableCase createCheckboxTableCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCaseCheckBoxAdHoc(10,
-                                                                    new String[]{
-                                                                        ColumnNames.ID.getColName(),
-                                                                        ColumnNames.NAME.getColName(),
-                                                                        ColumnNames.PICK.getColName()
-                                                                    }, ColumnNames.PICK.ordinal());
+  @SuppressWarnings("unchecked")
+  private <T> void setupTableListener(TTTable<T, ?> tt, String colName, ModelHandler<T> handler) {
+    int colIdx = tt.model().schema().modelIndexOf(colName);
+    if (colIdx < 0) {
+      log.warn("Column '{}' not found in table schema", colName);
+      return;
+    }
 
-    jxTableCase.getJxTable().getColumnExt(ColumnNames.ID.ordinal()).setVisible(false);
+    tt.model().addTableModelListener(e -> {
+      if (e.getType() == TableModelEvent.UPDATE && e.getColumn() == colIdx) {
+        int rowIdx = e.getFirstRow();
+        if (rowIdx >= 0 && rowIdx < tt.model().getRowCount()) {
+          T item = tt.model().itemAt(rowIdx);
+          if (item == null) return;
 
-    TableColumn nameColumn = jxTableCase.getJxTable().getColumnModel().getColumn(ColumnNames.NAME.ordinal());
-    nameColumn.setMinWidth(30);
-    nameColumn.setMaxWidth(40);
+          boolean isPicked = false;
+          if (item instanceof ColumnRow) isPicked = ((ColumnRow) item).isPick();
+          else if (item instanceof MetricRow) isPicked = ((MetricRow) item).isPick();
 
-    return jxTableCase;
+          handler.handle(item, isPicked);
+        }
+      }
+    });
   }
 
-  public void initializeProfileTable(List<ProfileInfo> profileInfoList) {
-    profileTableCase.clearTable();
-    profileInfoList.forEach(profile -> profileTableCase.getDefaultTableModel()
-        .addRow(new Object[]{profile.getId(), profile.getName()}));
-  }
-
+  // --- Selection Helpers ---
   public void selectFirstProfileRow() {
-    if (profileTableCase.getDefaultTableModel().getRowCount() > 0) {
-      profileTableCase.getJxTable().setRowSelectionInterval(0, 0);
-    }
-  }
-
-  public int getSelectedProfileId() {
-    int selectedRow = profileTableCase.getJxTable().getSelectedRow();
-    if (selectedRow >= 0) {
-      Object idObj = profileTableCase.getDefaultTableModel().getValueAt(selectedRow, ColumnNames.ID.ordinal());
-      if (idObj instanceof Integer) {
-        return (Integer) idObj;
-      } else {
-        return Integer.parseInt(idObj.toString());
-      }
-    }
-    return -1;
-  }
-
-  public void removeProfileFromTable(int profileId) {
-    DefaultTableModel model = profileTableCase.getDefaultTableModel();
-    for (int row = 0; row < model.getRowCount(); row++) {
-      Object idObj = model.getValueAt(row, ColumnNames.ID.ordinal());
-      int id;
-      if (idObj instanceof Integer) {
-        id = (Integer) idObj;
-      } else {
-        id = Integer.parseInt(idObj.toString());
-      }
-      if (id == profileId) {
-        model.removeRow(row);
-        log.info("Removed profile row with id={}", profileId);
-        break;
-      }
-    }
-  }
-
-  public void clearAllSelections() {
-    profileTableCase.getJxTable().clearSelection();
-    taskTableCase.clearTable();
-    queryTableCase.clearTable();
-    columnTableCase.clearTable();
-    metricTableCase.clearTable();
-  }
-
-  public void updateTaskTable(List<TaskInfo> taskInfoList) {
-    taskTableCase.clearTable();
-    taskInfoList.forEach(taskInfo -> taskTableCase.getDefaultTableModel()
-        .addRow(new Object[]{taskInfo.getId(), taskInfo.getName()}));
+    if (profileTable.model().getRowCount() > 0)
+      profileTable.table().setRowSelectionInterval(0, 0);
   }
 
   public void selectFirstTaskRow() {
-    if (taskTableCase.getDefaultTableModel().getRowCount() > 0) {
-      taskTableCase.getJxTable().setRowSelectionInterval(0, 0);
-    } else {
+    if (taskTable.model().getRowCount() > 0)
+      taskTable.table().setRowSelectionInterval(0, 0);
+    else
       clearQueryAndDetailsTables();
-    }
-  }
-
-  public void updateQueryTable(List<QueryInfo> queryInfoList) {
-    queryTableCase.clearTable();
-    queryInfoList.forEach(queryInfo -> queryTableCase.getDefaultTableModel()
-        .addRow(new Object[]{queryInfo.getId(), queryInfo.getName()}));
   }
 
   public void selectFirstQueryRow() {
-    if (queryTableCase.getDefaultTableModel().getRowCount() > 0) {
-      queryTableCase.getJxTable().setRowSelectionInterval(0, 0);
-    } else {
+    if (queryTable.model().getRowCount() > 0)
+      queryTable.table().setRowSelectionInterval(0, 0);
+    else
       clearQueryAndDetailsTables();
-    }
   }
 
-  private void clearQueryAndDetailsTables() {
-    queryTableCase.clearTable();
-    columnTableCase.clearTable();
-    metricTableCase.clearTable();
+  public void selectFirstDetailsRows() {
+    if (columnTable.model().getRowCount() > 0)
+      columnTable.table().setRowSelectionInterval(0, 0);
+    if (metricTable.model().getRowCount() > 0)
+      metricTable.table().setRowSelectionInterval(0, 0);
   }
 
-  public void updateColumnAndMetricTables(TableInfo tableInfo,
-                                          List<Metric> metricList) {
-    columnTableCase.clearTable();
-    metricTableCase.clearTable();
-
-    populateColumnTable(tableInfo);
-    populateMetricTable(metricList);
+  public void clearAllSelections() {
+    profileTable.table().clearSelection();
+    taskTable.setItems(Collections.emptyList());
+    clearQueryAndDetailsTables();
   }
 
-  private void populateColumnTable(TableInfo tableInfo) {
-    if (tableInfo.getCProfiles() != null) {
-      tableInfo.getCProfiles().stream()
-          .filter(cProfile -> !cProfile.getCsType().isTimeStamp())
-          .forEach(cProfile -> columnTableCase.getDefaultTableModel()
-              .addRow(new Object[]{cProfile.getColId(), cProfile.getColName(), false}));
-    }
-  }
-
-  private void populateMetricTable(List<Metric> metricList) {
-    if (metricList != null) {
-      metricList.forEach(metric -> metricTableCase.getDefaultTableModel()
-          .addRow(new Object[]{metric.getId(), metric.getName(), false}));
-    }
-  }
-
-  public void restoreSelections(List<CProfile> selectedColumns,
-                                List<Metric> selectedMetrics) {
-    restoreColumnSelections(selectedColumns);
-    restoreMetricSelections(selectedMetrics);
-  }
-
-  private void restoreColumnSelections(List<CProfile> selectedColumns) {
-    for (int row = 0; row < columnTableCase.getDefaultTableModel().getRowCount(); row++) {
-      int id = (int) columnTableCase.getDefaultTableModel().getValueAt(row, ColumnNames.ID.ordinal());
-      boolean exists = selectedColumns.stream().anyMatch(cProfile -> cProfile.getColId() == id);
-      columnTableCase.getDefaultTableModel().setValueAt(exists, row, ColumnNames.PICK.ordinal());
-    }
-  }
-
-  private void restoreMetricSelections(List<Metric> selectedMetrics) {
-    for (int row = 0; row < metricTableCase.getDefaultTableModel().getRowCount(); row++) {
-      int id = (int) metricTableCase.getDefaultTableModel().getValueAt(row, ColumnNames.ID.ordinal());
-      boolean exists = selectedMetrics.stream().anyMatch(metric -> metric.getId() == id);
-      metricTableCase.getDefaultTableModel().setValueAt(exists, row, ColumnNames.PICK.ordinal());
-    }
-  }
-
-  public void setupColumnEditors(Supplier<ModelHandler<CProfile>> columnHandlerSupplier,
-                                 Supplier<ModelHandler<Metric>> metricHandlerSupplier,
-                                 Supplier<List<CProfile>> cProfilesSupplier,
-                                 Supplier<List<Metric>> metricsSupplier) {
-    setupColumnEditor(columnTableCase.getJxTable(), columnHandlerSupplier, cProfilesSupplier);
-    setupColumnEditor(metricTableCase.getJxTable(), metricHandlerSupplier, metricsSupplier);
-  }
-
-  private <T> void setupColumnEditor(JXTable dataTable,
-                                     Supplier<ModelHandler<T>> handlerSupplier,
-                                     Supplier<List<T>> itemsSupplier) {
-    DefaultCellEditor editor = createCheckboxEditor();
-    dataTable.getColumnModel().getColumn(ColumnNames.NAME.ordinal()).setCellEditor(editor);
-
-    ModelHandler<T> handler = handlerSupplier.get();
-    List<T> items = itemsSupplier.get();
-    ModelCellEditorListener<T> editorListener = new ModelCellEditorListener<>(items, dataTable, handler);
-    editor.addCellEditorListener(editorListener);
-  }
-
-  private DefaultCellEditor createCheckboxEditor() {
-    return new DefaultCellEditor(new JCheckBox());
-  }
-
-  public void selectFirstRows() {
-    if (columnTableCase.getDefaultTableModel().getRowCount() > 0) {
-      columnTableCase.getJxTable().setRowSelectionInterval(0, 0);
-    }
-    if (metricTableCase.getDefaultTableModel().getRowCount() > 0) {
-      metricTableCase.getJxTable().setRowSelectionInterval(0, 0);
-    }
-  }
-
-  public void resetColumnSelections() {
-    for (int r = 0; r < columnTableCase.getJxTable().getRowCount(); r++) {
-      columnTableCase.getDefaultTableModel().setValueAt(false, r, ColumnNames.PICK.ordinal());
-    }
-  }
-
-  public void resetMetricSelections() {
-    for (int r = 0; r < metricTableCase.getJxTable().getRowCount(); r++) {
-      metricTableCase.getDefaultTableModel().setValueAt(false, r, ColumnNames.PICK.ordinal());
-    }
+  public void clearQueryAndDetailsTables() {
+    queryTable.setItems(Collections.emptyList());
+    columnTable.setItems(Collections.emptyList());
+    metricTable.setItems(Collections.emptyList());
   }
 
   public void showNotRunningMessage(String profileName) {
     log.warn("Profile: {} not started", profileName);
   }
 
-  public JXTableCase getProfileTableCase() {
-    return profileTableCase;
+  // --- Creation Helpers with Icons ---
+
+  private <T> TTTable<T, JXTable> createBasicTableWithIcon(
+      TTRegistry registry,
+      Class<T> type,
+      RowIconProvider<T> iconProvider) {
+
+    TTTable<T, JXTable> tt = JXTableTables.create(
+        registry,
+        type,
+        TableUi.<T>builder()
+            .rowIcon(iconProvider)
+            .rowIconInColumn("name")
+            .build()
+    );
+    configureCommon(tt);
+    return tt;
   }
 
-  public JXTableCase getTaskTableCase() {
-    return taskTableCase;
+  private <T> TTTable<T, JXTable> createCheckBoxTableWithIcon(
+      TTRegistry registry,
+      Class<T> type,
+      RowIconProvider<T> iconProvider) {
+
+    TTTable<T, JXTable> tt = JXTableTables.create(
+        registry,
+        type,
+        TableUi.<T>builder()
+            .rowIcon(iconProvider)
+            .rowIconInColumn("name")
+            .build()
+    );
+
+    JXTable table = tt.table();
+    configureCommon(tt);
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setEditable(true);
+
+    if (table.getColumnExt("Name") != null) {
+      table.getColumnExt("Name").setMinWidth(30);
+      table.getColumnExt("Name").setMaxWidth(40);
+      table.getColumnExt("Name").setEditable(false);
+    }
+    return tt;
   }
 
-  public JXTableCase getQueryTableCase() {
-    return queryTableCase;
+  private void configureCommon(TTTable<?, JXTable> tt) {
+    JXTable table = tt.table();
+    table.setSortable(false);
+    if (table.getColumnExt("id") != null) {
+      table.getColumnExt("id").setVisible(false);
+    }
+  }
+
+  private void setupLayout() {
+    LaF.setBackgroundConfigPanel(CONFIG_PANEL, this);
+    this.setBorder(new EtchedBorder());
+    setLayout(new GridBagLayout());
+    GridBagConstraints gbc = new GridBagConstraints();
+    Dimension zeroSize = new Dimension(0, 0);
+    int gridY = 0;
+
+    gbc.gridx = 0;
+    gbc.weightx = 1.0;
+
+    // Profile
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.0;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    add(new JXTitledSeparator("Profile"), gbc);
+
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.15;
+    gbc.fill = GridBagConstraints.BOTH;
+    JScrollPane profileSP = profileTable.scrollPane();
+    profileSP.setPreferredSize(zeroSize);
+    add(profileSP, gbc);
+
+    // Task
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.0;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    add(new JXTitledSeparator("Task"), gbc);
+
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.15;
+    gbc.fill = GridBagConstraints.BOTH;
+    JScrollPane taskSP = taskTable.scrollPane();
+    taskSP.setPreferredSize(zeroSize);
+    add(taskSP, gbc);
+
+    // Query
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.0;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    add(new JXTitledSeparator("Query"), gbc);
+
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.15;
+    gbc.fill = GridBagConstraints.BOTH;
+    JScrollPane querySP = queryTable.scrollPane();
+    querySP.setPreferredSize(zeroSize);
+    add(querySP, gbc);
+
+    // Details Tabs
+    JTabbedPane tabbedPane = new JTabbedPane();
+    tabbedPane.addTab("Columns", columnTable.scrollPane());
+    tabbedPane.addTab("Metrics", metricTable.scrollPane());
+    tabbedPane.setPreferredSize(zeroSize);
+
+    gbc.gridy = gridY++;
+    gbc.weighty = 0.55;
+    gbc.fill = GridBagConstraints.BOTH;
+    add(tabbedPane, gbc);
   }
 }

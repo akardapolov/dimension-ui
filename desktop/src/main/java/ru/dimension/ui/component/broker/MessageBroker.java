@@ -11,9 +11,12 @@ public class MessageBroker {
   public enum Panel { REALTIME, HISTORY, INSIGHT, NONE}
   public enum Block { CONFIG, CHART, DETAIL, NONE}
 
-  public enum Action { ADD_CHART, REMOVE_CHART,
+  public enum Action {
+    ADD_CHART,
+    REMOVE_CHART,
     REMOVE_ALL_CHART,
     REMOVE_ALL_CHARTS_FOR_CONNECTION,
+    REMOVE_ALL_CHARTS_FOR_TABLE_OR_VIEW,
 
     SET_CHECKBOX_COLUMN, SET_CHECKBOX_METRIC,
     EXPAND_COLLAPSE_ALL, CHART_LEGEND_STATE_ALL,
@@ -29,7 +32,7 @@ public class MessageBroker {
     NEED_TO_UPDATE_LIST_DESIGN,
     SHOW_CHART_FULL,
     REMOVE_ADHOC_TAB,
-    CLEAR_SELECTION_FOR_GLOBAL_KEY
+    CLEAR_SELECTION_FOR_TABLE_OR_VIEW
   }
 
   private final Map<Destination, List<MessageAction>> receivers = new HashMap<>();

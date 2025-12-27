@@ -1,12 +1,5 @@
 package ru.dimension.ui.component.module.model;
 
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import javax.swing.table.DefaultTableModel;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.broker.Destination;
@@ -14,22 +7,23 @@ import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Action;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
+import ru.dimension.ui.component.module.model.row.Rows.*;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.RunStatus;
-import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.info.ProfileInfo;
-import ru.dimension.ui.model.info.QueryInfo;
-import ru.dimension.ui.model.info.TableInfo;
-import ru.dimension.ui.model.info.TaskInfo;
+import ru.dimension.ui.model.info.*;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Log4j2
 public class ModelPresenter {
   private final MessageBroker.Component component;
   private final ModelModel model;
   private final ModelView view;
-
   private final MessageBroker broker = MessageBroker.getInstance();
+
+  private ProfileTaskQueryKey currentKey;
 
   public ModelPresenter(MessageBroker.Component component,
                         ModelModel model,
@@ -37,171 +31,185 @@ public class ModelPresenter {
     this.component = component;
     this.model = model;
     this.view = view;
+
+    // Register listeners once. They will check 'currentKey' dynamically.
+    this.view.setColumnToggleListener(this::handleColumnToggle);
+    this.view.setMetricToggleListener(this::handleMetricToggle);
   }
 
   public void initializeModel() {
-    List<ProfileInfo> profileInfoList = model.getProfileManager().getProfileInfoList();
-    view.initializeProfileTable(profileInfoList);
+    List<ProfileInfo> profiles = model.getProfileManager().getProfileInfoList();
+    view.getProfileTable().setItems(ModelRowMapper.mapProfiles(profiles));
     view.selectFirstProfileRow();
   }
 
   public void initializePartialModel() {
-    List<ProfileInfo> profileInfoList = model.getProfileManager().getProfileInfoList();
+    List<ProfileInfo> profiles = model.getProfileManager().getProfileInfoList();
+    Set<Integer> existingIds = view.getProfileTable().model().items().stream()
+        .map(ProfileRow::getId)
+        .collect(Collectors.toSet());
 
-    DefaultTableModel modelTable = view.getProfileTableCase().getDefaultTableModel();
-
-    // Collect existing profile IDs from the table
-    List<Integer> existingIds = new ArrayList<>();
-    for (int row = 0; row < modelTable.getRowCount(); row++) {
-      Object idObj = modelTable.getValueAt(row, ColumnNames.ID.ordinal());
-      if (idObj instanceof Integer) {
-        existingIds.add((Integer) idObj);
-      } else {
-        existingIds.add(Integer.parseInt(idObj.toString()));
-      }
-    }
-
-    // Append only new profiles
-    profileInfoList.stream()
+    List<ProfileRow> newRows = profiles.stream()
         .filter(p -> !existingIds.contains(p.getId()))
-        .forEach(p -> modelTable.addRow(new Object[]{p.getId(), p.getName()}));
+        .map(p -> new ProfileRow(p.getId(), p.getName()))
+        .toList();
+
+    if (!newRows.isEmpty()) {
+      List<ProfileRow> allRows = new ArrayList<>(view.getProfileTable().model().items());
+      allRows.addAll(newRows);
+      view.getProfileTable().setItems(allRows);
+    }
   }
 
   public void handleProfileRemoval(int profileId) {
     log.info("Handling profile removal: profileId={}", profileId);
 
-    // Check if the removed profile is currently selected
-    int selectedProfileId = view.getSelectedProfileId();
-    boolean wasSelected = (selectedProfileId == profileId);
+    boolean wasSelected = view.getProfileTable().selectedItem()
+        .map(p -> p.getId() == profileId).orElse(false);
 
-    // Clear cached data for this profile
     model.clearCacheForProfile(profileId);
 
     if (wasSelected) {
-      // Profile was selected - clear selection and do full rendering
       log.info("Removed profile was selected, performing full rendering");
+      currentKey = null;
       view.clearAllSelections();
       initializeModel();
     } else {
-      // Profile was not selected - do partial rendering
-      log.info("Removed profile was not selected, performing partial rendering");
-      view.removeProfileFromTable(profileId);
+      List<ProfileRow> updated = view.getProfileTable().model().items().stream()
+          .filter(r -> r.getId() != profileId)
+          .collect(Collectors.toList());
+      view.getProfileTable().setItems(updated);
     }
   }
 
+  // --- List Selection Handlers ---
   public void handleProfileSelection(int profileId) {
     ProfileInfo profileInfo = model.getProfileManager().getProfileInfoById(profileId);
-    List<TaskInfo> taskInfoList = profileInfo.getTaskInfoList().stream()
-        .map(taskId -> model.getProfileManager().getTaskInfoById(taskId))
+    if (profileInfo == null) return;
+
+    List<TaskInfo> tasks = profileInfo.getTaskInfoList().stream()
+        .map(id -> model.getProfileManager().getTaskInfoById(id))
         .collect(Collectors.toList());
-    view.updateTaskTable(taskInfoList);
+
+    view.getTaskTable().setItems(ModelRowMapper.mapTasks(tasks));
     view.selectFirstTaskRow();
   }
 
   public void handleTaskSelection(int taskId) {
     TaskInfo taskInfo = model.getProfileManager().getTaskInfoById(taskId);
-    List<QueryInfo> queryInfoList = taskInfo.getQueryInfoList().stream()
-        .map(queryId -> model.getProfileManager().getQueryInfoById(queryId))
+    if (taskInfo == null) return;
+
+    List<QueryInfo> queries = taskInfo.getQueryInfoList().stream()
+        .map(id -> model.getProfileManager().getQueryInfoById(id))
         .collect(Collectors.toList());
-    view.updateQueryTable(queryInfoList);
+
+    view.getQueryTable().setItems(ModelRowMapper.mapQueries(queries));
     view.selectFirstQueryRow();
   }
 
-  public void handleQuerySelection(int profileId,
-                                   int taskId,
-                                   int queryId) {
-    QueryInfo queryInfo = model.getProfileManager().getQueryInfoList(profileId, taskId).stream()
-        .filter(q -> q.getId() == queryId)
-        .findFirst()
-        .orElseThrow();
+  public void handleQuerySelection(int profileId, int taskId, int queryId) {
+    this.currentKey = new ProfileTaskQueryKey(profileId, taskId, queryId);
+
+    QueryInfo queryInfo = getQueryInfo(profileId, taskId, queryId);
+    if (queryInfo == null) {
+      log.error("Query not found: {}", queryId);
+      return;
+    }
+
     TableInfo tableInfo = model.getProfileManager().getTableInfoByTableName(queryInfo.getName());
-    ProfileTaskQueryKey key = new ProfileTaskQueryKey(profileId, taskId, queryId);
 
-    Map.Entry<List<Metric>, List<CProfile>> entry = model.getQueryKeyMap().get(key);
-    List<Metric> selectedMetrics = entry == null ? new ArrayList<>() : entry.getKey();
-    List<CProfile> selectedColumns = entry == null ? new ArrayList<>() : entry.getValue();
+    var entry = model.getQueryKeyMap().getOrDefault(currentKey,
+                                                    new AbstractMap.SimpleEntry<>(new ArrayList<>(), new ArrayList<>()));
 
-    view.updateColumnAndMetricTables(tableInfo, queryInfo.getMetricList());
-    view.restoreSelections(selectedColumns, selectedMetrics);
+    List<Metric> selectedMetrics = entry.getKey();
+    List<CProfile> selectedColumns = entry.getValue();
 
-    view.setupColumnEditors(
-        getColumnStackChartPanelHandler(key),
-        getMetricStackChartPanelHandler(key),
-        tableInfo::getCProfiles,
-        queryInfo::getMetricList
-    );
-    view.selectFirstRows();
+    view.getColumnTable().setItems(ModelRowMapper.mapColumns(tableInfo, selectedColumns));
+    view.getMetricTable().setItems(ModelRowMapper.mapMetrics(queryInfo.getMetricList(), selectedMetrics));
+
+    view.selectFirstDetailsRows();
 
     broker.sendMessage(Message.builder()
                            .destination(Destination.withDefault(component, Module.MANAGE))
                            .action(Action.SET_PROFILE_TASK_QUERY_KEY)
-                           .parameter("key", key)
+                           .parameter("key", currentKey)
                            .build());
   }
 
-  private Supplier<ModelHandler<CProfile>> getColumnStackChartPanelHandler(ProfileTaskQueryKey key) {
-    return () -> (cProfile, add) -> {
-      ProfileInfo profileInfo = model.getProfileManager().getProfileInfoById(key.getProfileId());
-      if (profileInfo.getStatus() != RunStatus.RUNNING) {
-        view.showNotRunningMessage(profileInfo.getName());
-      }
+  private void handleColumnToggle(ColumnRow row, boolean isAdded) {
+    if (!validateInteraction() || !row.hasOrigin()) return;
 
-      updateColumnSelection(key, cProfile, add);
+    CProfile cProfile = row.getOrigin();
+    updateCache(currentKey, cProfile, isAdded);
 
-      QueryInfo queryInfo = model.getProfileManager().getQueryInfoById(key.getQueryId());
-      TableInfo tableInfo = model.getProfileManager().getTableInfoByTableName(queryInfo.getName());
-      Metric metric = new Metric(tableInfo, cProfile);
+    Metric chartMetric = createMetricFromColumn(currentKey, cProfile);
+    if (chartMetric != null) {
+      sendChartMessage(isAdded, currentKey, chartMetric);
+    }
+  }
 
+  private void handleMetricToggle(MetricRow row, boolean isAdded) {
+    if (!validateInteraction() || !row.hasOrigin()) return;
+
+    Metric metric = row.getOrigin();
+    updateCache(currentKey, metric, isAdded);
+    sendChartMessage(isAdded, currentKey, metric);
+  }
+
+  private boolean validateInteraction() {
+    if (currentKey == null) return false;
+
+    ProfileInfo profileInfo = model.getProfileManager().getProfileInfoById(currentKey.getProfileId());
+    if (profileInfo != null && profileInfo.getStatus() != RunStatus.RUNNING) {
+      view.showNotRunningMessage(profileInfo.getName());
+    }
+    return true;
+  }
+
+  private void updateCache(ProfileTaskQueryKey key, Object item, boolean add) {
+    var entry = model.getQueryKeyMap()
+        .computeIfAbsent(key, k -> new AbstractMap.SimpleEntry<>(new ArrayList<>(), new ArrayList<>()));
+
+    if (item instanceof CProfile cp) {
+      List<CProfile> list = entry.getValue();
       if (add) {
-        broker.sendMessage(Message.builder()
-                               .destination(Destination.withDefault(component, Module.CHARTS))
-                               .action(Action.ADD_CHART)
-                               .parameter("key", key)
-                               .parameter("metric", metric)
-                               .build());
+        if (list.stream().noneMatch(c -> c.getColId() == cp.getColId())) list.add(cp);
       } else {
-        broker.sendMessage(Message.builder()
-                               .destination(Destination.withDefault(component, Module.CHARTS))
-                               .action(Action.REMOVE_CHART)
-                               .parameter("key", key)
-                               .parameter("metric", metric)
-                               .build());
+        list.removeIf(c -> c.getColId() == cp.getColId());
       }
-    };
-  }
-
-  private void updateColumnSelection(ProfileTaskQueryKey key,
-                                     CProfile cProfile,
-                                     boolean add) {
-    Map.Entry<List<Metric>, List<CProfile>> entry = model.getQueryKeyMap()
-        .computeIfAbsent(key, k -> new AbstractMap.SimpleEntry<>(new ArrayList<>(), new ArrayList<>()));
-    if (add) {
-      entry.getValue().add(cProfile);
-    } else {
-      entry.getValue().remove(cProfile);
+    } else if (item instanceof Metric m) {
+      List<Metric> list = entry.getKey();
+      if (add) {
+        if (list.stream().noneMatch(mx -> mx.getId() == m.getId())) list.add(m);
+      } else {
+        list.removeIf(mx -> mx.getId() == m.getId());
+      }
     }
   }
 
-  private Supplier<ModelHandler<Metric>> getMetricStackChartPanelHandler(ProfileTaskQueryKey key) {
-    return () -> (metric, add) -> {
-      ProfileInfo profileInfo = model.getProfileManager().getProfileInfoById(key.getProfileId());
-      if (profileInfo.getStatus() != RunStatus.RUNNING) {
-        view.showNotRunningMessage(profileInfo.getName());
-      }
+  private Metric createMetricFromColumn(ProfileTaskQueryKey key, CProfile cProfile) {
+    QueryInfo q = getQueryInfo(key.getProfileId(), key.getTaskId(), key.getQueryId());
+    if (q == null) return null;
 
-      updateMetricSelection(key, metric, add);
-    };
+    TableInfo t = model.getProfileManager().getTableInfoByTableName(q.getName());
+    if (t == null) return null;
+
+    return new Metric(t, cProfile);
   }
 
-  private void updateMetricSelection(ProfileTaskQueryKey key,
-                                     Metric metric,
-                                     boolean add) {
-    Map.Entry<List<Metric>, List<CProfile>> entry = model.getQueryKeyMap()
-        .computeIfAbsent(key, k -> new AbstractMap.SimpleEntry<>(new ArrayList<>(), new ArrayList<>()));
-    if (add) {
-      entry.getKey().add(metric);
-    } else {
-      entry.getKey().remove(metric);
-    }
+  private QueryInfo getQueryInfo(int profileId, int taskId, int queryId) {
+    return model.getProfileManager().getQueryInfoList(profileId, taskId).stream()
+        .filter(q -> q.getId() == queryId)
+        .findFirst()
+        .orElse(null);
+  }
+
+  private void sendChartMessage(boolean add, ProfileTaskQueryKey key, Metric metric) {
+    broker.sendMessage(Message.builder()
+                           .destination(Destination.withDefault(component, Module.CHARTS))
+                           .action(add ? Action.ADD_CHART : Action.REMOVE_CHART)
+                           .parameter("key", key)
+                           .parameter("metric", metric)
+                           .build());
   }
 }

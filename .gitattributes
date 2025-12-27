@@ -1,0 +1,26 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# These files are text and should be normalized (LF in repo, CRLF in working dir)
+*.txt text
+*.js text
+*.css text
+*.html text
+*.json text
+*.md text
+*.yml text
+*.yaml text
+*.xml text
+
+# Shell scripts should always be LF
+*.sh text eol=lf
+*.bash text eol=lf
+*.sh.template text eol=lf
+
+# Binary files should not be modified
+*.png binary
+*.jpg binary
+*.gif binary
+*.pdf binary
+*.jar binary
+*.zip binary
