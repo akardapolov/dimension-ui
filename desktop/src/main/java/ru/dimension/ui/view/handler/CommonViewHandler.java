@@ -1,34 +1,29 @@
 package ru.dimension.ui.view.handler;
 
+import java.util.List;
+import java.util.stream.Collectors;
+import org.jdesktop.swingx.JXTable;
+import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.table.JXTableCase;
+import ru.dimension.ui.view.table.row.Rows.MetadataRow;
 
 public interface CommonViewHandler {
 
-  default void fillConfigMetadata(TableInfo tableInfo,
-                                  JXTableCase configMetadataCase) {
-    Object[][] rowData = tableInfo.getCProfiles().stream()
-        .filter(f -> !f.getCsType().isTimeStamp())
-        .map(cProfile -> {
-          boolean dimensionVal = tableInfo.getDimensionColumnList() != null &&
-              tableInfo.getDimensionColumnList().stream().anyMatch(f -> f.equalsIgnoreCase(cProfile.getColName()));
+  default void fillConfigMetadata(TableInfo tableInfo, JXTableCase configMetadataCase) {
+    if (tableInfo != null && tableInfo.getCProfiles() != null) {
+      TTTable<MetadataRow, JXTable> tt = configMetadataCase.getTypedTable();
 
-          return new Object[]{
-              cProfile.getColId(),
-              cProfile.getColIdSql(),
-              cProfile.getColName(),
-              cProfile.getColDbTypeName(),
-              cProfile.getCsType().getSType(),
-              cProfile.getCsType().getCType(),
-              dimensionVal
-          };
-        })
-        .toArray(Object[][]::new);
+      List<MetadataRow> rows = tableInfo.getCProfiles().stream()
+          .filter(f -> !f.getCsType().isTimeStamp())
+          .map(cProfile -> {
+            boolean isDimension = tableInfo.getDimensionColumnList() != null &&
+                tableInfo.getDimensionColumnList().contains(cProfile.getColName());
+            return new MetadataRow(cProfile, isDimension);
+          })
+          .collect(Collectors.toList());
 
-    configMetadataCase.getDefaultTableModel().setRowCount(0);
-
-    for (Object[] row : rowData) {
-      configMetadataCase.getDefaultTableModel().addRow(row);
+      tt.setItems(rows);
     }
   }
 }

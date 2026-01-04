@@ -1,6 +1,5 @@
 package ru.dimension.ui.view.panel.config.profile;
 
-import java.util.List;
 import java.util.ResourceBundle;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -16,8 +15,6 @@ import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.manager.TemplateManager;
-import ru.dimension.ui.model.config.Task;
-import ru.dimension.ui.model.info.TaskInfo;
 import ru.dimension.ui.prompt.Internationalization;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 
@@ -61,20 +58,6 @@ public class ProfilePanel extends JPanel {
     this.jTextFieldProfile.setPrompt(bundleDefault.getString("pName"));
     this.jTextFieldDescription.setPrompt(bundleDefault.getString("pDesc"));
     this.multiSelectTaskPanel = multiSelectTaskPanel;
-
-    this.multiSelectTaskPanel.getSelectedTaskCase().getDefaultTableModel().getDataVector().removeAllElements();
-    this.multiSelectTaskPanel.getSelectedTaskCase().getDefaultTableModel().fireTableDataChanged();
-    this.multiSelectTaskPanel.getTaskListCase().getDefaultTableModel().getDataVector().removeAllElements();
-    this.multiSelectTaskPanel.getTaskListCase().getDefaultTableModel().fireTableDataChanged();
-    this.multiSelectTaskPanel.getTemplateListTaskCase().getDefaultTableModel().getDataVector().removeAllElements();
-    multiSelectTaskPanel.getTemplateListTaskCase().getDefaultTableModel().fireTableDataChanged();
-
-    List<TaskInfo> taskList = profileManager.getTaskInfoList();
-    List<Task> taskListTemplate = templateManager.getConfigList(Task.class);
-    taskListTemplate.forEach(taskIn -> multiSelectTaskPanel.getTemplateListTaskCase().getDefaultTableModel()
-        .addRow(new Object[]{taskIn.getId(), taskIn.getName()}));
-    taskList.forEach(taskIn -> multiSelectTaskPanel.getTaskListCase().getDefaultTableModel()
-        .addRow(new Object[]{taskIn.getId(), taskIn.getName()}));
 
     Border finalBorder = GUIHelper.getGrayBorder();
     jTextFieldDescription.setBorder(finalBorder);

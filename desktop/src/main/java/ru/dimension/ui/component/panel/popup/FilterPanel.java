@@ -7,42 +7,54 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import javax.swing.BorderFactory;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.RowFilter;
 import javax.swing.border.EtchedBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
 import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.tt.api.TT;
+import ru.dimension.tt.api.TTRegistry;
+import ru.dimension.tt.swing.TTTable;
+import ru.dimension.tt.swing.TableUi;
+import ru.dimension.tt.swingx.JXTableTables;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.helper.DateHelper;
-import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
-import ru.dimension.ui.model.column.MetricsColumnNames;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.date.DateLocale;
 import ru.dimension.ui.model.info.TableInfo;
-import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.ChartKey;
+import ru.dimension.ui.view.table.icon.ModelIconProviders;
+import ru.dimension.ui.view.table.row.Rows.ColumnRow;
 
 @Log4j2
 @Data
+@EqualsAndHashCode(callSuper = true)
 public class FilterPanel extends ConfigPopupPanel {
   private final MessageBroker.Component component;
 
   private final JTextField columnsSearch;
   private final JTextField filterSearch;
-  private final JXTableCase columns;
+
+  private final TTTable<ColumnRow, JXTable> columnsTable;
+  private TableRowSorter<?> columnSorter;
+
   private final GanttPopupPanel filtersPanel;
 
   private TableInfo tableInfo;
@@ -54,12 +66,8 @@ public class FilterPanel extends ConfigPopupPanel {
   private long end;
 
   private List<CProfile> allColumns = new ArrayList<>();
-  private List<CProfile> filteredColumns = new ArrayList<>();
-  private List<String> allFilters = new ArrayList<>();
-  private List<String> filteredFilters = new ArrayList<>();
 
   private CProfile selectedColumn;
-
   private RealtimeStateProvider realtimeStateProvider;
 
   public FilterPanel(MessageBroker.Component component) {
@@ -70,20 +78,55 @@ public class FilterPanel extends ConfigPopupPanel {
     columnsSearch = new JTextField();
     filterSearch = new JTextField();
 
-    String[] colNames = {MetricsColumnNames.ID.getColName(), MetricsColumnNames.COLUMN_NAME.getColName()};
-
-    columns = GUIHelper.getJXTableCase(10, colNames);
     filtersPanel = new GanttPopupPanel(component);
 
-    configureTableColumns(columns);
+    TTRegistry registry = TT.builder()
+        .scanPackages("ru.dimension.ui.view.table.row")
+        .build();
+
+    this.columnsTable = createColumnTable(registry);
 
     initializeListeners();
 
     updateContent(this::createPopupContent);
   }
 
-  private void configureTableColumns(JXTableCase table) {
-    table.getJxTable().getColumnExt(0).setVisible(false);
+  private TTTable<ColumnRow, JXTable> createColumnTable(TTRegistry registry) {
+    TTTable<ColumnRow, JXTable> tt = JXTableTables.create(
+        registry,
+        ColumnRow.class,
+        TableUi.<ColumnRow>builder()
+            .rowIcon(ModelIconProviders.forColumnRow())
+            .rowIconInColumn("name")
+            .build()
+    );
+
+    JXTable table = tt.table();
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setGridColor(java.awt.Color.GRAY);
+    table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+
+    table.setEditable(false);
+    table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+    // Hide ID column
+    if (table.getColumnExt("ID") != null) {
+      table.getColumnExt("ID").setVisible(false);
+    }
+
+    // Hide Pick column (checkbox) if it exists, as we select by row click here
+    if (table.getColumnExt("Pick") != null) {
+      table.getColumnExt("Pick").setVisible(false);
+    } else if (table.getColumnExt("pick") != null) {
+      table.getColumnExt("pick").setVisible(false);
+    }
+
+    // Setup sorter for filtering
+    columnSorter = new TableRowSorter<>(tt.model());
+    table.setRowSorter(columnSorter);
+
+    return tt;
   }
 
   private JPanel createPopupContent() {
@@ -93,7 +136,7 @@ public class FilterPanel extends ConfigPopupPanel {
 
     JPanel leftPanel = new JPanel(new BorderLayout());
     leftPanel.add(columnsSearch, BorderLayout.NORTH);
-    leftPanel.add(columns.getJScrollPane(), BorderLayout.CENTER);
+    leftPanel.add(columnsTable.scrollPane(), BorderLayout.CENTER);
 
     JPanel rightPanel = new JPanel(new BorderLayout());
     rightPanel.add(filterSearch, BorderLayout.NORTH);
@@ -137,19 +180,36 @@ public class FilterPanel extends ConfigPopupPanel {
       public void changedUpdate(DocumentEvent e) { filterFilters(); }
     });
 
-    columns.getJxTable().getSelectionModel().addListSelectionListener(e -> {
+    // Update selection logic for TTTable
+    columnsTable.table().getSelectionModel().addListSelectionListener(e -> {
       if (!e.getValueIsAdjusting()) {
-        int selectedRow = columns.getJxTable().getSelectedRow();
-        if (selectedRow >= 0) {
-          selectedColumn = filteredColumns.get(selectedRow);
-          filterSearch.setText("");
+        int viewRow = columnsTable.table().getSelectedRow();
+        if (viewRow >= 0) {
+          int modelRow = columnsTable.table().convertRowIndexToModel(viewRow);
+          ColumnRow rowItem = columnsTable.model().itemAt(modelRow);
 
-          loadFiltersForColumn(selectedColumn);
+          handleColumnSelection(rowItem);
         } else {
           clearFilters();
         }
       }
     });
+  }
+
+  private void handleColumnSelection(ColumnRow rowItem) {
+    if (rowItem == null) return;
+
+    // Find the original CProfile from allColumns based on the name from the row
+    // (Assuming Name is unique enough for the table view)
+    this.selectedColumn = allColumns.stream()
+        .filter(p -> p.getColName().equals(rowItem.getName()))
+        .findFirst()
+        .orElse(null);
+
+    if (this.selectedColumn != null) {
+      filterSearch.setText("");
+      loadFiltersForColumn(this.selectedColumn);
+    }
   }
 
   public void initializeChartPanel(ChartKey chartKey, TableInfo tableInfo, Panel panelType) {
@@ -178,13 +238,13 @@ public class FilterPanel extends ConfigPopupPanel {
     boolean panelEnabled = super.isEnabled();
 
     columnsSearch.setEnabled(panelEnabled);
-    columns.getJxTable().setEnabled(panelEnabled);
+    columnsTable.table().setEnabled(panelEnabled);
     filterSearch.setEnabled(panelEnabled);
     filtersPanel.setEnabled(panelEnabled);
   }
 
   public void clearFilterPanel() {
-    columns.getJxTable().clearSelection();
+    columnsTable.table().clearSelection();
     filtersPanel.clear();
 
     columnsSearch.setText("");
@@ -198,24 +258,30 @@ public class FilterPanel extends ConfigPopupPanel {
         .filter(profile -> !profile.getCsType().isTimeStamp())
         .collect(Collectors.toList());
 
-    filterColumns();
+    // Convert CProfiles to ColumnRows for the TTTable
+    List<ColumnRow> rows = allColumns.stream()
+        .map(cProfile -> new ColumnRow(cProfile, false))
+        .collect(Collectors.toList());
+
+    columnsTable.setItems(rows);
   }
 
   private void filterColumns() {
     String searchText = columnsSearch.getText();
-    filteredColumns = allColumns.stream()
-        .filter(profile -> matchesRegex(profile.getColName(), searchText))
-        .collect(Collectors.toList());
+    if (columnsTable == null || columnSorter == null) return;
 
-    updateColumnsTable();
-  }
-
-  private void updateColumnsTable() {
-    DefaultTableModel model = columns.getDefaultTableModel();
-    model.setRowCount(0);
-
-    for (CProfile profile : filteredColumns) {
-      model.addRow(new Object[]{profile.getColId(), profile.getColName()});
+    if (searchText == null || searchText.isEmpty()) {
+      columnSorter.setRowFilter(null);
+    } else {
+      try {
+        int nameIndex = columnsTable.model().schema().modelIndexOf("name");
+        if (nameIndex >= 0) {
+          columnSorter.setRowFilter(RowFilter.regexFilter("(?iu)" + searchText, nameIndex));
+        }
+      } catch (PatternSyntaxException e) {
+        log.warn("Invalid regex pattern", e);
+        columnSorter.setRowFilter(null);
+      }
     }
   }
 
@@ -253,16 +319,5 @@ public class FilterPanel extends ConfigPopupPanel {
   private void clearFilters() {
     filterSearch.setText("");
     filtersPanel.clear();
-  }
-
-  private boolean matchesRegex(String input, String pattern) {
-    if (pattern == null || pattern.isEmpty()) return true;
-    try {
-      return Pattern.compile(pattern, Pattern.CASE_INSENSITIVE)
-          .matcher(input)
-          .find();
-    } catch (Exception e) {
-      return false;
-    }
   }
 }

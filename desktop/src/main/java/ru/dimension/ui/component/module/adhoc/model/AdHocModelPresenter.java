@@ -10,18 +10,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
-import javax.swing.DefaultCellEditor;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
-import javax.swing.event.CellEditorListener;
-import javax.swing.event.ChangeEvent;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellEditor;
-import javax.swing.table.TableColumn;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import ru.dimension.db.core.DStore;
@@ -32,6 +23,7 @@ import ru.dimension.db.model.profile.TProfile;
 import ru.dimension.db.model.profile.table.BType;
 import ru.dimension.db.model.profile.table.IType;
 import ru.dimension.db.model.profile.table.TType;
+import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageBroker;
@@ -40,17 +32,12 @@ import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.chart.HelperChart;
 import ru.dimension.ui.component.model.ChartCardState;
-import ru.dimension.ui.component.module.analyze.handler.TableSelectionHandler;
 import ru.dimension.ui.component.module.db.DatabaseMetadata;
 import ru.dimension.ui.component.module.db.MetadataFactory;
 import ru.dimension.ui.helper.DialogHelper;
-import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.KeyHelper;
 import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.chart.ChartRange;
-import ru.dimension.ui.model.column.ColumnNames;
-import ru.dimension.ui.model.column.ConnectionColumnNames;
-import ru.dimension.ui.model.column.QueryMetadataColumnNames;
 import ru.dimension.ui.model.config.ConfigClasses;
 import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.db.DBType;
@@ -58,10 +45,13 @@ import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
-import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.state.AdHocStateManager;
+import ru.dimension.ui.view.table.row.Rows.ColumnRow;
+import ru.dimension.ui.view.table.row.Rows.ConnectionRow;
+import ru.dimension.ui.view.table.row.Rows.EntityRow;
+import ru.dimension.ui.view.table.row.Rows.TimestampRow;
 
 @Log4j2
 public class AdHocModelPresenter implements HelperChart {
@@ -71,12 +61,6 @@ public class AdHocModelPresenter implements HelperChart {
   private final MessageBroker broker = MessageBroker.getInstance();
   private final AdHocStateManager adHocStateManager = AdHocStateManager.getInstance();
 
-  private final JXTableCase connectionCase;
-  private final JComboBox<String> schemaCatalogCBox;
-  private final JXTableCase tableCase;
-  private final JXTableCase viewCase;
-  private final JXTableCase timestampCase;
-  private final JXTableCase columnCase;
   private final AtomicBoolean running = new AtomicBoolean(false);
   private final AtomicBoolean removingConnection = new AtomicBoolean(false);
 
@@ -88,19 +72,12 @@ public class AdHocModelPresenter implements HelperChart {
 
   private int currentConnectionId;
 
-  public AdHocModelPresenter(AdHocModelModel model,
-                             AdHocModelView view) {
+  public AdHocModelPresenter(AdHocModelModel model, AdHocModelView view) {
     this.model = model;
     this.view = view;
-    this.connectionCase = view.getConnectionCase();
-    this.schemaCatalogCBox = view.getSchemaCatalogCBox();
-    this.tableCase = view.getTableCase();
-    this.viewCase = view.getViewCase();
-    this.timestampCase = view.getTimestampCase();
-    this.columnCase = view.getColumnCase();
 
     setupListeners();
-    setupCheckboxEditors();
+    setupCheckboxListener();
   }
 
   public void loadConnections() {
@@ -109,10 +86,14 @@ public class AdHocModelPresenter implements HelperChart {
 
   public void addConnection(int connectionId, String connectionName, ConnectionType type) {
     if (type == null || type.equals(ConnectionType.JDBC)) {
+      ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(connectionId);
+      DBType dbType = connectionInfo != null ? connectionInfo.getDbType() : null;
+
       SwingUtilities.invokeLater(() ->
-                                     connectionCase.addRow(new Object[]{connectionId, connectionName})
+                                     view.addConnectionRow(new ConnectionRow(connectionId, connectionName, ConnectionType.JDBC, dbType))
       );
-      log.info("Added connection to AdHoc model: id={}, name={}", connectionId, connectionName);
+      log.info("Added connection to AdHoc model: id={}, name={}, dbType={}",
+               connectionId, connectionName, dbType);
     }
   }
 
@@ -124,9 +105,7 @@ public class AdHocModelPresenter implements HelperChart {
 
         if (isCurrentConnection) {
           removeAllChartsForConnection(connectionId);
-
           clearUIElements();
-
           releaseConnection(connectionId);
 
           tProfile = null;
@@ -140,19 +119,11 @@ public class AdHocModelPresenter implements HelperChart {
         }
 
         model.clearSelectionState(connectionId);
+        view.removeConnectionRowById(connectionId);
+        log.info("Removed connection from AdHoc model: id={}", connectionId);
 
-        DefaultTableModel tableModel = connectionCase.getDefaultTableModel();
-        for (int i = 0; i < tableModel.getRowCount(); i++) {
-          int id = (int) tableModel.getValueAt(i, 0);
-          if (id == connectionId) {
-            tableModel.removeRow(i);
-            log.info("Removed connection from AdHoc model: id={}", connectionId);
-            break;
-          }
-        }
-
-        if (isCurrentConnection && connectionCase.getJxTable().getRowCount() > 0) {
-          connectionCase.getJxTable().clearSelection();
+        if (isCurrentConnection && view.getConnectionTable().model().getRowCount() > 0) {
+          view.getConnectionTable().table().clearSelection();
         }
       } finally {
         removingConnection.set(false);
@@ -181,7 +152,6 @@ public class AdHocModelPresenter implements HelperChart {
     try {
       model.getAdHocDatabaseManager().removeDataBase(connectionId);
       model.getConnectionPoolManager().removeConnection(connectionId);
-
       log.info("Released connection pool resources for connectionId: {}", connectionId);
     } catch (Exception e) {
       log.error("Error releasing connection for connectionId: {}", connectionId, e);
@@ -189,93 +159,100 @@ public class AdHocModelPresenter implements HelperChart {
   }
 
   private void setupListeners() {
-    Consumer<String> runActionConnection = this::runActionConnection;
-    new TableSelectionHandler(connectionCase, ConnectionColumnNames.NAME.getColName(), runActionConnection);
-
-    schemaCatalogCBox.addActionListener(e -> reloadTables());
-
-    tableCase.getJxTable().getSelectionModel().addListSelectionListener(e -> {
-      if (!e.getValueIsAdjusting() && !tableCase.isBlockRunAction()) {
-        runActionForSelectedEntity(tableCase, "Table");
+    view.getConnectionTable().table().getSelectionModel().addListSelectionListener(e -> {
+      if (!e.getValueIsAdjusting() && !view.isBlockConnectionAction()) {
+        ConnectionRow row = view.getSelectedConnectionRow();
+        if (row != null) {
+          runActionConnection(row.getName());
+        }
       }
     });
 
-    viewCase.getJxTable().getSelectionModel().addListSelectionListener(e -> {
-      if (!e.getValueIsAdjusting() && !viewCase.isBlockRunAction()) {
-        runActionForSelectedEntity(viewCase, "View");
+    view.getSchemaCatalogCBox().addActionListener(e -> reloadTables());
+
+    view.getTableTable().table().getSelectionModel().addListSelectionListener(e -> {
+      if (!e.getValueIsAdjusting() && !view.isBlockTableAction()) {
+        runActionForSelectedEntity(view.getTableTable(), "Table");
       }
     });
 
-    Consumer<String> runActionTimestamp = this::runActionTimestamp;
-    new TableSelectionHandler(timestampCase, ConnectionColumnNames.NAME.getColName(), runActionTimestamp);
+    view.getViewTable().table().getSelectionModel().addListSelectionListener(e -> {
+      if (!e.getValueIsAdjusting() && !view.isBlockViewAction()) {
+        runActionForSelectedEntity(view.getViewTable(), "View");
+      }
+    });
+
+    view.getTimestampTable().table().getSelectionModel().addListSelectionListener(e -> {
+      if (!e.getValueIsAdjusting() && !view.isBlockTimestampAction()) {
+        TimestampRow row = view.getSelectedTimestampRow();
+        if (row != null) {
+          runActionTimestamp(row.getName());
+        }
+      }
+    });
 
     view.getTableViewPane().addChangeListener(event -> triggerActionForSelectedRow());
   }
 
-  private void setupCheckboxEditors() {
-    setupCheckboxEditor(view.getTableCase(), this::handleTableSelection);
-    setupCheckboxEditor(view.getViewCase(), this::handleViewSelection);
-    setupCheckboxEditor(view.getColumnCase(), this::handleColumnSelection);
-  }
-
-  private void setupCheckboxEditor(JXTableCase tableCase,
-                                   SelectionHandler handler) {
-    JXTable table = tableCase.getJxTable();
-    int checkboxColumn = table.getColumnCount() - 1;
-    TableColumn column = table.getColumnModel().getColumn(checkboxColumn);
-    DefaultCellEditor editor = new DefaultCellEditor(new JCheckBox());
-    column.setCellEditor(editor);
-
-    editor.addCellEditorListener(new CellEditorListener() {
+  private void setupCheckboxListener() {
+    view.setCheckboxChangeListener(new AdHocModelView.EntityCheckboxChangeListener() {
       @Override
-      public void editingStopped(ChangeEvent e) {
-        TableCellEditor editor = (TableCellEditor) e.getSource();
-        Boolean cValue = (Boolean) editor.getCellEditorValue();
-
-        int viewRow = table.getSelectedRow();
-        if (viewRow < 0) return;
-
-        int modelRow = table.convertRowIndexToModel(viewRow);
-        handler.handleSelection(cValue, modelRow);
+      public void onTableCheckboxChanged(EntityRow row, boolean selected, int modelRow) {
+        handleTableSelection(selected, modelRow);
       }
 
       @Override
-      public void editingCanceled(ChangeEvent e) {
+      public void onViewCheckboxChanged(EntityRow row, boolean selected, int modelRow) {
+        handleViewSelection(selected, modelRow);
+      }
+
+      @Override
+      public void onColumnCheckboxChanged(ColumnRow row, boolean selected, int modelRow) {
+        handleColumnSelection(selected, modelRow);
       }
     });
   }
 
-  private void runActionForSelectedEntity(JXTableCase entityCase, String entityType) {
-    int viewRow = entityCase.getJxTable().getSelectedRow();
+  private void runActionForSelectedEntity(TTTable<EntityRow, JXTable> entityTable, String entityType) {
+    int viewRow = entityTable.table().getSelectedRow();
     if (viewRow < 0) return;
 
-    int modelRow = entityCase.getJxTable().convertRowIndexToModel(viewRow);
-    String name = (String) entityCase.getDefaultTableModel().getValueAt(modelRow, ColumnNames.NAME.ordinal());
-    String schema = (String) schemaCatalogCBox.getSelectedItem();
+    int modelRow = entityTable.table().convertRowIndexToModel(viewRow);
+    EntityRow row = entityTable.model().itemAt(modelRow);
+    if (row == null) return;
+
+    String name = row.getName();
+    String schema = (String) view.getSchemaCatalogCBox().getSelectedItem();
     String fullName = (schema == null || schema.isBlank()) ? name : schema + "." + name;
 
     runAction(fullName);
   }
 
-  private void handleTableSelection(boolean selected,
-                                    int row) {
-    handleEntitySelection(view.getTableCase(), row, selected);
+  private void handleTableSelection(boolean selected, int row) {
+    handleEntitySelection(view.getTableTable(), row, selected);
   }
 
-  private void handleViewSelection(boolean selected,
-                                   int row) {
-    handleEntitySelection(view.getViewCase(), row, selected);
+  private void handleViewSelection(boolean selected, int row) {
+    handleEntitySelection(view.getViewTable(), row, selected);
   }
 
-  private void handleEntitySelection(JXTableCase entityCase,
-                                     int row,
-                                     boolean selected) {
-    String name = (String) entityCase.getDefaultTableModel().getValueAt(row, ColumnNames.NAME.ordinal());
+  private void handleEntitySelection(TTTable<EntityRow, JXTable> entityTable, int row, boolean selected) {
+    EntityRow entityRow = entityTable.model().itemAt(row);
+    if (entityRow == null) return;
+
+    String name = entityRow.getName();
     String schema = (String) view.getSchemaCatalogCBox().getSelectedItem();
     String fullName = (schema == null || schema.isBlank()) ? name : schema + "." + name;
 
     if (selected) {
-      entityCase.getDefaultTableModel().setValueAt(false, row, ColumnNames.PICK.ordinal());
+      view.setIgnoreTableCheckboxEvents(true);
+      view.setIgnoreViewCheckboxEvents(true);
+      try {
+        entityRow.setPick(false);
+      } finally {
+        view.setIgnoreTableCheckboxEvents(false);
+        view.setIgnoreViewCheckboxEvents(false);
+      }
       return;
     }
 
@@ -290,10 +267,7 @@ public class AdHocModelPresenter implements HelperChart {
     }
 
     if (tProfile != null && fullTableName.equals(tProfile.getTableName())) {
-      DefaultTableModel tableModel = columnCase.getDefaultTableModel();
-      for (int i = 0; i < tableModel.getRowCount(); i++) {
-        tableModel.setValueAt(false, i, ColumnNames.PICK.ordinal());
-      }
+      view.clearAllColumnCheckboxes();
     }
 
     try {
@@ -314,23 +288,23 @@ public class AdHocModelPresenter implements HelperChart {
   private void handleColumnSelection(boolean selected, int row) {
     if (tProfile == null) {
       DialogHelper.showMessageDialog(null, "Table metadata not loaded", "Error");
-      view.getColumnCase().getDefaultTableModel().setValueAt(false, row, ColumnNames.PICK.ordinal());
+      view.setColumnPickValue(row, false);
       return;
     }
 
-    int columnId = (int) view.getColumnCase()
-        .getDefaultTableModel()
-        .getValueAt(row, ColumnNames.ID.ordinal());
+    ColumnRow columnRow = view.getColumnTable().model().itemAt(row);
+    if (columnRow == null) return;
+
+    int columnId = columnRow.getId();
     String tableName = tProfile != null ? tProfile.getTableName() : "";
 
     model.setColumnSelected(currentConnectionId, tableName, columnId, selected);
 
-    String activeTab = view.getTableViewPane()
-        .getTitleAt(view.getTableViewPane().getSelectedIndex());
-    JXTableCase activeCase = switch (activeTab) {
-      case "Table" -> tableCase;
-      case "View"  -> viewCase;
-      default      -> null;
+    String activeTab = view.getTableViewPane().getTitleAt(view.getTableViewPane().getSelectedIndex());
+    TTTable<EntityRow, JXTable> activeTable = switch (activeTab) {
+      case "Table" -> view.getTableTable();
+      case "View" -> view.getViewTable();
+      default -> null;
     };
 
     if (selected) {
@@ -338,71 +312,55 @@ public class AdHocModelPresenter implements HelperChart {
       if (!wasSelected) {
         model.setTableOrViewSelected(currentConnectionId, tableName, true);
       }
-      updateTableCheckboxState(activeCase, tableName, true);
-
+      updateTableCheckboxState(activeTable, tableName, true);
       addChart(tableName, columnId);
     } else {
       Set<Integer> selectedColumns = model.getSelectedColumns(currentConnectionId, tableName);
       if (selectedColumns.isEmpty()) {
         model.setTableOrViewSelected(currentConnectionId, tableName, false);
-        updateTableCheckboxState(activeCase, tableName, false);
+        updateTableCheckboxState(activeTable, tableName, false);
       }
-
       removeChart(tableName, columnId);
     }
   }
 
-  private void updateTableCheckboxState(JXTableCase targetCase,
-                                        String fullTableName,
-                                        boolean selected) {
-
-    if (targetCase == null) return;
+  private void updateTableCheckboxState(TTTable<EntityRow, JXTable> targetTable, String fullTableName, boolean selected) {
+    if (targetTable == null) return;
 
     String baseName = fullTableName.contains(".")
         ? fullTableName.substring(fullTableName.lastIndexOf('.') + 1)
         : fullTableName;
 
-    for (int i = 0; i < targetCase.getDefaultTableModel().getRowCount(); i++) {
-      String entityName = (String) targetCase.getDefaultTableModel()
-          .getValueAt(i, ColumnNames.NAME.ordinal());
-      if (baseName.equals(entityName)) {
-        targetCase.getDefaultTableModel().setValueAt(selected, i, ColumnNames.PICK.ordinal());
-        return;
-      }
-    }
+    view.updateEntityCheckbox(targetTable, baseName, selected);
   }
 
   private void triggerActionForSelectedRow() {
     String activeTab = view.getTableViewPane().getTitleAt(view.getTableViewPane().getSelectedIndex());
-    JXTableCase activeCase = switch (activeTab) {
-      case "Table" -> tableCase;
-      case "View" -> viewCase;
+    TTTable<EntityRow, JXTable> activeTable = switch (activeTab) {
+      case "Table" -> view.getTableTable();
+      case "View" -> view.getViewTable();
       default -> null;
     };
 
-    timestampCase.clearTable();
-    columnCase.clearTable();
+    view.clearTimestampTable();
+    view.clearColumnTable();
 
     tProfile = null;
     dStore = null;
 
-    if (activeCase == null) {
-      return;
-    }
+    if (activeTable == null) return;
 
-    int row = activeCase.getJxTable().getSelectedRow();
-    if (row < 0) {
-      return;
-    }
+    int row = activeTable.table().getSelectedRow();
+    if (row < 0) return;
 
-    String name = GUIHelper.getNameByColumnName(activeCase,
-                                                activeCase.getJxTable().getSelectionModel(),
-                                                ConnectionColumnNames.NAME.getColName());
-    if (name == null || name.isBlank()) {
-      return;
-    }
+    int modelRow = activeTable.table().convertRowIndexToModel(row);
+    EntityRow entityRow = activeTable.model().itemAt(modelRow);
+    if (entityRow == null) return;
 
-    String schema = (String) schemaCatalogCBox.getSelectedItem();
+    String name = entityRow.getName();
+    if (name == null || name.isBlank()) return;
+
+    String schema = (String) view.getSchemaCatalogCBox().getSelectedItem();
     String fullName = (schema == null || schema.isBlank()) ? name : schema + "." + name;
 
     SwingUtilities.invokeLater(() -> runAction(fullName));
@@ -423,14 +381,14 @@ public class AdHocModelPresenter implements HelperChart {
     running.set(true);
     clearUIElements();
 
-    currentConnectionId = GUIHelper.getIdByColumnName(connectionCase, ConnectionColumnNames.ID.getColName());
+    ConnectionRow connectionRow = view.getSelectedConnectionRow();
+    if (connectionRow == null) return;
 
-    connectionName = GUIHelper.getNameByColumnName(connectionCase,
-                                                   connectionCase.getJxTable()
-                                                       .getSelectionModel(), ConnectionColumnNames.NAME.getColName());
+    currentConnectionId = connectionRow.getId();
+    connectionName = connectionRow.getName();
 
     periodicTask = Thread.ofVirtual().start(() -> {
-      loadMetadata(GUIHelper.getIdByColumnName(connectionCase, ConnectionColumnNames.ID.getColName()));
+      loadMetadata(currentConnectionId);
       running.set(false);
     });
   }
@@ -438,18 +396,18 @@ public class AdHocModelPresenter implements HelperChart {
   private void runAction(String schemaDotTableOrViewName) {
     String activeTab = view.getTableViewPane().getTitleAt(view.getTableViewPane().getSelectedIndex());
 
-    JXTableCase activeCase = switch (activeTab) {
-      case "Table" -> tableCase;
-      case "View" -> viewCase;
+    TTTable<EntityRow, JXTable> activeTable = switch (activeTab) {
+      case "Table" -> view.getTableTable();
+      case "View" -> view.getViewTable();
       default -> null;
     };
 
-    if (activeCase == null) {
+    if (activeTable == null) {
       clearColumnAndTimestamp();
       return;
     }
 
-    int selectedRow = activeCase.getJxTable().getSelectedRow();
+    int selectedRow = activeTable.table().getSelectedRow();
     if (selectedRow < 0) {
       clearColumnAndTimestamp();
       return;
@@ -462,16 +420,12 @@ public class AdHocModelPresenter implements HelperChart {
 
     log.info("Run action for {}: {}", activeTab.toLowerCase(), schemaDotTableOrViewName);
     cleanAllPanels();
-
     loadTableView(schemaDotTableOrViewName);
   }
 
   private void runActionTimestamp(String timestampName) {
     log.info("Run action for timestamp: {}", timestampName);
-    if (timestampName.isBlank()) {
-      return;
-    }
-
+    if (timestampName.isBlank()) return;
     setTimestampColumn(timestampName);
   }
 
@@ -487,38 +441,7 @@ public class AdHocModelPresenter implements HelperChart {
     }
   }
 
-  private boolean isColumnEmptyOrNotSelected() {
-    if (columnCase.getJxTable().getRowCount() == 0) {
-      DialogHelper.showMessageDialog(null, "Columns list is empty. Please try another table or view", "Warning");
-      return true;
-    }
-    String columnName = GUIHelper.getNameByColumnName(columnCase,
-                                                      columnCase.getJxTable()
-                                                          .getSelectionModel(), QueryMetadataColumnNames.NAME.getColName());
-    if (columnName.isBlank()) {
-      DialogHelper.showMessageDialog(null, "Column not selected, please select it", "Warning");
-      return true;
-    }
-    return false;
-  }
-
-  private boolean isTimeStampColumnEmptyOrNotSelected() {
-    if (timestampCase.getJxTable().getRowCount() == 0) {
-      DialogHelper.showMessageDialog(null, "Timestamp columns list is empty. Please try another table or view", "Warning");
-      return true;
-    }
-    String tsColumnName = GUIHelper.getNameByColumnName(timestampCase,
-                                                        timestampCase.getJxTable()
-                                                            .getSelectionModel(), QueryMetadataColumnNames.NAME.getColName());
-    if (tsColumnName.isBlank()) {
-      DialogHelper.showMessageDialog(null, "Timestamp column not selected, please pick it", "Warning");
-      return true;
-    }
-    return false;
-  }
-
-  private void addChart(String tableName,
-                        int cProfileId) {
+  private void addChart(String tableName, int cProfileId) {
     String activeTab = view.getTableViewPane().getTitleAt(view.getTableViewPane().getSelectedIndex());
 
     log.info("{} name: {}", activeTab, tableName);
@@ -528,7 +451,10 @@ public class AdHocModelPresenter implements HelperChart {
         .orElseThrow();
     log.info("Column profile: {}", cProfile);
 
-    int connectionId = GUIHelper.getIdByColumnName(connectionCase, ConnectionColumnNames.ID.getColName());
+    ConnectionRow connectionRow = view.getSelectedConnectionRow();
+    if (connectionRow == null) return;
+
+    int connectionId = connectionRow.getId();
     ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(connectionId);
     TableInfo tableInfo = new TableInfo(tProfile);
     tableInfo.setDimensionColumnList(new ArrayList<>());
@@ -543,7 +469,6 @@ public class AdHocModelPresenter implements HelperChart {
     ChartInfo chartInfo = new ChartInfo();
     chartInfo.setId(queryInfo.getId());
 
-    /*TODO AdHocStateManager usage*/
     AdHocKey adHocKey = KeyHelper.getAdHocKey(connectionInfo, tableName, cProfile);
     String globalKey = KeyHelper.getGlobalKey(connectionInfo, tableName);
 
@@ -559,8 +484,7 @@ public class AdHocModelPresenter implements HelperChart {
 
       if (RangeHistory.CUSTOM.equals(chartInfo.getRangeHistory())) {
         if (chartRange.getBegin() == chartRange.getEnd()) {
-          log.warn("Here the custom begin and end are identical. "
-                       + "Fix it to add 1 second to the end of range");
+          log.warn("Here the custom begin and end are identical. Fix it to add 1 second to the end of range");
           chartRange.setEnd(chartRange.getBegin() + 1000L);
         }
       }
@@ -583,7 +507,6 @@ public class AdHocModelPresenter implements HelperChart {
       adHocStateManager.putGlobalHistoryCustomRange(globalKey, chartRange);
 
       adHocStateManager.putGlobalShowLegend(globalKey, true);
-
       adHocStateManager.putGlobalChartCardState(globalKey, ChartCardState.COLLAPSE_ALL);
     }
 
@@ -606,8 +529,7 @@ public class AdHocModelPresenter implements HelperChart {
                            .build());
   }
 
-  private void removeChart(String tableName,
-                           int cProfileId) {
+  private void removeChart(String tableName, int cProfileId) {
     String activeTab = view.getTableViewPane().getTitleAt(view.getTableViewPane().getSelectedIndex());
 
     log.info("{} name: {}", activeTab, tableName);
@@ -617,7 +539,10 @@ public class AdHocModelPresenter implements HelperChart {
         .orElseThrow();
     log.info("Column profile: {}", cProfile);
 
-    int connectionId = GUIHelper.getIdByColumnName(connectionCase, ConnectionColumnNames.ID.getColName());
+    ConnectionRow connectionRow = view.getSelectedConnectionRow();
+    if (connectionRow == null) return;
+
+    int connectionId = connectionRow.getId();
     ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(connectionId);
 
     broker.sendMessage(Message.builder()
@@ -634,7 +559,10 @@ public class AdHocModelPresenter implements HelperChart {
     log.info("Table/view name: {}", tableName);
     view.getStatusLabel().setText("Table/view name: " + tableName + " is loading..");
 
-    int connectionId = GUIHelper.getIdByColumnName(connectionCase, ConnectionColumnNames.ID.getColName());
+    ConnectionRow connectionRow = view.getSelectedConnectionRow();
+    if (connectionRow == null) return;
+
+    int connectionId = connectionRow.getId();
     try {
       ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(connectionId);
       java.sql.Connection connection = model.getConnectionPoolManager().getConnection(connectionInfo);
@@ -655,7 +583,7 @@ public class AdHocModelPresenter implements HelperChart {
 
       updateColumnDisplays(tProfile.getCProfiles(), tableName);
 
-      if (timestampCase.getJxTable().getRowCount() == 0) {
+      if (view.getTimestampTable().model().getRowCount() == 0) {
         handleNoTimestampColumns(tableName);
         return;
       } else {
@@ -668,8 +596,7 @@ public class AdHocModelPresenter implements HelperChart {
     }
   }
 
-  private String buildMetadataQuery(String tableName,
-                                    DBType dbType) {
+  private String buildMetadataQuery(String tableName, DBType dbType) {
     return switch (dbType) {
       case ORACLE -> "SELECT * FROM " + tableName + " WHERE ROWNUM = 1";
       case MSSQL -> "SELECT TOP 1 * FROM " + tableName;
@@ -678,8 +605,7 @@ public class AdHocModelPresenter implements HelperChart {
     };
   }
 
-  private void createQueryInfo(String tableName,
-                               String queryText) {
+  private void createQueryInfo(String tableName, String queryText) {
     QueryInfo queryInfo = new QueryInfo();
     queryInfo.setId(tableName.hashCode());
     queryInfo.setName(tableName);
@@ -692,30 +618,28 @@ public class AdHocModelPresenter implements HelperChart {
 
   private void handleNoTimestampColumns(String tableName) {
     view.getStatusLabel().setText("For " + tableName + " timestamp column not found");
-    columnCase.clearTable();
+    view.clearColumnTable();
   }
 
   private void selectFirstTimestamp() {
-    timestampCase.setBlockRunAction(true);
-    timestampCase.getJxTable().setRowSelectionInterval(0, 0);
-    String tsColumnName = GUIHelper.getNameByColumnName(timestampCase.getJxTable(),
-                                                        timestampCase.getDefaultTableModel(),
-                                                        timestampCase.getJxTable().getSelectionModel(),
-                                                        QueryMetadataColumnNames.NAME.getColName());
-    setTimestampColumn(tsColumnName);
-    timestampCase.setBlockRunAction(false);
+    view.setBlockTimestampAction(true);
+    view.getTimestampTable().table().setRowSelectionInterval(0, 0);
+    TimestampRow row = view.getSelectedTimestampRow();
+    if (row != null) {
+      setTimestampColumn(row.getName());
+    }
+    view.setBlockTimestampAction(false);
   }
 
   private void handleTableViewError(Exception e) {
     view.getStatusLabel().setText(e.getMessage());
-    columnCase.clearTable();
-    timestampCase.clearTable();
+    view.clearColumnTable();
+    view.clearTimestampTable();
     log.catching(e);
     throw new RuntimeException(e);
   }
 
-  public SProfile getSProfile(String tableName,
-                              DBType dbType) {
+  public SProfile getSProfile(String tableName, DBType dbType) {
     SProfile sProfile = new SProfile();
     sProfile.setTableName(tableName);
     sProfile.setTableType(TType.TIME_SERIES);
@@ -740,20 +664,17 @@ public class AdHocModelPresenter implements HelperChart {
   }
 
   private void reloadTables() {
-    if (running.get() || removingConnection.get()) {
-      return;
-    }
+    if (running.get() || removingConnection.get()) return;
 
     if (connection == null) {
       log.debug("Connection is null, skipping reloadTables");
       return;
     }
 
-    int connectionId = GUIHelper.getIdByColumnName(connectionCase, ConnectionColumnNames.ID.getColName());
-    if (connectionId <= 0) {
-      return;
-    }
+    ConnectionRow connectionRow = view.getSelectedConnectionRow();
+    if (connectionRow == null || connectionRow.getId() <= 0) return;
 
+    int connectionId = connectionRow.getId();
     ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(connectionId);
     if (connectionInfo == null) {
       log.debug("ConnectionInfo is null for connectionId: {}, skipping reloadTables", connectionId);
@@ -762,9 +683,7 @@ public class AdHocModelPresenter implements HelperChart {
 
     running.set(true);
     clearUIElementsReloadTables();
-    connectionName = GUIHelper.getNameByColumnName(connectionCase,
-                                                   connectionCase.getJxTable()
-                                                       .getSelectionModel(), ConnectionColumnNames.NAME.getColName());
+    connectionName = connectionRow.getName();
 
     periodicTask = Thread.ofVirtual().start(() -> {
       try {
@@ -772,22 +691,19 @@ public class AdHocModelPresenter implements HelperChart {
         processSchema(connectionInfo, metaData);
       } catch (Exception e) {
         DialogHelper.showErrorDialog(null,
-                                     "Error on loading tables for connection: "
-                                         + connectionName, "Connection error", e);
+                                     "Error on loading tables for connection: " + connectionName, "Connection error", e);
         log.error("Error reloading tables", e);
       } finally {
         running.set(false);
         connectionName = "";
-        schemaCatalogCBox.setEnabled(true);
-        connectionCase.getJxTable().setEnabled(true);
+        view.getSchemaCatalogCBox().setEnabled(true);
+        view.getConnectionTable().table().setEnabled(true);
       }
     });
   }
 
   private void loadMetadata(int connectionId) {
-    if (connectionId <= 0) {
-      return;
-    }
+    if (connectionId <= 0) return;
 
     try {
       ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(connectionId);
@@ -800,7 +716,7 @@ public class AdHocModelPresenter implements HelperChart {
       connection = model.getConnectionPoolManager().getDatasource(connectionInfo).getConnection();
       DatabaseMetaData metaData = connection.getMetaData();
 
-      getSchemasCatalogs(connectionInfo, metaData).forEach(schemaCatalogCBox::addItem);
+      getSchemasCatalogs(connectionInfo, metaData).forEach(view.getSchemaCatalogCBox()::addItem);
       processSchema(connectionInfo, metaData);
     } catch (SQLException e) {
       DialogHelper.showErrorDialog(null, "Error on loading connection: " + connectionName, "Connection error", e);
@@ -808,16 +724,15 @@ public class AdHocModelPresenter implements HelperChart {
     }
   }
 
-  private void processSchema(ConnectionInfo connectionInfo,
-                             DatabaseMetaData metaData) {
+  private void processSchema(ConnectionInfo connectionInfo, DatabaseMetaData metaData) {
     if (connectionInfo == null) {
       log.warn("ConnectionInfo is null, skipping processSchema");
       return;
     }
 
     log.info("Start schema processing");
-    String selectedSchemaCatalog = (String) schemaCatalogCBox.getSelectedItem();
-    schemaCatalogCBox.setEnabled(false);
+    String selectedSchemaCatalog = (String) view.getSchemaCatalogCBox().getSelectedItem();
+    view.getSchemaCatalogCBox().setEnabled(false);
 
     DatabaseMetadata dbMetadata = MetadataFactory.create(connectionInfo.getDbType());
 
@@ -827,7 +742,7 @@ public class AdHocModelPresenter implements HelperChart {
               ? dbMetadata.getOracleTables(connection, selectedSchemaCatalog, "TABLE")
               : dbMetadata.getTables(metaData, selectedSchemaCatalog)) {
 
-        fillEntityTable(tablesResultSet, tableCase, selectedSchemaCatalog);
+        fillEntityTable(tablesResultSet, view.getTableTable(), selectedSchemaCatalog);
       }
 
       try (ResultSet viewsResultSet =
@@ -835,7 +750,7 @@ public class AdHocModelPresenter implements HelperChart {
               ? dbMetadata.getOracleTables(connection, selectedSchemaCatalog, "VIEW")
               : dbMetadata.getViews(metaData, selectedSchemaCatalog)) {
 
-        fillEntityTable(viewsResultSet, viewCase, selectedSchemaCatalog);
+        fillEntityTable(viewsResultSet, view.getViewTable(), selectedSchemaCatalog);
       }
 
     } catch (SQLException e) {
@@ -844,13 +759,12 @@ public class AdHocModelPresenter implements HelperChart {
                                    "Error loading metadata for: " + selectedSchemaCatalog,
                                    "Database Error", e);
     } finally {
-      schemaCatalogCBox.setEnabled(true);
+      view.getSchemaCatalogCBox().setEnabled(true);
       log.info("Stop schema processing");
     }
   }
 
-  private List<String> getSchemasCatalogs(ConnectionInfo connectionInfo,
-                                          DatabaseMetaData metaData) throws SQLException {
+  private List<String> getSchemasCatalogs(ConnectionInfo connectionInfo, DatabaseMetaData metaData) throws SQLException {
     DatabaseMetadata dbMetadata = MetadataFactory.create(connectionInfo.getDbType());
     return switch (connectionInfo.getDbType()) {
       case POSTGRES, ORACLE, MSSQL -> dbMetadata.getSchemas(metaData);
@@ -860,36 +774,34 @@ public class AdHocModelPresenter implements HelperChart {
     };
   }
 
-  private void fillEntityTable(ResultSet resultSet,
-                               JXTableCase entityCase,
-                               String schema) throws SQLException {
+  private void fillEntityTable(ResultSet resultSet, TTTable<EntityRow, JXTable> entityTable, String schema) throws SQLException {
+    List<EntityRow> rows = new ArrayList<>();
+    int id = 0;
     while (resultSet.next()) {
       String entityName = resultSet.getString("TABLE_NAME");
       String fullName = (schema == null || schema.isBlank()) ? entityName : schema + "." + entityName;
       boolean isSelected = model.isTableOrViewSelected(currentConnectionId, fullName);
-
-      entityCase.addRow(new Object[]{entityCase.getJxTable().getRowCount(), entityName, isSelected});
+      rows.add(new EntityRow(id++, entityName, isSelected));
     }
+    entityTable.setItems(rows);
   }
 
-  private void updateColumnDisplays(List<CProfile> cProfileList,
-                                    String tableName) {
-    view.getColumnCase().clearTable();
-    view.getTimestampCase().clearTable();
+  private void updateColumnDisplays(List<CProfile> cProfileList, String tableName) {
+    List<ColumnRow> columnRows = new ArrayList<>();
+    List<TimestampRow> timestampRows = new ArrayList<>();
 
     for (CProfile cProfile : cProfileList) {
       boolean isSelected = model.isColumnSelected(currentConnectionId, tableName, cProfile.getColId());
 
       switch (cProfile.getCsType().getDType()) {
         case TIMESTAMP, TIMESTAMPTZ, TIMETZ, TIME, DATETIME, SMALLDATETIME, DATE, DATE32, DATETIME2 ->
-            view.getTimestampCase().addRow(new Object[]{cProfile.getColName()});
-        default -> view.getColumnCase().addRow(new Object[]{
-            cProfile.getColId(),
-            cProfile.getColName(),
-            isSelected
-        });
+            timestampRows.add(new TimestampRow(cProfile.getColName()));
+        default -> columnRows.add(new ColumnRow(cProfile, isSelected));
       }
     }
+
+    view.setColumnRows(columnRows);
+    view.setTimestampRows(timestampRows);
   }
 
   public <T> void loadModel(Class<T> clazz) {
@@ -897,7 +809,11 @@ public class AdHocModelPresenter implements HelperChart {
       log.info("Loading connection..");
       model.getConfigurationManager().getConfigList(Connection.class).stream()
           .filter(e -> e.getType() == null || e.getType().equals(ConnectionType.JDBC))
-          .forEach(e -> connectionCase.addRow(new Object[]{e.getId(), e.getName()}));
+          .forEach(e -> {
+            ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(e.getId());
+            DBType dbType = connectionInfo != null ? connectionInfo.getDbType() : null;
+            view.addConnectionRow(new ConnectionRow(e.getId(), e.getName(), ConnectionType.JDBC, dbType));
+          });
     }
   }
 
@@ -911,37 +827,22 @@ public class AdHocModelPresenter implements HelperChart {
 
   private void resetUI(boolean clearSchemaCatalog) {
     view.getStatusLabel().setText("");
-    columnCase.clearTable();
-    timestampCase.clearTable();
+    view.clearColumnTable();
+    view.clearTimestampTable();
 
-    viewCase.setBlockRunAction(true);
-    tableCase.setBlockRunAction(true);
+    view.setBlockViewAction(true);
+    view.setBlockTableAction(true);
     try {
-      viewCase.clearTable();
-      tableCase.clearTable();
+      view.clearViewTable();
+      view.clearTableTable();
     } finally {
-      viewCase.setBlockRunAction(false);
-      tableCase.setBlockRunAction(false);
+      view.setBlockViewAction(false);
+      view.setBlockTableAction(false);
     }
 
     if (clearSchemaCatalog) {
-      schemaCatalogCBox.removeAllItems();
+      view.getSchemaCatalogCBox().removeAllItems();
     }
-  }
-
-  private String getSelectedTableName(String tabSelected) {
-    String schemaUI = (String) schemaCatalogCBox.getSelectedItem();
-    String schema = (schemaUI == null || schemaUI.isBlank()) ? "" : schemaUI + ".";
-
-    return switch (tabSelected) {
-      case "Table" -> schema + GUIHelper.getNameByColumnName(
-          tableCase.getJxTable(), tableCase.getDefaultTableModel(),
-          tableCase.getJxTable().getSelectionModel(), ColumnNames.NAME.getColName());
-      case "View" -> schema + GUIHelper.getNameByColumnName(
-          viewCase.getJxTable(), viewCase.getDefaultTableModel(),
-          viewCase.getJxTable().getSelectionModel(), ColumnNames.NAME.getColName());
-      default -> "";
-    };
   }
 
   public void clearSelectionForTableOrView(Message message) {
@@ -966,28 +867,19 @@ public class AdHocModelPresenter implements HelperChart {
     }
 
     SwingUtilities.invokeLater(() -> {
-      updateTableCheckboxState(view.getTableCase(), tableName, false);
-      updateTableCheckboxState(view.getViewCase(), tableName, false);
+      updateTableCheckboxState(view.getTableTable(), tableName, false);
+      updateTableCheckboxState(view.getViewTable(), tableName, false);
 
       if (tProfile != null && tableName.equals(tProfile.getTableName())) {
-        DefaultTableModel m = view.getColumnCase().getDefaultTableModel();
-        for (int i = 0; i < m.getRowCount(); i++) {
-          m.setValueAt(false, i, ColumnNames.PICK.ordinal());
-        }
+        view.clearAllColumnCheckboxes();
       }
 
-      view.getTimestampCase().getJxTable().clearSelection();
+      view.getTimestampTable().table().clearSelection();
     });
   }
 
   private void clearColumnAndTimestamp() {
-    columnCase.clearTable();
-    timestampCase.clearTable();
-  }
-
-  private interface SelectionHandler {
-
-    void handleSelection(boolean selected,
-                         int row);
+    view.clearColumnTable();
+    view.clearTimestampTable();
   }
 }

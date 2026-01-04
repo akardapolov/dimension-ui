@@ -1,6 +1,6 @@
 package ru.dimension.ui.view.structure.config;
 
-import static ru.dimension.ui.component.broker.MessageBroker.*;
+import static ru.dimension.ui.component.broker.MessageBroker.Component;
 import static ru.dimension.ui.model.config.ConfigClasses.Connection;
 import static ru.dimension.ui.model.config.ConfigClasses.Query;
 
@@ -9,26 +9,35 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.List;
+import java.util.stream.Collectors;
 import javax.swing.JCheckBox;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
+import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.bus.EventBus;
 import ru.dimension.ui.bus.event.ProfileAddEvent;
 import ru.dimension.ui.bus.event.ProfileRemoveEvent;
 import ru.dimension.ui.helper.event.EventRouteRegistry;
 import ru.dimension.ui.helper.event.EventUtils;
 import ru.dimension.ui.manager.ConfigurationManager;
+import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.config.ConfigClasses;
 import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.config.Profile;
 import ru.dimension.ui.model.config.Query;
 import ru.dimension.ui.model.config.Task;
+import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.table.JXTableCase;
-import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.ConfigState;
 import ru.dimension.ui.router.event.EventListener;
 import ru.dimension.ui.router.listener.ConfigListener;
 import ru.dimension.ui.state.NavigatorState;
 import ru.dimension.ui.view.structure.ConfigView;
+import ru.dimension.ui.view.table.row.Rows.ConnectionRow;
+import ru.dimension.ui.view.table.row.Rows.ProfileRow;
+import ru.dimension.ui.view.table.row.Rows.QueryRow;
+import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
 @Log4j2
 @Singleton
@@ -38,6 +47,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
   private final NavigatorState navigatorState;
   private final EventListener eventListener;
   private final ConfigurationManager configurationManager;
+  private final ProfileManager profileManager;
 
   private final JXTableCase profileCase;
   private final JXTableCase taskCase;
@@ -54,6 +64,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
                          @Named("eventListener") EventListener eventListener,
                          @Named("eventBus") EventBus eventBus,
                          @Named("configurationManager") ConfigurationManager configurationManager,
+                         @Named("profileManager") ProfileManager profileManager,
                          @Named("profileConfigCase") JXTableCase profileCase,
                          @Named("taskConfigCase") JXTableCase taskCase,
                          @Named("connectionConfigCase") JXTableCase connectionCase,
@@ -63,6 +74,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
     this.navigatorState = navigatorState;
     this.eventListener = eventListener;
     this.configurationManager = configurationManager;
+    this.profileManager = profileManager;
 
     this.profileCase = profileCase;
     this.taskCase = taskCase;
@@ -99,39 +111,63 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
 
     if (ConfigClasses.Profile.equals(ConfigClasses.fromClass(clazz))) {
       log.info("Profile..");
-      configurationManager.getConfigList(Profile.class)
-          .forEach(e -> profileCase.getDefaultTableModel().addRow(new Object[]{e.getId(), e.getName()}));
-
+      fillProfileTable();
     }
 
     if (ConfigClasses.Task.equals(ConfigClasses.fromClass(clazz))) {
       log.info("Task..");
-      configurationManager.getConfigList(Task.class)
-          .forEach(e -> taskCase.getDefaultTableModel().addRow(new Object[]{e.getId(), e.getName()}));
+      fillTaskTable();
     }
 
     if (Connection.equals(ConfigClasses.fromClass(clazz))) {
       log.info("Connection..");
-      configurationManager.getConfigList(Connection.class)
-          .forEach(
-              e -> {
-                if (e.getType() != null) {
-                  connectionCase.getDefaultTableModel()
-                      .addRow(new Object[]{e.getId(), e.getName(), e.getType()});
-                } else {
-                  connectionCase.getDefaultTableModel()
-                      .addRow(new Object[]{e.getId(), e.getName(), ConnectionType.JDBC});
-                }
-              }
-          );
+      fillConnectionTable();
     }
 
     if (Query.equals(ConfigClasses.fromClass(clazz))) {
       log.info("Query..");
-      configurationManager.getConfigList(Query.class)
-          .forEach(e -> queryCase.getDefaultTableModel().addRow(new Object[]{e.getId(), e.getName()}));
+      fillQueryTable();
     }
+  }
 
+  private void fillProfileTable() {
+    TTTable<ProfileRow, JXTable> tt = profileCase.getTypedTable();
+    List<ProfileRow> rows = configurationManager.getConfigList(Profile.class).stream()
+        .map(e -> new ProfileRow(e.getId(), e.getName()))
+        .collect(Collectors.toList());
+    tt.setItems(rows);
+  }
+
+  private void fillTaskTable() {
+    TTTable<TaskRow, JXTable> tt = taskCase.getTypedTable();
+    List<TaskRow> rows = configurationManager.getConfigList(Task.class).stream()
+        .map(e -> new TaskRow(e.getId(), e.getName()))
+        .collect(Collectors.toList());
+    tt.setItems(rows);
+  }
+
+  private void fillConnectionTable() {
+    TTTable<ConnectionRow, JXTable> tt = connectionCase.getTypedTable();
+    List<ConnectionRow> rows = configurationManager.getConfigList(Connection.class).stream()
+        .map(e -> {
+          ConnectionInfo connectionInfo = profileManager.getConnectionInfoById(e.getId());
+          return new ConnectionRow(
+              e.getId(),
+              e.getName(),
+              e.getType(),
+              connectionInfo.getDbType()
+          );
+        })
+        .collect(Collectors.toList());
+    tt.setItems(rows);
+  }
+
+  private void fillQueryTable() {
+    TTTable<QueryRow, JXTable> tt = queryCase.getTypedTable();
+    List<QueryRow> rows = configurationManager.getConfigList(Query.class).stream()
+        .map(e -> new QueryRow(e.getId(), e.getName()))
+        .collect(Collectors.toList());
+    tt.setItems(rows);
   }
 
   public void fireProfileAdd(ProfileAddEvent event) {
@@ -161,17 +197,10 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
   }
 
   private void clearAllTables() {
-    profileCase.getDefaultTableModel().getDataVector().removeAllElements();
-    profileCase.getDefaultTableModel().fireTableDataChanged();
-
-    taskCase.getDefaultTableModel().getDataVector().removeAllElements();
-    taskCase.getDefaultTableModel().fireTableDataChanged();
-
-    connectionCase.getDefaultTableModel().getDataVector().removeAllElements();
-    connectionCase.getDefaultTableModel().fireTableDataChanged();
-
-    queryCase.getDefaultTableModel().getDataVector().removeAllElements();
-    queryCase.getDefaultTableModel().fireTableDataChanged();
+    profileCase.clearTable();
+    taskCase.clearTable();
+    connectionCase.clearTable();
+    queryCase.clearTable();
   }
 
   private void refillAllTables() {

@@ -20,18 +20,17 @@ import ru.dimension.di.DimensionDI;
 import ru.dimension.di.ServiceLocator;
 import ru.dimension.ui.cache.AppCache;
 import ru.dimension.ui.cache.impl.AppCacheImpl;
+import ru.dimension.ui.config.UITestOverridesConfig;
 import ru.dimension.ui.config.core.CoreConfig;
 import ru.dimension.ui.config.core.HandlersAndManagersConfig;
 import ru.dimension.ui.config.core.RoutingSecurityStateConfig;
 import ru.dimension.ui.config.ui.UIBaseConfig;
 import ru.dimension.ui.config.ui.UIComponentsConfig;
-import ru.dimension.ui.config.UITestOverridesConfig;
 import ru.dimension.ui.config.ui.ViewAndPresenterConfig;
 import ru.dimension.ui.helper.FilesHelper;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.manager.ConfigurationManager;
 import ru.dimension.ui.manager.impl.ConfigurationManagerImpl;
-import ru.dimension.ui.model.column.QueryColumnNames;
 import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.config.Query;
 import ru.dimension.ui.model.config.Task;
@@ -50,6 +49,7 @@ import ru.dimension.ui.view.panel.config.task.TaskPanel;
 import ru.dimension.ui.view.structure.ConfigView;
 import ru.dimension.ui.view.structure.config.ConfigViewImpl;
 import ru.dimension.ui.view.tab.ConfigTab;
+import ru.dimension.ui.view.table.row.Rows;
 import ru.dimension.ui.warehouse.LocalDB;
 
 @Log4j2
@@ -85,10 +85,15 @@ public abstract class HandlerMock {
   protected final ButtonPanel buttonConnectionPanelMock = new ButtonPanel();
   protected final ButtonPanel buttonMetricQueryPanelMock = new ButtonPanel();
   protected final ConfigTab configTab = new ConfigTab();
-  protected final JXTableCase profileCase = GUIHelper.getJXTableCase(5, new String[]{QueryColumnNames.ID.getColName(), QueryColumnNames.NAME.getColName()});
-  protected final JXTableCase taskCase = GUIHelper.getJXTableCase(5, new String[]{QueryColumnNames.ID.getColName(), QueryColumnNames.NAME.getColName()});
-  protected final JXTableCase connectionCase = GUIHelper.getJXTableCase(5, new String[]{QueryColumnNames.ID.getColName(), QueryColumnNames.NAME.getColName()});
-  protected final JXTableCase queryCase = GUIHelper.getJXTableCase(5, new String[]{QueryColumnNames.ID.getColName(), QueryColumnNames.NAME.getColName()});
+
+  protected final JXTableCase profileCase = GUIHelper.getTypedJXTableCase(Rows.ProfileRow.class);
+  protected final JXTableCase taskCase = GUIHelper.getTypedJXTableCase(Rows.TaskRow.class);
+  protected final JXTableCase connectionCase = GUIHelper.getTypedJXTableCase(Rows.ConnectionRow.class);
+  protected final JXTableCase queryCase = GUIHelper.getTypedJXTableCase(Rows.QueryRow.class);
+
+  protected final JXTableCase taskListCase = GUIHelper.getTypedJXTableCase(Rows.TaskRow.class);
+  protected final JXTableCase selectedTaskCase = GUIHelper.getTypedJXTableCase(Rows.TaskRow.class);
+  protected final JXTableCase templateListTaskCase = GUIHelper.getTypedJXTableCase(Rows.TaskRow.class);
 
   @BeforeAll
   public void setUp() {

@@ -84,5 +84,3 @@ public class MultiSelectTaskPanel extends JPanel {
     gbl.doneAndPushEverythingToTop();
   }
 }
-
-

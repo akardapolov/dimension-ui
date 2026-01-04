@@ -18,7 +18,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <revision>25.12.4</revision>
+        <revision>26.1.1</revision>
         <junit.version>5.13.4</junit.version>
         <junit.platform.version>1.13.4</junit.platform.version>
     </properties>

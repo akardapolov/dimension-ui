@@ -2,33 +2,32 @@ package ru.dimension.ui.view.handler.task;
 
 import static ru.dimension.ui.model.view.tab.ConnectionTypeTabPane.JDBC;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
-import jakarta.inject.Inject;
-import jakarta.inject.Named;
-import jakarta.inject.Singleton;
 import javax.swing.JCheckBox;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import javax.swing.table.DefaultTableModel;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
+import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.manager.TemplateManager;
-import ru.dimension.ui.model.column.TaskColumnNames;
 import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TaskInfo;
@@ -41,6 +40,10 @@ import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.task.MultiSelectQueryPanel;
 import ru.dimension.ui.view.panel.config.task.TaskPanel;
 import ru.dimension.ui.view.tab.ConfigTab;
+import ru.dimension.ui.view.table.row.Rows.ConnectionRow;
+import ru.dimension.ui.view.table.row.Rows.QueryRow;
+import ru.dimension.ui.view.table.row.Rows.QueryTableRow;
+import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
 @Log4j2
 @Singleton
@@ -93,9 +96,6 @@ public class TaskSelectionHandler extends MouseListenerImpl
     this.taskPanel = taskPanel;
     this.multiSelectQueryPanel = multiSelectQueryPanel;
     this.taskButtonPanel = taskButtonPanel;
-    this.multiSelectQueryPanel.getQueryListCase().getJxTable().getColumnExt(0).setVisible(false);
-    this.multiSelectQueryPanel.getSelectedQueryCase().getJxTable().getColumnExt(0).setVisible(false);
-    this.multiSelectQueryPanel.getTemplateListQueryCase().getJxTable().getColumnExt(0).setVisible(false);
 
     this.checkboxConfig = checkboxConfig;
     this.checkboxConfig.addItemListener(this);
@@ -158,6 +158,10 @@ public class TaskSelectionHandler extends MouseListenerImpl
 
         taskId = getSelectedTaskId();
 
+        if (taskId == -1) {
+          return;
+        }
+
         TaskInfo taskInfo = profileManager.getTaskInfoById(taskId);
         if (Objects.isNull(taskInfo)) {
           throw new NotFoundException("Not found task: " + taskId);
@@ -196,22 +200,26 @@ public class TaskSelectionHandler extends MouseListenerImpl
         if (Objects.isNull(profileManager.getTaskInfoById(taskId))) {
           throw new NotFoundException("Not found task: " + taskId);
         } else {
-          profileManager.getTaskInfoById(taskId)
+          List<QueryTableRow> selectedRows = profileManager.getTaskInfoById(taskId)
               .getQueryInfoList()
-              .forEach(queryId -> {
+              .stream()
+              .map(queryId -> {
                 QueryInfo queryInfo = profileManager.getQueryInfoById(queryId);
                 if (Objects.isNull(queryInfo)) {
                   throw new NotFoundException("Not found query: " + queryId);
                 }
-                multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel()
-                    .addRow(new Object[]{queryInfo.getId(),
-                        queryInfo.getName(),
-                        queryInfo.getDescription(),
-                        queryInfo.getText()});
-              });
-        }
+                return new QueryTableRow(
+                    queryInfo.getId(),
+                    queryInfo.getName(),
+                    queryInfo.getDescription(),
+                    queryInfo.getText()
+                );
+              })
+              .collect(Collectors.toList());
 
-        multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel().fireTableDataChanged();
+          TTTable<QueryTableRow, JXTable> selectedTT = multiSelectQueryPanel.getSelectedQueryCase().getTypedTable();
+          selectedTT.setItems(selectedRows);
+        }
 
         String connName = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(0).toString();
         Object connDriver = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(4);
@@ -228,22 +236,30 @@ public class TaskSelectionHandler extends MouseListenerImpl
     }
   }
 
+  private int getSelectedTaskId() {
+    int selectedRow = taskCase.getJxTable().getSelectedRow();
+    if (selectedRow < 0) {
+      return -1;
+    }
+    TTTable<TaskRow, JXTable> tt = taskCase.getTypedTable();
+    TaskRow row = tt.model().itemAt(selectedRow);
+    return row != null ? row.getId() : -1;
+  }
+
   private void clearMultiSelectionPanel() {
-    multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel().getDataVector().removeAllElements();
-    multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel().fireTableDataChanged();
-    multiSelectQueryPanel.getQueryListCase().getDefaultTableModel().getDataVector().removeAllElements();
-    multiSelectQueryPanel.getQueryListCase().getDefaultTableModel().fireTableDataChanged();
-    multiSelectQueryPanel.getTemplateListQueryCase().getDefaultTableModel().getDataVector().removeAllElements();
-    multiSelectQueryPanel.getTemplateListQueryCase().getDefaultTableModel().fireTableDataChanged();
+    TTTable<QueryTableRow, JXTable> selectedTT = multiSelectQueryPanel.getSelectedQueryCase().getTypedTable();
+    TTTable<QueryTableRow, JXTable> queryListTT = multiSelectQueryPanel.getQueryListCase().getTypedTable();
+    TTTable<QueryTableRow, JXTable> templateTT = multiSelectQueryPanel.getTemplateListQueryCase().getTypedTable();
+
+    selectedTT.setItems(new ArrayList<>());
+    queryListTT.setItems(new ArrayList<>());
+    templateTT.setItems(new ArrayList<>());
   }
 
   private void fillAvailableQueryList(String connDriver) {
     List<String> listSelectedQueryForExclude = getSelectedQueryNameList();
 
     // Configuration
-    multiSelectQueryPanel.getQueryListCase().getDefaultTableModel().getDataVector().removeAllElements();
-    multiSelectQueryPanel.getQueryListCase().getDefaultTableModel().fireTableDataChanged();
-
     List<String> connectionDrivers = getConnectionDriverAll();
     connectionDrivers.removeIf(q -> q == null || connDriver.contains(q));
 
@@ -258,66 +274,42 @@ public class TaskSelectionHandler extends MouseListenerImpl
                 c.getName().equals(q.getName())))
         .collect(Collectors.toList());
 
-    List<QueryInfo> queryListWithoutConnDriver = profileManager.getQueryInfoList().stream()
+    List<QueryTableRow> queryListRows = profileManager.getQueryInfoList().stream()
         .filter(q -> !listSelectedQueryForExclude.contains(q.getName()))
         .filter(q -> !queryListOfUnsuitableConnDriver.contains(q))
         .filter(q -> !queryListOfUnsuitableConnType.contains(q))
+        .map(q -> new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()))
         .collect(Collectors.toList());
 
-    for (QueryInfo q : queryListWithoutConnDriver) {
-      multiSelectQueryPanel.getQueryListCase().getDefaultTableModel()
-          .addRow(new Object[]{q.getId(), q.getName(), q.getDescription(), q.getText()});
-    }
+    TTTable<QueryTableRow, JXTable> queryListTT = multiSelectQueryPanel.getQueryListCase().getTypedTable();
+    queryListTT.setItems(queryListRows);
 
     // Template
-    multiSelectQueryPanel.getTemplateListQueryCase().getDefaultTableModel().getDataVector().removeAllElements();
-    multiSelectQueryPanel.getTemplateListQueryCase().getDefaultTableModel().fireTableDataChanged();
+    List<QueryTableRow> templateRows = templateManager.getQueryListByConnDriver(connDriver).stream()
+        .map(q -> new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()))
+        .collect(Collectors.toList());
 
-    templateManager.getQueryListByConnDriver(connDriver).stream()
-        .forEach(q -> {
-          QueryInfo queryInfo = new QueryInfo();
-          queryInfo.setId(q.getId());
-          queryInfo.setName(q.getName());
-          queryInfo.setText(q.getText());
-          queryInfo.setDescription(q.getDescription());
-
-          multiSelectQueryPanel.getTemplateListQueryCase().getDefaultTableModel()
-              .addRow(new Object[]{queryInfo.getId(), queryInfo.getName(),
-                  queryInfo.getDescription(), queryInfo.getText()});
-        });
-
+    TTTable<QueryTableRow, JXTable> templateTT = multiSelectQueryPanel.getTemplateListQueryCase().getTypedTable();
+    templateTT.setItems(templateRows);
   }
 
   private List<String> getSelectedQueryNameList() {
-    List<String> queryListId = new ArrayList<>();
-
-    DefaultTableModel tableModel = multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel();
-    if (tableModel.getRowCount() > 0) {
-      for (int i = 0; i < tableModel.getRowCount(); i++) {
-        String selectedQueryName = tableModel.getValueAt(i, 1).toString();
-        queryListId.add(selectedQueryName);
-      }
+    List<String> queryListNames = new ArrayList<>();
+    TTTable<QueryTableRow, JXTable> selectedTT = multiSelectQueryPanel.getSelectedQueryCase().getTypedTable();
+    List<QueryTableRow> items = selectedTT.model().items();
+    for (QueryTableRow row : items) {
+      queryListNames.add(row.getName());
     }
-
-    return queryListId;
+    return queryListNames;
   }
 
   private List<String> getConnectionDriverAll() {
-    List<String> connAllDriver = Collections.emptyList();
     List<ConnectionInfo> connectionInfoList = profileManager.getConnectionInfoList();
-    connAllDriver = connectionInfoList.stream()
+    return connectionInfoList.stream()
         .map(ConnectionInfo::getDriver)
+        .distinct()
         .collect(Collectors.toList());
-
-    return connAllDriver.stream().distinct().collect(Collectors.toList());
   }
-
-  private int getSelectedTaskId() {
-    return GUIHelper.getIdByColumnName(taskCase.getJxTable(),
-                                       taskCase.getDefaultTableModel(), taskCase.getJxTable().getSelectionModel(),
-                                       TaskColumnNames.ID.getColName());
-  }
-
 
   @Override
   public void mouseClicked(MouseEvent e) {
@@ -342,65 +334,94 @@ public class TaskSelectionHandler extends MouseListenerImpl
   }
 
   public void fillConnectionCheckboxIsSelected(Boolean isSelected) {
-    connectionCase.getDefaultTableModel().getDataVector().removeAllElements();
-    connectionCase.getDefaultTableModel().fireTableDataChanged();
+    connectionCase.clearTable();
+    TTTable<ConnectionRow, JXTable> tt = connectionCase.getTypedTable();
+    List<ConnectionRow> rows = new ArrayList<>();
 
-    if (taskCase.getDefaultTableModel().getRowCount() > 0) {
-      if (getSelectedTaskId() == 0) {
+    if (taskCase.getJxTable().getRowCount() > 0) {
+      if (taskCase.getJxTable().getSelectedRow() == -1) {
         taskCase.getJxTable().setRowSelectionInterval(0, 0);
       }
     }
 
     if (isSelected) {
-      if (profileCase.getDefaultTableModel().getRowCount() > 0) {
+      if (profileCase.getJxTable().getRowCount() > 0) {
         int taskId = getSelectedTaskId();
+        if (taskId != -1) {
+          TaskInfo task = profileManager.getTaskInfoById(taskId);
+          if (Objects.isNull(task)) {
+            throw new NotFoundException("Not found task: " + taskId);
+          }
 
-        TaskInfo task = profileManager.getTaskInfoById(taskId);
-        if (Objects.isNull(task)) {
-          throw new NotFoundException("Not found task: " + taskId);
+          ConnectionInfo connection = profileManager.getConnectionInfoById(task.getConnectionId());
+          if (Objects.isNull(connection)) {
+            throw new NotFoundException("Not found connection: " + task.getConnectionId());
+          }
+
+          ConnectionInfo connectionInfo = profileManager.getConnectionInfoById(connection.getId());
+
+          rows.add(new ConnectionRow(
+              connection.getId(),
+              connection.getName(),
+              connection.getType(),
+              connectionInfo.getDbType()
+          ));
         }
-
-        ConnectionInfo connection = profileManager.getConnectionInfoById(task.getConnectionId());
-        if (Objects.isNull(connection)) {
-          throw new NotFoundException("Not found connection: " + task.getConnectionId());
-        }
-
-        connectionCase.getDefaultTableModel()
-            .addRow(new Object[]{connection.getId(),
-                connection.getName(),
-                connection.getType() != null ? connection.getType() : JDBC});
       }
     } else {
-      profileManager.getConnectionInfoList()
-          .forEach(e -> connectionCase.getDefaultTableModel()
-              .addRow(new Object[]{e.getId(), e.getName(), ConnectionType.JDBC.getName()}));
+      rows = profileManager.getConnectionInfoList().stream()
+          .map(c -> {
+            ConnectionInfo connectionInfo = profileManager.getConnectionInfoById(c.getId());
+            return new ConnectionRow(
+                c.getId(),
+                c.getName(),
+                c.getType(),
+                connectionInfo.getDbType()
+            );
+          })
+          .collect(Collectors.toList());
     }
+
+    tt.setItems(rows);
   }
 
   public void fillQueryCheckboxIsSelected(Boolean isSelected) {
-    queryCase.getDefaultTableModel().getDataVector().removeAllElements();
-    queryCase.getDefaultTableModel().fireTableDataChanged();
+    queryCase.clearTable();
+    TTTable<QueryRow, JXTable> tt = queryCase.getTypedTable();
+    List<QueryRow> rows = new ArrayList<>();
+
+    if (taskCase.getJxTable().getRowCount() > 0) {
+      if (taskCase.getJxTable().getSelectedRow() == -1) {
+        taskCase.getJxTable().setRowSelectionInterval(0, 0);
+      }
+    }
 
     if (isSelected) {
-      if (taskCase.getDefaultTableModel().getRowCount() > 0) {
-        if (Objects.isNull(profileManager.getTaskInfoById(taskId))) {
-          throw new NotFoundException("Not found task: " + taskId);
-        } else {
-          profileManager.getTaskInfoById(taskId)
-              .getQueryInfoList()
-              .forEach(queryId -> {
-                QueryInfo queryIn = profileManager.getQueryInfoById(queryId);
-                if (Objects.isNull(queryIn)) {
-                  throw new NotFoundException("Not found query: " + queryId);
-                }
-                queryCase.getDefaultTableModel().addRow(new Object[]{queryIn.getId(), queryIn.getName()});
-              });
+      if (taskCase.getJxTable().getRowCount() > 0) {
+        int taskId = getSelectedTaskId();
+        if (taskId != -1) {
+          if (Objects.isNull(profileManager.getTaskInfoById(taskId))) {
+            throw new NotFoundException("Not found task: " + taskId);
+          } else {
+            rows = profileManager.getTaskInfoById(taskId).getQueryInfoList().stream()
+                .map(queryId -> {
+                  QueryInfo queryIn = profileManager.getQueryInfoById(queryId);
+                  if (Objects.isNull(queryIn)) {
+                    throw new NotFoundException("Not found query: " + queryId);
+                  }
+                  return new QueryRow(queryIn.getId(), queryIn.getName());
+                })
+                .collect(Collectors.toList());
+          }
         }
       }
     } else {
-      profileManager.getQueryInfoList()
-          .forEach(e -> queryCase.getDefaultTableModel().addRow(new Object[]{e.getId(), e.getName()}));
+      rows = profileManager.getQueryInfoList().stream()
+          .map(e -> new QueryRow(e.getId(), e.getName()))
+          .collect(Collectors.toList());
     }
+
+    tt.setItems(rows);
   }
 
   @Override
@@ -453,7 +474,7 @@ public class TaskSelectionHandler extends MouseListenerImpl
             }
 
           } else {
-            taskPanel.getTaskConnectionComboBox().setTableData(Collections.emptyList());
+            taskPanel.getTaskConnectionComboBox().setTableData(java.util.Collections.emptyList());
           }
         } else {
           clearMultiSelectionPanel();
@@ -497,25 +518,25 @@ public class TaskSelectionHandler extends MouseListenerImpl
 
           taskPanel.getTaskConnectionComboBox().setTableData(connectionData);
 
-          if (Objects.isNull(profileManager.getTaskInfoById(taskId))) {
-            throw new NotFoundException("Not found task: " + taskId);
-          } else {
-            profileManager.getTaskInfoById(taskId)
-                .getQueryInfoList()
-                .forEach(queryId -> {
-                  QueryInfo queryInfo = profileManager.getQueryInfoById(queryId);
-                  if (Objects.isNull(queryInfo)) {
-                    throw new NotFoundException("Not found task: " + queryId);
-                  }
-                  multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel()
-                      .addRow(new Object[]{queryInfo.getId(),
-                          queryInfo.getName(),
-                          queryInfo.getDescription(),
-                          queryInfo.getText()});
-                });
-          }
+          List<QueryTableRow> selectedRows = profileManager.getTaskInfoById(taskId)
+              .getQueryInfoList()
+              .stream()
+              .map(queryId -> {
+                QueryInfo queryInfo = profileManager.getQueryInfoById(queryId);
+                if (Objects.isNull(queryInfo)) {
+                  throw new NotFoundException("Not found query: " + queryId);
+                }
+                return new QueryTableRow(
+                    queryInfo.getId(),
+                    queryInfo.getName(),
+                    queryInfo.getDescription(),
+                    queryInfo.getText()
+                );
+              })
+              .collect(Collectors.toList());
 
-          multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel().fireTableDataChanged();
+          TTTable<QueryTableRow, JXTable> selectedTT = multiSelectQueryPanel.getSelectedQueryCase().getTypedTable();
+          selectedTT.setItems(selectedRows);
 
           String connName = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(0).toString();
           Object connDriver = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(4);

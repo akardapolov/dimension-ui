@@ -44,14 +44,32 @@ import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.db.model.profile.cstype.CType;
 import ru.dimension.db.model.profile.cstype.SType;
+import ru.dimension.tt.api.TT;
+import ru.dimension.tt.api.TTRegistry;
+import ru.dimension.tt.swing.TTTable;
+import ru.dimension.tt.swing.TableUi;
+import ru.dimension.tt.swing.icon.RowIconProvider;
+import ru.dimension.tt.swingx.JXTableTables;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.textfield.JTextFieldCase;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
+import ru.dimension.ui.view.table.icon.ModelIconProviders;
+import ru.dimension.ui.view.table.row.Rows;
 
 @Log4j2
 public class GUIHelper {
+  private static TTRegistry REGISTRY;
+
+  private static synchronized TTRegistry getRegistry() {
+    if (REGISTRY == null) {
+      REGISTRY = TT.builder()
+          .scanPackages("ru.dimension.ui.view.table.row")
+          .build();
+    }
+    return REGISTRY;
+  }
 
   private GUIHelper() {}
 
@@ -548,5 +566,52 @@ public class GUIHelper {
       case INSIGHT -> "Insight";
       default -> "";
     };
+  }
+
+  public static <T> JXTableCase getTypedJXTableCase(Class<T> rowClass) {
+    RowIconProvider<T> iconProvider = getIconProviderFor(rowClass);
+
+    TTTable<T, JXTable> tt = JXTableTables.create(
+        getRegistry(),
+        rowClass,
+        TableUi.<T>builder()
+            .rowIcon(iconProvider)
+            .rowIconInColumn("name")
+            .build()
+    );
+
+    JXTable table = tt.table();
+    configureStandardTableProperties(table);
+
+    if (table.getColumnExt("ID") != null) {
+      table.getColumnExt("ID").setVisible(false);
+    }
+
+    return new JXTableCase(tt);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <T> RowIconProvider<T> getIconProviderFor(Class<T> rowClass) {
+    if (rowClass.equals(Rows.ProfileRow.class)) {
+      return (RowIconProvider<T>) ModelIconProviders.forProfileRow();
+    } else if (rowClass.equals(Rows.TaskRow.class)) {
+      return (RowIconProvider<T>) ModelIconProviders.forTaskRow();
+    } else if (rowClass.equals(Rows.ConnectionRow.class)) {
+      return (RowIconProvider<T>) ModelIconProviders.forConnectionRow();
+    } else if (rowClass.equals(Rows.QueryRow.class) || rowClass.equals(Rows.PickableQueryRow.class)) {
+      return (RowIconProvider<T>) ModelIconProviders.forQueryRow();
+    } else if (rowClass.equals(Rows.QueryTableRow.class)) {
+      return (RowIconProvider<T>) ModelIconProviders.forQueryTableRow();
+    }
+    return null;
+  }
+
+  private static void configureStandardTableProperties(JXTable table) {
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setGridColor(java.awt.Color.GRAY);
+    table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+    table.setEditable(false);
+    table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
   }
 }

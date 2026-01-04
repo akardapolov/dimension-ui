@@ -4,10 +4,13 @@ import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 import static ru.dimension.ui.laf.LafColorGroup.CHART_PANEL;
 
 import java.awt.BorderLayout;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 import java.util.regex.PatternSyntaxException;
+import java.util.stream.Collectors;
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -19,12 +22,17 @@ import javax.swing.border.EtchedBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.TableModelEvent;
-import javax.swing.table.TableColumn;
 import javax.swing.table.TableRowSorter;
 import lombok.Getter;
 import lombok.Setter;
+import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.painlessgridbag.PainlessGridBag;
+import ru.dimension.tt.api.TT;
+import ru.dimension.tt.api.TTRegistry;
+import ru.dimension.tt.swing.TTTable;
+import ru.dimension.tt.swing.TableUi;
+import ru.dimension.tt.swingx.JXTableTables;
 import ru.dimension.ui.component.block.PreviewConfigBlock;
 import ru.dimension.ui.component.module.preview.spi.IPreviewChart;
 import ru.dimension.ui.component.module.preview.spi.PreviewMode;
@@ -37,9 +45,9 @@ import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.laf.LaF;
-import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.info.TableInfo;
-import ru.dimension.ui.model.table.JXTableCase;
+import ru.dimension.ui.view.table.icon.ModelIconProviders;
+import ru.dimension.ui.view.table.row.Rows.ColumnRow;
 
 @Getter
 public class PreviewView extends JPanel {
@@ -47,10 +55,12 @@ public class PreviewView extends JPanel {
 
   private final PreviewModel model;
   private final JSplitPane splitPane;
-  private final JXTableCase columnTableCase;
+  private final TTTable<ColumnRow, JXTable> columnTable;
 
   private JTextField columnSearch;
   private TableRowSorter<?> columnSorter;
+  private int nameColumnIndex = -1;
+  private int pickColumnIndex = -1;
 
   private boolean ignoreCheckboxEvents = false;
 
@@ -79,7 +89,11 @@ public class PreviewView extends JPanel {
 
     this.setBorder(new EtchedBorder());
 
-    this.columnTableCase = createCheckboxTableCase();
+    TTRegistry registry = TT.builder()
+        .scanPackages("ru.dimension.ui.view.table.row")
+        .build();
+
+    this.columnTable = createCheckboxTable(registry);
     setupColumnTableListener();
 
     JPanel columnSearchPanel = new JPanel(new BorderLayout());
@@ -94,7 +108,7 @@ public class PreviewView extends JPanel {
     });
     columnSearch.setToolTipText("Search columns...");
     columnSearchPanel.add(columnSearch, BorderLayout.NORTH);
-    columnSearchPanel.add(columnTableCase.getJScrollPane(), BorderLayout.CENTER);
+    columnSearchPanel.add(columnTable.scrollPane(), BorderLayout.CENTER);
     columnSearchPanel.setBorder(BorderFactory.createTitledBorder("Columns"));
 
     this.realTimeRangePanel = new RealTimeRangePanel(getLabel("Range: "));
@@ -140,7 +154,7 @@ public class PreviewView extends JPanel {
     } else if (PreviewMode.DETAIL.equals(mode)) {
       splitPane.setDividerLocation(200);
     } else if (PreviewMode.ADHOC.equals(mode)) {
-        splitPane.setDividerLocation(200);
+      splitPane.setDividerLocation(200);
     }
 
     gbl.row().cell(splitPane).fillXY();
@@ -149,30 +163,36 @@ public class PreviewView extends JPanel {
 
   public void setColumnSelected(String columnName, boolean selected) {
     ignoreCheckboxEvents = true;
-    for (int i = 0; i < columnTableCase.getDefaultTableModel().getRowCount(); i++) {
-      String name = (String) columnTableCase.getDefaultTableModel().getValueAt(i, ColumnNames.NAME.ordinal());
-      if (name.equals(columnName)) {
-        columnTableCase.getDefaultTableModel().setValueAt(selected, i, ColumnNames.PICK.ordinal());
-        break;
+    try {
+      for (int i = 0; i < columnTable.model().getRowCount(); i++) {
+        ColumnRow row = columnTable.model().itemAt(i);
+        if (row != null && row.getName().equals(columnName)) {
+          columnTable.model().setValueAt(selected, i, pickColumnIndex);
+          break;
+        }
       }
+    } finally {
+      ignoreCheckboxEvents = false;
     }
-    ignoreCheckboxEvents = false;
   }
 
   private void setupColumnTableListener() {
-    columnTableCase.getDefaultTableModel().addTableModelListener(e -> {
+    pickColumnIndex = columnTable.model().schema().modelIndexOf("pick");
+    if (pickColumnIndex < 0) {
+      return;
+    }
+
+    columnTable.model().addTableModelListener(e -> {
       if (ignoreCheckboxEvents || e.getType() != TableModelEvent.UPDATE)
         return;
 
-      if (e.getColumn() == ColumnNames.PICK.ordinal()) {
+      if (e.getColumn() == pickColumnIndex) {
         int row = e.getFirstRow();
-        Boolean selected = (Boolean) columnTableCase.getDefaultTableModel()
-            .getValueAt(row, ColumnNames.PICK.ordinal());
-        String columnName = (String) columnTableCase.getDefaultTableModel()
-            .getValueAt(row, ColumnNames.NAME.ordinal());
-
-        if (checkboxChangeListener != null) {
-          checkboxChangeListener.onCheckboxChanged(columnName, selected);
+        if (row >= 0 && row < columnTable.model().getRowCount()) {
+          ColumnRow item = columnTable.model().itemAt(row);
+          if (item != null && checkboxChangeListener != null) {
+            checkboxChangeListener.onCheckboxChanged(item.getName(), item.isPick());
+          }
         }
       }
     });
@@ -199,14 +219,17 @@ public class PreviewView extends JPanel {
 
   public void clearAllCharts() {
     ignoreCheckboxEvents = true;
-    for (int i = 0; i < columnTableCase.getDefaultTableModel().getRowCount(); i++) {
-      columnTableCase.getDefaultTableModel().setValueAt(false, i, ColumnNames.PICK.ordinal());
-    }
+    try {
+      for (int i = 0; i < columnTable.model().getRowCount(); i++) {
+        columnTable.model().setValueAt(false, i, pickColumnIndex);
+      }
 
-    cardContainer.removeAll();
-    cardContainer.revalidate();
-    cardContainer.repaint();
-    ignoreCheckboxEvents = false;
+      cardContainer.removeAll();
+      cardContainer.revalidate();
+      cardContainer.repaint();
+    } finally {
+      ignoreCheckboxEvents = false;
+    }
   }
 
   private void addTaskPane(IPreviewChart taskPane) {
@@ -227,42 +250,64 @@ public class PreviewView extends JPanel {
   }
 
   public void updateColumnTables(TableInfo tableInfo) {
-    columnTableCase.clearTable();
+    columnTable.setItems(Collections.emptyList());
     populateColumnTable(tableInfo);
   }
 
-  private JXTableCase createCheckboxTableCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCaseCheckBoxAdHoc(10,
-                                                                    new String[]{
-                                                                        ColumnNames.ID.getColName(),
-                                                                        ColumnNames.NAME.getColName(),
-                                                                        ColumnNames.PICK.getColName()
-                                                                    }, ColumnNames.PICK.ordinal());
+  private TTTable<ColumnRow, JXTable> createCheckboxTable(TTRegistry registry) {
+    TTTable<ColumnRow, JXTable> tt = JXTableTables.create(
+        registry,
+        ColumnRow.class,
+        TableUi.<ColumnRow>builder()
+            .rowIcon(ModelIconProviders.forColumnRow())
+            .rowIconInColumn("name")
+            .build()
+    );
 
-    jxTableCase.getJxTable().getColumnExt(ColumnNames.ID.ordinal()).setVisible(false);
+    JXTable table = tt.table();
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setGridColor(java.awt.Color.GRAY);
+    table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+    table.setEditable(true);
 
-    TableColumn nameColumn = jxTableCase.getJxTable().getColumnModel().getColumn(ColumnNames.NAME.ordinal());
-    nameColumn.setMinWidth(30);
-    nameColumn.setMaxWidth(40);
+    // Hide ID column (already set in annotation, but defensive)
+    if (table.getColumnExt("ID") != null) {
+      table.getColumnExt("ID").setVisible(false);
+    }
 
-    columnSorter = new TableRowSorter<>(jxTableCase.getJxTable().getModel());
-    jxTableCase.getJxTable().setRowSorter(columnSorter);
+    // Configure Name column
+    if (table.getColumnExt("Name") != null) {
+      table.getColumnExt("Name").setEditable(false);
+    }
 
-    return jxTableCase;
+    // Setup sorter for filtering - preserves sort keys when filter changes
+    columnSorter = new TableRowSorter<>(tt.model());
+    table.setRowSorter(columnSorter);
+
+    // Store column indices for filtering and checkbox updates
+    nameColumnIndex = tt.model().schema().modelIndexOf("name");
+    pickColumnIndex = tt.model().schema().modelIndexOf("pick");
+
+    return tt;
   }
 
   private void updateColumnFilter() {
     String searchText = columnSearch.getText();
-    if (columnTableCase == null) return;
+    if (columnTable == null) return;
+
     if (columnSorter == null) {
-      columnSorter = new TableRowSorter<>(columnTableCase.getJxTable().getModel());
-      columnTableCase.getJxTable().setRowSorter(columnSorter);
+      columnSorter = new TableRowSorter<>(columnTable.model());
+      columnTable.table().setRowSorter(columnSorter);
     }
+
     if (searchText == null || searchText.isEmpty()) {
       columnSorter.setRowFilter(null);
     } else {
       try {
-        columnSorter.setRowFilter(RowFilter.regexFilter("(?iu)" + searchText, ColumnNames.NAME.ordinal()));
+        if (nameColumnIndex >= 0) {
+          columnSorter.setRowFilter(RowFilter.regexFilter("(?iu)" + searchText, nameColumnIndex));
+        }
       } catch (PatternSyntaxException e) {
         columnSorter.setRowFilter(RowFilter.regexFilter("$^", 0));
       }
@@ -270,11 +315,12 @@ public class PreviewView extends JPanel {
   }
 
   private void populateColumnTable(TableInfo tableInfo) {
-    if (tableInfo.getCProfiles() != null) {
-      tableInfo.getCProfiles().stream()
+    if (tableInfo != null && tableInfo.getCProfiles() != null) {
+      List<ColumnRow> rows = tableInfo.getCProfiles().stream()
           .filter(cProfile -> !cProfile.getCsType().isTimeStamp())
-          .forEach(cProfile -> columnTableCase.getDefaultTableModel()
-              .addRow(new Object[]{cProfile.getColId(), cProfile.getColName(), false}));
+          .map(cProfile -> new ColumnRow(cProfile, false))
+          .collect(Collectors.toList());
+      columnTable.setItems(rows);
     }
   }
 

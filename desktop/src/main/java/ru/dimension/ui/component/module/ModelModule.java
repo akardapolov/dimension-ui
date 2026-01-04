@@ -11,12 +11,12 @@ import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.module.model.ModelModel;
 import ru.dimension.ui.component.module.model.ModelPresenter;
 import ru.dimension.ui.component.module.model.ModelView;
-import ru.dimension.ui.component.module.model.row.Rows.ProfileRow;
-import ru.dimension.ui.component.module.model.row.Rows.QueryRow;
-import ru.dimension.ui.component.module.model.row.Rows.TaskRow;
 import ru.dimension.ui.helper.event.EventRouteRegistry;
 import ru.dimension.ui.helper.event.EventUtils;
 import ru.dimension.ui.manager.ProfileManager;
+import ru.dimension.ui.view.table.row.Rows.ProfileRow;
+import ru.dimension.ui.view.table.row.Rows.QueryRow;
+import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
 @Log4j2
 public class ModelModule {
@@ -67,7 +67,7 @@ public class ModelModule {
     // Query Selection
     view.getQueryTable().table().getSelectionModel().addListSelectionListener(e -> {
       if (!e.getValueIsAdjusting() && view.getQueryTable().selectedItem().isPresent()) {
-        QueryRow query = view.getQueryTable().selectedItem().get();
+       QueryRow query = view.getQueryTable().selectedItem().get();
         ProfileRow profile = view.getProfileTable().selectedItem().orElse(null);
         TaskRow task = view.getTaskTable().selectedItem().orElse(null);
 

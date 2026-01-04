@@ -4,14 +4,16 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import javax.swing.JOptionPane;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import javax.swing.table.DefaultTableModel;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
+import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.exception.NotSelectedRowException;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.manager.TemplateManager;
@@ -19,6 +21,7 @@ import ru.dimension.ui.model.config.Query;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.view.panel.config.task.MultiSelectQueryPanel;
 import ru.dimension.ui.view.panel.config.task.TaskPanel;
+import ru.dimension.ui.view.table.row.Rows.QueryTableRow;
 
 @Log4j2
 @Singleton
@@ -58,37 +61,41 @@ public class MultiSelectQueryHandler implements ActionListener, ChangeListener {
       if (jxTableCase.getJxTable().getSelectedRow() == -1) {
         throw new NotSelectedRowException("Not selected row in table. Please select and try again!");
       }
-      String selectedData = (String) jxTableCase.getDefaultTableModel()
-          .getValueAt(jxTableCase.getJxTable().getSelectedRow(), 1);
-      int selectedID = (Integer) jxTableCase.getDefaultTableModel()
-          .getValueAt(jxTableCase.getJxTable().getSelectedRow(), 0);
-      String selectedDescription = (String) jxTableCase.getDefaultTableModel()
-          .getValueAt(jxTableCase.getJxTable().getSelectedRow(), 2);
-      String selectedText = (String) jxTableCase.getDefaultTableModel()
-          .getValueAt(jxTableCase.getJxTable().getSelectedRow(), 3);
 
-      if (isExistName(selectedData)) {
-        if (selectedData != null) {
-          jxTableCaseSelected.getDefaultTableModel()
-              .addRow(new Object[]{selectedID, selectedData, selectedDescription, selectedText});
-          jxTableCaseSelected.getJxTable()
-              .setRowSelectionInterval(jxTableCaseSelected.getJxTable().getRowCount() - 1,
-                                       jxTableCaseSelected.getJxTable().getRowCount() - 1);
-          if (jxTableCase == multiSelectQueryPanel.getQueryListCase()) {
-            int index = jxTableCase.getJxTable().getSelectedRow();
-            if (index > -1) {
-              DefaultTableModel defaultTableModel = (DefaultTableModel) jxTableCase.getJxTable().getModel();
-              defaultTableModel.removeRow(index);
-              if (jxTableCase.getJxTable().getRowCount() > 0) {
-                jxTableCase.getJxTable().setRowSelectionInterval(jxTableCase.getJxTable().getRowCount() - 1,
-                                                                 jxTableCase.getJxTable().getRowCount() - 1);
-              }
-            }
+      TTTable<QueryTableRow, JXTable> sourceTT = jxTableCase.getTypedTable();
+      int selectedRow = jxTableCase.getJxTable().getSelectedRow();
+      QueryTableRow selectedItem = sourceTT.model().itemAt(selectedRow);
+
+      if (selectedItem == null) {
+        return;
+      }
+
+      if (isExistName(selectedItem.getName())) {
+        TTTable<QueryTableRow, JXTable> selectedTT = jxTableCaseSelected.getTypedTable();
+        List<QueryTableRow> selectedItems = new ArrayList<>(selectedTT.model().items());
+        selectedItems.add(selectedItem);
+        selectedTT.setItems(selectedItems);
+
+        jxTableCaseSelected.getJxTable().setRowSelectionInterval(
+            jxTableCaseSelected.getJxTable().getRowCount() - 1,
+            jxTableCaseSelected.getJxTable().getRowCount() - 1
+        );
+
+        if (jxTableCase == multiSelectQueryPanel.getQueryListCase()) {
+          List<QueryTableRow> sourceItems = new ArrayList<>(sourceTT.model().items());
+          sourceItems.remove(selectedRow);
+          sourceTT.setItems(sourceItems);
+
+          if (jxTableCase.getJxTable().getRowCount() > 0) {
+            jxTableCase.getJxTable().setRowSelectionInterval(
+                jxTableCase.getJxTable().getRowCount() - 1,
+                jxTableCase.getJxTable().getRowCount() - 1
+            );
           }
         }
       } else if (jxTableCase == multiSelectQueryPanel.getTemplateListQueryCase()) {
         JOptionPane.showMessageDialog(null,
-                                      selectedData + " query already exists, please choose  another one ",
+                                      selectedItem.getName() + " query already exists, please choose another one",
                                       "Information", JOptionPane.INFORMATION_MESSAGE);
       }
     }
@@ -98,37 +105,40 @@ public class MultiSelectQueryHandler implements ActionListener, ChangeListener {
         throw new NotSelectedRowException("Not selected row in table. Please select and try again!");
       }
 
-      String selectedData = (String) jxTableCaseSelected.getDefaultTableModel()
-          .getValueAt(jxTableCaseSelected.getJxTable().getSelectedRow(), 1);
-      int selectedID = (Integer) jxTableCaseSelected.getDefaultTableModel()
-          .getValueAt(jxTableCaseSelected.getJxTable().getSelectedRow(), 0);
-      String selectedDescription = (String) jxTableCaseSelected.getDefaultTableModel()
-          .getValueAt(jxTableCaseSelected.getJxTable().getSelectedRow(), 2);
-      String selectedText = (String) jxTableCaseSelected.getDefaultTableModel()
-          .getValueAt(jxTableCaseSelected.getJxTable().getSelectedRow(), 3);
+      TTTable<QueryTableRow, JXTable> selectedTT = jxTableCaseSelected.getTypedTable();
+      int selectedRow = jxTableCaseSelected.getJxTable().getSelectedRow();
+      QueryTableRow selectedItem = selectedTT.model().itemAt(selectedRow);
 
-      jxTableCase = tableToFill(selectedData, selectedID);
+      if (selectedItem == null) {
+        return;
+      }
 
-      if (selectedData != null) {
-        if (jxTableCase == multiSelectQueryPanel.getQueryListCase()) {
-          jxTableCase.getDefaultTableModel()
-              .addRow(new Object[]{selectedID, selectedData, selectedDescription, selectedText});
-          jxTableCase.getJxTable().setRowSelectionInterval(jxTableCase.getJxTable().getRowCount() - 1,
-                                                           jxTableCase.getJxTable().getRowCount() - 1);
-          multiSelectQueryPanel.getJTabbedPaneQuery().setSelectedIndex(0);
-        } else {
-          multiSelectQueryPanel.getJTabbedPaneQuery().setSelectedIndex(1);
-        }
-        int index = jxTableCaseSelected.getJxTable().getSelectedRow();
-        if (index > -1) {
-          DefaultTableModel defaultTableModel = (DefaultTableModel) jxTableCaseSelected.getJxTable().getModel();
-          defaultTableModel.removeRow(index);
-          if (jxTableCaseSelected.getJxTable().getRowCount() > 0) {
-            jxTableCaseSelected.getJxTable()
-                .setRowSelectionInterval(jxTableCaseSelected.getJxTable().getRowCount() - 1,
-                                         jxTableCaseSelected.getJxTable().getRowCount() - 1);
-          }
-        }
+      jxTableCase = tableToFill(selectedItem.getName(), selectedItem.getId());
+
+      if (jxTableCase == multiSelectQueryPanel.getQueryListCase()) {
+        TTTable<QueryTableRow, JXTable> queryListTT = jxTableCase.getTypedTable();
+        List<QueryTableRow> queryListItems = new ArrayList<>(queryListTT.model().items());
+        queryListItems.add(selectedItem);
+        queryListTT.setItems(queryListItems);
+
+        jxTableCase.getJxTable().setRowSelectionInterval(
+            jxTableCase.getJxTable().getRowCount() - 1,
+            jxTableCase.getJxTable().getRowCount() - 1
+        );
+        multiSelectQueryPanel.getJTabbedPaneQuery().setSelectedIndex(0);
+      } else {
+        multiSelectQueryPanel.getJTabbedPaneQuery().setSelectedIndex(1);
+      }
+
+      List<QueryTableRow> selectedItems = new ArrayList<>(selectedTT.model().items());
+      selectedItems.remove(selectedRow);
+      selectedTT.setItems(selectedItems);
+
+      if (jxTableCaseSelected.getJxTable().getRowCount() > 0) {
+        jxTableCaseSelected.getJxTable().setRowSelectionInterval(
+            jxTableCaseSelected.getJxTable().getRowCount() - 1,
+            jxTableCaseSelected.getJxTable().getRowCount() - 1
+        );
       }
     }
 
@@ -136,75 +146,84 @@ public class MultiSelectQueryHandler implements ActionListener, ChangeListener {
       List<String> listSelectedQueryForExclude = getSelectedQueryNameList();
       String connDriver = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(4).toString();
 
-      List<Query> queryListAll;
-      if (jxTableCase == multiSelectQueryPanel.getQueryListCase()) {
-        jxTableCase.getDefaultTableModel().getDataVector().removeAllElements();
-        jxTableCase.getDefaultTableModel().fireTableDataChanged();
+      TTTable<QueryTableRow, JXTable> selectedTT = jxTableCaseSelected.getTypedTable();
+      List<QueryTableRow> currentSelected = new ArrayList<>(selectedTT.model().items());
 
-        profileManager.getQueryInfoListByConnDriver(connDriver).stream()
+      if (jxTableCase == multiSelectQueryPanel.getQueryListCase()) {
+        TTTable<QueryTableRow, JXTable> queryListTT = jxTableCase.getTypedTable();
+
+        // Добавляем все из query list в selected
+        List<QueryTableRow> toAdd = profileManager.getQueryInfoListByConnDriver(connDriver).stream()
             .filter(q -> !listSelectedQueryForExclude.contains(q.getName()))
-            .forEach(q -> multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel()
-                .addRow(new Object[]{q.getId(), q.getName(), q.getDescription(), q.getText()}));
+            .map(q -> new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()))
+            .collect(Collectors.toList());
+
+        currentSelected.addAll(toAdd);
+        selectedTT.setItems(currentSelected);
+
+        // Очищаем query list
+        queryListTT.setItems(new ArrayList<>());
 
       } else {
-        queryListAll = templateManager.getQueryListByConnDriver(connDriver).stream()
+        List<Query> queryListAll = templateManager.getQueryListByConnDriver(connDriver).stream()
             .filter(q -> !listSelectedQueryForExclude.contains(q.getName()))
             .toList();
 
         for (Query query : queryListAll) {
           if (isExistName(query.getName())) {
-            jxTableCaseSelected.getDefaultTableModel()
-                .addRow(new Object[]{query.getId(), query.getName(), query.getDescription(), query.getText()});
-          } else if (jxTableCase == multiSelectQueryPanel.getTemplateListQueryCase()) {
+            currentSelected.add(new QueryTableRow(
+                query.getId(), query.getName(), query.getDescription(), query.getText()
+            ));
+          } else {
             JOptionPane.showMessageDialog(null,
-                                          query.getName() + " query already exists, please choose  another one ",
+                                          query.getName() + " query already exists, please choose another one",
                                           "Information", JOptionPane.INFORMATION_MESSAGE);
           }
         }
+        selectedTT.setItems(currentSelected);
       }
 
       profileManager.updateCache();
     }
 
     if (e.getSource() == multiSelectQueryPanel.getUnPickAllBtn()) {
-      jxTableCaseSelected.getDefaultTableModel().getDataVector().removeAllElements();
-      jxTableCaseSelected.getDefaultTableModel().fireTableDataChanged();
-      multiSelectQueryPanel.getQueryListCase().getDefaultTableModel().getDataVector().removeAllElements();
-      multiSelectQueryPanel.getQueryListCase().getDefaultTableModel().fireTableDataChanged();
+      TTTable<QueryTableRow, JXTable> selectedTT = jxTableCaseSelected.getTypedTable();
+      selectedTT.setItems(new ArrayList<>());
 
       String connDriver = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(4).toString();
       List<String> listSelectedQueryForExclude = getSelectedQueryNameList();
-      profileManager.getQueryInfoListByConnDriver(connDriver).stream()
+
+      List<QueryTableRow> queryListRows = profileManager.getQueryInfoListByConnDriver(connDriver).stream()
           .filter(q -> !listSelectedQueryForExclude.contains(q.getName()))
-          .forEach(q -> multiSelectQueryPanel.getQueryListCase().getDefaultTableModel()
-              .addRow(new Object[]{q.getId(), q.getName(), q.getDescription(), q.getText()}));
+          .map(q -> new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()))
+          .collect(Collectors.toList());
+
+      TTTable<QueryTableRow, JXTable> queryListTT = multiSelectQueryPanel.getQueryListCase().getTypedTable();
+      queryListTT.setItems(queryListRows);
 
       multiSelectQueryPanel.getJTabbedPaneQuery().setSelectedIndex(0);
     }
   }
 
   private boolean isExistName(String selectedData) {
-    boolean isExist = true;
-    DefaultTableModel defaultTableModel = multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel();
-    for (int rowIndex = 0; rowIndex < defaultTableModel.getRowCount(); rowIndex++) {
-      if (selectedData.equals(defaultTableModel.getValueAt(rowIndex, 1).toString())) {
-        isExist = false;
-      }
-    }
-    return isExist;
+    TTTable<QueryTableRow, JXTable> selectedTT = multiSelectQueryPanel.getSelectedQueryCase().getTypedTable();
+    List<QueryTableRow> items = selectedTT.model().items();
+    return items.stream().noneMatch(row -> selectedData.equals(row.getName()));
   }
 
-  private JXTableCase tableToFill(String selectedName,
-                                  int selectedId) {
-    JXTableCase jxTableCase = multiSelectQueryPanel.getQueryListCase();
-    DefaultTableModel defaultTableModel = multiSelectQueryPanel.getTemplateListQueryCase().getDefaultTableModel();
-    for (int rowIndex = 0; rowIndex < defaultTableModel.getRowCount(); rowIndex++) {
-      if (selectedName.equals(defaultTableModel.getValueAt(rowIndex, 1).toString())
-          && selectedId == (Integer) (defaultTableModel.getValueAt(rowIndex, 0))) {
-        jxTableCase = multiSelectQueryPanel.getTemplateListQueryCase();
+  private JXTableCase tableToFill(String selectedName, int selectedId) {
+    JXTableCase result = multiSelectQueryPanel.getQueryListCase();
+
+    TTTable<QueryTableRow, JXTable> templateTT = multiSelectQueryPanel.getTemplateListQueryCase().getTypedTable();
+    List<QueryTableRow> templateItems = templateTT.model().items();
+
+    for (QueryTableRow row : templateItems) {
+      if (selectedName.equals(row.getName()) && selectedId == row.getId()) {
+        result = multiSelectQueryPanel.getTemplateListQueryCase();
+        break;
       }
     }
-    return jxTableCase;
+    return result;
   }
 
   @Override
@@ -217,16 +236,12 @@ public class MultiSelectQueryHandler implements ActionListener, ChangeListener {
   }
 
   private List<String> getSelectedQueryNameList() {
-    List<String> queryListId = new ArrayList<>();
-
-    DefaultTableModel tableModel = multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel();
-    if (tableModel.getRowCount() > 0) {
-      for (int i = 0; i < tableModel.getRowCount(); i++) {
-        String selectedQueryName = tableModel.getValueAt(i, 1).toString();
-        queryListId.add(selectedQueryName);
-      }
+    List<String> queryListNames = new ArrayList<>();
+    TTTable<QueryTableRow, JXTable> selectedTT = multiSelectQueryPanel.getSelectedQueryCase().getTypedTable();
+    List<QueryTableRow> items = selectedTT.model().items();
+    for (QueryTableRow row : items) {
+      queryListNames.add(row.getName());
     }
-
-    return queryListId;
+    return queryListNames;
   }
 }

@@ -36,13 +36,13 @@ import ru.dimension.ui.helper.FilterHelper;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.helper.ProgressBarHelper;
-import ru.dimension.ui.model.column.TaskColumnNames;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.gantt.DrawingScale;
 import ru.dimension.ui.model.gantt.GanttColumn;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.view.SeriesType;
+import ru.dimension.ui.view.table.row.Rows.ColumnRow;
 
 @Log4j2
 public class MainTopDashboardPanel extends GanttPanel implements ListSelectionListener {
@@ -72,9 +72,9 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
     this.seriesType = seriesType;
     this.topMapSelected = topMapSelected;
 
-    super.jxTableCase.getJxTable().getSelectionModel().addListSelectionListener(this);
+    super.columnTable.table().getSelectionModel().addListSelectionListener(this);
 
-    this.jSplitPane.add(this.jxTableCase.getJScrollPane(), JSplitPane.LEFT);
+    this.jSplitPane.add(super.columnTable.scrollPane(), JSplitPane.LEFT);
     this.jSplitPane.add(this.dimensionTop(), JSplitPane.RIGHT);
 
     this.setLayout(new BorderLayout());
@@ -156,8 +156,13 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
       if (listSelectionModel.isSelectionEmpty()) {
         log.info("Clearing query fields");
       } else {
-        int columnId = GUIHelper.getIdByColumnName(jxTableCase.getJxTable(),
-                                                   super.jxTableCase.getDefaultTableModel(), listSelectionModel, TaskColumnNames.ID.getColName());
+        int viewRow = columnTable.table().getSelectedRow();
+        if (viewRow < 0) return;
+
+        int modelRow = columnTable.table().convertRowIndexToModel(viewRow);
+        ColumnRow selectedItem = columnTable.model().itemAt(modelRow);
+
+        String colName = selectedItem.getName();
 
         executorService.submit(() -> {
           GUIHelper.addToJSplitPane(jSplitPane, ProgressBarHelper.createProgressBar("Loading, please wait..."),
@@ -165,7 +170,7 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
 
           try {
             CProfile firstLevelGroupBy = tableInfo.getCProfiles().stream()
-                .filter(f -> f.getColId() == columnId)
+                .filter(f -> f.getColName().equalsIgnoreCase(colName))
                 .findFirst()
                 .orElseThrow();
 
@@ -182,7 +187,7 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
           }
         });
 
-        log.info(columnId);
+        log.info("Selected column: " + colName);
       }
     }
   }
@@ -196,11 +201,11 @@ public class MainTopDashboardPanel extends GanttPanel implements ListSelectionLi
         CompositeFilter compositeFilter = FilterHelper.toCompositeFilter(topMapSelected);
 
         return convertGanttColumns(dStore.getGanttCount(tableInfo.getTableName(),
-                                                   firstLevelGroupBy,
-                                                   cProfile,
-                                                   compositeFilter,
-                                                   begin,
-                                                   end));
+                                                        firstLevelGroupBy,
+                                                        cProfile,
+                                                        compositeFilter,
+                                                        begin,
+                                                        end));
       } else {
         return convertGanttColumns(dStore.getGanttCount(tableInfo.getTableName(),
                                                         firstLevelGroupBy,

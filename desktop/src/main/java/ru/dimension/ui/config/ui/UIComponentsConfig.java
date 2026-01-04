@@ -5,7 +5,6 @@ import static ru.dimension.ui.model.view.TemplateAction.SAVE;
 
 import java.awt.Dimension;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -14,19 +13,23 @@ import javax.swing.JTabbedPane;
 import javax.swing.table.TableColumn;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTextArea;
 import ru.dimension.db.model.profile.table.IType;
 import ru.dimension.db.model.profile.table.TType;
 import ru.dimension.di.DimensionDI;
 import ru.dimension.di.ServiceLocator;
+import ru.dimension.tt.api.TT;
+import ru.dimension.tt.api.TTRegistry;
+import ru.dimension.tt.swing.TTTable;
+import ru.dimension.tt.swing.TableUi;
+import ru.dimension.tt.swingx.JXTableTables;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.column.ConnectionColumnNames;
-import ru.dimension.ui.model.column.MetadataColumnNames;
 import ru.dimension.ui.model.column.MetricsColumnNames;
-import ru.dimension.ui.model.column.ProfileColumnNames;
 import ru.dimension.ui.model.column.QueryColumnNames;
 import ru.dimension.ui.model.column.TaskColumnNames;
 import ru.dimension.ui.model.function.GroupFunction;
@@ -44,6 +47,13 @@ import ru.dimension.ui.view.panel.template.TemplateEditPanel;
 import ru.dimension.ui.view.panel.template.TemplateHTTPConnPanel;
 import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.view.tab.ConnTypeTab;
+import ru.dimension.ui.view.table.icon.ModelIconProviders;
+import ru.dimension.ui.view.table.row.Rows;
+import ru.dimension.ui.view.table.row.Rows.ConnectionRow;
+import ru.dimension.ui.view.table.row.Rows.MetadataRow;
+import ru.dimension.ui.view.table.row.Rows.ProfileRow;
+import ru.dimension.ui.view.table.row.Rows.QueryRow;
+import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
 public final class UIComponentsConfig {
 
@@ -65,31 +75,18 @@ public final class UIComponentsConfig {
         .bindNamed(TemplateHTTPConnPanel.class, "templateHTTPConnPanel", TemplateHTTPConnPanel.class)
         .bindNamed(TemplateEditPanel.class, "templateEditPanel", TemplateEditPanel.class)
 
-        // Tables for config tabs
+        // Tables for config tabs with ICONS
         .provideNamed(JXTableCase.class, "profileConfigCase", ServiceLocator.singleton(
-            () -> GUIHelper.getJXTableCase(10, new String[]{
-                ProfileColumnNames.ID.getColName(),
-                ProfileColumnNames.NAME.getColName()
-            })
+            () -> GUIHelper.getTypedJXTableCase(ProfileRow.class)
         ))
         .provideNamed(JXTableCase.class, "taskConfigCase", ServiceLocator.singleton(
-            () -> GUIHelper.getJXTableCase(10, new String[]{
-                TaskColumnNames.ID.getColName(),
-                TaskColumnNames.NAME.getColName()
-            })
+            () -> GUIHelper.getTypedJXTableCase(TaskRow.class)
         ))
         .provideNamed(JXTableCase.class, "connectionConfigCase", ServiceLocator.singleton(
-            () -> GUIHelper.getJXTableCase(10, new String[]{
-                ConnectionColumnNames.ID.getColName(),
-                ConnectionColumnNames.NAME.getColName(),
-                ConnectionColumnNames.TYPE.getColName()
-            })
+            () -> GUIHelper.getTypedJXTableCase(ConnectionRow.class)
         ))
         .provideNamed(JXTableCase.class, "queryConfigCase", ServiceLocator.singleton(
-            () -> GUIHelper.getJXTableCase(10, new String[]{
-                TaskColumnNames.ID.getColName(),
-                TaskColumnNames.NAME.getColName()
-            })
+            () -> GUIHelper.getTypedJXTableCase(QueryRow.class)
         ))
 
         // Tabs
@@ -111,48 +108,25 @@ public final class UIComponentsConfig {
           return detailedComboBox;
         }))
 
-        // Task, Query list/selected/template tables
+        // Task list/selected/template typed tables
         .provideNamed(JXTableCase.class, "taskListCase", ServiceLocator.singleton(
-            () -> GUIHelper.getJXTableCase(6, new String[]{
-                TaskColumnNames.ID.getColName(),
-                TaskColumnNames.NAME.getColName()
-            })
+            () -> GUIHelper.getTypedJXTableCase(TaskRow.class)
         ))
         .provideNamed(JXTableCase.class, "selectedTaskCase", ServiceLocator.singleton(
-            () -> GUIHelper.getJXTableCase(6, new String[]{
-                TaskColumnNames.ID.getColName(),
-                TaskColumnNames.NAME.getColName()
-            })
+            () -> GUIHelper.getTypedJXTableCase(TaskRow.class)
         ))
         .provideNamed(JXTableCase.class, "templateListTaskCase", ServiceLocator.singleton(
-            () -> GUIHelper.getJXTableCase(6, new String[]{
-                TaskColumnNames.ID.getColName(),
-                TaskColumnNames.NAME.getColName()
-            })
+            () -> GUIHelper.getTypedJXTableCase(TaskRow.class)
         ))
+
         .provideNamed(JXTableCase.class, "queryListCase", ServiceLocator.singleton(
-            () -> GUIHelper.getJXTableCase(10, new String[]{
-                QueryColumnNames.ID.getColName(),
-                QueryColumnNames.NAME.getColName(),
-                QueryColumnNames.DESCRIPTION.getColName(),
-                QueryColumnNames.TEXT.getColName()
-            })
+            () -> GUIHelper.getTypedJXTableCase(Rows.QueryTableRow.class)
         ))
         .provideNamed(JXTableCase.class, "selectedQueryCase", ServiceLocator.singleton(
-            () -> GUIHelper.getJXTableCase(10, new String[]{
-                QueryColumnNames.ID.getColName(),
-                QueryColumnNames.NAME.getColName(),
-                QueryColumnNames.DESCRIPTION.getColName(),
-                QueryColumnNames.TEXT.getColName()
-            })
+            () -> GUIHelper.getTypedJXTableCase(Rows.QueryTableRow.class)
         ))
         .provideNamed(JXTableCase.class, "templateListQueryCase", ServiceLocator.singleton(
-            () -> GUIHelper.getJXTableCase(10, new String[]{
-                QueryColumnNames.ID.getColName(),
-                QueryColumnNames.NAME.getColName(),
-                QueryColumnNames.DESCRIPTION.getColName(),
-                QueryColumnNames.TEXT.getColName()
-            })
+            () -> GUIHelper.getTypedJXTableCase(Rows.QueryTableRow.class)
         ))
 
         // SQL editing
@@ -312,30 +286,36 @@ public final class UIComponentsConfig {
             })
         ))
 
-        // Metadata config table
         .provideNamed(JXTableCase.class, "configMetadataCase", ServiceLocator.singleton(() -> {
-          JXTableCase jxTableCase = GUIHelper.getJXTableCaseCheckBox(10, new String[]{
-              MetadataColumnNames.COLUMN_ID.getColName(),
-              MetadataColumnNames.COLUMN_ID_SQL.getColName(),
-              MetadataColumnNames.COLUMN.getColName(),
-              MetadataColumnNames.COLUMN_DB_TYPE_NAME.getColName(),
-              MetadataColumnNames.STORAGE.getColName(),
-              MetadataColumnNames.COLUMN_TYPE.getColName(),
-              MetadataColumnNames.DIMENSION.getColName()
-          }, 6);
-          jxTableCase.getJxTable().getColumnExt(0).setVisible(false);
-          jxTableCase.getJxTable().getColumnExt(0).setVisible(false);
+          TTRegistry registry = TT.builder()
+              .scanPackages("ru.dimension.ui.view.table.row")
+              .build();
 
-          Enumeration<TableColumn> columns = jxTableCase.getJxTable().getColumnModel().getColumns();
-          while (columns.hasMoreElements()) {
-            TableColumn column = columns.nextElement();
-            if (MetadataColumnNames.DIMENSION.getColName().equals(column.getHeaderValue())) {
-              column.setCellRenderer(new ru.dimension.ui.view.custom.BorderCellCheckBoxRenderer());
-              column.setMinWidth(50);
-              column.setMaxWidth(70);
-            }
+          TTTable<MetadataRow, JXTable> tt = JXTableTables.create(
+              registry,
+              MetadataRow.class,
+              TableUi.<MetadataRow>builder()
+                  .rowIcon(ModelIconProviders.forMetadataRow())
+                  .rowIconInColumn("colName")
+                  .build()
+          );
+
+          JXTable table = tt.table();
+          table.setShowVerticalLines(true);
+          table.setShowHorizontalLines(true);
+          table.setGridColor(java.awt.Color.GRAY);
+          table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+          table.setEditable(true);
+
+          if (table.getColumnExt("Column ID") != null) {
+            table.getColumnExt("Column ID").setVisible(false);
           }
-          return jxTableCase;
+
+          if (table.getColumnExt("Column ID SQL") != null) {
+            table.getColumnExt("Column ID SQL").setVisible(false);
+          }
+
+          return new JXTableCase(tt);
         }))
 
         // Metrics tables

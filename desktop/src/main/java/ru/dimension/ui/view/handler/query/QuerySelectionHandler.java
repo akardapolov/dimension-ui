@@ -1,45 +1,50 @@
 package ru.dimension.ui.view.handler.query;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.ResourceBundle;
-import jakarta.inject.Inject;
-import jakarta.inject.Named;
-import jakarta.inject.Singleton;
+import java.util.stream.Collectors;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JCheckBox;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.table.IType;
 import ru.dimension.db.model.profile.table.TType;
+import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.helper.GUIHelper;
-import ru.dimension.ui.model.table.JXTableCase;
-import ru.dimension.ui.view.panel.config.ButtonPanel;
-import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.manager.ProfileManager;
-import ru.dimension.ui.model.column.TaskColumnNames;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
+import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.tab.ConfigEditTabPane;
 import ru.dimension.ui.prompt.Internationalization;
 import ru.dimension.ui.view.handler.CommonViewHandler;
 import ru.dimension.ui.view.handler.MouseListenerImpl;
+import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.query.MainQueryPanel;
 import ru.dimension.ui.view.panel.config.query.MetadataQueryPanel;
 import ru.dimension.ui.view.panel.config.query.MetricQueryPanel;
 import ru.dimension.ui.view.panel.config.query.QueryPanel;
+import ru.dimension.ui.view.tab.ConfigTab;
+import ru.dimension.ui.view.table.row.Rows.MetadataRow;
+import ru.dimension.ui.view.table.row.Rows.QueryRow;
 
 @Log4j2
 @Singleton
@@ -120,15 +125,14 @@ public class QuerySelectionHandler extends MouseListenerImpl implements ListSele
         metadataQueryPanel.getEditMetadata().setEnabled(false);
         metadataQueryPanel.getSaveMetadata().setEnabled(false);
         metadataQueryPanel.getConfigMetadataCase().getJxTable().setEditable(false);
-        configMetadataCase.getDefaultTableModel().getDataVector().removeAllElements();
-        configMetadataCase.getDefaultTableModel().fireTableDataChanged();
+        configMetadataCase.clearTable();
         metricQueryPanel.getConfigMetricCase().getDefaultTableModel().getDataVector().removeAllElements();
         metricQueryPanel.getConfigMetricCase().getDefaultTableModel().fireTableDataChanged();
         metricQueryPanel.getNameMetric().setText("");
         metricQueryPanel.getNameMetric().setPrompt(bundleDefault.getString("metricName"));
         metricQueryPanel.getDefaultCheckBox().setSelected(false);
       } else {
-        int queryId = getSelectedQueryId(listSelectionModel);
+        int queryId = getSelectedQueryId();
         QueryInfo queryInfo = profileManager.getQueryInfoById(queryId);
 
         if (Objects.isNull(queryInfo)) {
@@ -149,10 +153,21 @@ public class QuerySelectionHandler extends MouseListenerImpl implements ListSele
         List<String> yAxisList = new ArrayList<>();
         List<String> dimensionList = new ArrayList<>();
 
-        configMetadataCase.getDefaultTableModel().getDataVector().removeAllElements();
-        configMetadataCase.getDefaultTableModel().fireTableDataChanged();
+        TTTable<MetadataRow, JXTable> tt = configMetadataCase.getTypedTable();
+        tt.setItems(Collections.emptyList());
 
         if (cProfileList != null) {
+          List<MetadataRow> metadataRows = cProfileList.stream()
+              .filter(f -> !f.getCsType().isTimeStamp())
+              .map(cProfile -> {
+                boolean isDimension = tableInfo.getDimensionColumnList() != null &&
+                    tableInfo.getDimensionColumnList().contains(cProfile.getColName());
+                return new MetadataRow(cProfile, isDimension);
+              })
+              .collect(Collectors.toList());
+
+          tt.setItems(metadataRows);
+
           fillConfigMetadata(tableInfo, configMetadataCase);
 
           cProfileList.stream()
@@ -260,8 +275,7 @@ public class QuerySelectionHandler extends MouseListenerImpl implements ListSele
         metadataQueryPanel.getLoadMetadata().setEnabled(!isSelected);
         GUIHelper.disableButton(metricQueryPanel.getMetricQueryButtonPanel(), !isSelected);
 
-        if (queryCase.getDefaultTableModel().getRowCount() > 0) {
-          // Logic to enable/disable metadata buttons based on task assignment
+        if (queryCase.getJxTable().getRowCount() > 0) {
           profileManager.getTaskInfoList()
               .stream()
               .flatMap(t -> t.getQueryInfoList().stream())
@@ -269,12 +283,10 @@ public class QuerySelectionHandler extends MouseListenerImpl implements ListSele
               .filter(id -> Objects.equals(id, queryInfo.getId()))
               .findAny()
               .ifPresentOrElse(
-                  // Case: Query is assigned to a task
                   q -> {
                     metadataQueryPanel.getEditMetadata().setEnabled(!isSelected);
                     metadataQueryPanel.getLoadMetadata().setEnabled(!isSelected);
                   },
-                  // Case: Query is NOT assigned to a task (cannot load metadata without connection)
                   () -> {
                     metadataQueryPanel.getEditMetadata().setEnabled(false);
                     metadataQueryPanel.getLoadMetadata().setEnabled(false);
@@ -285,10 +297,14 @@ public class QuerySelectionHandler extends MouseListenerImpl implements ListSele
     }
   }
 
-  private int getSelectedQueryId(ListSelectionModel listSelectionModel) {
-    return GUIHelper.getIdByColumnName(queryCase.getJxTable(),
-                                       queryCase.getDefaultTableModel(),
-                                       listSelectionModel, TaskColumnNames.ID.getColName());
+  private int getSelectedQueryId() {
+    int selectedRow = queryCase.getJxTable().getSelectedRow();
+    if (selectedRow < 0) {
+      return -1;
+    }
+    TTTable<QueryRow, JXTable> tt = queryCase.getTypedTable();
+    QueryRow row = tt.model().itemAt(selectedRow);
+    return row != null ? row.getId() : -1;
   }
 
   @Override
@@ -315,5 +331,3 @@ public class QuerySelectionHandler extends MouseListenerImpl implements ListSele
     }
   }
 }
-
-

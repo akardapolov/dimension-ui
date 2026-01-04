@@ -19,7 +19,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
-import javax.swing.DefaultCellEditor;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
@@ -30,13 +29,20 @@ import javax.swing.JSplitPane;
 import javax.swing.UIManager;
 import javax.swing.border.EtchedBorder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.jdesktop.swingx.JXTitledSeparator;
 import org.jdesktop.swingx.VerticalLayout;
 import org.jdesktop.swingx.plaf.basic.CalendarHeaderHandler;
 import org.jdesktop.swingx.plaf.basic.SpinningCalendarHeaderHandler;
 import org.painlessgridbag.PainlessGridBag;
+import ru.dimension.tt.api.TT;
+import ru.dimension.tt.api.TTRegistry;
+import ru.dimension.tt.swing.TTTable;
+import ru.dimension.tt.swing.TableUi;
+import ru.dimension.tt.swingx.JXTableTables;
 import ru.dimension.ui.component.module.chart.ReportChartModule;
 import ru.dimension.ui.component.panel.CollapseCardPanel;
 import ru.dimension.ui.helper.DateHelper;
@@ -47,25 +53,25 @@ import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.model.chart.ChartRange;
-import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.state.UIState;
 import ru.dimension.ui.view.panel.DateTimePicker;
+import ru.dimension.ui.view.table.icon.ModelIconProviders;
+import ru.dimension.ui.view.table.row.Rows.DesignRow;
 
 @Log4j2
 @Data
+@EqualsAndHashCode(callSuper = true)
 public class DesignView extends JPanel {
-  private static final int QUERY_PICK_COLUMN_INDEX = 1;
-  private static final int QUERY_NAME_COLUMN_INDEX = 2;
-  private static final int MIN_COLUMN_WIDTH = 30;
-  private static final int MAX_COLUMN_WIDTH = 35;
 
   private final DesignModel model;
   private final JSplitPane mainSplitPane;
   private final JSplitPane modelSplitPane;
   private final JSplitPane configChartsSplitPane;
-  private final JXTableCase designReportCase;
-  private final DefaultCellEditor queryEditor;
+
+  private final TTRegistry registry;
+  private final TTTable<DesignRow, JXTable> designTable;
+
   private final JCheckBox collapseCard;
   private final DateTimePicker dateTimePickerFrom;
   private final DateTimePicker dateTimePickerTo;
@@ -80,7 +86,6 @@ public class DesignView extends JPanel {
   private final JXTaskPaneContainer chartContainer;
   private final JScrollPane cardScrollPane;
   private final JScrollPane chartScrollPane;
-  private final JScrollPane designListScrollPane;
 
   private final CollapseCardPanel collapseCardPanel;
 
@@ -92,11 +97,17 @@ public class DesignView extends JPanel {
 
   public DesignView(DesignModel model) {
     this.model = model;
+
+    this.registry = TT.builder()
+        .scanPackages("ru.dimension.ui.view.table.row")
+        .build();
+
     this.mainSplitPane = GUIHelper.getJSplitPane(JSplitPane.HORIZONTAL_SPLIT, 10, 240);
     this.modelSplitPane = GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, 250);
     this.configChartsSplitPane = GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, 50);
-    this.designReportCase = createDesignTable();
-    this.queryEditor = new DefaultCellEditor(new JCheckBox());
+
+    this.designTable = createDesignTable();
+
     this.collapseCard = createCollapseCheckBox();
     this.showButton = createShowButton();
     this.clearButton = createClearButton();
@@ -113,8 +124,6 @@ public class DesignView extends JPanel {
     this.chartScrollPane = createChartScrollPane();
     this.collapseCardPanel = new CollapseCardPanel();
     this.collapseCardPanel.setCollapseCheckBoxEnabled(false);
-
-    this.designListScrollPane = new JScrollPane(designReportCase.getJScrollPane());
 
     this.designSaveDirs = new ArrayList<>();
 
@@ -173,14 +182,35 @@ public class DesignView extends JPanel {
 
     PainlessGridBag gbl = new PainlessGridBag(panel, PGHelper.getPGConfig(), false);
     gbl.row().cell(new JXTitledSeparator("Design")).fillX();
-    gbl.row().cell(designReportCase.getJScrollPane()).fillXY();
+    gbl.row().cell(designTable.scrollPane()).fillXY();
     gbl.done();
 
     return panel;
   }
 
+  private TTTable<DesignRow, JXTable> createDesignTable() {
+    TTTable<DesignRow, JXTable> tt = JXTableTables.create(
+        registry,
+        DesignRow.class,
+        TableUi.<DesignRow>builder()
+            .rowIcon(ModelIconProviders.forDesignRow())
+            .rowIconInColumn("name")
+            .build()
+    );
+
+    JXTable table = tt.table();
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setEditable(false);
+
+    return tt;
+  }
+
   void loadDesignConfigurationByName(String designName) {
-    designReportCase.addRow(new Object[]{designName});
+    // Add single row
+    List<DesignRow> currentItems = new ArrayList<>(designTable.model().items());
+    currentItems.add(new DesignRow(designName));
+    designTable.setItems(currentItems);
 
     LocalDateTime dateTime = DesignHelper.parseDesignDate(designName);
     String folderDate = dateTime.format(DesignHelper.getFileFormatFormatter());
@@ -194,11 +224,13 @@ public class DesignView extends JPanel {
     File designFolder = new File(model.getFilesHelper().getDesignDir());
 
     if (!designFolder.exists() || !designFolder.isDirectory()) {
+      designTable.setItems(Collections.emptyList());
       return;
     }
 
     File[] folders = designFolder.listFiles(File::isDirectory);
     if (folders == null) {
+      designTable.setItems(Collections.emptyList());
       return;
     }
 
@@ -219,17 +251,18 @@ public class DesignView extends JPanel {
     }
 
     Collections.reverse(designSaveDirs);
-    designReportCase.clearTable();
 
+    List<DesignRow> rows = new ArrayList<>();
     for (File folder : designSaveDirs) {
       try {
         LocalDateTime dateTime = DesignHelper.parseFolderDate(folder.getName());
         String designName = DesignHelper.formatDesignName(dateTime);
-        designReportCase.addRow(new Object[]{designName});
+        rows.add(new DesignRow(designName));
       } catch (DateTimeParseException e) {
         log.warn("Invalid folder name format: {}", folder.getName(), e);
       }
     }
+    designTable.setItems(rows);
   }
 
   private JXTaskPaneContainer initContainerCard() {
@@ -374,10 +407,6 @@ public class DesignView extends JPanel {
     button.setMnemonic('S');
     button.setEnabled(false);
     return button;
-  }
-
-  private JXTableCase createDesignTable() {
-    return GUIHelper.getJXTableCase(7, new String[]{"Design name"});
   }
 
   private JCheckBox createCollapseCheckBox() {

@@ -243,25 +243,33 @@ public class GanttPopupPanel extends GanttCommon {
         data,
         columnNames,
         getBasicJTableList(),
-        seriesColorMap);
+        seriesColorMap
+    );
 
     setGanttTableParameters(visibleRowCount, rowHeightForJTable, ganttTable);
 
+    setTableHeaderFont(ganttTable, new java.awt.Font("Arial", java.awt.Font.BOLD, 14));
     setTooltipAndPercent(ganttTable);
 
-    JXTable jxTable = ganttTable.getJXTable();
-    if (jxTable != null) {
-      TableColumn col2 = jxTable.getColumnModel().getColumn(2);
-      col2.setMinWidth(30);
-      col2.setMaxWidth(35);
-
-      jxTable.setShowVerticalLines(true);
-      jxTable.setShowHorizontalLines(true);
-      jxTable.setBackground(LaF.getBackgroundColor(LafColorGroup.TABLE_BACKGROUND, LaF.getLafType()));
-      jxTable.setForeground(LaF.getBackgroundColor(LafColorGroup.TABLE_FONT, LaF.getLafType()));
+    JXTable table = ganttTable.getJXTable();
+    if (table == null) {
+      return null;
     }
 
-    return jxTable;
+    TableColumn pickCol = table.getColumnModel().getColumn(2);
+    pickCol.setMinWidth(30);
+    pickCol.setMaxWidth(35);
+
+    table.setShowGrid(true);
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setGridColor(java.awt.Color.GRAY);
+    table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+
+    table.setBackground(LaF.getBackgroundColor(LafColorGroup.TABLE_BACKGROUND, LaF.getLafType()));
+    table.setForeground(LaF.getBackgroundColor(LafColorGroup.TABLE_FONT, LaF.getLafType()));
+
+    return table;
   }
 
   @Override

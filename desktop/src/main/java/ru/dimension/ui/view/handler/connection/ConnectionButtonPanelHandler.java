@@ -16,6 +16,7 @@ import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import javax.swing.AbstractAction;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
@@ -29,6 +30,8 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import lombok.extern.log4j.Log4j2;
 import org.apache.hc.core5.http.Method;
+import org.jdesktop.swingx.JXTable;
+import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.bus.EventBus;
 import ru.dimension.ui.bus.event.ConnectionAddEvent;
 import ru.dimension.ui.bus.event.ConnectionRemoveEvent;
@@ -52,6 +55,8 @@ import ru.dimension.ui.security.EncryptDecrypt;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.connection.ConnectionPanel;
 import ru.dimension.ui.view.tab.ConfigTab;
+import ru.dimension.ui.view.table.row.Rows.ConnectionRow;
+import ru.dimension.ui.view.table.row.Rows.QueryRow;
 
 @Log4j2
 @Singleton
@@ -220,7 +225,7 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
         int input = 0;
         if (!connectionType.equals(openedTab.getName())) {
 
-          input = JOptionPane.showOptionDialog(null,// 0=yes, 1=no
+          input = JOptionPane.showOptionDialog(null,
                                                "The " + connectionType + " connection is selected in the table, "
                                                    + "and you are on the " + openedTab.getName() + " tab."
                                                    + " Go to the " + connectionType + " tab and make a copy?",
@@ -254,11 +259,12 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
                                       "General Error", JOptionPane.ERROR_MESSAGE);
       } else {
         int connectionId = getSelectedConnectionId();
-        int input = JOptionPane.showConfirmDialog(new JDialog(),// 0=yes, 1=no, 2=cancel
-                                                  "Do you want to delete configuration: "
-                                                      + connectionCase.getDefaultTableModel()
-                                                      .getValueAt(connectionCase.getJxTable().getSelectedRow(), 1)
-                                                      + "?");
+
+        // Получаем имя для диалога
+        String connectionName = getSelectedConnectionName();
+
+        int input = JOptionPane.showConfirmDialog(new JDialog(),
+                                                  "Do you want to delete configuration: " + connectionName + "?");
         if (input == 0) {
           if (isUsedOnTask(connectionId)) {
             ConnectionInfo connection = profileManager.getConnectionInfoById(connectionId);
@@ -270,32 +276,14 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
             eventBus.publish(new ConnectionRemoveEvent(connectionId));
 
             clearConnectionCase();
+            refillConnectionTable();
 
-            profileManager.getConnectionInfoList().forEach(connectionInfo -> {
-                                                             if (connectionInfo.getType() != null) {
-                                                               connectionCase.getDefaultTableModel()
-                                                                   .addRow(new Object[]{connectionInfo.getId(), connectionInfo.getName(), connectionInfo.getType()});
-                                                             } else {
-                                                               connectionCase.getDefaultTableModel()
-                                                                   .addRow(new Object[]{connectionInfo.getId(), connectionInfo.getName(), ConnectionType.JDBC});
-                                                             }
-                                                           }
-            );
-
-            if (connectionCase.getJxTable().getSelectedRow() > 0) {
+            if (connectionCase.getJxTable().getRowCount() > 0) {
               connectionCase.getJxTable().setRowSelectionInterval(0, 0);
             }
 
             if (openedTab.equals(ConnectionTypeTabPane.HTTP)) {
-              for (int rowQuery = 0; rowQuery < queryCase.getJxTable().getRowCount(); rowQuery++) {
-                String nameQuery = queryCase.getDefaultTableModel().getValueAt(rowQuery, 1).toString();
-                if (nameQuery.equals(connection.getName())) {
-                  int idQuery = (Integer) queryCase.getDefaultTableModel().getValueAt(rowQuery, 0);
-                  deleteQueryById(idQuery);
-                  profileManager.deleteTable(nameQuery);
-                  updateQueryCase();
-                }
-              }
+              deleteHttpRelatedQuery(connection.getName());
             }
           } else {
             JOptionPane.showMessageDialog(null, "Cannot delete this connection it is used in the task",
@@ -321,7 +309,7 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
         int input = 0;
         if (!connectionType.equals(openedTab.getName())) {
 
-          input = JOptionPane.showOptionDialog(null,// 0=yes, 1=no
+          input = JOptionPane.showOptionDialog(null,
                                                "The " + connectionType + " connection is selected in the table, "
                                                    + "and you are on the " + openedTab.getName() + " tab."
                                                    + " Go to the " + connectionType + " tab and edit the connection?",
@@ -410,26 +398,25 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
 
           clearConnectionCase();
 
-          int selection = 0;
-          int index = 0;
-          for (ConnectionInfo connection : profileManager.getConnectionInfoList()) {
-            if (connection.getType() != null) {
-              connectionCase.getDefaultTableModel()
-                  .addRow(new Object[]{connection.getId(), connection.getName(), connection.getType()});
-            } else {
-              connectionCase.getDefaultTableModel()
-                  .addRow(new Object[]{connection.getId(), connection.getName(), ConnectionType.JDBC});
-            }
+          List<ConnectionInfo> allConnections = profileManager.getConnectionInfoList();
+          List<ConnectionRow> rows = allConnections.stream()
+              .map(c -> new ConnectionRow(c.getId(), c.getName(),
+                                          c.getType() != null ? c.getType() : ConnectionType.JDBC))
+              .collect(Collectors.toList());
 
-            if (connection.getId() == saveConnection.getId()) {
-              index++;
-              selection = index;
+          TTTable<ConnectionRow, JXTable> tt = connectionCase.getTypedTable();
+          tt.setItems(rows);
+
+          int selection = 0;
+          for (int i = 0; i < rows.size(); i++) {
+            if (rows.get(i).getId() == saveConnection.getId()) {
+              selection = i;
+              break;
             }
-            index++;
           }
 
           setPanelView(true, openedTab.getName());
-          connectionCase.getJxTable().setRowSelectionInterval(selection - 1, selection - 1);
+          connectionCase.getJxTable().setRowSelectionInterval(selection, selection);
 
         } else {
           throw new EmptyNameException("The name field is empty");
@@ -488,41 +475,14 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
             eventBus.publish(new ConnectionAddEvent(editConnection.getId(), editConnection.getName(), editConnection.getType()));
 
             if (openedTab.equals(ConnectionTypeTabPane.HTTP)) {
-              for (int rowQuery = 0; rowQuery < queryCase.getJxTable().getRowCount(); rowQuery++) {
-                String nameQuery = queryCase.getDefaultTableModel().getValueAt(rowQuery, 1).toString();
-                if (nameQuery.equals(oldConnection.getName())) {
-                  int idQuery = (Integer) queryCase.getDefaultTableModel().getValueAt(rowQuery, 0);
-                  deleteQueryById(idQuery);
-                  profileManager.deleteTable(nameQuery);
-
-                  QueryInfo queryinfo = new QueryInfo();
-                  queryinfo.setId(idQuery);
-                  queryinfo.setName(connectionPanel.getJTextFieldHttpName().getText());
-
-                  TableInfo tableInfo = new TableInfo();
-                  tableInfo.setTableName(queryinfo.getName());
-
-                  profileManager.addTable(tableInfo);
-                  profileManager.addQuery(queryinfo);
-                  updateQueryCase();
-                }
-              }
+              updateHttpRelatedQuery(oldConnection.getName(), connectionPanel.getJTextFieldHttpName().getText());
             }
           } else {
             profileManager.updateConnection(editConnection);
           }
 
           clearConnectionCase();
-
-          profileManager.getConnectionInfoList().forEach(connectionInfo -> {
-            if (connectionInfo.getType() != null) {
-              connectionCase.getDefaultTableModel()
-                  .addRow(new Object[]{connectionInfo.getId(), connectionInfo.getName(), connectionInfo.getType()});
-            } else {
-              connectionCase.getDefaultTableModel()
-                  .addRow(new Object[]{connectionInfo.getId(), connectionInfo.getName(), ConnectionType.JDBC});
-            }
-          });
+          refillConnectionTable();
 
           setPanelView(true, openedTab.getName());
           connectionCase.getJxTable().setRowSelectionInterval(selectedIndex, selectedIndex);
@@ -536,8 +496,11 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
       if (!connectionPanel.getJButtonTemplate().isEnabled()) {
         if (connectionCase.getJxTable().getSelectedRowCount() > 0) {
           int selectedIndex = connectionCase.getJxTable().getSelectedRow();
-          String connectionType = connectionCase.getDefaultTableModel()
-              .getValueAt(connectionCase.getJxTable().getSelectedRow(), 2).toString();
+
+          TTTable<ConnectionRow, JXTable> tt = connectionCase.getTypedTable();
+          ConnectionRow selectedRow = tt.model().itemAt(selectedIndex);
+          String connectionType = selectedRow != null ? selectedRow.getType() : ConnectionType.JDBC.getName();
+
           ConnectionTypeTabPane selectedOpenTab = openedTab;
           connectionCase.getJxTable().setRowSelectionInterval(0, 0);
           setPanelView(true, selectedOpenTab.getName());
@@ -583,20 +546,62 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
     }
   }
 
+  /**
+   * Удаляет связанный Query для HTTP соединения.
+   */
+  private void deleteHttpRelatedQuery(String connectionName) {
+    TTTable<QueryRow, JXTable> ttQuery = queryCase.getTypedTable();
+    for (int i = 0; i < ttQuery.model().getRowCount(); i++) {
+      QueryRow row = ttQuery.model().itemAt(i);
+      if (row != null && row.getName().equals(connectionName)) {
+        deleteQueryById(row.getId());
+        profileManager.deleteTable(connectionName);
+        updateQueryCase();
+        break;
+      }
+    }
+  }
+
+  private void updateHttpRelatedQuery(String oldName, String newName) {
+    TTTable<QueryRow, JXTable> ttQuery = queryCase.getTypedTable();
+    for (int i = 0; i < ttQuery.model().getRowCount(); i++) {
+      QueryRow row = ttQuery.model().itemAt(i);
+      if (row != null && row.getName().equals(oldName)) {
+        int idQuery = row.getId();
+        deleteQueryById(idQuery);
+        profileManager.deleteTable(oldName);
+
+        QueryInfo queryinfo = new QueryInfo();
+        queryinfo.setId(idQuery);
+        queryinfo.setName(newName);
+
+        TableInfo tableInfo = new TableInfo();
+        tableInfo.setTableName(queryinfo.getName());
+
+        profileManager.addTable(tableInfo);
+        profileManager.addQuery(queryinfo);
+        updateQueryCase();
+        break;
+      }
+    }
+  }
+
   private void updateQueryCase() {
-    queryCase.getDefaultTableModel().getDataVector().removeAllElements();
-    queryCase.getDefaultTableModel().fireTableDataChanged();
+    queryCase.clearTable();
 
-    profileManager.getQueryInfoList()
-        .forEach(queryInfo -> queryCase.getDefaultTableModel()
-            .addRow(new Object[]{queryInfo.getId(), queryInfo.getName()}));
+    TTTable<QueryRow, JXTable> tt = queryCase.getTypedTable();
+    List<QueryRow> rows = profileManager.getQueryInfoList().stream()
+        .map(q -> new QueryRow(q.getId(), q.getName()))
+        .collect(Collectors.toList());
+    tt.setItems(rows);
 
-    int rowCount = queryCase.getDefaultTableModel().getRowCount();
+    int rowCount = tt.model().getRowCount();
+    if (rowCount > 0) {
+      queryCase.getJxTable().setRowSelectionInterval(rowCount - 1, rowCount - 1);
 
-    queryCase.getJxTable().setRowSelectionInterval(rowCount - 1, rowCount - 1);
-
-    final JScrollBar verticalScrollBar = queryCase.getJScrollPane().getVerticalScrollBar();
-    verticalScrollBar.setValue(verticalScrollBar.getMaximum());
+      final JScrollBar verticalScrollBar = queryCase.getJScrollPane().getVerticalScrollBar();
+      verticalScrollBar.setValue(verticalScrollBar.getMaximum());
+    }
   }
 
   private int getIdForQuery() {
@@ -630,8 +635,7 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
     isPasswordChanged = false;
   }
 
-  public void checkConnectionNameIsBusy(int id,
-                                        String newConnectionName) {
+  public void checkConnectionNameIsBusy(int id, String newConnectionName) {
     List<ConnectionInfo> connectionList = profileManager.getConnectionInfoList();
     for (ConnectionInfo connection : connectionList) {
       if (connection.getName().equals(newConnectionName) && connection.getId() != id) {
@@ -658,18 +662,39 @@ public class ConnectionButtonPanelHandler implements ActionListener, ChangeListe
   }
 
   private int getSelectedConnectionId() {
-    return (Integer) connectionCase.getDefaultTableModel()
-        .getValueAt(connectionCase.getJxTable().getSelectedRow(), 0);
+    int selectedRow = connectionCase.getJxTable().getSelectedRow();
+    if (selectedRow < 0) {
+      return -1;
+    }
+    TTTable<ConnectionRow, JXTable> tt = connectionCase.getTypedTable();
+    ConnectionRow row = tt.model().itemAt(selectedRow);
+    return row != null ? row.getId() : -1;
   }
 
+  private String getSelectedConnectionName() {
+    int selectedRow = connectionCase.getJxTable().getSelectedRow();
+    if (selectedRow < 0) {
+      return "";
+    }
+    TTTable<ConnectionRow, JXTable> tt = connectionCase.getTypedTable();
+    ConnectionRow row = tt.model().itemAt(selectedRow);
+    return row != null ? row.getName() : "";
+  }
 
   private void clearConnectionCase() {
-    connectionCase.getDefaultTableModel().getDataVector().removeAllElements();
-    connectionCase.getDefaultTableModel().fireTableDataChanged();
+    connectionCase.clearTable();
   }
 
-  private void setPanelView(Boolean isSelected,
-                            String connectionTabbedPane) {
+  private void refillConnectionTable() {
+    TTTable<ConnectionRow, JXTable> tt = connectionCase.getTypedTable();
+    List<ConnectionRow> rows = profileManager.getConnectionInfoList().stream()
+        .map(c -> new ConnectionRow(c.getId(), c.getName(),
+                                    c.getType() != null ? c.getType() : ConnectionType.JDBC))
+        .collect(Collectors.toList());
+    tt.setItems(rows);
+  }
+
+  private void setPanelView(Boolean isSelected, String connectionTabbedPane) {
     connectionButtonPanel.setButtonView(isSelected);
     if (connectionTabbedPane.equals(ConnectionTypeTabPane.JDBC.getName())) {
       connectionPanel.getJTextFieldConnectionName().setEditable(!isSelected);

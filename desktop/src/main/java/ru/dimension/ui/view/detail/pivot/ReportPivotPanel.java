@@ -14,7 +14,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
-import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -28,11 +27,10 @@ import ru.dimension.db.model.CompareFunction;
 import ru.dimension.db.model.output.GanttColumnCount;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.helper.GUIHelper;
-import ru.dimension.ui.helper.ProgressBarHelper;
-import ru.dimension.ui.model.column.TaskColumnNames;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.view.detail.HelperGantt;
+import ru.dimension.ui.view.table.row.Rows.ColumnRow;
 
 @Log4j2
 public class ReportPivotPanel extends GanttPivotPanel implements ListSelectionListener, HelperGantt {
@@ -55,9 +53,9 @@ public class ReportPivotPanel extends GanttPivotPanel implements ListSelectionLi
     this.seriesType = seriesType;
     this.executorService = Executors.newSingleThreadScheduledExecutor();
 
-    this.jxTableCase.getJxTable().getSelectionModel().addListSelectionListener(this);
+    this.columnTable.table().getSelectionModel().addListSelectionListener(this);
 
-    this.jSplitPane.add(this.jxTableCase.getJScrollPane(), JSplitPane.LEFT);
+    this.jSplitPane.add(this.columnTable.scrollPane(), JSplitPane.LEFT);
     this.jSplitPane.add(new JPanel(), JSplitPane.RIGHT);
 
     this.setLayout(new BorderLayout());
@@ -66,24 +64,31 @@ public class ReportPivotPanel extends GanttPivotPanel implements ListSelectionLi
 
   @Override
   public void valueChanged(ListSelectionEvent e) {
+    if (e.getValueIsAdjusting()) {
+      return;
+    }
 
-    ListSelectionModel listSelectionModel = (ListSelectionModel) e.getSource();
+    var table = this.columnTable.table();
 
-    // prevents double events
-    if (!e.getValueIsAdjusting()) {
+    if (table.getSelectionModel().isSelectionEmpty()) {
+      log.info("Clearing query fields");
+    } else {
+      int viewRow = table.getSelectedRow();
+      if (viewRow < 0) return;
 
-      if (listSelectionModel.isSelectionEmpty()) {
-        log.info("Clearing query fields");
-      } else {
-        int columnId = GUIHelper.getIdByColumnName(jxTableCase.getJxTable(),
-                                                   this.jxTableCase.getDefaultTableModel(), listSelectionModel, TaskColumnNames.ID.getColName());
+      int modelRow = table.convertRowIndexToModel(viewRow);
+      ColumnRow selectedItem = this.columnTable.model().itemAt(modelRow);
+
+      if (selectedItem != null) {
+        String selectedColumnName = selectedItem.getName();
+        log.info("Selected column: {}", selectedColumnName);
 
         executorService.submit(() -> {
-          GUIHelper.addToJSplitPane(jSplitPane, ProgressBarHelper.createProgressBar("Loading, please wait..."), JSplitPane.RIGHT, DIVIDER_LOCATION);
+          GUIHelper.addToJSplitPane(jSplitPane, createProgressBar("Loading, please wait..."), JSplitPane.RIGHT, DIVIDER_LOCATION);
 
           try {
             CProfile firstGrpBy = tableInfo.getCProfiles().stream()
-                .filter(f -> f.getColId() == columnId)
+                .filter(f -> f.getColName().equalsIgnoreCase(selectedColumnName))
                 .findFirst()
                 .orElseThrow();
 
@@ -116,7 +121,6 @@ public class ReportPivotPanel extends GanttPivotPanel implements ListSelectionLi
             log.catching(exception);
           }
         });
-        log.info(columnId);
       }
     }
   }

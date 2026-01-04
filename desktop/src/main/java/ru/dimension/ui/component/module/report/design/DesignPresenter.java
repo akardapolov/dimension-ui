@@ -18,17 +18,21 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 import javax.swing.JCheckBox;
 import javax.swing.JOptionPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import javax.swing.table.DefaultTableModel;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.bus.EventBus;
+import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.MessageBroker;
+import ru.dimension.ui.component.broker.MessageBroker.Block;
+import ru.dimension.ui.component.broker.MessageBroker.Module;
+import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.module.chart.ReportChartModule;
 import ru.dimension.ui.component.module.factory.MetricColumnPanelFactory;
@@ -43,7 +47,6 @@ import ru.dimension.ui.component.module.report.playground.MetricColumnPanel;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.helper.DesignHelper;
 import ru.dimension.ui.helper.DialogHelper;
-import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.KeyHelper;
 import ru.dimension.ui.helper.event.EventRouteRegistry;
 import ru.dimension.ui.helper.event.EventUtils;
@@ -51,7 +54,6 @@ import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.chart.ChartType;
-import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.info.ProfileInfo;
@@ -63,10 +65,12 @@ import ru.dimension.ui.model.report.CProfileReport;
 import ru.dimension.ui.model.report.DesignReportData;
 import ru.dimension.ui.model.report.MetricReport;
 import ru.dimension.ui.model.report.QueryReportData;
-import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.state.ChartKey;
 import ru.dimension.ui.state.UIState;
+import ru.dimension.ui.view.table.row.Rows.ColumnRow;
+import ru.dimension.ui.view.table.row.Rows.DesignRow;
+import ru.dimension.ui.view.table.row.Rows.MetricRow;
 
 @Log4j2
 public class DesignPresenter implements ActionListener, ListSelectionListener {
@@ -77,6 +81,8 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
   private final EventBus eventBus;
   private final EventRouteRegistry eventRouter;
   private final MetricColumnPanelFactory metricColumnPanelFactory;
+
+  private final MessageBroker broker = MessageBroker.getInstance();
 
   private static final ExecutorService virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -102,7 +108,7 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
   }
 
   private void setupEventHandlers() {
-    this.view.getDesignReportCase().getJxTable().getSelectionModel().addListSelectionListener(this);
+    this.view.getDesignTable().table().getSelectionModel().addListSelectionListener(this);
 
     this.view.getCollapseCard().addActionListener(this);
     this.view.getShowButton().addActionListener(this);
@@ -166,7 +172,7 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
       handleShow();
     } else if (source == view.getClearButton()) {
       handleClear();
-      view.getDesignReportCase().clearSelection();
+      view.getDesignTable().table().clearSelection();
     } else if (source == view.getSaveButton()) {
       handleSave();
       view.setEnabledButton(true, true, false, true, true);
@@ -178,8 +184,8 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
   }
 
   private void handleDeleteDesign() {
-    int selectedRow = view.getDesignReportCase().getJxTable().getSelectedRow();
-    if (selectedRow == -1) {
+    int selectedRowIndex = view.getDesignTable().table().getSelectedRow();
+    if (selectedRowIndex == -1) {
       JOptionPane.showMessageDialog(
           view,
           "No design selected. Please select a design to delete.",
@@ -189,11 +195,12 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
       return;
     }
 
-    String designName = (String) view.getDesignReportCase().getDefaultTableModel().getValueAt(selectedRow, 0);
+    DesignRow row = view.getDesignTable().model().itemAt(selectedRowIndex);
+    String designName = row.getName();
+
     LocalDateTime dateTime = DesignHelper.parseDesignDate(designName);
     String folderName = DesignHelper.formatFolderName(dateTime);
 
-    // Create confirmation dialog with checkbox
     JCheckBox deleteReportsCheckBox = new JCheckBox("Delete associated reports");
     Object[] message = {
         "Are you sure you want to delete the design: " + designName + "?",
@@ -213,10 +220,8 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
         File designDir = new File(designDirPath);
 
         if (deleteReportsCheckBox.isSelected()) {
-          // Delete entire directory with reports
           deleteDirectory(designDir);
         } else {
-          // Delete only design files (non-PDF files)
           File[] files = designDir.listFiles();
           if (files != null) {
             for (File file : files) {
@@ -229,16 +234,13 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
               }
             }
           }
-          // Delete the directory if empty
           if (designDir.list() != null && designDir.list().length == 0) {
             designDir.delete();
           }
         }
 
-        // Refresh the design list
         view.loadDesignConfiguration();
 
-        // Clear current view if we deleted the loaded design
         if (model.getLoadedDesignFolder().isEmpty() &&
             model.getLoadedDesignFolder().equals(folderName)) {
           handleClear();
@@ -273,12 +275,11 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
 
   private void handleSave() {
     try {
-      String designDir = GUIHelper.getNameByColumnName(
-          view.getDesignReportCase().getJxTable(),
-          view.getDesignReportCase().getDefaultTableModel(),
-          view.getDesignReportCase().getJxTable().getSelectionModel(),
-          "Design name"
-      );
+      int selectedRowIndex = view.getDesignTable().table().getSelectedRow();
+      if (selectedRowIndex == -1) return;
+
+      DesignRow row = view.getDesignTable().model().itemAt(selectedRowIndex);
+      String designDir = row.getName();
 
       LocalDateTime dateTime = DesignHelper.parseDesignDate(designDir);
       String folderDate = DesignHelper.formatFolderName(dateTime);
@@ -317,14 +318,12 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
 
     String fileJson = folderDate + model.getFilesHelper().getFileSeparator() + "design.json";
 
-    // Delete existing design before saving
     try {
       model.getReportManager().deleteDesign(fileJson);
     } catch (IOException e) {
       log.warn("Design file didn't exist or could not be deleted: {}", fileJson, e);
     }
 
-    // Save new configuration
     model.getReportManager().saveDesign(designData);
   }
 
@@ -345,11 +344,11 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
   }
 
   private void loadSelectedDesign() {
-    String designDir = GUIHelper.getNameByColumnName(
-        view.getDesignReportCase().getJxTable(),
-        view.getDesignReportCase().getDefaultTableModel(),
-        view.getDesignReportCase().getJxTable().getSelectionModel(),
-        "Design name");
+    int selectedRowIndex = view.getDesignTable().table().getSelectedRow();
+    if (selectedRowIndex == -1) return;
+
+    DesignRow row = view.getDesignTable().model().itemAt(selectedRowIndex);
+    String designDir = row.getName();
 
     LocalDateTime dateTime = DesignHelper.parseDesignDate(designDir);
     String folderName = DesignHelper.formatFolderName(dateTime);
@@ -411,7 +410,7 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
         MetricColumnPanel card = getCardComponent(key);
 
         for (MetricReport metric : metricReportList) {
-          setCheckboxInTable(card.getJtcMetric(), metric.getId(), true);
+          card.setMetricSelected(metric.getId(), true);
         }
 
         for (CProfileReport cProfileReport : cProfileReportList) {
@@ -420,7 +419,7 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
               .findFirst()
               .orElseThrow(() -> new NotFoundException("CProfile not found for colId: " + cProfileReport.getColId()));
 
-          setCheckboxInTable(card.getJtcColumn(), cProfile.getColId(), true);
+          card.setColumnSelected(cProfile.getColId(), true);
 
           ChartInfo chartInfoCopy = chartInfo.copy();
           chartInfoCopy.setRangeHistory(RangeHistory.CUSTOM);
@@ -458,6 +457,9 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
             }
             model.getChartPanes().computeIfAbsent(key, k -> new ConcurrentHashMap<>()).put(cProfile, taskPane);
 
+            Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+            broker.addReceiver(destinationHistory, taskPane.getPresenter());
+
             taskPane.revalidate();
             taskPane.repaint();
 
@@ -473,18 +475,14 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
     }
   }
 
-  private void setCheckboxInTable(JXTableCase tableCase,
-                                  Object id,
-                                  boolean checked) {
-    DefaultTableModel model = tableCase.getDefaultTableModel();
-
-    for (int i = 0; i < model.getRowCount(); i++) {
-      Object rowId = model.getValueAt(i, ColumnNames.ID.ordinal());
-      if (rowId != null && rowId.equals(id)) {
-        model.setValueAt(checked, i, ColumnNames.PICK.ordinal());
-        break;
-      }
-    }
+  private Destination getDestination(Panel panel, ChartKey chartKey) {
+    return Destination.builder()
+        .component(model.getComponent())
+        .module(Module.CHART)
+        .panel(panel)
+        .block(Block.CHART)
+        .chartKey(chartKey)
+        .build();
   }
 
   private void addQueryCard(ProfileTaskQueryKey key) {
@@ -510,9 +508,7 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
     view.getCardContainer().repaint();
   }
 
-  private String createCardTitle(String profileName,
-                                 String taskName,
-                                 String queryName) {
+  private String createCardTitle(String profileName, String taskName, String queryName) {
     if (!queryName.equals("")) {
       return "<html><b>Profile:</b> " + profileName + " <br>"
           + "  <b>Task:</b> " + taskName + " <br>"
@@ -523,37 +519,26 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
     }
   }
 
-  private void initializeMetricTable(MetricColumnPanel cardMetricCol,
-                                     List<Metric> metricList) {
-    cardMetricCol.getJtcMetric().getDefaultTableModel().getDataVector().removeAllElements();
-    cardMetricCol.getJtcMetric().getDefaultTableModel().fireTableDataChanged();
-
-    if (metricList != null && !metricList.isEmpty()) {
-      for (Metric m : metricList) {
-        cardMetricCol.getJtcMetric().getDefaultTableModel().addRow(new Object[]{
-            m.getId(),
-            m.getName(),
-            Boolean.FALSE
-        });
-      }
+  private void initializeMetricTable(MetricColumnPanel cardMetricCol, List<Metric> metricList) {
+    if (metricList != null) {
+      List<MetricRow> rows = metricList.stream()
+          .map(m -> new MetricRow(m, false))
+          .collect(Collectors.toList());
+      cardMetricCol.setMetricItems(rows);
+    } else {
+      cardMetricCol.setMetricItems(List.of());
     }
   }
 
-  private void initializeColumnTable(MetricColumnPanel cardMetricCol,
-                                     List<CProfile> cProfileList) {
-    cardMetricCol.getJtcColumn().getDefaultTableModel().getDataVector().removeAllElements();
-    cardMetricCol.getJtcColumn().getDefaultTableModel().fireTableDataChanged();
-
+  private void initializeColumnTable(MetricColumnPanel cardMetricCol, List<CProfile> cProfileList) {
     if (cProfileList != null) {
-      cProfileList.stream()
+      List<ColumnRow> rows = cProfileList.stream()
           .filter(f -> !f.getCsType().isTimeStamp())
-          .forEach(c -> {
-            cardMetricCol.getJtcColumn().getDefaultTableModel().addRow(new Object[]{
-                c.getColId(),
-                c.getColName(),
-                Boolean.FALSE
-            });
-          });
+          .map(c -> new ColumnRow(c, false))
+          .collect(Collectors.toList());
+      cardMetricCol.setColumnItems(rows);
+    } else {
+      cardMetricCol.setColumnItems(List.of());
     }
   }
 
@@ -561,6 +546,10 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
     model.getChartPanes().forEach((key, innerMap) -> {
       innerMap.forEach((cProfile, chartModule) -> {
         view.removeChartCard(chartModule);
+
+        ChartKey chartKey = chartModule.getModel().getChartKey();
+        Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+        broker.deleteReceiver(destinationHistory, chartModule.getPresenter());
       });
     });
     model.getChartPanes().clear();
@@ -669,6 +658,9 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
       }
       model.getChartPanes().computeIfAbsent(key, k -> new ConcurrentHashMap<>()).put(cProfile, taskPane);
 
+      Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+      broker.addReceiver(destinationHistory, taskPane.getPresenter());
+
       taskPane.revalidate();
       taskPane.repaint();
 
@@ -692,12 +684,17 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
     Map<CProfile, ReportChartModule> innerMap = model.getChartPanes().get(key);
     if (innerMap != null) {
       ReportChartModule chartModule = innerMap.remove(cProfile);
-      if (chartModule != null) {
-        view.removeChartCard(chartModule);
 
+      if (chartModule != null) {
+        ChartKey chartKey = new ChartKey(key, cProfile);
+        Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+        broker.deleteReceiver(destinationHistory, chartModule.getPresenter());
+
+        view.removeChartCard(chartModule);
         view.getChartContainer().revalidate();
         view.getChartContainer().repaint();
       }
+
       if (innerMap.isEmpty()) {
         model.getChartPanes().remove(key);
       }
@@ -728,15 +725,13 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
   }
 
   private boolean hasConfigChanges() {
-    int row = view.getDesignReportCase().getJxTable().getSelectedRow();
-    if (row < 0)
+    int selectedRowIndex = view.getDesignTable().table().getSelectedRow();
+    if (selectedRowIndex < 0) {
       return false;
+    }
 
-    String designDir = GUIHelper.getNameByColumnName(
-        view.getDesignReportCase().getJxTable(),
-        view.getDesignReportCase().getDefaultTableModel(),
-        view.getDesignReportCase().getJxTable().getSelectionModel(),
-        "Design name");
+    DesignRow row = view.getDesignTable().model().itemAt(selectedRowIndex);
+    String designDir = row.getName();
 
     LocalDateTime dateTime = DesignHelper.parseDesignDate(designDir);
     String folderName = DesignHelper.formatFolderName(dateTime);
@@ -768,11 +763,13 @@ public class DesignPresenter implements ActionListener, ListSelectionListener {
         LocalDateTime now   = LocalDateTime.now();
         String formattedDate = now.format(DesignHelper.getFileFormatFormatter());
 
-        String designDir = GUIHelper.getNameByColumnName(
-            view.getDesignReportCase().getJxTable(),
-            view.getDesignReportCase().getDefaultTableModel(),
-            view.getDesignReportCase().getJxTable().getSelectionModel(),
-            "Design name");
+        int selectedRowIndex = view.getDesignTable().table().getSelectedRow();
+        if (selectedRowIndex == -1) {
+          throw new IllegalStateException("No design selected");
+        }
+
+        DesignRow row = view.getDesignTable().model().itemAt(selectedRowIndex);
+        String designDir = row.getName();
 
         LocalDateTime dateTime = DesignHelper.parseDesignDate(designDir);
         String folderName = DesignHelper.formatFolderName(dateTime);

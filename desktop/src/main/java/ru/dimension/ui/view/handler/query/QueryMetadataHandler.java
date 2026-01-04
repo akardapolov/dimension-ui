@@ -1,5 +1,8 @@
 package ru.dimension.ui.view.handler.query;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.SQLException;
@@ -9,33 +12,28 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import jakarta.inject.Inject;
-import jakarta.inject.Named;
-import jakarta.inject.Singleton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.JTabbedPane;
 import javax.swing.ListSelectionModel;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.TableNameEmptyException;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.SProfile;
 import ru.dimension.db.model.profile.TProfile;
-import ru.dimension.db.model.profile.cstype.SType;
 import ru.dimension.db.model.profile.table.BType;
 import ru.dimension.db.model.profile.table.IType;
 import ru.dimension.db.model.profile.table.TType;
+import ru.dimension.tt.swing.TTTable;
+import ru.dimension.ui.collector.HttpLoader;
 import ru.dimension.ui.collector.collect.prometheus.ExporterParser;
 import ru.dimension.ui.collector.http.HttpResponseFetcher;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.exception.NotSelectedRowException;
 import ru.dimension.ui.helper.GUIHelper;
-import ru.dimension.ui.model.table.JXTableCase;
-import ru.dimension.ui.model.type.ConnectionType;
-import ru.dimension.ui.view.tab.ConfigTab;
-import ru.dimension.ui.collector.HttpLoader;
 import ru.dimension.ui.manager.ConnectionPoolManager;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.RunStatus;
@@ -45,9 +43,13 @@ import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.info.ProfileInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
+import ru.dimension.ui.model.table.JXTableCase;
+import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.view.handler.CommonViewHandler;
 import ru.dimension.ui.view.panel.config.query.MetadataQueryPanel;
 import ru.dimension.ui.view.panel.config.query.MetricQueryPanel;
+import ru.dimension.ui.view.tab.ConfigTab;
+import ru.dimension.ui.view.table.row.Rows.MetadataRow;
 
 
 @Log4j2
@@ -402,7 +404,8 @@ public class QueryMetadataHandler implements ActionListener, CommonViewHandler, 
 
       updateTableInfo(tableInfo);
 
-      configMetadataCase.getDefaultTableModel().fireTableDataChanged();
+      fillConfigMetadata(tableInfo, configMetadataCase);
+
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }
@@ -483,13 +486,25 @@ public class QueryMetadataHandler implements ActionListener, CommonViewHandler, 
   private void updateTableInfo(TableInfo tableInfo) {
     String timeStampSelected = metadataQueryPanel.getTimestampComboBox().getSelectedItem().toString();
 
-    for (int i = 0; i < configMetadataCase.getDefaultTableModel().getRowCount(); i++) {
-      String selectedDataKey = (String) configMetadataCase.getDefaultTableModel().getValueAt(i, 2);
-      SType selectedDataSType = (SType) configMetadataCase.getDefaultTableModel().getValueAt(i, 4);
+    TTTable<MetadataRow, JXTable> tt = configMetadataCase.getTypedTable();
 
-      Boolean selectedDimension = (Boolean) configMetadataCase.getDefaultTableModel().getValueAt(i, 6);
+    List<MetadataRow> metadataRows = new ArrayList<>();
+    for (int i = 0; i < tt.model().getRowCount(); i++) {
+      metadataRows.add(tt.model().itemAt(i));
+    }
+
+    for (MetadataRow metadataRow : metadataRows) {
+      if (!metadataRow.hasOrigin()) {
+        continue;
+      }
+
+      String selectedDataKey = metadataRow.getColName();
+      Boolean selectedDimension = metadataRow.isDimension();
 
       if (Boolean.TRUE.equals(selectedDimension)) {
+        if (tableInfo.getDimensionColumnList() == null) {
+          tableInfo.setDimensionColumnList(new ArrayList<>());
+        }
         if (!tableInfo.getDimensionColumnList().contains(selectedDataKey)) {
           tableInfo.getDimensionColumnList().add(selectedDataKey);
         }
@@ -520,26 +535,7 @@ public class QueryMetadataHandler implements ActionListener, CommonViewHandler, 
             .filter(f -> f.getColName().equals(selectedDataKey))
             .findAny()
             .orElseThrow()
-            .getCsType().setSType(selectedDataSType);
-        tableInfo.getCProfiles()
-            .stream()
-            .filter(f -> f.getColName().equals(selectedDataKey))
-            .findAny()
-            .orElseThrow()
             .getCsType().setTimeStamp(true);
-      } else {
-        tableInfo.getCProfiles()
-            .stream()
-            .filter(f -> f.getColName().equals(selectedDataKey))
-            .findAny()
-            .orElseThrow()
-            .getCsType().setSType(selectedDataSType);
-        tableInfo.getCProfiles()
-            .stream()
-            .filter(f -> f.getColName().equals(selectedDataKey))
-            .findAny()
-            .orElseThrow()
-            .getCsType().setTimeStamp(false);
       }
     }
 
@@ -551,12 +547,7 @@ public class QueryMetadataHandler implements ActionListener, CommonViewHandler, 
           .orElseThrow().getCsType().setTimeStamp(true);
     }
 
-    configMetadataCase.getDefaultTableModel().getDataVector().removeAllElements();
-    configMetadataCase.getDefaultTableModel().fireTableDataChanged();
-
-    if (tableInfo != null && tableInfo.getCProfiles() != null) {
-      fillConfigMetadata(tableInfo, configMetadataCase);
-    }
+    fillConfigMetadata(tableInfo, configMetadataCase);
   }
 
   private QueryInfo getQueryInfo(int queryID) {

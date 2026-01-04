@@ -1,13 +1,20 @@
-package ru.dimension.ui.component.module.model;
-
-import ru.dimension.db.model.profile.CProfile;
-import ru.dimension.ui.component.module.model.row.Rows.*;
-import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.info.*;
+package ru.dimension.ui.view.table;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.ui.model.config.Metric;
+import ru.dimension.ui.model.info.ProfileInfo;
+import ru.dimension.ui.model.info.QueryInfo;
+import ru.dimension.ui.model.info.TableInfo;
+import ru.dimension.ui.model.info.TaskInfo;
+import ru.dimension.ui.view.table.row.Rows.ColumnRow;
+import ru.dimension.ui.view.table.row.Rows.MetadataRow;
+import ru.dimension.ui.view.table.row.Rows.MetricRow;
+import ru.dimension.ui.view.table.row.Rows.ProfileRow;
+import ru.dimension.ui.view.table.row.Rows.QueryRow;
+import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
 /**
  * Responsible for converting Domain objects into UI Row objects.
@@ -55,6 +62,19 @@ public class ModelRowMapper {
           boolean isSelected = selectedMetrics.stream()
               .anyMatch(s -> s.getId() == m.getId());
           return new MetricRow(m, isSelected);
+        })
+        .collect(Collectors.toList());
+  }
+
+  public static List<MetadataRow> mapMetadata(TableInfo tableInfo) {
+    if (tableInfo == null || tableInfo.getCProfiles() == null) return List.of();
+
+    return tableInfo.getCProfiles().stream()
+        .filter(f -> !f.getCsType().isTimeStamp())
+        .map(cProfile -> {
+          boolean isDimension = tableInfo.getDimensionColumnList() != null &&
+              tableInfo.getDimensionColumnList().contains(cProfile.getColName());
+          return new MetadataRow(cProfile, isDimension);
         })
         .collect(Collectors.toList());
   }

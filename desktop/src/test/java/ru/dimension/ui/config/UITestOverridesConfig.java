@@ -59,5 +59,9 @@ public final class UITestOverridesConfig {
                          ServiceLocator.singleton(mockInstance::getConnectionCase));
     builder.provideNamed(JXTableCase.class, "queryConfigCase",
                          ServiceLocator.singleton(mockInstance::getQueryCase));
+
+    builder.provideNamed(JXTableCase.class, "taskListCase", ServiceLocator.singleton(mockInstance::getTaskListCase));
+    builder.provideNamed(JXTableCase.class, "selectedTaskCase", ServiceLocator.singleton(mockInstance::getSelectedTaskCase));
+    builder.provideNamed(JXTableCase.class, "templateListTaskCase", ServiceLocator.singleton(mockInstance::getTemplateListTaskCase));
   }
 }

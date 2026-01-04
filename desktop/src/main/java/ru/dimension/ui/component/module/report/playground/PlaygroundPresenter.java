@@ -14,15 +14,17 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 import javax.swing.JOptionPane;
-import javax.swing.event.CellEditorListener;
-import javax.swing.event.ChangeEvent;
-import javax.swing.table.TableCellEditor;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.bus.EventBus;
+import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.MessageBroker;
+import ru.dimension.ui.component.broker.MessageBroker.Block;
+import ru.dimension.ui.component.broker.MessageBroker.Module;
+import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.module.chart.ReportChartModule;
 import ru.dimension.ui.component.module.factory.MetricColumnPanelFactory;
@@ -39,7 +41,6 @@ import ru.dimension.ui.helper.event.EventUtils;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.chart.ChartType;
-import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.info.ProfileInfo;
@@ -53,6 +54,9 @@ import ru.dimension.ui.model.report.QueryReportData;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.state.ChartKey;
 import ru.dimension.ui.state.UIState;
+import ru.dimension.ui.view.table.row.Rows.ColumnRow;
+import ru.dimension.ui.view.table.row.Rows.MetricRow;
+import ru.dimension.ui.view.table.row.Rows.PickableQueryRow;
 
 @Log4j2
 public class PlaygroundPresenter implements ActionListener {
@@ -62,6 +66,8 @@ public class PlaygroundPresenter implements ActionListener {
   private final EventBus eventBus;
   private final EventRouteRegistry eventRouter;
   private final MetricColumnPanelFactory metricColumnPanelFactory;
+
+  private final MessageBroker broker = MessageBroker.getInstance();
 
   private static final ExecutorService virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -86,19 +92,7 @@ public class PlaygroundPresenter implements ActionListener {
   }
 
   private void setupEventHandlers() {
-    view.getQueryEditor().addCellEditorListener(new CellEditorListener() {
-      @Override
-      public void editingStopped(ChangeEvent e) {
-        handleQueryEditorChange(e);
-      }
-
-      @Override
-      public void editingCanceled(ChangeEvent e) {}
-    });
-
-    this.view.getQueryReportCase().getJxTable()
-        .getColumnExt(ColumnNames.PICK.getColName())
-        .setCellEditor(view.getQueryEditor());
+    view.setQueryCheckboxChangeListener(this::handleQueryCheckboxChange);
 
     this.view.getCollapseCard().addActionListener(this);
     this.view.getShowButton().addActionListener(this);
@@ -106,6 +100,16 @@ public class PlaygroundPresenter implements ActionListener {
     this.view.getSaveButton().addActionListener(this);
 
     this.view.getCollapseCardPanel().setStateChangeConsumer(this::handleCollapseCardChange);
+  }
+
+  private void handleQueryCheckboxChange(PickableQueryRow pickableQueryRow, boolean isSelected) {
+    ProfileTaskQueryKey key = view.getProfileTaskQueryKey();
+
+    if (isSelected) {
+      addQueryCard(key);
+    } else {
+      removeQueryCard(key);
+    }
   }
 
   private void handleCollapseCardChange(ChartCardState cardState) {
@@ -206,6 +210,9 @@ public class PlaygroundPresenter implements ActionListener {
       }
       model.getChartPanes().computeIfAbsent(key, k -> new ConcurrentHashMap<>()).put(cProfile, taskPane);
 
+      Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+      broker.addReceiver(destinationHistory, taskPane.getPresenter());
+
       taskPane.revalidate();
       taskPane.repaint();
 
@@ -229,6 +236,13 @@ public class PlaygroundPresenter implements ActionListener {
 
     try {
       log.info("Remove chart: {}", cProfile);
+
+      if (taskPane != null) {
+        ChartKey chartKey = new ChartKey(key, cProfile);
+        Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+        broker.deleteReceiver(destinationHistory, taskPane.getPresenter());
+      }
+
       model.getChartPanes().get(key).remove(cProfile);
     } finally {
       if (taskPane != null) {
@@ -242,16 +256,14 @@ public class PlaygroundPresenter implements ActionListener {
     }
   }
 
-  private void handleQueryEditorChange(ChangeEvent e) {
-    TableCellEditor editor = (TableCellEditor) e.getSource();
-    Boolean isSelected = (Boolean) editor.getCellEditorValue();
-    ProfileTaskQueryKey key = view.getProfileTaskQueryKey();
-
-    if (isSelected) {
-      addQueryCard(key);
-    } else {
-      removeQueryCard(key);
-    }
+  private Destination getDestination(Panel panel, ChartKey chartKey) {
+    return Destination.builder()
+        .component(model.getComponent())
+        .module(Module.CHART)
+        .panel(panel)
+        .block(Block.CHART)
+        .chartKey(chartKey)
+        .build();
   }
 
   private void addQueryCard(ProfileTaskQueryKey key) {
@@ -287,7 +299,13 @@ public class PlaygroundPresenter implements ActionListener {
       model.getMapReportData().remove(key);
 
       if (model.getChartPanes().containsKey(key)) {
-        model.getChartPanes().get(key).values().forEach(view::removeChartCard);
+        model.getChartPanes().get(key).values().forEach(chartModule -> {
+          view.removeChartCard(chartModule);
+
+          ChartKey chartKey = chartModule.getModel().getChartKey();
+          Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+          broker.deleteReceiver(destinationHistory, chartModule.getPresenter());
+        });
         model.getChartPanes().remove(key);
       }
     }
@@ -305,34 +323,25 @@ public class PlaygroundPresenter implements ActionListener {
   }
 
   private void initializeMetricTable(MetricColumnPanel cardMetricCol, List<Metric> metricList) {
-    cardMetricCol.getJtcMetric().getDefaultTableModel().getDataVector().removeAllElements();
-    cardMetricCol.getJtcMetric().getDefaultTableModel().fireTableDataChanged();
-
     if (metricList != null && !metricList.isEmpty()) {
-      for (Metric m : metricList) {
-        cardMetricCol.getJtcMetric().getDefaultTableModel().addRow(new Object[]{
-            m.getId(),
-            m.getName(),
-            Boolean.FALSE
-        });
-      }
+      List<MetricRow> rows = metricList.stream()
+          .map(m -> new MetricRow(m, false))
+          .collect(Collectors.toList());
+      cardMetricCol.setMetricItems(rows);
+    } else {
+      cardMetricCol.setMetricItems(List.of());
     }
   }
 
   private void initializeColumnTable(MetricColumnPanel cardMetricCol, List<CProfile> cProfileList) {
-    cardMetricCol.getJtcColumn().getDefaultTableModel().getDataVector().removeAllElements();
-    cardMetricCol.getJtcColumn().getDefaultTableModel().fireTableDataChanged();
-
     if (cProfileList != null) {
-      cProfileList.stream()
+      List<ColumnRow> rows = cProfileList.stream()
           .filter(f -> !f.getCsType().isTimeStamp())
-          .forEach(c -> {
-            cardMetricCol.getJtcColumn().getDefaultTableModel().addRow(new Object[]{
-                c.getColId(),
-                c.getColName(),
-                Boolean.FALSE
-            });
-          });
+          .map(c -> new ColumnRow(c, false))
+          .collect(Collectors.toList());
+      cardMetricCol.setColumnItems(rows);
+    } else {
+      cardMetricCol.setColumnItems(List.of());
     }
   }
 
@@ -401,6 +410,10 @@ public class PlaygroundPresenter implements ActionListener {
     model.getChartPanes().forEach((key, innerMap) -> {
       innerMap.forEach((cProfile, chartModule) -> {
         view.removeChartCard(chartModule);
+
+        ChartKey chartKey = chartModule.getModel().getChartKey();
+        Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+        broker.deleteReceiver(destinationHistory, chartModule.getPresenter());
       });
     });
     model.getChartPanes().clear();
@@ -411,15 +424,7 @@ public class PlaygroundPresenter implements ActionListener {
 
     model.getMapReportData().clear();
 
-    var table = view.getQueryReportCase().getJxTable();
-    int pickModelIndex = ColumnNames.PICK.ordinal();
-    int pickViewIndex = table.convertColumnIndexToView(pickModelIndex);
-
-    if (pickViewIndex >= 0) {
-      for (int row = 0; row < table.getRowCount(); row++) {
-        table.setValueAt(false, row, pickViewIndex);
-      }
-    }
+    view.clearAllCharts();
 
     view.updateButtonStates();
   }

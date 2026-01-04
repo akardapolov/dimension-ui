@@ -12,7 +12,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTable;
-import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ListSelectionEvent;
@@ -24,10 +23,9 @@ import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.output.GanttColumnCount;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.cstype.CType;
-import ru.dimension.ui.helper.GUIHelper;
-import ru.dimension.ui.model.column.TaskColumnNames;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.info.TableInfo;
+import ru.dimension.ui.view.table.row.Rows.ColumnRow;
 
 @Log4j2
 public class MainPivotDashboardPanel extends GanttPivotPanel implements ListSelectionListener {
@@ -65,7 +63,7 @@ public class MainPivotDashboardPanel extends GanttPivotPanel implements ListSele
     this.executorService = executorService;
     this.metric = metric;
 
-    this.jxTableCase.getJxTable().getSelectionModel().addListSelectionListener(this);
+    this.columnTable.table().getSelectionModel().addListSelectionListener(this);
 
     this.rightPanel = new JPanel(new BorderLayout());
     this.rightCenterPanel = new JPanel(new BorderLayout());
@@ -100,7 +98,7 @@ public class MainPivotDashboardPanel extends GanttPivotPanel implements ListSele
     rightPanel.add(aggPanel, BorderLayout.NORTH);
     rightPanel.add(rightCenterPanel, BorderLayout.CENTER);
 
-    this.jSplitPane.setLeftComponent(this.jxTableCase.getJScrollPane());
+    this.jSplitPane.setLeftComponent(this.columnTable.scrollPane());
     this.jSplitPane.setRightComponent(rightPanel);
 
     this.setLayout(new BorderLayout());
@@ -111,44 +109,47 @@ public class MainPivotDashboardPanel extends GanttPivotPanel implements ListSele
 
   @Override
   public void valueChanged(ListSelectionEvent e) {
-    ListSelectionModel listSelectionModel = (ListSelectionModel) e.getSource();
-
     if (e.getValueIsAdjusting()) {
       return;
     }
 
-    if (listSelectionModel.isSelectionEmpty()) {
+    var table = this.columnTable.table();
+
+    if (table.getSelectionModel().isSelectionEmpty()) {
       lastSelectedFirstLevelGroupBy = null;
       setRightCenter(new JPanel());
       return;
     }
 
-    int columnId = GUIHelper.getIdByColumnName(
-        jxTableCase.getJxTable(),
-        this.jxTableCase.getDefaultTableModel(),
-        listSelectionModel,
-        TaskColumnNames.ID.getColName()
-    );
+    int viewRow = table.getSelectedRow();
+    if (viewRow < 0) return;
 
-    executorService.submit(() -> {
-      try {
-        SwingUtilities.invokeLater(() -> setRightCenter(createProgressBar("Loading, please wait...")));
+    int modelRow = table.convertRowIndexToModel(viewRow);
+    ColumnRow selectedItem = this.columnTable.model().itemAt(modelRow);
 
-        CProfile firstLevelGroupBy = tableInfo.getCProfiles().stream()
-            .filter(f -> f.getColId() == columnId)
-            .findFirst()
-            .orElseThrow();
+    if (selectedItem != null) {
+      String selectedColumnName = selectedItem.getName();
 
-        SwingUtilities.invokeLater(() -> updateAggButtons(firstLevelGroupBy));
+      executorService.submit(() -> {
+        try {
+          SwingUtilities.invokeLater(() -> setRightCenter(createProgressBar("Loading, please wait...")));
 
-        lastSelectedFirstLevelGroupBy = firstLevelGroupBy;
-        buildAndShowPivot(firstLevelGroupBy);
+          CProfile firstLevelGroupBy = tableInfo.getCProfiles().stream()
+              .filter(f -> f.getColName().equalsIgnoreCase(selectedColumnName))
+              .findFirst()
+              .orElseThrow();
 
-      } catch (Exception ex) {
-        log.catching(ex);
-        SwingUtilities.invokeLater(() -> setRightCenter(new JLabel("Error loading pivot. See logs.")));
-      }
-    });
+          SwingUtilities.invokeLater(() -> updateAggButtons(firstLevelGroupBy));
+
+          lastSelectedFirstLevelGroupBy = firstLevelGroupBy;
+          buildAndShowPivot(firstLevelGroupBy);
+
+        } catch (Exception ex) {
+          log.catching(ex);
+          SwingUtilities.invokeLater(() -> setRightCenter(new JLabel("Error loading pivot. See logs.")));
+        }
+      });
+    }
   }
 
   private void reloadPivotForLastSelection() {

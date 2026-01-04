@@ -4,33 +4,32 @@ import jakarta.inject.Inject;
 import java.awt.Component;
 import java.util.Arrays;
 import java.util.List;
-import javax.swing.DefaultCellEditor;
 import javax.swing.JCheckBox;
 import javax.swing.JTabbedPane;
-import javax.swing.event.CellEditorListener;
-import javax.swing.event.ChangeEvent;
-import javax.swing.table.TableCellEditor;
-import javax.swing.table.TableColumn;
+import javax.swing.event.TableModelEvent;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTaskPane;
 import org.jdesktop.swingx.JXTaskPaneContainer;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.di.Assisted;
+import ru.dimension.tt.api.TT;
+import ru.dimension.tt.api.TTRegistry;
+import ru.dimension.tt.swing.TTTable;
+import ru.dimension.tt.swing.TableUi;
+import ru.dimension.tt.swingx.JXTableTables;
 import ru.dimension.ui.bus.EventBus;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.module.report.event.AddChartEvent;
 import ru.dimension.ui.component.module.report.event.RemoveChartEvent;
-import ru.dimension.ui.exception.NotFoundException;
-import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
-import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.info.QueryInfo;
-import ru.dimension.ui.model.info.TableInfo;
-import ru.dimension.ui.model.table.JXTableCase;
+import ru.dimension.ui.view.table.icon.ModelIconProviders;
+import ru.dimension.ui.view.table.row.Rows.ColumnRow;
+import ru.dimension.ui.view.table.row.Rows.MetricRow;
 
 @Log4j2
 @Data
@@ -39,10 +38,15 @@ public class MetricColumnPanel extends JXTaskPane {
   @EqualsAndHashCode.Include
   private final ProfileTaskQueryKey key;
   private final MessageBroker.Component component;
-  private final JXTableCase jtcMetric;
-  private final JXTableCase jtcColumn;
-  private final DefaultCellEditor mEditor;
-  private final DefaultCellEditor cEditor;
+
+  private final TTRegistry registry;
+  private final TTTable<MetricRow, JXTable> metricTable;
+  private final TTTable<ColumnRow, JXTable> columnTable;
+
+  private int metricPickColumnIndex = -1;
+  private int columnPickColumnIndex = -1;
+  private boolean ignoreCheckboxEvents = false;
+
   private final ProfileManager profileManager;
   private final JCheckBox collapseCard;
   private final JXTaskPaneContainer container;
@@ -61,13 +65,20 @@ public class MetricColumnPanel extends JXTaskPane {
 
     this.component = component;
     this.key = key;
-
     this.profileManager = profileManager;
     this.collapseCard = collapseCard;
     this.container = container;
     this.eventBus = eventBus;
 
-    // ... Rest of the constructor code remains exactly the same ...
+    this.registry = TT.builder()
+        .scanPackages("ru.dimension.ui.view.table.row")
+        .build();
+
+    this.metricTable = createMetricTable();
+    this.columnTable = createColumnTable();
+
+    setupMetricTableListener();
+    setupColumnTableListener();
 
     this.addPropertyChangeListener(propertyChangeEvent -> {
       if (!isCollapsed()) {
@@ -77,8 +88,7 @@ public class MetricColumnPanel extends JXTaskPane {
       } else {
         List<Component> components = Arrays.asList(container.getComponents());
         for (Component c : components) {
-          if (c instanceof JXTaskPane) {
-            JXTaskPane jxTaskPane = (JXTaskPane) c;
+          if (c instanceof JXTaskPane jxTaskPane) {
             if (!jxTaskPane.isCollapsed()) {
               collapseAll = false;
             }
@@ -91,138 +101,181 @@ public class MetricColumnPanel extends JXTaskPane {
       }
     });
 
-    String[] headers = new String[]{
-        ColumnNames.ID.getColName(),
-        ColumnNames.NAME.getColName(),
-        ColumnNames.PICK.getColName()
-    };
-
-    jtcMetric = GUIHelper.getJXTableCaseCheckBox(
-        ColumnNames.values().length,
-        headers,
-        ColumnNames.PICK.ordinal()
-    );
-
-    jtcColumn = GUIHelper.getJXTableCaseCheckBox(
-        ColumnNames.values().length,
-        headers,
-        ColumnNames.PICK.ordinal()
-    );
-
-    jtcMetric.getJxTable().getColumnExt(ColumnNames.ID.ordinal()).setVisible(false);
-    jtcColumn.getJxTable().getColumnExt(ColumnNames.ID.ordinal()).setVisible(false);
-
     JTabbedPane tabbedPane = new JTabbedPane();
-    tabbedPane.addTab("Columns", jtcColumn.getJScrollPane());
-    tabbedPane.addTab("Metrics", jtcMetric.getJScrollPane());
+    tabbedPane.addTab("Columns", columnTable.scrollPane());
+    tabbedPane.addTab("Metrics", metricTable.scrollPane());
     this.add(tabbedPane);
+  }
 
-    this.mEditor = new DefaultCellEditor(new JCheckBox());
-    configurePickColumn(jtcMetric, mEditor);
+  private TTTable<MetricRow, JXTable> createMetricTable() {
+    TTTable<MetricRow, JXTable> tt = JXTableTables.create(
+        registry,
+        MetricRow.class,
+        TableUi.<MetricRow>builder()
+            .rowIcon(ModelIconProviders.forMetricRow())
+            .rowIconInColumn("name")
+            .build()
+    );
 
-    mEditor.addCellEditorListener(new CellEditorListener() {
-      @Override
-      public void editingStopped(ChangeEvent e) {
-        QueryInfo queryInfo = profileManager.getQueryInfoById(key.getQueryId());
-        List<Metric> metricList = queryInfo.getMetricList();
+    JXTable table = tt.table();
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setGridColor(java.awt.Color.GRAY);
+    table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+    table.setEditable(true);
 
-        TableCellEditor editor = (TableCellEditor) e.getSource();
-        Boolean mValue = (Boolean) editor.getCellEditorValue();
+    if (table.getColumnExt("ID") != null) {
+      table.getColumnExt("ID").setVisible(false);
+    }
 
-        int viewRow = jtcMetric.getJxTable().getSelectedRow();
-        if (viewRow < 0) {
-          return;
-        }
-        int modelRow = jtcMetric.getJxTable().convertRowIndexToModel(viewRow);
+    if (table.getColumnExt("Name") != null) {
+      table.getColumnExt("Name").setEditable(false);
+    }
 
-        Object nameObj = jtcMetric.getDefaultTableModel()
-            .getValueAt(modelRow, ColumnNames.NAME.ordinal());
+    metricPickColumnIndex = tt.model().schema().modelIndexOf("pick");
 
-        final String metricName = (String) nameObj;
+    return tt;
+  }
 
-        Metric metric = metricList.stream()
-            .filter(f -> f.getName().equals(metricName))
-            .findAny()
-            .orElseThrow(() -> new NotFoundException("Not found metric"));
+  private TTTable<ColumnRow, JXTable> createColumnTable() {
+    TTTable<ColumnRow, JXTable> tt = JXTableTables.create(
+        registry,
+        ColumnRow.class,
+        TableUi.<ColumnRow>builder()
+            .rowIcon(ModelIconProviders.forColumnRow())
+            .rowIconInColumn("name")
+            .build()
+    );
 
-        if (Boolean.TRUE.equals(mValue)) {
-          addCard(key, metric.getYAxis());
-        } else {
-          removeCard(key, metric.getYAxis());
-        }
+    JXTable table = tt.table();
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setGridColor(java.awt.Color.GRAY);
+    table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+    table.setEditable(true);
+
+    if (table.getColumnExt("ID") != null) {
+      table.getColumnExt("ID").setVisible(false);
+    }
+
+    if (table.getColumnExt("Name") != null) {
+      table.getColumnExt("Name").setEditable(false);
+    }
+
+    columnPickColumnIndex = tt.model().schema().modelIndexOf("pick");
+
+    return tt;
+  }
+
+  private void setupMetricTableListener() {
+    if (metricPickColumnIndex < 0) {
+      return;
+    }
+
+    metricTable.model().addTableModelListener(e -> {
+      if (ignoreCheckboxEvents || e.getType() != TableModelEvent.UPDATE) {
+        return;
       }
 
-      @Override
-      public void editingCanceled(ChangeEvent changeEvent) {
-        // no-op
-      }
-    });
-
-    this.cEditor = new DefaultCellEditor(new JCheckBox());
-    configurePickColumn(jtcColumn, cEditor);
-
-    cEditor.addCellEditorListener(new CellEditorListener() {
-      @Override
-      public void editingStopped(ChangeEvent e) {
-        QueryInfo queryInfo = profileManager.getQueryInfoById(key.getQueryId());
-        TableInfo tableInfo = profileManager.getTableInfoByTableName(queryInfo.getName());
-        List<CProfile> cProfileList = tableInfo.getCProfiles();
-
-        TableCellEditor editor = (TableCellEditor) e.getSource();
-        Boolean cValue = (Boolean) editor.getCellEditorValue();
-
-        int viewRow = jtcColumn.getJxTable().getSelectedRow();
-        if (viewRow < 0) {
-          return;
+      if (e.getColumn() == metricPickColumnIndex) {
+        int row = e.getFirstRow();
+        if (row >= 0 && row < metricTable.model().getRowCount()) {
+          MetricRow metricRow = metricTable.model().itemAt(row);
+          if (metricRow != null && metricRow.hasOrigin()) {
+            Metric metric = metricRow.getOrigin();
+            if (metricRow.isPick()) {
+              addCard(key, metric.getYAxis());
+            } else {
+              removeCard(key, metric.getYAxis());
+            }
+          }
         }
-        int modelRow = jtcColumn.getJxTable().convertRowIndexToModel(viewRow);
-
-        Object nameObj = jtcColumn.getDefaultTableModel()
-            .getValueAt(modelRow, ColumnNames.NAME.ordinal());
-
-        final String colName = (String) nameObj;
-
-        CProfile cProfile = cProfileList.stream()
-            .filter(f -> f.getColName().equals(colName))
-            .findAny()
-            .orElseThrow(() -> new NotFoundException("Not found column profile"));
-
-        if (Boolean.TRUE.equals(cValue)) {
-          addCard(key, cProfile);
-        } else {
-          removeCard(key, cProfile);
-        }
-      }
-
-      @Override
-      public void editingCanceled(ChangeEvent changeEvent) {
-        // no-op
       }
     });
   }
 
-  // ... Rest of the methods (configurePickColumn, addCard, removeCard) remain the same ...
-  private void configurePickColumn(JXTableCase tableCase, DefaultCellEditor editor) {
-    int pickViewIndex = tableCase.getJxTable().convertColumnIndexToView(ColumnNames.PICK.ordinal());
-    if (pickViewIndex < 0) {
-      throw new IllegalStateException("PICK column is not visible");
+  private void setupColumnTableListener() {
+    if (columnPickColumnIndex < 0) {
+      return;
     }
 
-    TableColumn pickCol = tableCase.getJxTable().getColumnModel().getColumn(pickViewIndex);
-    pickCol.setMinWidth(30);
-    pickCol.setMaxWidth(35);
-    pickCol.setCellEditor(editor);
+    columnTable.model().addTableModelListener(e -> {
+      if (ignoreCheckboxEvents || e.getType() != TableModelEvent.UPDATE) {
+        return;
+      }
+
+      if (e.getColumn() == columnPickColumnIndex) {
+        int row = e.getFirstRow();
+        if (row >= 0 && row < columnTable.model().getRowCount()) {
+          ColumnRow columnRow = columnTable.model().itemAt(row);
+          if (columnRow != null && columnRow.hasOrigin()) {
+            CProfile cProfile = columnRow.getOrigin();
+            if (columnRow.isPick()) {
+              addCard(key, cProfile);
+            } else {
+              removeCard(key, cProfile);
+            }
+          }
+        }
+      }
+    });
+  }
+
+  public void setMetricItems(List<MetricRow> items) {
+    ignoreCheckboxEvents = true;
+    try {
+      metricTable.setItems(items);
+    } finally {
+      ignoreCheckboxEvents = false;
+    }
+  }
+
+  public void setColumnItems(List<ColumnRow> items) {
+    ignoreCheckboxEvents = true;
+    try {
+      columnTable.setItems(items);
+    } finally {
+      ignoreCheckboxEvents = false;
+    }
+  }
+
+  public void setMetricSelected(int metricId, boolean selected) {
+    ignoreCheckboxEvents = true;
+    try {
+      for (int i = 0; i < metricTable.model().getRowCount(); i++) {
+        MetricRow row = metricTable.model().itemAt(i);
+        if (row != null && row.getId() == metricId) {
+          metricTable.model().setValueAt(selected, i, metricPickColumnIndex);
+          break;
+        }
+      }
+    } finally {
+      ignoreCheckboxEvents = false;
+    }
+  }
+
+  public void setColumnSelected(int colId, boolean selected) {
+    ignoreCheckboxEvents = true;
+    try {
+      for (int i = 0; i < columnTable.model().getRowCount(); i++) {
+        ColumnRow row = columnTable.model().itemAt(i);
+        if (row != null && row.getId() == colId) {
+          columnTable.model().setValueAt(selected, i, columnPickColumnIndex);
+          break;
+        }
+      }
+    } finally {
+      ignoreCheckboxEvents = false;
+    }
   }
 
   private void addCard(ProfileTaskQueryKey key, CProfile cProfile) {
     log.info("Add card by key: {} and profile: {}", key, cProfile);
-
     eventBus.publish(new AddChartEvent(component, key, cProfile));
   }
 
   private void removeCard(ProfileTaskQueryKey key, CProfile cProfile) {
     log.info("Remove card by key: {} and profile: {}", key, cProfile);
-
     eventBus.publish(new RemoveChartEvent(component, key, cProfile));
   }
 }

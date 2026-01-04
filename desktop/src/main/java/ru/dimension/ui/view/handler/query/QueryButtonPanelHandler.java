@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -19,6 +20,8 @@ import javax.swing.JOptionPane;
 import javax.swing.JTabbedPane;
 import javax.swing.KeyStroke;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
+import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.exception.EmptyNameException;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.exception.NotSelectedRowException;
@@ -35,6 +38,7 @@ import ru.dimension.ui.router.event.EventListener;
 import ru.dimension.ui.view.panel.config.query.MainQueryPanel;
 import ru.dimension.ui.view.panel.config.query.MetadataQueryPanel;
 import ru.dimension.ui.view.panel.config.query.QueryPanel;
+import ru.dimension.ui.view.table.row.Rows.QueryRow;
 
 @Log4j2
 @Singleton
@@ -157,10 +161,10 @@ public class QueryButtonPanelHandler implements ActionListener {
                                       "General Error", JOptionPane.ERROR_MESSAGE);
       } else {
         int queryId = getSelectedQueryId();
-        int input = JOptionPane.showConfirmDialog(new JDialog(),// 0=yes, 1=no, 2=cancel
-                                                  "Do you want to delete configuration: "
-                                                      + queryCase.getDefaultTableModel()
-                                                      .getValueAt(queryCase.getJxTable().getSelectedRow(), 1) + "?");
+        String queryName = getSelectedQueryName();
+
+        int input = JOptionPane.showConfirmDialog(new JDialog(),
+                                                  "Do you want to delete configuration: " + queryName + "?");
         if (isUsedOnTask(queryId)) {
           if (input == 0) {
             QueryInfo query = profileManager.getQueryInfoById(queryId);
@@ -172,11 +176,9 @@ public class QueryButtonPanelHandler implements ActionListener {
             profileManager.deleteTable(query.getName());
 
             clearQueryCase();
+            refillQueryTable();
 
-            profileManager.getQueryInfoList().forEach(queryInfo -> queryCase.getDefaultTableModel()
-                .addRow(new Object[]{queryInfo.getId(), queryInfo.getName()}));
-
-            if (queryCase.getJxTable().getSelectedRow() > 0) {
+            if (queryCase.getJxTable().getRowCount() > 0) {
               queryCase.getJxTable().setRowSelectionInterval(0, 0);
             }
           }
@@ -229,20 +231,24 @@ public class QueryButtonPanelHandler implements ActionListener {
 
           clearQueryCase();
 
-          int selection = 0;
-          int index = 0;
-          for (QueryInfo query : profileManager.getQueryInfoList()) {
-            queryCase.getDefaultTableModel().addRow(new Object[]{query.getId(), query.getName()});
+          List<QueryInfo> allQueries = profileManager.getQueryInfoList();
+          List<QueryRow> rows = allQueries.stream()
+              .map(q -> new QueryRow(q.getId(), q.getName()))
+              .collect(Collectors.toList());
 
-            if (query.getId() == queryInfo.getId()) {
-              index++;
-              selection = index;
+          TTTable<QueryRow, JXTable> tt = queryCase.getTypedTable();
+          tt.setItems(rows);
+
+          int selection = 0;
+          for (int i = 0; i < rows.size(); i++) {
+            if (rows.get(i).getId() == queryInfo.getId()) {
+              selection = i;
+              break;
             }
-            index++;
           }
 
           setPanelView(true);
-          queryCase.getJxTable().setRowSelectionInterval(selection - 1, selection - 1);
+          queryCase.getJxTable().setRowSelectionInterval(selection, selection);
         } else {
           throw new EmptyNameException("The name field is empty");
         }
@@ -281,11 +287,8 @@ public class QueryButtonPanelHandler implements ActionListener {
           }
 
           clearQueryCase();
+          refillQueryTable();
 
-          for (QueryInfo q : profileManager.getQueryInfoList()) {
-            queryCase.getDefaultTableModel()
-                .addRow(new Object[]{q.getId(), q.getName()});
-          }
           setPanelView(true);
 
           mainQueryPanel.getQueryGatherDataComboBox().setSelectedItem(GatherDataMode.valueOf(selectedEnumGatherData));
@@ -328,8 +331,7 @@ public class QueryButtonPanelHandler implements ActionListener {
     mainQueryPanel.getQuerySqlText().setText("");
   }
 
-  public void checkQueryNameIsBusy(int id,
-                                   String newQueryName) {
+  public void checkQueryNameIsBusy(int id, String newQueryName) {
     List<QueryInfo> queryList = profileManager.getQueryInfoList();
     for (QueryInfo query : queryList) {
       if (query.getName().equals(newQueryName) && query.getId() != id) {
@@ -348,18 +350,39 @@ public class QueryButtonPanelHandler implements ActionListener {
   }
 
   private void clearProfileMetadataCase() {
-    metadataQueryPanel.getConfigMetadataCase().getDefaultTableModel().getDataVector().removeAllElements();
-    metadataQueryPanel.getConfigMetadataCase().getDefaultTableModel().fireTableDataChanged();
+    metadataQueryPanel.getConfigMetadataCase().clearTable();
   }
 
   private void clearQueryCase() {
-    queryCase.getDefaultTableModel().getDataVector().removeAllElements();
-    queryCase.getDefaultTableModel().fireTableDataChanged();
+    queryCase.clearTable();
+  }
+
+  private void refillQueryTable() {
+    TTTable<QueryRow, JXTable> tt = queryCase.getTypedTable();
+    List<QueryRow> rows = profileManager.getQueryInfoList().stream()
+        .map(q -> new QueryRow(q.getId(), q.getName()))
+        .collect(Collectors.toList());
+    tt.setItems(rows);
   }
 
   private int getSelectedQueryId() {
-    return (Integer) queryCase.getDefaultTableModel()
-        .getValueAt(queryCase.getJxTable().getSelectedRow(), 0);
+    int selectedRow = queryCase.getJxTable().getSelectedRow();
+    if (selectedRow < 0) {
+      return -1;
+    }
+    TTTable<QueryRow, JXTable> tt = queryCase.getTypedTable();
+    QueryRow row = tt.model().itemAt(selectedRow);
+    return row != null ? row.getId() : -1;
+  }
+
+  private String getSelectedQueryName() {
+    int selectedRow = queryCase.getJxTable().getSelectedRow();
+    if (selectedRow < 0) {
+      return "";
+    }
+    TTTable<QueryRow, JXTable> tt = queryCase.getTypedTable();
+    QueryRow row = tt.model().itemAt(selectedRow);
+    return row != null ? row.getName() : "";
   }
 
   private void setPanelView(Boolean isSelected) {
@@ -385,4 +408,3 @@ public class QueryButtonPanelHandler implements ActionListener {
         .anyMatch(task -> task.getQueryInfoList().contains(queryId));
   }
 }
-

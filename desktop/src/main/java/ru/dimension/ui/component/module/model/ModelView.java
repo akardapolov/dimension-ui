@@ -11,7 +11,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.border.EtchedBorder;
 import javax.swing.event.TableModelEvent;
-
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTitledSeparator;
@@ -21,9 +20,13 @@ import ru.dimension.tt.swing.TTTable;
 import ru.dimension.tt.swing.TableUi;
 import ru.dimension.tt.swing.icon.RowIconProvider;
 import ru.dimension.tt.swingx.JXTableTables;
-import ru.dimension.ui.component.module.model.icon.ModelIconProviders;
-import ru.dimension.ui.component.module.model.row.Rows.*;
 import ru.dimension.ui.laf.LaF;
+import ru.dimension.ui.view.table.icon.ModelIconProviders;
+import ru.dimension.ui.view.table.row.Rows.ColumnRow;
+import ru.dimension.ui.view.table.row.Rows.MetricRow;
+import ru.dimension.ui.view.table.row.Rows.ProfileRow;
+import ru.dimension.ui.view.table.row.Rows.QueryRow;
+import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
 @Log4j2
 public class ModelView extends JPanel {
@@ -36,7 +39,7 @@ public class ModelView extends JPanel {
 
   public ModelView() {
     TTRegistry registry = TT.builder()
-        .scanPackages("ru.dimension.ui.component.module.model.row")
+        .scanPackages("ru.dimension.ui.view.table.row")
         .build();
 
     // Create tables with icons
@@ -62,7 +65,6 @@ public class ModelView extends JPanel {
   public TTTable<MetricRow, JXTable>  getMetricTable()  { return metricTable; }
 
   // --- Listener Registration ---
-
   public void setColumnToggleListener(ModelHandler<ColumnRow> handler) {
     setupTableListener(columnTable, "pick", handler);
   }
@@ -174,8 +176,6 @@ public class ModelView extends JPanel {
 
     JXTable table = tt.table();
     configureCommon(tt);
-    table.setShowVerticalLines(true);
-    table.setShowHorizontalLines(true);
     table.setEditable(true);
 
     if (table.getColumnExt("Name") != null) {
@@ -192,6 +192,11 @@ public class ModelView extends JPanel {
     if (table.getColumnExt("id") != null) {
       table.getColumnExt("id").setVisible(false);
     }
+
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setGridColor(java.awt.Color.GRAY);
+    table.setIntercellSpacing(new java.awt.Dimension(1, 1));
   }
 
   private void setupLayout() {

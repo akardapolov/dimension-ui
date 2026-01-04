@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -24,8 +25,10 @@ import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
+import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.bus.EventBus;
-import ru.dimension.ui.bus.event.ProfileAddEvent; // Imported
+import ru.dimension.ui.bus.event.ProfileAddEvent;
 import ru.dimension.ui.bus.event.ProfileRemoveEvent;
 import ru.dimension.ui.exception.EmptyNameException;
 import ru.dimension.ui.exception.NotFoundException;
@@ -49,6 +52,10 @@ import ru.dimension.ui.model.RunStatus;
 import ru.dimension.ui.prompt.Internationalization;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.tab.ConfigTab;
+import ru.dimension.ui.view.table.row.Rows.ConnectionRow;
+import ru.dimension.ui.view.table.row.Rows.ProfileRow;
+import ru.dimension.ui.view.table.row.Rows.QueryRow;
+import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
 @Log4j2
 @Singleton
@@ -150,13 +157,18 @@ public class ProfileButtonPanelHandler implements ActionListener {
       setPanelView(false);
       clearMultiSelectPanels();
 
-      List<TaskInfo> taskInfoListAll = profileManager.getTaskInfoList();
-      for (TaskInfo taskInfo : taskInfoListAll) {
-        multiSelectTaskPanel.getTaskListCase().getDefaultTableModel()
-            .addRow(new Object[]{taskInfo.getId(), taskInfo.getName()});
-      }
-      templateManager.getConfigList(Task.class).forEach(taskIn -> multiSelectTaskPanel.getTemplateListTaskCase()
-          .getDefaultTableModel().addRow(new Object[]{taskIn.getId(), taskIn.getName()}));
+      TTTable<TaskRow, JXTable> ttTaskList = multiSelectTaskPanel.getTaskListCase().getTypedTable();
+      TTTable<TaskRow, JXTable> ttTemplate = multiSelectTaskPanel.getTemplateListTaskCase().getTypedTable();
+
+      List<TaskRow> taskRows = profileManager.getTaskInfoList().stream()
+          .map(t -> new TaskRow(t.getId(), t.getName()))
+          .collect(Collectors.toList());
+      ttTaskList.setItems(taskRows);
+
+      List<TaskRow> templateRows = templateManager.getConfigList(Task.class).stream()
+          .map(t -> new TaskRow(t.getId(), t.getName()))
+          .collect(Collectors.toList());
+      ttTemplate.setItems(templateRows);
 
     } else if (e.getSource() == profileButtonPanel.getBtnCopy()) {
       status = COPY;
@@ -187,7 +199,6 @@ public class ProfileButtonPanelHandler implements ActionListener {
           throw new NotFoundException("Not found profile: " + profileId);
         }
 
-        // Check if profile is currently running - deletion not allowed
         if (isProfileRunning(profile)) {
           JOptionPane.showMessageDialog(null,
                                         "Cannot delete profile '" + profile.getName() + "' while it is running. Please stop the profile first.",
@@ -195,15 +206,14 @@ public class ProfileButtonPanelHandler implements ActionListener {
           return;
         }
 
-        int input = JOptionPane.showConfirmDialog(new JDialog(),// 0=yes, 1=no, 2=cancel
+        int input = JOptionPane.showConfirmDialog(new JDialog(),
                                                   "Do you want to delete configuration: "
                                                       + profile.getName() + "?");
         if (input == 0) {
           profileManager.deleteProfile(profile.getId(), profile.getName());
 
           clearProfileCase();
-          profileManager.getProfileInfoList().forEach(profileInfo -> profileCase.getDefaultTableModel()
-              .addRow(new Object[]{profileInfo.getId(), profileInfo.getName()}));
+          refillProfileTable();
 
           if (profileCase.getJxTable().getRowCount() > 0) {
             profileCase.getJxTable().setRowSelectionInterval(0, 0);
@@ -247,21 +257,24 @@ public class ProfileButtonPanelHandler implements ActionListener {
 
           clearProfileCase();
 
-          int selection = 0;
-          int index = 0;
-          for (ProfileInfo profile : profileManager.getProfileInfoList()) {
-            profileCase.getDefaultTableModel()
-                .addRow(new Object[]{profile.getId(), profile.getName()});
+          List<ProfileInfo> allProfiles = profileManager.getProfileInfoList();
+          List<ProfileRow> rows = allProfiles.stream()
+              .map(p -> new ProfileRow(p.getId(), p.getName()))
+              .collect(Collectors.toList());
 
-            if (profile.getId() == saveProfile.getId()) {
-              index++;
-              selection = index;
+          TTTable<ProfileRow, JXTable> tt = profileCase.getTypedTable();
+          tt.setItems(rows);
+
+          int selection = 0;
+          for (int i = 0; i < rows.size(); i++) {
+            if (rows.get(i).getId() == saveProfile.getId()) {
+              selection = i;
+              break;
             }
-            index++;
           }
 
           setPanelView(true);
-          profileCase.getJxTable().setRowSelectionInterval(selection - 1, selection - 1);
+          profileCase.getJxTable().setRowSelectionInterval(selection, selection);
           multiSelectTaskPanel.getJTabbedPaneTask().setSelectedIndex(0);
 
           checkboxConfig.setEnabled(true);
@@ -290,8 +303,7 @@ public class ProfileButtonPanelHandler implements ActionListener {
           }
 
           clearProfileCase();
-          profileManager.getProfileInfoList().forEach(profileInfo -> profileCase.getDefaultTableModel()
-              .addRow(new Object[]{profileInfo.getId(), profileInfo.getName()}));
+          refillProfileTable();
 
           setPanelView(true);
           profileCase.getJxTable().setRowSelectionInterval(selectedIndex, selectedIndex);
@@ -320,34 +332,37 @@ public class ProfileButtonPanelHandler implements ActionListener {
             .findAny()
             .orElseThrow(() -> new NotFoundException("Not found profile: " + selectedId))
             .getTaskInfoList();
-        List<TaskInfo> taskList = profileManager.getTaskInfoList();
-        taskList.stream()
-            .filter(f -> !taskListAll.contains(f.getId()))
-            .forEach(taskIn -> multiSelectTaskPanel.getTaskListCase().getDefaultTableModel()
-                .addRow(new Object[]{taskIn.getId(), taskIn.getName()}));
 
-        profileManager.getProfileInfoList()
-            .stream()
-            .filter(f -> f.getId() == selectedId)
-            .findAny()
-            .orElseThrow(() -> new NotFoundException("Not found profile: " + selectedId))
-            .getTaskInfoList()
-            .forEach(task -> taskList.stream()
-                .filter(f -> f.getId() == task)
-                .forEach(
-                    taskIn -> multiSelectTaskPanel.getSelectedTaskCase().getDefaultTableModel()
-                        .addRow(new Object[]{taskIn.getId(), taskIn.getName()})));
+        List<TaskInfo> taskList = profileManager.getTaskInfoList();
+
+        TTTable<TaskRow, JXTable> ttTaskList = multiSelectTaskPanel.getTaskListCase().getTypedTable();
+        TTTable<TaskRow, JXTable> ttSelected = multiSelectTaskPanel.getSelectedTaskCase().getTypedTable();
+
+        List<TaskRow> unselectedRows = taskList.stream()
+            .filter(f -> !taskListAll.contains(f.getId()))
+            .map(t -> new TaskRow(t.getId(), t.getName()))
+            .collect(Collectors.toList());
+        ttTaskList.setItems(unselectedRows);
+
+        List<TaskRow> selectedRows = taskListAll.stream()
+            .flatMap(taskId -> taskList.stream()
+                .filter(t -> t.getId() == taskId)
+                .map(t -> new TaskRow(t.getId(), t.getName())))
+            .collect(Collectors.toList());
+        ttSelected.setItems(selectedRows);
+
         setPanelView(true);
         multiSelectTaskPanel.getJTabbedPaneTask().setSelectedIndex(0);
       } else {
-
         newEmptyPanel();
         setPanelView(true);
         clearMultiSelectPanels();
 
-        profileManager.getTaskInfoList().forEach(taskInfo -> multiSelectTaskPanel.getTaskListCase()
-            .getDefaultTableModel()
-            .addRow(new Object[]{taskInfo.getId(), taskInfo.getName()}));
+        TTTable<TaskRow, JXTable> ttTaskList = multiSelectTaskPanel.getTaskListCase().getTypedTable();
+        List<TaskRow> taskRows = profileManager.getTaskInfoList().stream()
+            .map(t -> new TaskRow(t.getId(), t.getName()))
+            .collect(Collectors.toList());
+        ttTaskList.setItems(taskRows);
       }
     }
   }
@@ -363,8 +378,7 @@ public class ProfileButtonPanelHandler implements ActionListener {
     profilePanel.getJTextFieldDescription().setPrompt(bundleDefault.getString("pDesc"));
   }
 
-  public void checkProfileNameIsBusy(int id,
-                                     String newProfileName) {
+  public void checkProfileNameIsBusy(int id, String newProfileName) {
     List<ProfileInfo> profileList = profileManager.getProfileInfoList();
     for (ProfileInfo profile : profileList) {
       if (profile.getName().equals(newProfileName) && profile.getId() != id) {
@@ -383,22 +397,47 @@ public class ProfileButtonPanelHandler implements ActionListener {
   }
 
   private int getSelectedProfileId() {
-    return (Integer) profileCase.getDefaultTableModel()
-        .getValueAt(profileCase.getJxTable().getSelectedRow(), 0);
+    int selectedRow = profileCase.getJxTable().getSelectedRow();
+    TTTable<ProfileRow, JXTable> tt = profileCase.getTypedTable();
+    ProfileRow row = tt.model().itemAt(selectedRow);
+    return row.getId();
   }
 
   private void clearMultiSelectPanels() {
-    multiSelectTaskPanel.getSelectedTaskCase().getDefaultTableModel().getDataVector().removeAllElements();
-    multiSelectTaskPanel.getSelectedTaskCase().getDefaultTableModel().fireTableDataChanged();
-    multiSelectTaskPanel.getTaskListCase().getDefaultTableModel().getDataVector().removeAllElements();
-    multiSelectTaskPanel.getTaskListCase().getDefaultTableModel().fireTableDataChanged();
-    multiSelectTaskPanel.getTemplateListTaskCase().getDefaultTableModel().getDataVector().removeAllElements();
-    multiSelectTaskPanel.getTemplateListTaskCase().getDefaultTableModel().fireTableDataChanged();
+    multiSelectTaskPanel.getSelectedTaskCase().clearTable();
+    multiSelectTaskPanel.getTaskListCase().clearTable();
+    multiSelectTaskPanel.getTemplateListTaskCase().clearTable();
   }
 
   private void clearProfileCase() {
-    profileCase.getDefaultTableModel().getDataVector().removeAllElements();
-    profileCase.getDefaultTableModel().fireTableDataChanged();
+    profileCase.clearTable();
+  }
+
+  private void refillProfileTable() {
+    TTTable<ProfileRow, JXTable> tt = profileCase.getTypedTable();
+    List<ProfileRow> rows = profileManager.getProfileInfoList().stream()
+        .map(p -> new ProfileRow(p.getId(), p.getName()))
+        .collect(Collectors.toList());
+    tt.setItems(rows);
+  }
+
+  private void refillConnectionTable() {
+    TTTable<ConnectionRow, JXTable> tt = connectionCase.getTypedTable();
+    List<ConnectionRow> rows = profileManager.getConnectionInfoList().stream()
+        .map(c -> {
+          ConnectionInfo connectionInfo = profileManager.getConnectionInfoById(c.getId());
+          return new ConnectionRow(c.getId(), c.getName(), c.getType(), connectionInfo.getDbType());
+        })
+        .collect(Collectors.toList());
+    tt.setItems(rows);
+  }
+
+  private void refillQueryTable() {
+    TTTable<QueryRow, JXTable> tt = queryCase.getTypedTable();
+    List<QueryRow> rows = profileManager.getQueryInfoList().stream()
+        .map(q -> new QueryRow(q.getId(), q.getName()))
+        .collect(Collectors.toList());
+    tt.setItems(rows);
   }
 
   private ProfileInfo getProfileInfo(int profileId) {
@@ -407,15 +446,15 @@ public class ProfileButtonPanelHandler implements ActionListener {
     profile.setName(profilePanel.getJTextFieldProfile().getText());
     profile.setDescription(profilePanel.getJTextFieldDescription().getText());
 
-    if (multiSelectTaskPanel.getSelectedTaskCase().getDefaultTableModel().getRowCount() > 0) {
+    TTTable<TaskRow, JXTable> ttSelected = multiSelectTaskPanel.getSelectedTaskCase().getTypedTable();
+
+    if (ttSelected.model().getRowCount() > 0) {
       List<Integer> taskListId = new ArrayList<>();
 
-      for (int i = 0; i < multiSelectTaskPanel.getSelectedTaskCase().getDefaultTableModel().getRowCount();
-          i++) {
-        Integer selectedDataTaskId = (Integer) multiSelectTaskPanel.getSelectedTaskCase().getDefaultTableModel()
-            .getValueAt(i, 0);
-        String selectedTaskName = multiSelectTaskPanel.getSelectedTaskCase().getDefaultTableModel()
-            .getValueAt(i, 1).toString();
+      for (int i = 0; i < ttSelected.model().getRowCount(); i++) {
+        TaskRow taskRow = ttSelected.model().itemAt(i);
+        Integer selectedDataTaskId = taskRow.getId();
+        String selectedTaskName = taskRow.getName();
 
         AtomicInteger taskIdNext = new AtomicInteger();
 
@@ -489,10 +528,10 @@ public class ProfileButtonPanelHandler implements ActionListener {
             }
 
             profileManager.addConnection(connectionInfo);
-            connectionCase.getDefaultTableModel().getDataVector().removeAllElements();
-            connectionCase.getDefaultTableModel().fireTableDataChanged();
-            profileManager.getConnectionInfoList().forEach(connection -> connectionCase.getDefaultTableModel()
-                .addRow(new Object[]{connection.getId(), connection.getName()}));
+
+            connectionCase.clearTable();
+            refillConnectionTable();
+
             taskInfo.setConnectionId(newIdConnection);
           } else {
             taskInfo.setConnectionId(existConnectionName(connectionTask.getName()));
@@ -536,10 +575,10 @@ public class ProfileButtonPanelHandler implements ActionListener {
               TableInfo tableInfo = new TableInfo();
               tableInfo.setTableName(saveQuery.getName());
               profileManager.addTable(tableInfo);
-              queryCase.getDefaultTableModel().getDataVector().removeAllElements();
-              queryCase.getDefaultTableModel().fireTableDataChanged();
-              profileManager.getQueryInfoList().forEach(query -> queryCase.getDefaultTableModel()
-                  .addRow(new Object[]{query.getId(), query.getName()}));
+
+              queryCase.clearTable();
+              refillQueryTable();
+
             } else {
               taskInfo.getQueryInfoList().set(j, existQueryId(queryTask.getName()));
             }

@@ -424,14 +424,14 @@
         </executions>
       </plugin>
 
-      <!-- Generate SHA256 hash for ZIP -->
+      <!-- Generate SHA256 hash for ZIP and App JAR -->
       <plugin>
         <groupId>net.nicoulaj.maven.plugins</groupId>
         <artifactId>checksum-maven-plugin</artifactId>
         <version>1.11</version>
         <executions>
           <execution>
-            <id>generate-zip-hash</id>
+            <id>generate-combined-hash</id>
             <goals>
               <goal>files</goal>
             </goals>
@@ -440,11 +440,16 @@
               <algorithms>
                 <algorithm>SHA-256</algorithm>
               </algorithms>
+
+              <shasumSummary>true</shasumSummary>
+              <shasumSummaryFile>checksums.sha256</shasumSummaryFile>
+
               <fileSets>
                 <fileSet>
                   <directory>${project.build.directory}</directory>
                   <includes>
                     <include>${project.build.finalName}.zip</include>
+                    <include>${project.build.finalName}-app.jar</include>
                   </includes>
                 </fileSet>
               </fileSets>

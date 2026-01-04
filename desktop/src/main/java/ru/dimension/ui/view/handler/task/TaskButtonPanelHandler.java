@@ -4,6 +4,9 @@ import static ru.dimension.ui.model.view.handler.LifeCycleStatus.COPY;
 import static ru.dimension.ui.model.view.handler.LifeCycleStatus.EDIT;
 import static ru.dimension.ui.model.view.handler.LifeCycleStatus.NEW;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -18,17 +21,15 @@ import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import jakarta.inject.Inject;
-import jakarta.inject.Named;
-import jakarta.inject.Singleton;
 import javax.swing.AbstractAction;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
-import javax.swing.table.DefaultTableModel;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
+import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.exception.EmptyNameException;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.exception.NotSelectedRowException;
@@ -48,6 +49,8 @@ import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.task.MultiSelectQueryPanel;
 import ru.dimension.ui.view.panel.config.task.TaskPanel;
 import ru.dimension.ui.view.tab.ConfigTab;
+import ru.dimension.ui.view.table.row.Rows.QueryTableRow;
+import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
 @Log4j2
 @Singleton
@@ -164,8 +167,7 @@ public class TaskButtonPanelHandler implements ActionListener {
 
         taskPanel.getTaskConnectionComboBox().setTableData(connectionDataList);
 
-        multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel().getDataVector().removeAllElements();
-        multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel().fireTableDataChanged();
+        clearSelectedQueryTable();
 
         fillAvailableQueryList();
       } else {
@@ -196,10 +198,13 @@ public class TaskButtonPanelHandler implements ActionListener {
                                       "General Error", JOptionPane.ERROR_MESSAGE);
       } else {
         int taskId = getSelectedTaskId();
-        int input = JOptionPane.showConfirmDialog(new JDialog(),// 0=yes, 1=no, 2=cancel
-                                                  "Do you want to delete configuration: "
-                                                      + taskCase.getDefaultTableModel()
-                                                      .getValueAt(taskCase.getJxTable().getSelectedRow(), 1) + "?");
+
+        TTTable<TaskRow, JXTable> tt = taskCase.getTypedTable();
+        TaskRow selectedRow = tt.model().itemAt(taskCase.getJxTable().getSelectedRow());
+        String taskName = selectedRow != null ? selectedRow.getName() : "Unknown";
+
+        int input = JOptionPane.showConfirmDialog(new JDialog(),
+                                                  "Do you want to delete configuration: " + taskName + "?");
         if (isUsedOnTask(taskId)) {
           if (input == 0) {
             TaskInfo task = profileManager.getTaskInfoById(taskId);
@@ -209,11 +214,9 @@ public class TaskButtonPanelHandler implements ActionListener {
 
             profileManager.deleteTask(task.getId(), task.getName());
             clearTaskCase();
+            refillTaskTable();
 
-            profileManager.getTaskInfoList().forEach(taskInfo -> taskCase.getDefaultTableModel()
-                .addRow(new Object[]{taskInfo.getId(), taskInfo.getName()}));
-
-            if (taskCase.getJxTable().getSelectedRow() > 0) {
+            if (taskCase.getJxTable().getRowCount() > 0) {
               taskCase.getJxTable().setRowSelectionInterval(0, 0);
             }
           }
@@ -254,20 +257,24 @@ public class TaskButtonPanelHandler implements ActionListener {
 
           clearTaskCase();
 
-          int selection = 0;
-          int index = 0;
-          for (TaskInfo task : profileManager.getTaskInfoList()) {
-            taskCase.getDefaultTableModel()
-                .addRow(new Object[]{task.getId(), task.getName()});
+          List<TaskInfo> allTasks = profileManager.getTaskInfoList();
+          List<TaskRow> rows = allTasks.stream()
+              .map(t -> new TaskRow(t.getId(), t.getName()))
+              .collect(Collectors.toList());
 
-            if (task.getId() == saveTask.getId()) {
-              index++;
-              selection = index;
+          TTTable<TaskRow, JXTable> tt = taskCase.getTypedTable();
+          tt.setItems(rows);
+
+          int selection = 0;
+          for (int i = 0; i < rows.size(); i++) {
+            if (rows.get(i).getId() == saveTask.getId()) {
+              selection = i;
+              break;
             }
-            index++;
           }
+
           setPanelView(true);
-          taskCase.getJxTable().setRowSelectionInterval(selection - 1, selection - 1);
+          taskCase.getJxTable().setRowSelectionInterval(selection, selection);
           multiSelectQueryPanel.getJTabbedPaneQuery().setSelectedIndex(0);
         } else {
           throw new EmptyNameException("The name field is empty");
@@ -292,9 +299,7 @@ public class TaskButtonPanelHandler implements ActionListener {
           }
 
           clearTaskCase();
-
-          profileManager.getTaskInfoList().forEach(taskInfo -> taskCase.getDefaultTableModel()
-              .addRow(new Object[]{taskInfo.getId(), taskInfo.getName()}));
+          refillTaskTable();
 
           setPanelView(true);
           taskCase.getJxTable().setRowSelectionInterval(selectedIndex, selectedIndex);
@@ -364,7 +369,6 @@ public class TaskButtonPanelHandler implements ActionListener {
         fillAvailableQueryList();
       }
     }
-
   }
 
   private void newEmptyPanel() {
@@ -374,8 +378,7 @@ public class TaskButtonPanelHandler implements ActionListener {
     taskPanel.getJTextFieldDescription().setPrompt(bundleDefault.getString("tDesc"));
   }
 
-  public void checkTaskNameIsBusy(int id,
-                                  String newTaskName) {
+  public void checkTaskNameIsBusy(int id, String newTaskName) {
     List<TaskInfo> taskList = profileManager.getTaskInfoList();
     for (TaskInfo task : taskList) {
       if (task.getName().equals(newTaskName) && task.getId() != id) {
@@ -410,9 +413,6 @@ public class TaskButtonPanelHandler implements ActionListener {
       log.info("Connection's {} driver: {}", connName, connDriver);
 
       // Configuration
-      multiSelectQueryPanel.getQueryListCase().getDefaultTableModel().getDataVector().removeAllElements();
-      multiSelectQueryPanel.getQueryListCase().getDefaultTableModel().fireTableDataChanged();
-
       List<String> connectionDrivers = getConnectionDriverAll();
       connectionDrivers.removeIf(q -> q == null || connDriver.toString().contains(q));
 
@@ -420,78 +420,62 @@ public class TaskButtonPanelHandler implements ActionListener {
           .flatMap(driver -> profileManager.getQueryInfoListByConnDriver(driver).stream())
           .toList();
 
-      List<QueryInfo> queryListWithoutConnDriver = profileManager.getQueryInfoList().stream()
+      List<QueryTableRow> queryListRows = profileManager.getQueryInfoList().stream()
           .filter(q -> !listSelectedQueryForExclude.contains(q.getName()))
           .filter(q -> !queryListOfUnsuitableConnDriver.contains(q))
           .filter(q -> !queryListOfUnsuitableConnType.contains(q))
-          .toList();
+          .map(q -> new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()))
+          .collect(Collectors.toList());
 
-      for (QueryInfo q : queryListWithoutConnDriver) {
-        multiSelectQueryPanel.getQueryListCase().getDefaultTableModel()
-            .addRow(new Object[]{q.getId(), q.getName(), q.getDescription(), q.getText()});
-      }
+      TTTable<QueryTableRow, JXTable> queryListTT = multiSelectQueryPanel.getQueryListCase().getTypedTable();
+      queryListTT.setItems(queryListRows);
 
       // Template
-      multiSelectQueryPanel.getTemplateListQueryCase().getDefaultTableModel().getDataVector().removeAllElements();
-      multiSelectQueryPanel.getTemplateListQueryCase().getDefaultTableModel().fireTableDataChanged();
-
-      templateManager.getQueryListByConnDriver(connDriver.toString()).stream()
+      List<QueryTableRow> templateRows = templateManager.getQueryListByConnDriver(connDriver.toString()).stream()
           .filter(q -> !listSelectedQueryForExclude.contains(q.getName()))
-          .forEach(q -> {
-            QueryInfo queryInfo = new QueryInfo();
-            queryInfo.setId(q.getId());
-            queryInfo.setName(q.getName());
-            queryInfo.setText(q.getText());
-            queryInfo.setDescription(q.getDescription());
+          .map(q -> new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()))
+          .collect(Collectors.toList());
 
-            multiSelectQueryPanel.getTemplateListQueryCase().getDefaultTableModel()
-                .addRow(new Object[]{queryInfo.getId(), queryInfo.getName(),
-                    queryInfo.getDescription(), queryInfo.getText()});
-          });
+      TTTable<QueryTableRow, JXTable> templateTT = multiSelectQueryPanel.getTemplateListQueryCase().getTypedTable();
+      templateTT.setItems(templateRows);
 
-      //Selected
-      multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel().getDataVector().removeAllElements();
-      multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel().fireTableDataChanged();
-
-      profileManager.getQueryInfoListByConnDriver(connDriver.toString()).stream()
+      // Selected
+      List<QueryTableRow> selectedRows = profileManager.getQueryInfoListByConnDriver(connDriver.toString()).stream()
           .filter(q -> listSelectedQueryForExclude.contains(q.getName()))
-          .forEach(q -> multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel()
-              .addRow(new Object[]{q.getId(), q.getName(), q.getDescription(), q.getText()}));
+          .map(q -> new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()))
+          .collect(Collectors.toList());
+
+      TTTable<QueryTableRow, JXTable> selectedTT = multiSelectQueryPanel.getSelectedQueryCase().getTypedTable();
+      selectedTT.setItems(selectedRows);
+
     } else {
-
       // Configuration
-      multiSelectQueryPanel.getQueryListCase().getDefaultTableModel().getDataVector().removeAllElements();
-      multiSelectQueryPanel.getQueryListCase().getDefaultTableModel().fireTableDataChanged();
-
       List<String> connectionDrivers = getConnectionDriverAll();
 
       List<QueryInfo> queryListOfUnsuitableConnDriver = connectionDrivers.stream()
           .flatMap(driver -> profileManager.getQueryInfoListByConnDriver(driver).stream())
           .toList();
 
-      List<QueryInfo> queryListWithoutConnDriver = profileManager.getQueryInfoList().stream()
+      List<QueryTableRow> queryListRows = profileManager.getQueryInfoList().stream()
           .filter(q -> !listSelectedQueryForExclude.contains(q.getName()))
           .filter(q -> !queryListOfUnsuitableConnDriver.contains(q))
           .filter(q -> q.getName().equals(connName))
-          .toList();
+          .map(q -> new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()))
+          .collect(Collectors.toList());
 
-      for (QueryInfo q : queryListWithoutConnDriver) {
-        multiSelectQueryPanel.getQueryListCase().getDefaultTableModel()
-            .addRow(new Object[]{q.getId(), q.getName(), q.getDescription(), q.getText()});
-      }
+      TTTable<QueryTableRow, JXTable> queryListTT = multiSelectQueryPanel.getQueryListCase().getTypedTable();
+      queryListTT.setItems(queryListRows);
 
-      //Selected
-      multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel().getDataVector().removeAllElements();
-      multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel().fireTableDataChanged();
-
-      queryListOfUnsuitableConnType.stream()
+      // Selected
+      List<QueryTableRow> selectedRows = queryListOfUnsuitableConnType.stream()
           .filter(q -> listSelectedQueryForExclude.contains(q.getName()))
-          .forEach(q -> multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel()
-              .addRow(new Object[]{q.getId(), q.getName(), q.getDescription(), q.getText()}));
+          .map(q -> new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()))
+          .collect(Collectors.toList());
+
+      TTTable<QueryTableRow, JXTable> selectedTT = multiSelectQueryPanel.getSelectedQueryCase().getTypedTable();
+      selectedTT.setItems(selectedRows);
     }
-
   }
-
 
   public int setRadioButtonPullTimeout() {
     int pullTimeout = 0;
@@ -514,14 +498,30 @@ public class TaskButtonPanelHandler implements ActionListener {
   }
 
   private int getSelectedTaskId() {
-    return (Integer) taskCase.getDefaultTableModel()
-        .getValueAt(taskCase.getJxTable().getSelectedRow(), 0);
+    int selectedRow = taskCase.getJxTable().getSelectedRow();
+    if (selectedRow < 0) {
+      return -1;
+    }
+    TTTable<TaskRow, JXTable> tt = taskCase.getTypedTable();
+    TaskRow row = tt.model().itemAt(selectedRow);
+    return row != null ? row.getId() : -1;
   }
 
-
   private void clearTaskCase() {
-    taskCase.getDefaultTableModel().getDataVector().removeAllElements();
-    taskCase.getDefaultTableModel().fireTableDataChanged();
+    taskCase.clearTable();
+  }
+
+  private void clearSelectedQueryTable() {
+    TTTable<QueryTableRow, JXTable> selectedTT = multiSelectQueryPanel.getSelectedQueryCase().getTypedTable();
+    selectedTT.setItems(new ArrayList<>());
+  }
+
+  private void refillTaskTable() {
+    TTTable<TaskRow, JXTable> tt = taskCase.getTypedTable();
+    List<TaskRow> rows = profileManager.getTaskInfoList().stream()
+        .map(t -> new TaskRow(t.getId(), t.getName()))
+        .collect(Collectors.toList());
+    tt.setItems(rows);
   }
 
   private TaskInfo getTaskInfo(int taskId) {
@@ -541,13 +541,14 @@ public class TaskButtonPanelHandler implements ActionListener {
 
     task.setConnectionId(connectionId);
 
-    DefaultTableModel tableModel = multiSelectQueryPanel.getSelectedQueryCase().getDefaultTableModel();
+    TTTable<QueryTableRow, JXTable> selectedTT = multiSelectQueryPanel.getSelectedQueryCase().getTypedTable();
+    List<QueryTableRow> selectedRows = selectedTT.model().items();
 
-    if (tableModel.getRowCount() > 0) {
+    if (!selectedRows.isEmpty()) {
       List<Integer> queryListId = new ArrayList<>();
-      for (int i = 0; i < tableModel.getRowCount(); i++) {
-        Integer selectedDataQueryId = (Integer) tableModel.getValueAt(i, 0);
-        String selectedQueryName = tableModel.getValueAt(i, 1).toString();
+      for (QueryTableRow row : selectedRows) {
+        Integer selectedDataQueryId = row.getId();
+        String selectedQueryName = row.getName();
 
         AtomicInteger queryIdNext = new AtomicInteger();
 
@@ -620,44 +621,30 @@ public class TaskButtonPanelHandler implements ActionListener {
   }
 
   private boolean isExistQueryName(String selectedName) {
-    boolean isExist = false;
-    List<QueryInfo> queryList = profileManager.getQueryInfoList();
-    for (QueryInfo query : queryList) {
-      if (query.getName().equals(selectedName)) {
-        isExist = true;
-      }
-    }
-    return isExist;
+    return profileManager.getQueryInfoList().stream()
+        .anyMatch(query -> query.getName().equals(selectedName));
   }
 
   private List<String> getSelectedQueryNameList() {
-    List<String> queryListId = new ArrayList<>();
-
-    int rowCount = multiSelectQueryPanel.getSelectedQueryCase().getJxTable().getRowCount();
-    if (rowCount > 0) {
-      for (int i = 0; i < rowCount; i++) {
-        String selectedQueryName = multiSelectQueryPanel.getSelectedQueryCase()
-            .getDefaultTableModel().getValueAt(i, 1).toString();
-        queryListId.add(selectedQueryName);
-      }
+    List<String> queryListNames = new ArrayList<>();
+    TTTable<QueryTableRow, JXTable> selectedTT = multiSelectQueryPanel.getSelectedQueryCase().getTypedTable();
+    List<QueryTableRow> items = selectedTT.model().items();
+    for (QueryTableRow row : items) {
+      queryListNames.add(row.getName());
     }
-
-    return queryListId;
+    return queryListNames;
   }
 
   private List<String> getConnectionDriverAll() {
-    List<String> connAllDriver = Collections.emptyList();
     List<ConnectionInfo> connectionInfoList = profileManager.getConnectionInfoList();
-    connAllDriver = connectionInfoList.stream()
+    return connectionInfoList.stream()
         .map(ConnectionInfo::getDriver)
+        .distinct()
         .collect(Collectors.toList());
-
-    return connAllDriver.stream().distinct().collect(Collectors.toList());
   }
 
   private boolean isUsedOnTask(int taskId) {
     return !profileManager.getProfileInfoList().stream()
         .anyMatch(profile -> profile.getTaskInfoList().contains(taskId));
   }
-
 }

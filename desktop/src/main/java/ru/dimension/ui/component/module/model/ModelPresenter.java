@@ -1,5 +1,10 @@
 package ru.dimension.ui.component.module.model;
 
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.broker.Destination;
@@ -7,14 +12,17 @@ import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Action;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
-import ru.dimension.ui.component.module.model.row.Rows.*;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.RunStatus;
 import ru.dimension.ui.model.config.Metric;
-import ru.dimension.ui.model.info.*;
-
-import java.util.*;
-import java.util.stream.Collectors;
+import ru.dimension.ui.model.info.ProfileInfo;
+import ru.dimension.ui.model.info.QueryInfo;
+import ru.dimension.ui.model.info.TableInfo;
+import ru.dimension.ui.model.info.TaskInfo;
+import ru.dimension.ui.view.table.ModelRowMapper;
+import ru.dimension.ui.view.table.row.Rows.ColumnRow;
+import ru.dimension.ui.view.table.row.Rows.MetricRow;
+import ru.dimension.ui.view.table.row.Rows.ProfileRow;
 
 @Log4j2
 public class ModelPresenter {

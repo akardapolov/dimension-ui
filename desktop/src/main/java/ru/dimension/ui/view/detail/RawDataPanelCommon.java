@@ -90,6 +90,8 @@ public abstract class RawDataPanelCommon extends JPanel {
     this.table.setHorizontalScrollEnabled(true);
     this.table.setShowVerticalLines(true);
     this.table.setShowHorizontalLines(true);
+    this.table.setGridColor(java.awt.Color.GRAY);
+    this.table.setIntercellSpacing(new java.awt.Dimension(1, 1));
     this.table.setBackground(LaF.getBackgroundColor(TABLE_BACKGROUND, LaF.getLafType()));
     this.table.setForeground(LaF.getBackgroundColor(TABLE_FONT, LaF.getLafType()));
     this.table.packAll();

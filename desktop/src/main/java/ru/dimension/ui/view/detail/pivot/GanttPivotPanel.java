@@ -13,25 +13,32 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import javax.swing.JSplitPane;
+import javax.swing.ListSelectionModel;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import ru.dimension.db.model.output.GanttColumnCount;
 import ru.dimension.db.model.profile.CProfile;
-import ru.dimension.ui.helper.GUIHelper;
+import ru.dimension.tt.api.TT;
+import ru.dimension.tt.api.TTRegistry;
+import ru.dimension.tt.swing.TTTable;
+import ru.dimension.tt.swing.TableUi;
+import ru.dimension.tt.swingx.JXTableTables;
 import ru.dimension.ui.laf.LaF;
-import ru.dimension.ui.model.column.MetricsColumnNames;
 import ru.dimension.ui.model.gantt.DrawingScale;
 import ru.dimension.ui.model.info.TableInfo;
-import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.view.detail.GanttPivotCommon;
+import ru.dimension.ui.view.table.icon.ModelIconProviders;
+import ru.dimension.ui.view.table.row.Rows.ColumnRow;
 
 @Log4j2
 public abstract class GanttPivotPanel extends GanttPivotCommon {
 
   protected JXTable combinedTable;
   protected JSplitPane jSplitPane;
-  protected JXTableCase jxTableCase;
+
+  protected TTTable<ColumnRow, JXTable> columnTable;
 
   public GanttPivotPanel(TableInfo tableInfo,
                          CProfile cProfile,
@@ -50,20 +57,60 @@ public abstract class GanttPivotPanel extends GanttPivotCommon {
     this.jSplitPane = new JSplitPane();
     this.jSplitPane.setDividerLocation(DIVIDER_LOCATION);
 
-    this.jxTableCase = GUIHelper.getJXTableCase(
-        5,
-        new String[] { MetricsColumnNames.ID.getColName(), MetricsColumnNames.COLUMN_NAME.getColName() }
+    TTRegistry registry = TT.builder()
+        .scanPackages("ru.dimension.ui.view.table.row")
+        .build();
+
+    this.columnTable = createProfileTable(registry);
+    populateProfileTable();
+  }
+
+  private TTTable<ColumnRow, JXTable> createProfileTable(TTRegistry registry) {
+    TTTable<ColumnRow, JXTable> tt = JXTableTables.create(
+        registry,
+        ColumnRow.class,
+        TableUi.<ColumnRow>builder()
+            .rowIcon(ModelIconProviders.forColumnRow())
+            .rowIconInColumn("name")
+            .build()
     );
 
-    this.jxTableCase.getJxTable().getColumnExt(0).setVisible(false);
-    this.jxTableCase.getJxTable().getColumnModel().getColumn(0)
-        .setCellRenderer(new GUIHelper.ActiveColumnCellRenderer());
+    JXTable table = tt.table();
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setGridColor(Color.GRAY);
+    table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+    table.setEditable(false);
 
-    this.tableInfo.getCProfiles().forEach(cProfile -> {
-      if (!cProfile.getCsType().isTimeStamp()) {
-        this.jxTableCase.getDefaultTableModel().addRow(new Object[] { cProfile.getColId(), cProfile.getColName() });
-      }
-    });
+    // Hide ID
+    if (table.getColumnExt("ID") != null) {
+      table.getColumnExt("ID").setVisible(false);
+    }
+
+    // HIDE PICK (Checkbox)
+    if (table.getColumnExt("Pick") != null) {
+      table.getColumnExt("Pick").setVisible(false);
+    }
+    if (table.getColumnExt("pick") != null) {
+      table.getColumnExt("pick").setVisible(false);
+    }
+
+    table.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    return tt;
+  }
+
+  private void populateProfileTable() {
+    if (tableInfo == null || tableInfo.getCProfiles() == null) {
+      columnTable.setItems(List.of());
+      return;
+    }
+
+    List<ColumnRow> rows = tableInfo.getCProfiles().stream()
+        .filter(cp -> !cp.getCsType().isTimeStamp())
+        .map(cp -> new ColumnRow(cp, false))
+        .collect(Collectors.toList());
+
+    columnTable.setItems(rows);
   }
 
   @Override
@@ -114,9 +161,6 @@ public abstract class GanttPivotPanel extends GanttPivotCommon {
     return ganttTable.getJXTable();
   }
 
-  /**
-   * SUM pivot: rows are numeric values (high-cardinality possible)
-   */
   protected JXTable loadPivotGanttSum(CProfile firstGrpBy,
                                       CProfile secondGrpBy,
                                       List<GanttColumnCount> ganttColumnList1,
@@ -172,12 +216,6 @@ public abstract class GanttPivotPanel extends GanttPivotCommon {
     return ganttTable.getJXTable();
   }
 
-  /**
-   * SUM(total)
-   * Collapse all numeric-value rows into ONE row:
-   * - each column cell = total SUM for that category
-   * - row header shows distribution across categories
-   */
   protected JXTable loadPivotGanttSumTotal(CProfile firstGrpBy,
                                            CProfile secondGrpBy,
                                            List<GanttColumnCount> ganttColumnList1,
@@ -344,10 +382,6 @@ public abstract class GanttPivotPanel extends GanttPivotCommon {
     return data;
   }
 
-  /**
-   * Data for SUM(total): one row with category totals.
-   * Keeps same table shape (header rows + totals row/col), but avoids noisy numeric-value rows.
-   */
   private Object[][] createDataSumTotal(DrawingScale drawingScale1,
                                         DrawingScale drawingScale2,
                                         List<GanttColumnCount> ganttColumnList2,
@@ -441,7 +475,6 @@ public abstract class GanttPivotPanel extends GanttPivotCommon {
     return bd.doubleValue();
   }
 
-  // --- original COUNT pivot createData + header methods (unchanged) ---
   private Object[][] createData(DrawingScale drawingScale1,
                                 DrawingScale drawingScale2,
                                 List<GanttColumnCount> ganttColumnList1,

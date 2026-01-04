@@ -9,14 +9,18 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import ru.dimension.ui.exception.NotFoundException;
+import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.HandlerMock;
+import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.config.Profile;
 import ru.dimension.ui.model.config.Query;
 import ru.dimension.ui.model.config.Task;
+import ru.dimension.ui.view.table.row.Rows;
+import ru.dimension.ui.view.table.row.Rows.ProfileRow;
 
 
 @Log4j2
@@ -112,25 +116,26 @@ public class ProfileEditHandlerTest extends HandlerMock {
     profilePanelLazy.get().getJTextFieldProfile().setText(profile.getName());
     profilePanelLazy.get().getJTextFieldDescription().setText(profile.getDescription());
 
-    profileCase.getDefaultTableModel().addRow(new Object[]{profile.getId(), profile.getName()});
+    TTTable<ProfileRow, JXTable> tt = profileCase.getTypedTable();
+    tt.addItem(new Rows.ProfileRow(profile.getId(), profile.getName()));
 
     List<Task> taskAllList = taskTestData();
 
     taskAllList.stream()
         .filter(t -> !profile.getTaskList().contains(t.getId()))
-        .forEach(
-            taskIn -> profilePanelLazy.get().getMultiSelectTaskPanel()
-                .getTaskListCase().getDefaultTableModel()
-                .addRow(new Object[]{taskIn.getId(), taskIn.getName()}));
+        .forEach(taskIn ->
+                     profilePanelLazy.get().getMultiSelectTaskPanel()
+                         .getTaskListCase().<Rows.TaskRow>getTypedTable()
+                         .addItem(new Rows.TaskRow(taskIn.getId(), taskIn.getName()))
+        );
 
     taskAllList.stream()
         .filter(t -> profile.getTaskList().contains(t.getId()))
-        .forEach(
-            taskIn -> {
-              profilePanelLazy.get().getMultiSelectTaskPanel()
-                  .getSelectedTaskCase().getDefaultTableModel()
-                  .addRow(new Object[]{taskIn.getId(), taskIn.getName()});
-            });
+        .forEach(taskIn ->
+                     profilePanelLazy.get().getMultiSelectTaskPanel()
+                         .getSelectedTaskCase().<Rows.TaskRow>getTypedTable()
+                         .addItem(new Rows.TaskRow(taskIn.getId(), taskIn.getName()))
+        );
 
     buttonProfilePanelMock.getBtnSave().doClick();
     startTabView();

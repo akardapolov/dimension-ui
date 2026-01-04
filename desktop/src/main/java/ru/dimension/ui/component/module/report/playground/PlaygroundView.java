@@ -6,14 +6,14 @@ import static ru.dimension.ui.laf.LafColorGroup.REPORT;
 
 import java.beans.PropertyChangeListener;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
-import javax.swing.DefaultCellEditor;
+import java.util.stream.Collectors;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
@@ -22,20 +22,26 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.ListSelectionModel;
-import javax.swing.UIManager;
 import javax.swing.border.EtchedBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.event.TableModelEvent;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.jdesktop.swingx.JXTitledSeparator;
 import org.jdesktop.swingx.VerticalLayout;
 import org.jdesktop.swingx.plaf.basic.CalendarHeaderHandler;
 import org.jdesktop.swingx.plaf.basic.SpinningCalendarHeaderHandler;
-import org.jdesktop.swingx.table.TableColumnExt;
 import org.painlessgridbag.PainlessGridBag;
+import ru.dimension.tt.api.TT;
+import ru.dimension.tt.api.TTRegistry;
+import ru.dimension.tt.swing.TTTable;
+import ru.dimension.tt.swing.TableUi;
+import ru.dimension.tt.swingx.JXTableTables;
 import ru.dimension.ui.component.module.chart.ReportChartModule;
 import ru.dimension.ui.component.panel.CollapseCardPanel;
 import ru.dimension.ui.exception.NotFoundException;
@@ -48,35 +54,42 @@ import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
-import ru.dimension.ui.model.column.ColumnNames;
-import ru.dimension.ui.model.column.ProfileColumnNames;
-import ru.dimension.ui.model.column.TaskColumnNames;
 import ru.dimension.ui.model.config.Profile;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TaskInfo;
-import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.state.UIState;
 import ru.dimension.ui.view.panel.DateTimePicker;
+import ru.dimension.ui.view.table.icon.ModelIconProviders;
+import ru.dimension.ui.view.table.row.Rows.PickableQueryRow;
+import ru.dimension.ui.view.table.row.Rows.ProfileRow;
+import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
 @Log4j2
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class PlaygroundView extends JPanel implements ListSelectionListener {
 
-  private static final int QUERY_PICK_COLUMN_INDEX = 1;
-  private static final int QUERY_NAME_COLUMN_INDEX = 2;
-  private static final int MIN_COLUMN_WIDTH = 30;
-  private static final int MAX_COLUMN_WIDTH = 35;
-
   private final PlaygroundModel model;
   private final JSplitPane mainSplitPane;
   private final JSplitPane modelSplitPane;
   private final JSplitPane configChartsSplitPane;
-  private final JXTableCase profileReportCase;
-  private final JXTableCase taskReportCase;
-  private final JXTableCase queryReportCase;
-  private final DefaultCellEditor queryEditor;
+
+  private final TTRegistry registry;
+  private final TTTable<ProfileRow, JXTable> profileTable;
+  private final TTTable<TaskRow, JXTable> taskTable;
+  private final TTTable<PickableQueryRow, JXTable> queryTable;
+
+  private int queryPickColumnIndex = -1;
+  private boolean ignoreCheckboxEvents = false;
+
+  public interface QueryCheckboxChangeListener {
+    void onQueryCheckboxChanged(PickableQueryRow pickableQueryRow, boolean selected);
+  }
+
+  @Setter
+  private QueryCheckboxChangeListener queryCheckboxChangeListener;
+
   private final JCheckBox collapseCard;
   private final DateTimePicker dateTimePickerFrom;
   private final DateTimePicker dateTimePickerTo;
@@ -98,13 +111,21 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
 
   public PlaygroundView(PlaygroundModel model) {
     this.model = model;
+
+    this.registry = TT.builder()
+        .scanPackages("ru.dimension.ui.view.table.row")
+        .build();
+
     this.mainSplitPane = GUIHelper.getJSplitPane(JSplitPane.HORIZONTAL_SPLIT, 10, 240);
     this.modelSplitPane = GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, 430);
     this.configChartsSplitPane = GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, 50);
-    this.profileReportCase = createProfileTable();
-    this.taskReportCase = createTaskTable();
-    this.queryReportCase = createQueryTable();
-    this.queryEditor = new DefaultCellEditor(new JCheckBox());
+
+    this.profileTable = createProfileTable();
+    this.taskTable = createTaskTable();
+    this.queryTable = createQueryTable();
+
+    setupQueryTableListener();
+
     this.collapseCard = createCollapseCheckBox();
     this.lblFrom = new JLabel("From");
     this.lblTo = new JLabel("To");
@@ -123,8 +144,122 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
     initDateTimePickers();
     setupDateChangeListeners();
     setupSelectionListeners();
-    configureQueryTableColumns();
     setupLayout();
+  }
+
+  private TTTable<ProfileRow, JXTable> createProfileTable() {
+    TTTable<ProfileRow, JXTable> tt = JXTableTables.create(
+        registry,
+        ProfileRow.class,
+        TableUi.<ProfileRow>builder()
+            .rowIcon(ModelIconProviders.forProfileRow())
+            .rowIconInColumn("name")
+            .build()
+    );
+
+    JXTable table = tt.table();
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setGridColor(java.awt.Color.GRAY);
+    table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+    table.setEditable(false);
+
+    if (table.getColumnExt("ID") != null) {
+      table.getColumnExt("ID").setVisible(false);
+    }
+
+    return tt;
+  }
+
+  private TTTable<TaskRow, JXTable> createTaskTable() {
+    TTTable<TaskRow, JXTable> tt = JXTableTables.create(
+        registry,
+        TaskRow.class,
+        TableUi.<TaskRow>builder()
+            .rowIcon(ModelIconProviders.forTaskRow())
+            .rowIconInColumn("name")
+            .build()
+    );
+
+    JXTable table = tt.table();
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setGridColor(java.awt.Color.GRAY);
+    table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+    table.setEditable(false);
+
+    if (table.getColumnExt("ID") != null) {
+      table.getColumnExt("ID").setVisible(false);
+    }
+
+    return tt;
+  }
+
+  private TTTable<PickableQueryRow, JXTable> createQueryTable() {
+    TTTable<PickableQueryRow, JXTable> tt = JXTableTables.create(
+        registry,
+        PickableQueryRow.class,
+        TableUi.<PickableQueryRow>builder()
+            .rowIcon(ModelIconProviders.forPickableQueryRow())
+            .rowIconInColumn("name")
+            .build()
+    );
+
+    JXTable table = tt.table();
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setGridColor(java.awt.Color.GRAY);
+    table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+    table.setEditable(true);
+
+    if (table.getColumnExt("ID") != null) {
+      table.getColumnExt("ID").setVisible(false);
+    }
+
+    if (table.getColumnExt("Name") != null) {
+      table.getColumnExt("Name").setEditable(false);
+    }
+
+    queryPickColumnIndex = tt.model().schema().modelIndexOf("pick");
+
+    return tt;
+  }
+
+  private void setupQueryTableListener() {
+    if (queryPickColumnIndex < 0) {
+      return;
+    }
+
+    queryTable.model().addTableModelListener(e -> {
+      if (ignoreCheckboxEvents || e.getType() != TableModelEvent.UPDATE) {
+        return;
+      }
+
+      if (e.getColumn() == queryPickColumnIndex) {
+        int row = e.getFirstRow();
+        if (row >= 0 && row < queryTable.model().getRowCount()) {
+          PickableQueryRow item = queryTable.model().itemAt(row);
+          if (item != null && queryCheckboxChangeListener != null) {
+            queryCheckboxChangeListener.onQueryCheckboxChanged(item, item.isPick());
+          }
+        }
+      }
+    });
+  }
+
+  public void setQuerySelected(int queryId, boolean selected) {
+    ignoreCheckboxEvents = true;
+    try {
+      for (int i = 0; i < queryTable.model().getRowCount(); i++) {
+        PickableQueryRow row = queryTable.model().itemAt(i);
+        if (row != null && row.getId() == queryId) {
+          queryTable.model().setValueAt(selected, i, queryPickColumnIndex);
+          break;
+        }
+      }
+    } finally {
+      ignoreCheckboxEvents = false;
+    }
   }
 
   private void initDateTimePickers() {
@@ -153,7 +288,6 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
       Date candidateTo = fromChanged ? dateTimePickerTo.getDate() : newDate;
 
       if (candidateTo.before(candidateFrom)) {
-
         if (fromChanged) {
           dateTimePickerFrom.setDate(lastValidFrom);
         } else {
@@ -185,40 +319,9 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
     SimpleDateFormat format = new SimpleDateFormat(DesignHelper.DATE_FORMAT_PATTERN);
     picker.setFormats(format);
     picker.setTimeFormat(format);
-    UIManager.put(CalendarHeaderHandler.uiControllerID, SpinningCalendarHeaderHandler.class.getName());
+    javax.swing.UIManager.put(CalendarHeaderHandler.uiControllerID, SpinningCalendarHeaderHandler.class.getName());
     picker.getMonthView().setZoomable(true);
     return picker;
-  }
-
-  private JXTableCase createProfileTable() {
-    return GUIHelper.getJXTableCase(5,
-                                    new String[]{
-                                        ProfileColumnNames.ID.getColName(),
-                                        ProfileColumnNames.NAME.getColName()
-                                    });
-  }
-
-  private JXTableCase createTaskTable() {
-    return GUIHelper.getJXTableCase(5,
-                                    new String[]{
-                                        TaskColumnNames.ID.getColName(),
-                                        TaskColumnNames.NAME.getColName()
-                                    });
-  }
-
-  /**
-   * Query table uses ColumnNames order: ID, NAME, PICK (PICK last/right).
-   */
-  private JXTableCase createQueryTable() {
-    return GUIHelper.getJXTableCaseCheckBox(
-        5,
-        new String[]{
-            ColumnNames.ID.getColName(),
-            ColumnNames.NAME.getColName(),
-            ColumnNames.PICK.getColName()
-        },
-        ColumnNames.PICK.ordinal()
-    );
   }
 
   private JCheckBox createCollapseCheckBox() {
@@ -280,20 +383,9 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
   }
 
   private void setupSelectionListeners() {
-    profileReportCase.getJxTable().getSelectionModel().addListSelectionListener(this);
-    taskReportCase.getJxTable().getSelectionModel().addListSelectionListener(this);
-    queryReportCase.getJxTable().getSelectionModel().addListSelectionListener(this);
-  }
-
-  private void configureQueryTableColumns() {
-    TableColumnExt pickExt = queryReportCase.getJxTable()
-        .getColumnExt(ColumnNames.PICK.ordinal());
-    pickExt.setMinWidth(MIN_COLUMN_WIDTH);
-    pickExt.setMaxWidth(MAX_COLUMN_WIDTH);
-
-    queryReportCase.getJxTable()
-        .getColumnExt(ColumnNames.ID.ordinal())
-        .setVisible(false);
+    profileTable.table().getSelectionModel().addListSelectionListener(this);
+    taskTable.table().getSelectionModel().addListSelectionListener(this);
+    queryTable.table().getSelectionModel().addListSelectionListener(this);
   }
 
   private void setupLayout() {
@@ -312,11 +404,11 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
 
     PainlessGridBag gbl = new PainlessGridBag(panel, PGHelper.getPGConfig(), false);
     gbl.row().cell(new JXTitledSeparator("Profile")).fillX();
-    gbl.row().cell(profileReportCase.getJScrollPane()).fillXY();
+    gbl.row().cell(profileTable.scrollPane()).fillXY();
     gbl.row().cell(new JXTitledSeparator("Task")).fillX();
-    gbl.row().cell(taskReportCase.getJScrollPane()).fillXY();
+    gbl.row().cell(taskTable.scrollPane()).fillXY();
     gbl.row().cell(new JXTitledSeparator("Query")).fillX();
-    gbl.row().cell(queryReportCase.getJScrollPane()).fillXY();
+    gbl.row().cell(queryTable.scrollPane()).fillXY();
     gbl.done();
 
     return panel;
@@ -354,34 +446,50 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
   }
 
   private void fillModel() {
-    model.getConfigurationManager().getConfigList(Profile.class)
-        .forEach(profile -> profileReportCase.getDefaultTableModel().addRow(
-            new Object[]{profile.getId(), profile.getName()}));
+    List<ProfileRow> profileRows = model.getConfigurationManager()
+        .getConfigList(Profile.class)
+        .stream()
+        .map(profile -> new ProfileRow(profile.getId(), profile.getName()))
+        .collect(Collectors.toList());
 
-    if (profileReportCase.getDefaultTableModel().getRowCount() > 0) {
-      profileReportCase.getJxTable().setRowSelectionInterval(0, 0);
+    profileTable.setItems(profileRows);
+
+    if (!profileRows.isEmpty()) {
+      profileTable.table().setRowSelectionInterval(0, 0);
     }
-
-    profileReportCase.getJxTable().getColumnExt(0).setVisible(false);
-    profileReportCase.getJxTable().getColumnModel().getColumn(0)
-        .setCellRenderer(new GUIHelper.ActiveColumnCellRenderer());
-
-    taskReportCase.getJxTable().getColumnExt(0).setVisible(false);
-    taskReportCase.getJxTable().getColumnModel().getColumn(0)
-        .setCellRenderer(new GUIHelper.ActiveColumnCellRenderer());
   }
 
   public ProfileTaskQueryKey getProfileTaskQueryKey() {
-    int profileId = (int) profileReportCase.getDefaultTableModel()
-        .getValueAt(profileReportCase.getJxTable().getSelectedRow(), 0);
+    int profileRowIndex = profileTable.table().getSelectedRow();
+    if (profileRowIndex < 0) {
+      throw new IllegalStateException("No profile selected");
+    }
+    ProfileRow profileRow = profileTable.model().itemAt(profileRowIndex);
+    int profileId = profileRow.getId();
 
-    int taskId = (int) taskReportCase.getDefaultTableModel()
-        .getValueAt(taskReportCase.getJxTable().getSelectedRow(), 0);
+    int taskRowIndex = taskTable.table().getSelectedRow();
+    if (taskRowIndex < 0) {
+      throw new IllegalStateException("No task selected");
+    }
+    TaskRow taskRow = taskTable.model().itemAt(taskRowIndex);
+    int taskId = taskRow.getId();
 
-    int queryId = (int) queryReportCase.getDefaultTableModel()
-        .getValueAt(queryReportCase.getJxTable().getSelectedRow(), ColumnNames.ID.ordinal());
+    int queryRowIndex = queryTable.table().getSelectedRow();
+    if (queryRowIndex < 0) {
+      throw new IllegalStateException("No query selected");
+    }
+    PickableQueryRow pickableQueryRow = queryTable.model().itemAt(queryRowIndex);
+    int queryId = pickableQueryRow.getId();
 
     return new ProfileTaskQueryKey(profileId, taskId, queryId);
+  }
+
+  public PickableQueryRow getSelectedQueryRow() {
+    int queryRowIndex = queryTable.table().getSelectedRow();
+    if (queryRowIndex < 0) {
+      return null;
+    }
+    return queryTable.model().itemAt(queryRowIndex);
   }
 
   private JXTaskPaneContainer initContainerCard() {
@@ -393,7 +501,6 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
 
   public void addChartCard(ReportChartModule taskPane,
                            BiConsumer<ReportChartModule, Exception> onComplete) {
-
     addChartCard(taskPane);
 
     SwingTaskRunner.runWithProgress(
@@ -424,9 +531,18 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
   }
 
   public void clearAllCharts() {
-    chartContainer.removeAll();
-    chartContainer.revalidate();
-    chartContainer.repaint();
+    ignoreCheckboxEvents = true;
+    try {
+      for (int i = 0; i < queryTable.model().getRowCount(); i++) {
+        queryTable.model().setValueAt(false, i, queryPickColumnIndex);
+      }
+
+      chartContainer.removeAll();
+      chartContainer.revalidate();
+      chartContainer.repaint();
+    } finally {
+      ignoreCheckboxEvents = false;
+    }
   }
 
   @Override
@@ -440,9 +556,9 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
       return;
     }
 
-    if (e.getSource() == profileReportCase.getJxTable().getSelectionModel()) {
+    if (e.getSource() == profileTable.table().getSelectionModel()) {
       handleProfileSelection();
-    } else if (e.getSource() == taskReportCase.getJxTable().getSelectionModel()) {
+    } else if (e.getSource() == taskTable.table().getSelectionModel()) {
       handleTaskSelection();
     }
   }
@@ -473,17 +589,16 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
   }
 
   private void clearTaskTable() {
-    taskReportCase.getDefaultTableModel().getDataVector().removeAllElements();
-    taskReportCase.getDefaultTableModel().fireTableDataChanged();
+    taskTable.setItems(Collections.emptyList());
   }
 
   private int getSelectedProfileId() {
-    return GUIHelper.getIdByColumnName(
-        profileReportCase.getJxTable(),
-        profileReportCase.getDefaultTableModel(),
-        profileReportCase.getJxTable().getSelectionModel(),
-        ProfileColumnNames.ID.getColName()
-    );
+    int rowIndex = profileTable.table().getSelectedRow();
+    if (rowIndex < 0) {
+      return -1;
+    }
+    ProfileRow row = profileTable.model().itemAt(rowIndex);
+    return row != null ? row.getId() : -1;
   }
 
   private void showProfileNotSelectedError() {
@@ -494,35 +609,39 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
   }
 
   private void loadTasksForProfile(int profileId) {
-    model.getProfileManager().getProfileInfoById(profileId).getTaskInfoList()
-        .forEach(taskId -> {
+    List<TaskRow> taskRows = model.getProfileManager()
+        .getProfileInfoById(profileId)
+        .getTaskInfoList()
+        .stream()
+        .map(taskId -> {
           TaskInfo taskInfo = model.getProfileManager().getTaskInfoById(taskId);
           if (taskInfo == null) {
             throw new NotFoundException("Not found task: " + taskId);
           }
-          taskReportCase.getDefaultTableModel().addRow(
-              new Object[]{taskInfo.getId(), taskInfo.getName()});
-        });
+          return new TaskRow(taskInfo.getId(), taskInfo.getName());
+        })
+        .collect(Collectors.toList());
+
+    taskTable.setItems(taskRows);
   }
 
   private void updateTaskSelection() {
-    if (taskReportCase.getDefaultTableModel().getRowCount() > 0) {
-      taskReportCase.getJxTable().setRowSelectionInterval(0, 0);
+    if (taskTable.model().getRowCount() > 0) {
+      taskTable.table().setRowSelectionInterval(0, 0);
     } else {
       clearQueryTable();
     }
   }
 
   private void clearQueryTable() {
-    queryReportCase.getDefaultTableModel().getDataVector().removeAllElements();
-    queryReportCase.getDefaultTableModel().fireTableDataChanged();
+    queryTable.setItems(Collections.emptyList());
   }
 
   private void handleTaskSelection() {
     clearQueryTable();
     int taskId = getSelectedTaskId();
 
-    if (taskReportCase.getDefaultTableModel().getRowCount() > 0) {
+    if (taskTable.model().getRowCount() > 0) {
       loadQueriesForTask(taskId);
     } else {
       loadAllQueries();
@@ -533,12 +652,12 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
   }
 
   private int getSelectedTaskId() {
-    return GUIHelper.getIdByColumnName(
-        taskReportCase.getJxTable(),
-        taskReportCase.getDefaultTableModel(),
-        taskReportCase.getJxTable().getSelectionModel(),
-        TaskColumnNames.ID.getColName()
-    );
+    int rowIndex = taskTable.table().getSelectedRow();
+    if (rowIndex < 0) {
+      return -1;
+    }
+    TaskRow row = taskTable.model().itemAt(rowIndex);
+    return row != null ? row.getId() : -1;
   }
 
   private void loadQueriesForTask(int taskId) {
@@ -547,39 +666,33 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
       throw new NotFoundException("Not found task: " + taskId);
     }
 
-    AtomicInteger row = new AtomicInteger();
-    taskInfo.getQueryInfoList().forEach(queryId -> {
-      QueryInfo queryInfo = model.getProfileManager().getQueryInfoById(queryId);
-      if (queryInfo == null) {
-        throw new NotFoundException("Not found query: " + queryId);
-      }
-      addQueryToTable(row.getAndIncrement(), queryInfo);
-    });
-  }
+    List<PickableQueryRow> pickableQueryRows = taskInfo.getQueryInfoList()
+        .stream()
+        .map(queryId -> {
+          QueryInfo queryInfo = model.getProfileManager().getQueryInfoById(queryId);
+          if (queryInfo == null) {
+            throw new NotFoundException("Not found query: " + queryId);
+          }
+          return new PickableQueryRow(queryInfo.getId(), queryInfo.getName(), false);
+        })
+        .collect(Collectors.toList());
 
-  private void addQueryToTable(int row, QueryInfo queryInfo) {
-    queryReportCase.getDefaultTableModel().addRow(new Object[0]);
-
-    queryReportCase.getDefaultTableModel().setValueAt(queryInfo.getId(), row, ColumnNames.ID.ordinal());
-    queryReportCase.getDefaultTableModel().setValueAt(queryInfo.getName(), row, ColumnNames.NAME.ordinal());
-    queryReportCase.getDefaultTableModel().setValueAt(false, row, ColumnNames.PICK.ordinal());
+    queryTable.setItems(pickableQueryRows);
   }
 
   private void loadAllQueries() {
-    List<QueryInfo> queryList = model.getProfileManager().getQueryInfoList();
-    for (int i = 0; i < queryList.size(); i++) {
-      queryReportCase.getDefaultTableModel().addRow(new Object[0]);
-      queryReportCase.getDefaultTableModel().setValueAt(queryList.get(i).getId(), i, ColumnNames.ID.ordinal());
-      queryReportCase.getDefaultTableModel().setValueAt(queryList.get(i).getName(), i, ColumnNames.NAME.ordinal());
-      queryReportCase.getDefaultTableModel().setValueAt(false, i, ColumnNames.PICK.ordinal());
-    }
+    List<PickableQueryRow> pickableQueryRows = model.getProfileManager()
+        .getQueryInfoList()
+        .stream()
+        .map(queryInfo -> new PickableQueryRow(queryInfo.getId(), queryInfo.getName(), false))
+        .collect(Collectors.toList());
+
+    queryTable.setItems(pickableQueryRows);
   }
 
   private void updateQuerySelection() {
-    if (queryReportCase.getDefaultTableModel().getRowCount() > 0) {
-      queryReportCase.getJxTable().setRowSelectionInterval(0, 0);
-    } else {
-      clearQueryTable();
+    if (queryTable.model().getRowCount() > 0) {
+      queryTable.table().setRowSelectionInterval(0, 0);
     }
   }
 
@@ -588,23 +701,27 @@ public class PlaygroundView extends JPanel implements ListSelectionListener {
       return;
     }
 
-    int profileId = (int) profileReportCase.getDefaultTableModel()
-        .getValueAt(profileReportCase.getJxTable().getSelectedRow(), 0);
+    int profileId = getSelectedProfileId();
     int taskId = getSelectedTaskId();
 
-    for (ProfileTaskQueryKey key : model.getMapReportData().keySet()) {
-      if (profileId == key.getProfileId() && taskId == key.getTaskId()) {
-        markQueryIfSelected(key);
+    ignoreCheckboxEvents = true;
+    try {
+      for (ProfileTaskQueryKey key : model.getMapReportData().keySet()) {
+        if (profileId == key.getProfileId() && taskId == key.getTaskId()) {
+          markQueryIfSelected(key);
+        }
       }
+    } finally {
+      ignoreCheckboxEvents = false;
     }
   }
 
   private void markQueryIfSelected(ProfileTaskQueryKey key) {
-    for (int row = 0; row < queryReportCase.getJxTable().getRowCount(); row++) {
-      int queryId = (int) queryReportCase.getDefaultTableModel()
-          .getValueAt(row, ColumnNames.ID.ordinal());
-      if (queryId == key.getQueryId()) {
-        queryReportCase.getJxTable().setValueAt(true, row, ColumnNames.PICK.ordinal());
+    for (int row = 0; row < queryTable.model().getRowCount(); row++) {
+      PickableQueryRow pickableQueryRow = queryTable.model().itemAt(row);
+      if (pickableQueryRow != null && pickableQueryRow.getId() == key.getQueryId()) {
+        queryTable.model().setValueAt(true, row, queryPickColumnIndex);
+        break;
       }
     }
   }

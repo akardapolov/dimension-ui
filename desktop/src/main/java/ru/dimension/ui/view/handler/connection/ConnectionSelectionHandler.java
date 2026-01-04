@@ -13,8 +13,9 @@ import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
+import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.helper.GUIHelper;
-import ru.dimension.ui.model.column.TaskColumnNames;
 import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.table.JXTableCase;
@@ -28,6 +29,7 @@ import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.manager.TemplateManager;
 import ru.dimension.ui.prompt.Internationalization;
+import ru.dimension.ui.view.table.row.Rows.ConnectionRow;
 
 @Log4j2
 @Singleton
@@ -115,9 +117,7 @@ public class ConnectionSelectionHandler extends MouseListenerImpl implements Lis
         emptyTabHTTP();
 
       } else {
-        int connectionID = GUIHelper.getIdByColumnName(connectionCase.getJxTable(),
-                                                       connectionCase.getDefaultTableModel(),
-                                                       listSelectionModel, TaskColumnNames.ID.getColName());
+        int connectionID = getSelectedConnectionId();
 
         ConnectionInfo selectConnection = profileManager.getConnectionInfoById(connectionID);
 
@@ -150,6 +150,16 @@ public class ConnectionSelectionHandler extends MouseListenerImpl implements Lis
         connectionPanel.getConnectionTemplateCase().getJxTable().setEnabled(!isSelected);
       }
     }
+  }
+
+  private int getSelectedConnectionId() {
+    int selectedRow = connectionCase.getJxTable().getSelectedRow();
+    if (selectedRow < 0) {
+      return -1;
+    }
+    TTTable<ConnectionRow, JXTable> tt = connectionCase.getTypedTable();
+    ConnectionRow row = tt.model().itemAt(selectedRow);
+    return row != null ? row.getId() : -1;
   }
 
   public void emptyTabJDBC() {
@@ -203,5 +213,3 @@ public class ConnectionSelectionHandler extends MouseListenerImpl implements Lis
     }
   }
 }
-
-

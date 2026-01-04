@@ -11,25 +11,32 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
 import ru.dimension.db.model.output.GanttColumnCount;
 import ru.dimension.db.model.profile.CProfile;
-import org.jdesktop.swingx.JXTable;
-import ru.dimension.ui.helper.GUIHelper;
-import ru.dimension.ui.model.table.JXTableCase;
+import ru.dimension.tt.api.TT;
+import ru.dimension.tt.api.TTRegistry;
+import ru.dimension.tt.swing.TTTable;
+import ru.dimension.tt.swing.TableUi;
+import ru.dimension.tt.swingx.JXTableTables;
 import ru.dimension.ui.laf.LaF;
-import ru.dimension.ui.model.column.MetricsColumnNames;
 import ru.dimension.ui.model.gantt.DrawingScale;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.view.detail.GanttPivotCommon;
+import ru.dimension.ui.view.table.icon.ModelIconProviders;
+import ru.dimension.ui.view.table.row.Rows.ColumnRow;
 
 @Log4j2
 public abstract class GanttReportPanel extends GanttPivotCommon {
 
   protected JSplitPane jSplitPane;
-  protected JXTableCase jxTableCase;
+
+  // was: protected JXTableCase jxTableCase;
+  protected TTTable<ColumnRow, JXTable> columnTable;
 
   public GanttReportPanel(TableInfo tableInfo,
                           CProfile cProfile,
@@ -37,7 +44,6 @@ public abstract class GanttReportPanel extends GanttPivotCommon {
                           long end,
                           Map<String, Color> seriesColorMap) {
     super(tableInfo, cProfile, begin, end, seriesColorMap);
-
     initUI();
   }
 
@@ -62,9 +68,7 @@ public abstract class GanttReportPanel extends GanttPivotCommon {
         seriesColorMap);
 
     setGanttTableParameters(visibleRowCount, rowHeightForJTable, ganttTable);
-
     setTableHeaderFont(ganttTable, new Font("Arial", Font.BOLD, 14));
-
     setTooltipAndPercent(ganttTable);
 
     ganttTable.getJXTable().setShowVerticalLines(true);
@@ -81,20 +85,53 @@ public abstract class GanttReportPanel extends GanttPivotCommon {
   protected void initUI() {
     this.jSplitPane = new JSplitPane();
     this.jSplitPane.setDividerLocation(DIVIDER_LOCATION);
-    this.jxTableCase = GUIHelper.getJXTableCase(5,
-                                                new String[]{MetricsColumnNames.ID.getColName(),
-                                                    MetricsColumnNames.COLUMN_NAME.getColName()});
-    this.jxTableCase.getJxTable().getColumnExt(0).setVisible(false);
-    this.jxTableCase.getJxTable().getColumnModel().getColumn(0)
-        .setCellRenderer(new GUIHelper.ActiveColumnCellRenderer());
 
-    this.tableInfo.getCProfiles().forEach(cProfile -> {
-      if (!cProfile.getCsType().isTimeStamp()) {
-        if (!cProfile.getColName().equalsIgnoreCase(this.cProfile.getColName())) {
-          this.jxTableCase.getDefaultTableModel().addRow(new Object[]{cProfile.getColId(), cProfile.getColName()});
-        }
-      }
-    });
+    TTRegistry registry = TT.builder()
+        .scanPackages("ru.dimension.ui.view.table.row")
+        .build();
+
+    this.columnTable = createProfileTable(registry);
+    populateProfileTable();
+  }
+
+  private TTTable<ColumnRow, JXTable> createProfileTable(TTRegistry registry) {
+    TTTable<ColumnRow, JXTable> tt = JXTableTables.create(
+        registry,
+        ColumnRow.class,
+        TableUi.<ColumnRow>builder()
+            .rowIcon(ModelIconProviders.forColumnRow())
+            .rowIconInColumn("name")
+            .build()
+    );
+
+    JXTable table = tt.table();
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setGridColor(Color.GRAY);
+    table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+    table.setEditable(false);
+
+    if (table.getColumnExt("ID") != null) table.getColumnExt("ID").setVisible(false);
+    if (table.getColumnExt("Pick") != null) table.getColumnExt("Pick").setVisible(false);
+    if (table.getColumnExt("pick") != null) table.getColumnExt("pick").setVisible(false);
+
+    table.getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+    return tt;
+  }
+
+  private void populateProfileTable() {
+    if (tableInfo == null || tableInfo.getCProfiles() == null) {
+      columnTable.setItems(List.of());
+      return;
+    }
+
+    List<ColumnRow> rows = tableInfo.getCProfiles().stream()
+        .filter(cp -> !cp.getCsType().isTimeStamp())
+        .filter(cp -> !cp.getColName().equalsIgnoreCase(this.cProfile.getColName()))
+        .map(cp -> new ColumnRow(cp, false))
+        .collect(Collectors.toList());
+
+    columnTable.setItems(rows);
   }
 
   private Object[][] createData(String[][] columnNames,

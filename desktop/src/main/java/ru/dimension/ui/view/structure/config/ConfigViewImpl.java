@@ -19,12 +19,12 @@ import javax.swing.KeyStroke;
 import javax.swing.border.Border;
 import javax.swing.border.EtchedBorder;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTitledSeparator;
 import org.painlessgridbag.PainlessGridBag;
+import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.helper.GUIHelper;
-import ru.dimension.ui.helper.GUIHelper.ActiveColumnCellRenderer;
 import ru.dimension.ui.helper.PGHelper;
-import ru.dimension.ui.model.column.ProfileColumnNames;
 import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.config.Profile;
 import ru.dimension.ui.model.config.Query;
@@ -50,6 +50,7 @@ import ru.dimension.ui.view.panel.config.query.QueryPanel;
 import ru.dimension.ui.view.panel.config.task.TaskPanel;
 import ru.dimension.ui.view.structure.ConfigView;
 import ru.dimension.ui.view.tab.ConfigTab;
+import ru.dimension.ui.view.table.row.Rows.ProfileRow;
 
 @Log4j2
 @Singleton
@@ -206,8 +207,10 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
       log.info("Profile id to view: {}", id);
 
       if (profileCase.getJxTable().getSelectedRowCount() > 0) {
-        int rowIndex = getRowIndexForIdColumnFromModel(ProfileColumnNames.ID.getColName(), id);
-        profileCase.getJxTable().setRowSelectionInterval(rowIndex, rowIndex);
+        int rowIndex = getRowIndexForProfileId(id);
+        if (rowIndex >= 0) {
+          profileCase.getJxTable().setRowSelectionInterval(rowIndex, rowIndex);
+        }
       }
     } catch (Exception e) {
       log.catching(e);
@@ -216,38 +219,41 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
     this.packConfig(true);
   }
 
-  private int getRowIndexForIdColumnFromModel(String columnName,
-                                              int columnValue) {
-    int index = 0;
-    for (int i = 0; i < profileCase.getDefaultTableModel().getRowCount(); i++) {
-      int rowValue = (int) profileCase.getDefaultTableModel()
-          .getValueAt(i, profileCase.getDefaultTableModel().findColumn(columnName));
-      if (columnValue == rowValue) {
-        index = i;
+  private int getRowIndexForProfileId(int profileId) {
+    TTTable<ProfileRow, JXTable> tt = profileCase.getTypedTable();
+    for (int i = 0; i < tt.model().getRowCount(); i++) {
+      ProfileRow row = tt.model().itemAt(i);
+      if (row != null && row.getId() == profileId) {
+        return i;
       }
     }
-    return index;
+    return -1;
   }
 
   @Override
   public void bindPresenter(ConfigPresenter configPresenter) {
     configPresenter.fillProfileModel(Profile.class);
-    profileCase.getJxTable().getColumnExt(0).setVisible(false);
-    profileCase.getJxTable().getColumnModel().getColumn(0).setCellRenderer(new ActiveColumnCellRenderer());
-
     configPresenter.fillProfileModel(Task.class);
-    taskCase.getJxTable().getColumnExt(0).setVisible(false);
-    taskCase.getJxTable().getColumnModel().getColumn(0).setCellRenderer(new ActiveColumnCellRenderer());
-
     configPresenter.fillProfileModel(Connection.class);
-    connectionCase.getJxTable().getColumnExt(0).setVisible(false);
-    connectionCase.getJxTable().getColumnModel().getColumn(0)
-        .setCellRenderer(new ActiveColumnCellRenderer());
-
     configPresenter.fillProfileModel(Query.class);
-    queryCase.getJxTable().getColumnExt(0).setVisible(false);
-    queryCase.getJxTable().getColumnModel().getColumn(0).setCellRenderer(new ActiveColumnCellRenderer());
+
+    hideIdColumnIfExists(profileCase.getJxTable());
+    hideIdColumnIfExists(taskCase.getJxTable());
+    hideIdColumnIfExists(connectionCase.getJxTable());
+    hideIdColumnIfExists(queryCase.getJxTable());
+
     addWindowListener(configPresenter);
+  }
+
+  private void hideIdColumnIfExists(JXTable table) {
+    try {
+      var columnExt = table.getColumnExt("ID");
+      if (columnExt != null) {
+        columnExt.setVisible(false);
+      }
+    } catch (Exception e) {
+      log.debug("Column 'ID' not found or already hidden: {}", e.getMessage());
+    }
   }
 
   private void packConfig(boolean visible) {
