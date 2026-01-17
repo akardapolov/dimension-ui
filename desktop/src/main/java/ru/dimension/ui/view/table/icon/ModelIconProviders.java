@@ -15,6 +15,7 @@ import ru.dimension.ui.view.table.icon.adhoc.TimestampIcon;
 import ru.dimension.ui.view.table.icon.adhoc.ViewIcon;
 import ru.dimension.ui.view.table.row.Rows.ColumnRow;
 import ru.dimension.ui.view.table.row.Rows.ConnectionRow;
+import ru.dimension.ui.view.table.row.Rows.ConnectionTemplateRow;
 import ru.dimension.ui.view.table.row.Rows.DesignRow;
 import ru.dimension.ui.view.table.row.Rows.EntityRow;
 import ru.dimension.ui.view.table.row.Rows.MetadataRow;
@@ -34,7 +35,7 @@ public class ModelIconProviders {
   private static final Color DESIGN_COLOR  = new Color(0x8B5CF6);
 
   private static final RowIconProvider.RowIcon DEFAULT_ROW_ICON =
-      new RowIconProvider.RowIcon(new DTGroupIcon(null), "Unknown type");
+      new RowIconProvider.RowIcon(new DTGroupIcon(null), null);
 
   private static final RowIconProvider.RowIcon DEFAULT_CONNECTION_ICON =
       new RowIconProvider.RowIcon(new DBTypeIcon(null), "Database Connection");
@@ -46,69 +47,103 @@ public class ModelIconProviders {
   public static RowIconProvider<DesignRow> forDesignRow() {
     return row -> new RowIconProvider.RowIcon(
         new VectorIcons.Design(DESIGN_COLOR),
-        "Design Configuration"
+        row != null ? row.getName() : "Design Configuration"
     );
   }
 
   public static RowIconProvider<ProfileRow> forProfileRow() {
     return row -> new RowIconProvider.RowIcon(
         new VectorIcons.Profile(PROFILE_COLOR),
-        "Profile"
+        row != null ? row.getName() : "Profile"
     );
   }
 
   public static RowIconProvider<TaskRow> forTaskRow() {
     return row -> new RowIconProvider.RowIcon(
         new VectorIcons.Task(TASK_COLOR),
-        "Task"
+        row != null ? row.getName() : "Task"
     );
   }
 
   public static RowIconProvider<QueryRow> forQueryRow() {
     return row -> new RowIconProvider.RowIcon(
         new VectorIcons.Query(QUERY_COLOR),
-        "Query"
+        row != null ? row.getName() : "Query"
     );
   }
 
   public static RowIconProvider<QueryTableRow> forQueryTableRow() {
     return row -> new RowIconProvider.RowIcon(
         new VectorIcons.Query(QUERY_COLOR),
-        "Query"
+        row != null ? row.getName() : "Query"
     );
   }
 
   public static RowIconProvider<PickableQueryRow> forPickableQueryRow() {
     return row -> new RowIconProvider.RowIcon(
         new VectorIcons.Query(QUERY_COLOR),
-        "Query"
+        row != null ? row.getName() : "Query"
     );
   }
 
   public static RowIconProvider<ColumnRow> forColumnRow() {
     return row -> {
-      if (row == null || !row.hasOrigin()) return DEFAULT_ROW_ICON;
+      if (row == null) return DEFAULT_ROW_ICON;
+      String name = row.getName();
+
+      if (!row.hasOrigin()) {
+        return new RowIconProvider.RowIcon(new DTGroupIcon(null), name);
+      }
+
       DTGroup group = extractDTGroup(row.getOrigin());
-      return new RowIconProvider.RowIcon(new DTGroupIcon(group), getTooltipForDTGroup(group));
+      String typeInfo = getTooltipForDTGroup(group);
+      String tooltip = (name != null && !name.isBlank())
+          ? name + " (" + typeInfo + ")"
+          : typeInfo;
+
+      return new RowIconProvider.RowIcon(new DTGroupIcon(group), tooltip);
     };
   }
 
   public static RowIconProvider<MetricRow> forMetricRow() {
     return row -> {
-      if (row == null || !row.hasOrigin()) return DEFAULT_ROW_ICON;
+      if (row == null) return DEFAULT_ROW_ICON;
+      String name = row.getName();
+
+      if (!row.hasOrigin()) {
+        return new RowIconProvider.RowIcon(new DTGroupIcon(null), name);
+      }
+
       Metric metric = row.getOrigin();
       CProfile yAxis = metric.getYAxis();
       if (yAxis == null) return DEFAULT_ROW_ICON;
+
       DTGroup group = extractDTGroup(yAxis);
-      return new RowIconProvider.RowIcon(new DTGroupIcon(group), getTooltipForDTGroup(group));
+      String typeInfo = getTooltipForDTGroup(group);
+      String tooltip = (name != null && !name.isBlank())
+          ? name + " (" + typeInfo + ")"
+          : typeInfo;
+
+      return new RowIconProvider.RowIcon(new DTGroupIcon(group), tooltip);
     };
   }
 
   public static RowIconProvider<MetadataRow> forMetadataRow() {
     return row -> {
-      if (row == null || !row.hasOrigin()) return DEFAULT_ROW_ICON;
+      if (row == null) return DEFAULT_ROW_ICON;
+      String name = row.getColName();
+
+      if (!row.hasOrigin()) {
+        return new RowIconProvider.RowIcon(new DTGroupIcon(null), name);
+      }
+
       DTGroup group = extractDTGroup(row.getOrigin());
-      return new RowIconProvider.RowIcon(new DTGroupIcon(group), getTooltipForDTGroup(group));
+      String typeInfo = getTooltipForDTGroup(group);
+      String tooltip = (name != null && !name.isBlank())
+          ? name + " (" + typeInfo + ")"
+          : typeInfo;
+
+      return new RowIconProvider.RowIcon(new DTGroupIcon(group), tooltip);
     };
   }
 
@@ -121,10 +156,15 @@ public class ModelIconProviders {
   public static RowIconProvider<ConnectionRow> forConnectionRow(Function<Integer, DBType> dbTypeLookup) {
     return row -> {
       if (row == null) return DEFAULT_CONNECTION_ICON;
+
       DBType dbType = dbTypeLookup != null ? dbTypeLookup.apply(row.getId()) : null;
+      String name = row.getName();
+      String typeInfo = getTooltipForDBType(dbType);
+      String tooltip = (name != null && !name.isBlank()) ? name + " [" + typeInfo + "]" : typeInfo;
+
       return new RowIconProvider.RowIcon(
           new DBTypeIcon(dbType),
-          getTooltipForDBType(dbType)
+          tooltip
       );
     };
   }
@@ -135,10 +175,15 @@ public class ModelIconProviders {
   public static RowIconProvider<ConnectionRow> forConnectionRow() {
     return row -> {
       if (row == null) return DEFAULT_CONNECTION_ICON;
+
       DBType dbType = row.getDbType();
+      String name = row.getName();
+      String typeInfo = getTooltipForDBType(dbType);
+      String tooltip = (name != null && !name.isBlank()) ? name + " [" + typeInfo + "]" : typeInfo;
+
       return new RowIconProvider.RowIcon(
           new DBTypeIcon(dbType),
-          getTooltipForDBType(dbType)
+          tooltip
       );
     };
   }
@@ -149,7 +194,7 @@ public class ModelIconProviders {
   public static RowIconProvider<EntityRow> forTableRow() {
     return row -> new RowIconProvider.RowIcon(
         new TableIcon(),
-        "Database Table"
+        row != null ? row.getName() : "Database Table"
     );
   }
 
@@ -159,7 +204,7 @@ public class ModelIconProviders {
   public static RowIconProvider<EntityRow> forViewRow() {
     return row -> new RowIconProvider.RowIcon(
         new ViewIcon(),
-        "Database View"
+        row != null ? row.getName() : "Database View"
     );
   }
 
@@ -169,8 +214,48 @@ public class ModelIconProviders {
   public static RowIconProvider<TimestampRow> forTimestampRow() {
     return row -> new RowIconProvider.RowIcon(
         new TimestampIcon(),
-        "Timestamp Column"
+        row != null ? row.getName() : "Timestamp Column"
     );
+  }
+
+  /**
+   * Provider for ConnectionTemplateRow.
+   */
+  public static RowIconProvider<ConnectionTemplateRow> forConnectionTemplateRow() {
+    return row -> {
+      if (row == null) return DEFAULT_CONNECTION_ICON;
+
+      DBType dbType = guessDbType(row);
+
+      String name = row.getName();
+      String typeInfo = getTooltipForDBType(dbType);
+      String tooltip = (name != null && !name.isBlank())
+          ? name + " [" + typeInfo + "]"
+          : typeInfo;
+
+      return new RowIconProvider.RowIcon(new DBTypeIcon(dbType), tooltip);
+    };
+  }
+
+  private static DBType guessDbType(ConnectionTemplateRow row) {
+    String blob = String.valueOf(row.getType()) + " " +
+        String.valueOf(row.getUrl()) + " " +
+        String.valueOf(row.getDriver()) + " " +
+        String.valueOf(row.getJar()) + " " +
+        String.valueOf(row.getHttpMethod());
+
+    String s = blob.toLowerCase();
+
+    if (s.contains("http")) return DBType.HTTP;
+    if (s.contains("postgres")) return DBType.POSTGRES;
+    if (s.contains("oracle")) return DBType.ORACLE;
+    if (s.contains("sqlserver") || s.contains("mssql")) return DBType.MSSQL;
+    if (s.contains("clickhouse")) return DBType.CLICKHOUSE;
+    if (s.contains("mysql")) return DBType.MYSQL;
+    if (s.contains("duckdb")) return DBType.DUCKDB;
+    if (s.contains("firebird")) return DBType.FIREBIRD;
+
+    return DBType.UNKNOWN;
   }
 
   // ==================== Helper Methods ====================

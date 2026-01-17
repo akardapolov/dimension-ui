@@ -1,19 +1,24 @@
 package ru.dimension.ui.manager.impl;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
-import jakarta.inject.Inject;
-import jakarta.inject.Named;
-import jakarta.inject.Singleton;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.TableNameEmptyException;
 import ru.dimension.ui.cache.AppCache;
 import ru.dimension.ui.collector.JdbcLoader;
 import ru.dimension.ui.exception.NotFoundException;
+import ru.dimension.ui.manager.ConfigurationManager;
+import ru.dimension.ui.manager.ConnectionPoolManager;
+import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.RunStatus;
 import ru.dimension.ui.model.config.Connection;
@@ -28,11 +33,10 @@ import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.TaskInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
+import ru.dimension.ui.model.sql.GatherDataMode;
+import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.RangeRealTime;
-import ru.dimension.ui.manager.ConfigurationManager;
-import ru.dimension.ui.manager.ConnectionPoolManager;
-import ru.dimension.ui.manager.ProfileManager;
 
 @Log4j2
 @Singleton
@@ -524,13 +528,50 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
   public List<QueryInfo> getQueryInfoListByConnDriver(String connDriver) {
     return this.appCache.getTaskInfoMap().values()
         .stream()
-        .filter(f -> this.appCache.getConnectionInfo(f.getConnectionId()).getDriver() != null &&
-            this.appCache.getConnectionInfo(f.getConnectionId()).getDriver().equalsIgnoreCase(connDriver))
+        .filter(t -> {
+          ConnectionInfo ci = this.appCache.getConnectionInfo(t.getConnectionId());
+          return ci != null
+              && ci.getDriver() != null
+              && ci.getDriver().equalsIgnoreCase(connDriver);
+        })
         .flatMap(t -> t.getQueryInfoList().stream())
         .distinct()
-        .toList()
-        .stream()
         .map(this.appCache::getQueryInfo)
+        .toList();
+  }
+
+  @Override
+  public List<QueryInfo> getQueryInfoListByConnectionType(ConnectionType connectionType) {
+    return this.appCache.getTaskInfoMap().values()
+        .stream()
+        .filter(t -> {
+          ConnectionInfo conn = this.appCache.getConnectionInfo(t.getConnectionId());
+          return conn != null && conn.getType() == connectionType;
+        })
+        .flatMap(t -> t.getQueryInfoList().stream())
+        .distinct()
+        .map(this.appCache::getQueryInfo)
+        .filter(Objects::nonNull)
+        .toList();
+  }
+
+  @Override
+  public List<QueryInfo> getOrphanQueryInfoList() {
+    Set<Integer> assignedQueryIds = this.appCache.getTaskInfoMap().values()
+        .stream()
+        .flatMap(t -> t.getQueryInfoList().stream())
+        .collect(Collectors.toSet());
+
+    return this.appCache.getQueryInfo().values()
+        .stream()
+        .filter(q -> !assignedQueryIds.contains(q.getId()))
+        .toList();
+  }
+
+  @Override
+  public List<QueryInfo> getHttpOrphanQueryInfoList() {
+    return getOrphanQueryInfoList().stream()
+        .filter(q -> q.getGatherDataMode() == GatherDataMode.BY_CLIENT_HTTP)
         .toList();
   }
 

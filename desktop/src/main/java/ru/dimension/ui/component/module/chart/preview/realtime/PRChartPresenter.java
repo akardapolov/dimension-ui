@@ -179,6 +179,8 @@ public class PRChartPresenter extends BaseUnitPresenter<PRChartView> implements 
 
     if (GatherDataMode.BY_CLIENT_JDBC.equals(queryInfo.getGatherDataMode())) {
       return new ClientRealtimeSCP(model.getSqlQueryState(), dStore, config, key, topMapSelected);
+    } else if (GatherDataMode.BY_CLIENT_HTTP.equals(queryInfo.getGatherDataMode())) {
+      return new ClientRealtimeSCP(model.getSqlQueryState(), dStore, config, key, topMapSelected);
     } else {
       return new ServerRealtimeSCP(model.getSqlQueryState(), dStore, config, key, topMapSelected);
     }

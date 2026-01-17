@@ -6,11 +6,17 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import javax.swing.SwingUtilities;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
+import org.jdesktop.swingx.JXTable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
@@ -35,9 +41,11 @@ import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.config.Query;
 import ru.dimension.ui.model.config.Task;
 import ru.dimension.ui.model.table.JXTableCase;
+import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.tab.ConnectionTypeTabPane;
 import ru.dimension.ui.security.EncryptDecrypt;
 import ru.dimension.ui.view.handler.connection.ConnectionButtonPanelHandler;
+import ru.dimension.ui.view.handler.core.ConfigSelectionContext;
 import ru.dimension.ui.view.handler.profile.ProfileButtonPanelHandler;
 import ru.dimension.ui.view.handler.query.QueryButtonPanelHandler;
 import ru.dimension.ui.view.handler.task.TaskButtonPanelHandler;
@@ -62,7 +70,6 @@ public abstract class HandlerMock {
 
   protected ObjectMapper objectMapper;
 
-  // --- Lazily-loaded dependencies for tests ---
   protected Supplier<QueryButtonPanelHandler> queryButtonPanelHandlerLazy;
   protected Supplier<QueryPanel> queryPanelLazy;
   protected Supplier<ConfigurationManagerImpl> configurationManagerLazy;
@@ -77,6 +84,7 @@ public abstract class HandlerMock {
   protected Supplier<ConnectionPanel> connectionPanelLazy;
   protected Supplier<AppCacheImpl> appCacheLazy;
   protected Supplier<ConfigViewImpl> configViewLazy;
+  protected Supplier<ConfigSelectionContext> configSelectionContextLazy;
 
   // --- Mock UI Components ---
   protected final ButtonPanel buttonQueryPanelMock = new ButtonPanel();
@@ -84,12 +92,13 @@ public abstract class HandlerMock {
   protected final ButtonPanel buttonTaskPanelMock = new ButtonPanel();
   protected final ButtonPanel buttonConnectionPanelMock = new ButtonPanel();
   protected final ButtonPanel buttonMetricQueryPanelMock = new ButtonPanel();
-  protected final ConfigTab configTab = new ConfigTab();
 
   protected final JXTableCase profileCase = GUIHelper.getTypedJXTableCase(Rows.ProfileRow.class);
   protected final JXTableCase taskCase = GUIHelper.getTypedJXTableCase(Rows.TaskRow.class);
   protected final JXTableCase connectionCase = GUIHelper.getTypedJXTableCase(Rows.ConnectionRow.class);
   protected final JXTableCase queryCase = GUIHelper.getTypedJXTableCase(Rows.QueryRow.class);
+
+  protected final ConfigTab configTab = new ConfigTab(profileCase, taskCase, connectionCase, queryCase);
 
   protected final JXTableCase taskListCase = GUIHelper.getTypedJXTableCase(Rows.TaskRow.class);
   protected final JXTableCase selectedTaskCase = GUIHelper.getTypedJXTableCase(Rows.TaskRow.class);
@@ -131,6 +140,7 @@ public abstract class HandlerMock {
     connectionPanelLazy = () -> ServiceLocator.get(ConnectionPanel.class, "connectionConfigPanel");
     appCacheLazy = () -> (AppCacheImpl) ServiceLocator.get(AppCache.class, "appCache");
     configViewLazy = () -> (ConfigViewImpl) ServiceLocator.get(ConfigView.class, "configView");
+    configSelectionContextLazy = () -> ServiceLocator.get(ConfigSelectionContext.class, "configSelectionContext");
 
     objectMapper = new ObjectMapper();
   }
@@ -155,6 +165,21 @@ public abstract class HandlerMock {
   }
 
   protected void createTaskTest(Task task) {
+    List<Connection> connectionAll = configurationManagerLazy.get().getConfigList(Connection.class);
+    if (!connectionAll.isEmpty()) {
+      List<List<?>> connectionDataList = new LinkedList<>();
+      connectionAll.forEach(connection -> connectionDataList.add(
+          new ArrayList<>(Arrays.asList(
+              connection.getName(),
+              connection.getUserName(),
+              connection.getUrl(),
+              connection.getJar(),
+              connection.getDriver(),
+              connection.getType() != null ? connection.getType() : ConnectionType.JDBC
+          ))));
+      this.taskPanelLazy.get().getTaskConnectionComboBox().setTableData(connectionDataList);
+    }
+
     buttonTaskPanelMock.getBtnNew().doClick();
     taskPanelLazy.get().getJTextFieldTask().setText(task.getName());
     taskPanelLazy.get().getJTextFieldDescription().setText(task.getDescription());
@@ -182,9 +207,16 @@ public abstract class HandlerMock {
     }, 2, 1, TimeUnit.SECONDS);
   }
 
+  protected void waitForEvents() {
+    try {
+      SwingUtilities.invokeAndWait(() -> {});
+    } catch (Exception e) {
+      // ignore
+    }
+  }
+
   @AfterAll
   public void tearDown() {
-    // Ensure lazy suppliers have been resolved before using them
     if (localDBLazy != null && localDBLazy.get() != null) {
       localDBLazy.get().closeBackendDb();
     }

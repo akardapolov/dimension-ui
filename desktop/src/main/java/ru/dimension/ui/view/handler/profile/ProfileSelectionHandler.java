@@ -1,403 +1,205 @@
 package ru.dimension.ui.view.handler.profile;
 
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
-import java.awt.event.MouseEvent;
-import java.util.List;
-import java.util.Objects;
-import java.util.ResourceBundle;
-import java.util.stream.Collectors;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.awt.event.ItemEvent;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.swing.JCheckBox;
-import javax.swing.ListSelectionModel;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
+import javax.swing.SwingUtilities;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import ru.dimension.tt.swing.TTTable;
-import ru.dimension.ui.exception.NotFoundException;
-import ru.dimension.ui.view.panel.config.profile.MultiSelectTaskPanel;
-import ru.dimension.ui.view.panel.config.profile.ProfilePanel;
-import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.manager.TemplateManager;
 import ru.dimension.ui.model.config.Task;
 import ru.dimension.ui.model.info.ProfileInfo;
 import ru.dimension.ui.model.info.TaskInfo;
 import ru.dimension.ui.model.table.JXTableCase;
-import ru.dimension.ui.model.view.tab.ConfigEditTabPane;
-import ru.dimension.ui.prompt.Internationalization;
-import ru.dimension.ui.view.handler.MouseListenerImpl;
+import ru.dimension.ui.view.handler.core.AbstractTableSelectionHandler;
+import ru.dimension.ui.view.handler.core.ButtonPanelBindings;
+import ru.dimension.ui.view.handler.core.ConfigSelectionContext;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
-import ru.dimension.ui.view.tab.ConfigTab;
+import ru.dimension.ui.view.panel.config.profile.MultiSelectTaskPanel;
+import ru.dimension.ui.view.panel.config.profile.ProfilePanel;
 import ru.dimension.ui.view.table.row.Rows.ProfileRow;
 import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
 @Log4j2
 @Singleton
-public class ProfileSelectionHandler extends MouseListenerImpl
-    implements ListSelectionListener, ItemListener, ChangeListener {
+public final class ProfileSelectionHandler extends AbstractTableSelectionHandler<ProfileRow> {
 
   private final ProfileManager profileManager;
   private final TemplateManager templateManager;
-  private final JXTableCase profileCase;
-  private final JXTableCase taskCase;
-  private final JXTableCase connectionCase;
-  private final JXTableCase queryCase;
-
-  private final ConfigTab configTab;
+  private final ConfigSelectionContext context;
   private final ProfilePanel profilePanel;
-  private final MultiSelectTaskPanel multiSelectTaskPanel;
-
-  private final ButtonPanel profileButtonPanel;
+  private final MultiSelectTaskPanel multiSelectPanel;
+  private final ButtonPanel buttonPanel;
   private final JCheckBox checkboxConfig;
-
-  private Boolean isSelected;
-  private int profileId;
-  private final ResourceBundle bundleDefault;
+  private final JXTableCase taskCase;
 
   @Inject
-  public ProfileSelectionHandler(@Named("profileManager") ProfileManager profileManager,
-                                 @Named("templateManager") TemplateManager templateManager,
-                                 @Named("jTabbedPaneConfig") ConfigTab configTab,
-                                 @Named("profileConfigCase") JXTableCase profileCase,
+  public ProfileSelectionHandler(@Named("profileConfigCase") JXTableCase profileCase,
                                  @Named("taskConfigCase") JXTableCase taskCase,
-                                 @Named("connectionConfigCase") JXTableCase connectionCase,
-                                 @Named("queryConfigCase") JXTableCase queryCase,
+                                 @Named("profileManager") ProfileManager profileManager,
+                                 @Named("templateManager") TemplateManager templateManager,
+                                 @Named("configSelectionContext") ConfigSelectionContext context,
                                  @Named("profileConfigPanel") ProfilePanel profilePanel,
-                                 @Named("multiSelectPanel") MultiSelectTaskPanel multiSelectTaskPanel,
-                                 @Named("profileButtonPanel") ButtonPanel profileButtonPanel,
+                                 @Named("multiSelectPanel") MultiSelectTaskPanel multiSelectPanel,
+                                 @Named("profileButtonPanel") ButtonPanel buttonPanel,
                                  @Named("checkboxConfig") JCheckBox checkboxConfig) {
+    super(profileCase);
+    this.taskCase = taskCase;
     this.profileManager = profileManager;
     this.templateManager = templateManager;
-
-    this.configTab = configTab;
-    this.profileCase = profileCase;
-    this.taskCase = taskCase;
-    this.connectionCase = connectionCase;
-    this.queryCase = queryCase;
-    this.profileCase.getJxTable().getSelectionModel().addListSelectionListener(this);
-    this.profileCase.getJxTable().addMouseListener(this);
-
+    this.context = context;
     this.profilePanel = profilePanel;
-    this.multiSelectTaskPanel = multiSelectTaskPanel;
-    this.profileButtonPanel = profileButtonPanel;
-
+    this.multiSelectPanel = multiSelectPanel;
+    this.buttonPanel = buttonPanel;
     this.checkboxConfig = checkboxConfig;
-    this.checkboxConfig.addItemListener(this);
-    this.isSelected = false;
-    this.profileId = -1;
 
-    this.bundleDefault = Internationalization.getInternationalizationBundle();
+    bind();
 
-    this.configTab.addChangeListener(this);
-
-    initializeTaskTables();
-  }
-
-  private void initializeTaskTables() {
-    log.info("Initializing task tables...");
-
-    clearMultiSelectionPanel();
-
-    TTTable<TaskRow, JXTable> ttTemplate = multiSelectTaskPanel.getTemplateListTaskCase().getTypedTable();
-    TTTable<TaskRow, JXTable> ttTaskList = multiSelectTaskPanel.getTaskListCase().getTypedTable();
-
-    List<Task> templateTasks = templateManager.getConfigList(Task.class);
-    log.info("Template tasks count: {}", templateTasks.size());
-
-    List<TaskRow> templateRows = templateTasks.stream()
-        .map(t -> new TaskRow(t.getId(), t.getName()))
-        .collect(Collectors.toList());
-    ttTemplate.setItems(templateRows);
-
-    List<TaskInfo> configTasks = profileManager.getTaskInfoList();
-    log.info("Config tasks count: {}", configTasks.size());
-
-    List<TaskRow> taskRows = configTasks.stream()
-        .map(t -> new TaskRow(t.getId(), t.getName()))
-        .collect(Collectors.toList());
-    ttTaskList.setItems(taskRows);
-
-    log.info("Task tables initialized. TaskList rows: {}, Template rows: {}",
-             ttTaskList.model().getRowCount(), ttTemplate.model().getRowCount());
-  }
-
-  @Override
-  public void valueChanged(ListSelectionEvent e) {
-    ListSelectionModel listSelectionModel = (ListSelectionModel) e.getSource();
-
-    if (configTab.isEnabledAt(0)) {
-      configTab.setSelectedTab(ConfigEditTabPane.PROFILE);
-    }
-
-    if (!e.getValueIsAdjusting()) {
-      if (listSelectionModel.isSelectionEmpty()) {
-        log.info("Clearing profile fields");
-
-        multiSelectTaskPanel.getJTabbedPaneTask().setSelectedIndex(0);
-        profileId = -1;
-        profilePanel.getJTextFieldProfile().setEditable(false);
-        profilePanel.getJTextFieldDescription().setEditable(false);
-        multiSelectTaskPanel.getUnPickBtn().setEnabled(false);
-        multiSelectTaskPanel.getPickBtn().setEnabled(false);
-        multiSelectTaskPanel.getUnPickAllBtn().setEnabled(false);
-        multiSelectTaskPanel.getPickAllBtn().setEnabled(false);
-
-        profilePanel.getJTextFieldProfile().setText("");
-        profilePanel.getJTextFieldProfile().setPrompt(bundleDefault.getString("pName"));
-        profilePanel.getJTextFieldDescription().setText("");
-        profilePanel.getJTextFieldDescription().setPrompt(bundleDefault.getString("pDesc"));
-
-        clearMultiSelectionPanel();
-
-        TTTable<TaskRow, JXTable> ttTemplate = multiSelectTaskPanel.getTemplateListTaskCase().getTypedTable();
-        TTTable<TaskRow, JXTable> ttTaskList = multiSelectTaskPanel.getTaskListCase().getTypedTable();
-
-        List<TaskRow> templateRows = templateManager.getConfigList(Task.class).stream()
-            .map(t -> new TaskRow(t.getId(), t.getName()))
-            .collect(Collectors.toList());
-        ttTemplate.setItems(templateRows);
-        log.info("Loaded {} template tasks", templateRows.size());
-
-        List<TaskRow> taskRows = profileManager.getTaskInfoList().stream()
-            .map(t -> new TaskRow(t.getId(), t.getName()))
-            .collect(Collectors.toList());
-        ttTaskList.setItems(taskRows);
-        log.info("Loaded {} config tasks", taskRows.size());
-
+    this.checkboxConfig.addItemListener(e -> {
+      if (e.getStateChange() == ItemEvent.SELECTED) {
+        applyHierarchyMode();
       } else {
-
-        profileId = getSelectedProfileId();
-        log.info("Selected profile ID: {}", profileId);
-
-        ProfileInfo profile = profileManager.getProfileInfoById(profileId);
-
-        if (Objects.isNull(profile)) {
-          throw new NotFoundException("Not found profile: " + profileId);
-        }
-
-        profilePanel.getJTextFieldProfile().setText(profile.getName());
-        profilePanel.getJTextFieldDescription().setText(profile.getDescription());
-
-        List<Integer> taskListByProfile = profile.getTaskInfoList();
-        log.info("Profile {} has {} tasks", profile.getName(), taskListByProfile.size());
-
-        clearMultiSelectionPanel();
-
-        TTTable<TaskRow, JXTable> ttTemplate = multiSelectTaskPanel.getTemplateListTaskCase().getTypedTable();
-        TTTable<TaskRow, JXTable> ttTaskList = multiSelectTaskPanel.getTaskListCase().getTypedTable();
-        TTTable<TaskRow, JXTable> ttSelected = multiSelectTaskPanel.getSelectedTaskCase().getTypedTable();
-
-        List<TaskRow> templateRows = templateManager.getConfigList(Task.class).stream()
-            .map(t -> new TaskRow(t.getId(), t.getName()))
-            .collect(Collectors.toList());
-        ttTemplate.setItems(templateRows);
-
-        List<TaskRow> unselectedRows = profileManager.getTaskInfoList().stream()
-            .filter(f -> !taskListByProfile.contains(f.getId()))
-            .map(t -> new TaskRow(t.getId(), t.getName()))
-            .collect(Collectors.toList());
-        ttTaskList.setItems(unselectedRows);
-
-        List<TaskRow> selectedRows = taskListByProfile.stream()
-            .map(taskId -> {
-              TaskInfo taskIn = profileManager.getTaskInfoById(taskId);
-              if (Objects.isNull(taskIn)) {
-                throw new NotFoundException("Not found task: " + taskId);
-              }
-              return new TaskRow(taskIn.getId(), taskIn.getName());
-            })
-            .collect(Collectors.toList());
-        ttSelected.setItems(selectedRows);
-
-        log.info("Loaded tables - Template: {}, TaskList: {}, Selected: {}",
-                 templateRows.size(), unselectedRows.size(), selectedRows.size());
-
-        fillTaskCheckboxIsSelected(isSelected);
-
-        configTab.setSelectedTab(ConfigEditTabPane.PROFILE);
-        GUIHelper.disableButton(profileButtonPanel, !isSelected);
+        applyFullMode();
       }
-    }
-  }
+    });
 
-  private int getSelectedProfileId() {
-    int selectedRow = profileCase.getJxTable().getSelectedRow();
-    if (selectedRow < 0) {
-      return -1;
-    }
-    TTTable<ProfileRow, JXTable> tt = profileCase.getTypedTable();
-    ProfileRow row = tt.model().itemAt(selectedRow);
-    return row != null ? row.getId() : -1;
-  }
-
-  private void clearMultiSelectionPanel() {
-    multiSelectTaskPanel.getSelectedTaskCase().clearTable();
-    multiSelectTaskPanel.getTaskListCase().clearTable();
-    multiSelectTaskPanel.getTemplateListTaskCase().clearTable();
-  }
-
-  @Override
-  public void mouseClicked(MouseEvent e) {
-    if (configTab.isEnabledAt(0)) {
-      configTab.setSelectedTab(ConfigEditTabPane.PROFILE);
-    }
-  }
-
-  @Override
-  public void itemStateChanged(ItemEvent e) {
-    if (e.getStateChange() == ItemEvent.SELECTED) {
-      GUIHelper.disableButton(profileButtonPanel, false);
-      isSelected = true;
-      fillTaskCheckboxIsSelected(true);
+    if (checkboxConfig.isSelected()) {
+      applyHierarchyMode();
     } else {
-      GUIHelper.disableButton(profileButtonPanel, true);
-      isSelected = false;
-      fillTaskCheckboxIsSelected(false);
+      applyFullModeWithoutRestore();
     }
-
-    configTab.setSelectedTab(ConfigEditTabPane.PROFILE);
   }
 
-  public void fillTaskCheckboxIsSelected(Boolean isSelected) {
-    taskCase.clearTable();
+  @Override
+  protected void onSelection(Optional<ProfileRow> item) {
+    Integer id = item.map(ProfileRow::getId).orElse(null);
+    context.setSelectedProfileId(id);
+    ButtonPanelBindings.setViewMode(buttonPanel, id != null);
 
-    if (isSelected) {
-      if (profileId == -1) {
-        if (profileCase.getJxTable().getRowCount() > 0) {
-          profileCase.getJxTable().setRowSelectionInterval(0, 0);
-        } else {
-          checkboxConfig.setSelected(false);
-          checkboxConfig.setEnabled(false);
-        }
-        return;
-      }
+    updateFields(id);
+    updateTaskMultiSelect(id);
 
-      if (profileId >= 0) {
-        TTTable<TaskRow, JXTable> tt = taskCase.getTypedTable();
+    if (checkboxConfig.isSelected()) {
+      applyHierarchyMode();
+    }
+  }
 
-        ProfileInfo profileInfo = profileManager.getProfileInfoById(profileId);
-        if (profileInfo == null) {
-          log.warn("Profile not found: {}", profileId);
+  private void updateFields(Integer id) {
+    if (id == null) {
+      profilePanel.getJTextFieldProfile().setText("");
+      profilePanel.getJTextFieldDescription().setText("");
+      return;
+    }
+    ProfileInfo info = profileManager.getProfileInfoById(id);
+    if (info != null) {
+      profilePanel.getJTextFieldProfile().setText(info.getName());
+      profilePanel.getJTextFieldDescription().setText(info.getDescription());
+    }
+  }
+
+  private void updateTaskMultiSelect(Integer id) {
+    TTTable<TaskRow, JXTable> ttSelected = multiSelectPanel.getSelectedTaskCase().getTypedTable();
+    TTTable<TaskRow, JXTable> ttAvailable = multiSelectPanel.getTaskListCase().getTypedTable();
+    TTTable<TaskRow, JXTable> ttTemplate = multiSelectPanel.getTemplateListTaskCase().getTypedTable();
+
+    ttTemplate.setItems(templateManager.getConfigList(Task.class).stream()
+                            .map(t -> new TaskRow(t.getId(), t.getName())).collect(Collectors.toList()));
+
+    List<Integer> selectedIds = (id == null) ? List.of() :
+        Optional.ofNullable(profileManager.getProfileInfoById(id))
+            .map(ProfileInfo::getTaskInfoList).orElse(List.of());
+
+    List<TaskInfo> allTasks = profileManager.getTaskInfoList();
+
+    ttSelected.setItems(allTasks.stream()
+                            .filter(t -> selectedIds.contains(t.getId()))
+                            .map(t -> new TaskRow(t.getId(), t.getName())).collect(Collectors.toList()));
+
+    ttAvailable.setItems(allTasks.stream()
+                             .filter(t -> !selectedIds.contains(t.getId()))
+                             .map(t -> new TaskRow(t.getId(), t.getName())).collect(Collectors.toList()));
+  }
+
+  private void applyHierarchyMode() {
+    Integer pId = context.getSelectedProfileId();
+    TTTable<TaskRow, JXTable> tt = taskCase.getTypedTable();
+
+    if (pId == null) {
+      tt.setItems(List.of());
+      return;
+    }
+
+    ProfileInfo info = profileManager.getProfileInfoById(pId);
+    if (info != null) {
+      tt.setItems(info.getTaskInfoList().stream()
+                      .map(profileManager::getTaskInfoById)
+                      .filter(Objects::nonNull)
+                      .map(t -> new TaskRow(t.getId(), t.getName()))
+                      .collect(Collectors.toList()));
+    } else {
+      tt.setItems(List.of());
+    }
+
+    selectFirstRow(taskCase);
+  }
+
+  private void applyFullMode() {
+    Integer currentTaskId = context.getSelectedTaskId();
+    TTTable<TaskRow, JXTable> tt = taskCase.getTypedTable();
+
+    List<TaskRow> rows = profileManager.getTaskInfoList().stream()
+        .map(t -> new TaskRow(t.getId(), t.getName()))
+        .collect(Collectors.toList());
+    tt.setItems(rows);
+
+    restoreSelection(taskCase, rows, currentTaskId);
+  }
+
+  private void applyFullModeWithoutRestore() {
+    TTTable<TaskRow, JXTable> tt = taskCase.getTypedTable();
+    tt.setItems(profileManager.getTaskInfoList().stream()
+                    .map(t -> new TaskRow(t.getId(), t.getName()))
+                    .collect(Collectors.toList()));
+  }
+
+  private void restoreSelection(JXTableCase tableCase, List<TaskRow> rows, Integer targetId) {
+    if (targetId == null || rows.isEmpty()) {
+      return;
+    }
+
+    JXTable table = tableCase.getJxTable();
+    if (table == null) {
+      return;
+    }
+
+    SwingUtilities.invokeLater(() -> {
+      for (int i = 0; i < rows.size(); i++) {
+        if (Objects.equals(rows.get(i).getId(), targetId)) {
+          table.setRowSelectionInterval(i, i);
           return;
         }
-
-        List<TaskRow> rows = profileInfo.getTaskInfoList().stream()
-            .map(taskId -> {
-              TaskInfo taskIn = profileManager.getTaskInfoById(taskId);
-              if (Objects.isNull(taskIn)) {
-                throw new NotFoundException("Not found task: " + taskId);
-              }
-              return new TaskRow(taskIn.getId(), taskIn.getName());
-            })
-            .collect(Collectors.toList());
-
-        tt.setItems(rows);
-
-        if (taskCase.getJxTable().getRowCount() > 0) {
-          taskCase.getJxTable().setRowSelectionInterval(0, 0);
-        } else {
-          connectionCase.clearTable();
-          queryCase.clearTable();
-        }
       }
-    } else {
-      TTTable<TaskRow, JXTable> tt = taskCase.getTypedTable();
-      List<TaskRow> rows = profileManager.getTaskInfoList().stream()
-          .map(t -> new TaskRow(t.getId(), t.getName()))
-          .collect(Collectors.toList());
-      tt.setItems(rows);
-    }
+    });
   }
 
-  @Override
-  public void stateChanged(ChangeEvent changeEvent) {
-    if (!isSelected) {
-      if (configTab.getSelectedIndex() == 0) {
+  private void selectFirstRow(JXTableCase tableCase) {
+    JXTable table = tableCase.getJxTable();
+    if (table == null) return;
 
-        if (profileId == -1) {
-          multiSelectTaskPanel.getJTabbedPaneTask().setSelectedIndex(0);
-
-          profilePanel.getJTextFieldProfile().setEditable(false);
-          profilePanel.getJTextFieldDescription().setEditable(false);
-          multiSelectTaskPanel.getUnPickBtn().setEnabled(false);
-          multiSelectTaskPanel.getPickBtn().setEnabled(false);
-          multiSelectTaskPanel.getUnPickAllBtn().setEnabled(false);
-          multiSelectTaskPanel.getPickAllBtn().setEnabled(false);
-
-          profilePanel.getJTextFieldProfile().setText("");
-          profilePanel.getJTextFieldProfile().setPrompt(bundleDefault.getString("pName"));
-          profilePanel.getJTextFieldDescription().setText("");
-          profilePanel.getJTextFieldDescription().setPrompt(bundleDefault.getString("pDesc"));
-
-          clearMultiSelectionPanel();
-
-          TTTable<TaskRow, JXTable> ttTemplate = multiSelectTaskPanel.getTemplateListTaskCase().getTypedTable();
-          TTTable<TaskRow, JXTable> ttTaskList = multiSelectTaskPanel.getTaskListCase().getTypedTable();
-
-          List<TaskRow> templateRows = templateManager.getConfigList(Task.class).stream()
-              .map(t -> new TaskRow(t.getId(), t.getName()))
-              .collect(Collectors.toList());
-          ttTemplate.setItems(templateRows);
-
-          List<TaskRow> taskRows = profileManager.getTaskInfoList().stream()
-              .map(t -> new TaskRow(t.getId(), t.getName()))
-              .collect(Collectors.toList());
-          ttTaskList.setItems(taskRows);
-
-        } else {
-
-          ProfileInfo profile = profileManager.getProfileInfoById(profileId);
-
-          if (Objects.isNull(profile)) {
-            throw new NotFoundException("Not found profile: " + profileId);
-          }
-
-          profilePanel.getJTextFieldProfile().setText(profile.getName());
-          profilePanel.getJTextFieldDescription().setText(profile.getDescription());
-
-          List<Integer> taskListByProfile = profile.getTaskInfoList();
-
-          clearMultiSelectionPanel();
-
-          TTTable<TaskRow, JXTable> ttTemplate = multiSelectTaskPanel.getTemplateListTaskCase().getTypedTable();
-          TTTable<TaskRow, JXTable> ttTaskList = multiSelectTaskPanel.getTaskListCase().getTypedTable();
-          TTTable<TaskRow, JXTable> ttSelected = multiSelectTaskPanel.getSelectedTaskCase().getTypedTable();
-
-          List<TaskRow> templateRows = templateManager.getConfigList(Task.class).stream()
-              .map(t -> new TaskRow(t.getId(), t.getName()))
-              .collect(Collectors.toList());
-          ttTemplate.setItems(templateRows);
-
-          List<TaskRow> unselectedRows = profileManager.getTaskInfoList().stream()
-              .filter(f -> !taskListByProfile.contains(f.getId()))
-              .map(t -> new TaskRow(t.getId(), t.getName()))
-              .collect(Collectors.toList());
-          ttTaskList.setItems(unselectedRows);
-
-          List<TaskRow> selectedRows = taskListByProfile.stream()
-              .map(taskId -> {
-                TaskInfo taskIn = profileManager.getTaskInfoById(taskId);
-                if (Objects.isNull(taskIn)) {
-                  throw new NotFoundException("Not found task: " + taskId);
-                }
-                return new TaskRow(taskIn.getId(), taskIn.getName());
-              })
-              .collect(Collectors.toList());
-          ttSelected.setItems(selectedRows);
-
-          fillTaskCheckboxIsSelected(isSelected);
-
-          configTab.setSelectedTab(ConfigEditTabPane.PROFILE);
-          GUIHelper.disableButton(profileButtonPanel, !isSelected);
-        }
-
+    SwingUtilities.invokeLater(() -> {
+      if (table.getRowCount() > 0) {
+        table.setRowSelectionInterval(0, 0);
+      } else {
+        table.clearSelection();
       }
-    }
+    });
   }
 }

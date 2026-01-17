@@ -2,15 +2,22 @@ package ru.dimension.ui.component.module.model;
 
 import static ru.dimension.ui.laf.LafColorGroup.CONFIG_PANEL;
 
+import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.util.Collections;
+import java.util.regex.PatternSyntaxException;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextField;
+import javax.swing.RowFilter;
 import javax.swing.border.EtchedBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.event.TableModelEvent;
+import javax.swing.table.TableRowSorter;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTitledSeparator;
@@ -37,12 +44,20 @@ public class ModelView extends JPanel {
   private final TTTable<ColumnRow, JXTable> columnTable;
   private final TTTable<MetricRow, JXTable> metricTable;
 
+  private JTextField columnSearch;
+  private JTextField metricSearch;
+
+  private TableRowSorter<?> columnSorter;
+  private TableRowSorter<?> metricSorter;
+
+  private int columnNameColumnIndex = -1;
+  private int metricNameColumnIndex = -1;
+
   public ModelView() {
     TTRegistry registry = TT.builder()
         .scanPackages("ru.dimension.ui.view.table.row")
         .build();
 
-    // Create tables with icons
     this.profileTable = createBasicTableWithIcon(
         registry, ProfileRow.class, ModelIconProviders.forProfileRow());
     this.taskTable = createBasicTableWithIcon(
@@ -54,17 +69,18 @@ public class ModelView extends JPanel {
     this.metricTable = createCheckBoxTableWithIcon(
         registry, MetricRow.class, ModelIconProviders.forMetricRow());
 
+    initColumnFiltering();
+    initMetricFiltering();
+
     setupLayout();
   }
 
-  // --- Getters ---
   public TTTable<ProfileRow, JXTable> getProfileTable() { return profileTable; }
-  public TTTable<TaskRow, JXTable>    getTaskTable()    { return taskTable; }
-  public TTTable<QueryRow, JXTable>   getQueryTable()   { return queryTable; }
-  public TTTable<ColumnRow, JXTable>  getColumnTable()  { return columnTable; }
-  public TTTable<MetricRow, JXTable>  getMetricTable()  { return metricTable; }
+  public TTTable<TaskRow, JXTable> getTaskTable() { return taskTable; }
+  public TTTable<QueryRow, JXTable> getQueryTable() { return queryTable; }
+  public TTTable<ColumnRow, JXTable> getColumnTable() { return columnTable; }
+  public TTTable<MetricRow, JXTable> getMetricTable() { return metricTable; }
 
-  // --- Listener Registration ---
   public void setColumnToggleListener(ModelHandler<ColumnRow> handler) {
     setupTableListener(columnTable, "pick", handler);
   }
@@ -98,31 +114,35 @@ public class ModelView extends JPanel {
     });
   }
 
-  // --- Selection Helpers ---
   public void selectFirstProfileRow() {
-    if (profileTable.model().getRowCount() > 0)
+    if (profileTable.model().getRowCount() > 0) {
       profileTable.table().setRowSelectionInterval(0, 0);
+    }
   }
 
   public void selectFirstTaskRow() {
-    if (taskTable.model().getRowCount() > 0)
+    if (taskTable.model().getRowCount() > 0) {
       taskTable.table().setRowSelectionInterval(0, 0);
-    else
+    } else {
       clearQueryAndDetailsTables();
+    }
   }
 
   public void selectFirstQueryRow() {
-    if (queryTable.model().getRowCount() > 0)
+    if (queryTable.model().getRowCount() > 0) {
       queryTable.table().setRowSelectionInterval(0, 0);
-    else
+    } else {
       clearQueryAndDetailsTables();
+    }
   }
 
   public void selectFirstDetailsRows() {
-    if (columnTable.model().getRowCount() > 0)
+    if (columnTable.model().getRowCount() > 0) {
       columnTable.table().setRowSelectionInterval(0, 0);
-    if (metricTable.model().getRowCount() > 0)
+    }
+    if (metricTable.model().getRowCount() > 0) {
       metricTable.table().setRowSelectionInterval(0, 0);
+    }
   }
 
   public void clearAllSelections() {
@@ -141,8 +161,6 @@ public class ModelView extends JPanel {
     log.warn("Profile: {} not started", profileName);
   }
 
-  // --- Creation Helpers with Icons ---
-
   private <T> TTTable<T, JXTable> createBasicTableWithIcon(
       TTRegistry registry,
       Class<T> type,
@@ -157,6 +175,7 @@ public class ModelView extends JPanel {
             .build()
     );
     configureCommon(tt);
+    tt.table().setSortable(false);
     return tt;
   }
 
@@ -188,7 +207,7 @@ public class ModelView extends JPanel {
 
   private void configureCommon(TTTable<?, JXTable> tt) {
     JXTable table = tt.table();
-    table.setSortable(false);
+
     if (table.getColumnExt("id") != null) {
       table.getColumnExt("id").setVisible(false);
     }
@@ -197,6 +216,60 @@ public class ModelView extends JPanel {
     table.setShowHorizontalLines(true);
     table.setGridColor(java.awt.Color.GRAY);
     table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+  }
+
+  private void initColumnFiltering() {
+    columnNameColumnIndex = columnTable.model().schema().modelIndexOf("name");
+    columnSorter = new TableRowSorter<>(columnTable.model());
+    for (int i = 0; i < columnTable.model().getColumnCount(); i++) {
+      columnSorter.setSortable(i, false);
+    }
+    columnTable.table().setRowSorter(columnSorter);
+  }
+
+  private void initMetricFiltering() {
+    metricNameColumnIndex = metricTable.model().schema().modelIndexOf("name");
+    metricSorter = new TableRowSorter<>(metricTable.model());
+    for (int i = 0; i < metricTable.model().getColumnCount(); i++) {
+      metricSorter.setSortable(i, false);
+    }
+    metricTable.table().setRowSorter(metricSorter);
+  }
+
+  private void updateColumnFilter() {
+    if (columnSearch == null || columnSorter == null) return;
+
+    String searchText = columnSearch.getText();
+    if (searchText == null || searchText.isEmpty()) {
+      columnSorter.setRowFilter(null);
+      return;
+    }
+
+    try {
+      if (columnNameColumnIndex >= 0) {
+        columnSorter.setRowFilter(RowFilter.regexFilter("(?iu)" + searchText, columnNameColumnIndex));
+      }
+    } catch (PatternSyntaxException e) {
+      columnSorter.setRowFilter(RowFilter.regexFilter("$^", 0));
+    }
+  }
+
+  private void updateMetricFilter() {
+    if (metricSearch == null || metricSorter == null) return;
+
+    String searchText = metricSearch.getText();
+    if (searchText == null || searchText.isEmpty()) {
+      metricSorter.setRowFilter(null);
+      return;
+    }
+
+    try {
+      if (metricNameColumnIndex >= 0) {
+        metricSorter.setRowFilter(RowFilter.regexFilter("(?iu)" + searchText, metricNameColumnIndex));
+      }
+    } catch (PatternSyntaxException e) {
+      metricSorter.setRowFilter(RowFilter.regexFilter("$^", 0));
+    }
   }
 
   private void setupLayout() {
@@ -210,7 +283,6 @@ public class ModelView extends JPanel {
     gbc.gridx = 0;
     gbc.weightx = 1.0;
 
-    // Profile
     gbc.gridy = gridY++;
     gbc.weighty = 0.0;
     gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -223,7 +295,6 @@ public class ModelView extends JPanel {
     profileSP.setPreferredSize(zeroSize);
     add(profileSP, gbc);
 
-    // Task
     gbc.gridy = gridY++;
     gbc.weighty = 0.0;
     gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -236,7 +307,6 @@ public class ModelView extends JPanel {
     taskSP.setPreferredSize(zeroSize);
     add(taskSP, gbc);
 
-    // Query
     gbc.gridy = gridY++;
     gbc.weighty = 0.0;
     gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -249,10 +319,37 @@ public class ModelView extends JPanel {
     querySP.setPreferredSize(zeroSize);
     add(querySP, gbc);
 
-    // Details Tabs
+    JPanel columnsPanel = new JPanel(new BorderLayout());
+    columnSearch = new JTextField();
+    columnSearch.setToolTipText("Search columns...");
+    columnSearch.getDocument().addDocumentListener(new DocumentListener() {
+      @Override
+      public void insertUpdate(DocumentEvent e) { updateColumnFilter(); }
+      @Override
+      public void removeUpdate(DocumentEvent e) { updateColumnFilter(); }
+      @Override
+      public void changedUpdate(DocumentEvent e) { updateColumnFilter(); }
+    });
+    columnsPanel.add(columnSearch, BorderLayout.NORTH);
+    columnsPanel.add(columnTable.scrollPane(), BorderLayout.CENTER);
+
+    JPanel metricsPanel = new JPanel(new BorderLayout());
+    metricSearch = new JTextField();
+    metricSearch.setToolTipText("Search metrics...");
+    metricSearch.getDocument().addDocumentListener(new DocumentListener() {
+      @Override
+      public void insertUpdate(DocumentEvent e) { updateMetricFilter(); }
+      @Override
+      public void removeUpdate(DocumentEvent e) { updateMetricFilter(); }
+      @Override
+      public void changedUpdate(DocumentEvent e) { updateMetricFilter(); }
+    });
+    metricsPanel.add(metricSearch, BorderLayout.NORTH);
+    metricsPanel.add(metricTable.scrollPane(), BorderLayout.CENTER);
+
     JTabbedPane tabbedPane = new JTabbedPane();
-    tabbedPane.addTab("Columns", columnTable.scrollPane());
-    tabbedPane.addTab("Metrics", metricTable.scrollPane());
+    tabbedPane.addTab("Columns", columnsPanel);
+    tabbedPane.addTab("Metrics", metricsPanel);
     tabbedPane.setPreferredSize(zeroSize);
 
     gbc.gridy = gridY++;

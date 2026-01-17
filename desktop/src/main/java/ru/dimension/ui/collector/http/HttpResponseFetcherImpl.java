@@ -45,13 +45,14 @@ import ru.dimension.ui.collector.collect.utils.IpDomainUtil;
 @Singleton
 public class HttpResponseFetcherImpl implements HttpResponseFetcher {
 
-  static Set<Integer> defaultSuccessStatusCodes = Stream.of(HttpStatus.SC_OK,
-                                                            HttpStatus.SC_CREATED,
-                                                            HttpStatus.SC_ACCEPTED,
-                                                            HttpStatus.SC_MULTIPLE_CHOICES,
-                                                            HttpStatus.SC_MOVED_PERMANENTLY,
-                                                            HttpStatus.SC_MOVED_TEMPORARILY)
-      .collect(Collectors.toSet());
+  static Set<Integer> defaultSuccessStatusCodes = Stream.of(
+      HttpStatus.SC_OK,
+      HttpStatus.SC_CREATED,
+      HttpStatus.SC_ACCEPTED,
+      HttpStatus.SC_MULTIPLE_CHOICES,
+      HttpStatus.SC_MOVED_PERMANENTLY,
+      HttpStatus.SC_MOVED_TEMPORARILY
+  ).collect(Collectors.toSet());
 
   @Inject
   public HttpResponseFetcherImpl() {
@@ -60,45 +61,53 @@ public class HttpResponseFetcherImpl implements HttpResponseFetcher {
   @Override
   public String fetchResponse(HttpProtocol httpProtocol) {
     HttpContext httpContext = createHttpContext(httpProtocol);
-    ClassicHttpRequest request = createHttpRequest(httpProtocol);
-    HttpHost target = new HttpHost(request.getScheme(), request.getAuthority());
 
-    String resp = "";
+    ClassicHttpRequest request = createHttpRequest(httpProtocol);
+    if (request == null) {
+      log.error("HTTP request is null (could not be built)");
+      return "";
+    }
+
+    HttpHost target = new HttpHost(request.getScheme(), request.getAuthority());
 
     try (ClassicHttpResponse response = CommonHttpClient.getHttpClient().executeOpen(target, request, httpContext)) {
       int statusCode = response.getCode();
       log.debug("http response status: {}", statusCode);
+
       if (!checkSuccessInvoke(httpProtocol, statusCode)) {
         log.error("StatusCode {}", statusCode);
-        return resp;
+        return "";
       }
+
       return EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
     } catch (ClientProtocolException e1) {
-      log.error("Client Protocol Exception: {}, Message: {}", e1.getClass()
-          .getSimpleName(), CommonUtil.getMessageFromThrowable(e1));
+      log.error("Client Protocol Exception: {}, Message: {}", e1.getClass().getSimpleName(), CommonUtil.getMessageFromThrowable(e1));
     } catch (SocketTimeoutException e2) {
-      log.error("Socket Timeout: {}, Message: {}", e2.getClass()
-          .getSimpleName(), CommonUtil.getMessageFromThrowable(e2));
+      log.error("Socket Timeout: {}, Message: {}", e2.getClass().getSimpleName(), CommonUtil.getMessageFromThrowable(e2));
     } catch (IOException e4) {
       log.error("IO Exception: {}, Message: {}", e4.getClass().getSimpleName(), CommonUtil.getMessageFromThrowable(e4));
     } catch (Exception e) {
-      log.error("Unexpected Exception: {}, Message: {}", e.getClass()
-          .getSimpleName(), CommonUtil.getMessageFromThrowable(e), e);
+      log.error("Unexpected Exception: {}, Message: {}", e.getClass().getSimpleName(), CommonUtil.getMessageFromThrowable(e), e);
     }
 
-    return resp;
+    return "";
   }
 
-  private boolean checkSuccessInvoke(HttpProtocol httpProtocol,
-                                     int statusCode) {
+  private boolean checkSuccessInvoke(HttpProtocol httpProtocol, int statusCode) {
     List<String> successCodes = httpProtocol.getSuccessCodes();
-    Set<Integer> successCodeSet = successCodes != null ? successCodes.stream().map(code -> {
-      try {
-        return Integer.valueOf(code);
-      } catch (Exception ignored) {
-        return null;
-      }
-    }).filter(Objects::nonNull).collect(Collectors.toSet()) : defaultSuccessStatusCodes;
+    Set<Integer> successCodeSet = successCodes != null
+        ? successCodes.stream()
+        .map(code -> {
+          try {
+            return Integer.valueOf(code);
+          } catch (Exception ignored) {
+            return null;
+          }
+        })
+        .filter(Objects::nonNull)
+        .collect(Collectors.toSet())
+        : defaultSuccessStatusCodes;
+
     if (successCodeSet.isEmpty()) {
       successCodeSet = defaultSuccessStatusCodes;
     }
@@ -108,13 +117,15 @@ public class HttpResponseFetcherImpl implements HttpResponseFetcher {
   public HttpContext createHttpContext(HttpProtocol httpProtocol) {
     HttpProtocol.Authorization auth = httpProtocol.getAuthorization();
     if (auth != null && CollectorConstants.DIGEST_AUTH.equals(auth.getType())) {
-      HttpClientContext clientContext = new HttpClientContext();
-      if (CommonUtil.isNullOrBlank(auth.getDigestAuthUsername())
-          && CommonUtil.isNullOrBlank(auth.getDigestAuthPassword())) {
-        UsernamePasswordCredentials credentials
-            = new UsernamePasswordCredentials(auth.getDigestAuthUsername(), auth.getDigestAuthPassword().toCharArray());
 
-        // Create AuthScope
+      if (!CommonUtil.isNullOrBlank(auth.getDigestAuthUsername())
+          && !CommonUtil.isNullOrBlank(auth.getDigestAuthPassword())) {
+
+        HttpClientContext clientContext = new HttpClientContext();
+
+        UsernamePasswordCredentials credentials =
+            new UsernamePasswordCredentials(auth.getDigestAuthUsername(), auth.getDigestAuthPassword().toCharArray());
+
         int portNumber;
         try {
           portNumber = Integer.parseInt(httpProtocol.getPort());
@@ -127,7 +138,7 @@ public class HttpResponseFetcherImpl implements HttpResponseFetcher {
         provider.setCredentials(authScope, credentials);
 
         AuthCache authCache = new BasicAuthCache();
-        authCache.put(new HttpHost(httpProtocol.getHost(), Integer.parseInt(httpProtocol.getPort())), new DigestScheme());
+        authCache.put(new HttpHost(httpProtocol.getHost(), portNumber), new DigestScheme());
         clientContext.setCredentialsProvider(provider);
         clientContext.setAuthCache(authCache);
         return clientContext;
@@ -137,8 +148,8 @@ public class HttpResponseFetcherImpl implements HttpResponseFetcher {
   }
 
   public ClassicHttpRequest createHttpRequest(HttpProtocol httpProtocol) {
-    // Build the URI first, as it's going to be used in any case
     String uri = CollectUtil.replaceUriSpecialChar(httpProtocol.getUrl());
+
     if (IpDomainUtil.isHasSchema(httpProtocol.getHost())) {
       uri = httpProtocol.getHost() + ":" + httpProtocol.getPort() + uri;
     } else {
@@ -146,77 +157,75 @@ public class HttpResponseFetcherImpl implements HttpResponseFetcher {
       String baseUri = CollectorConstants.IPV6.equals(ipAddressType)
           ? String.format("[%s]:%s%s", httpProtocol.getHost(), httpProtocol.getPort(), uri)
           : String.format("%s:%s%s", httpProtocol.getHost(), httpProtocol.getPort(), uri);
+
       boolean ssl = Boolean.parseBoolean(httpProtocol.getSsl());
       uri = ssl ? CollectorConstants.HTTPS_HEADER + baseUri : CollectorConstants.HTTP_HEADER + baseUri;
     }
 
-    // Start building the request
     ClassicRequestBuilder requestBuilder =
         ClassicRequestBuilder.create(httpProtocol.getMethod().toUpperCase())
             .setUri(uri);
 
-    // Parameters
+    // Parameters (FIX: add only if NOT blank)
     Map<String, String> params = httpProtocol.getParams();
     if (params != null) {
       params.forEach((key, val) -> {
-        if (CommonUtil.isNullOrBlank(val)) {
+        if (!CommonUtil.isNullOrBlank(val)) {
           requestBuilder.addParameter(key, val);
         }
       });
     }
 
-    // Default and custom headers
     requestBuilder.addHeader(HttpHeaders.CONNECTION, "keep-alive");
     requestBuilder.addHeader(HttpHeaders.USER_AGENT, "Mozilla/5.0 ...");
 
-    // Overwrite headers with httpProtocol's headers
     Map<String, String> headers = httpProtocol.getHeaders();
     if (headers != null) {
       headers.forEach((key, val) -> {
-        if (CommonUtil.isNullOrBlank(val)) {
-          requestBuilder.addHeader(CollectUtil.replaceUriSpecialChar(key),
-                                   CollectUtil.replaceUriSpecialChar(val));
+        if (!CommonUtil.isNullOrBlank(val)) {
+          requestBuilder.addHeader(
+              CollectUtil.replaceUriSpecialChar(key),
+              CollectUtil.replaceUriSpecialChar(val)
+          );
         }
       });
     }
 
-    // Accept header based on parse type
     switch (httpProtocol.getParseType()) {
-      case CollectorConstants.PARSE_DEFAULT:
-      case CollectorConstants.PARSE_JSON_PATH:
-        requestBuilder.addHeader(HttpHeaders.ACCEPT, "application/json");
-        break;
-      case CollectorConstants.PARSE_XML_PATH:
-        requestBuilder.addHeader(HttpHeaders.ACCEPT, "text/xml,application/xml");
-        break;
-      default:
-        requestBuilder.addHeader(HttpHeaders.ACCEPT, "*/*");
+      case CollectorConstants.PARSE_DEFAULT, CollectorConstants.PARSE_JSON_PATH ->
+          requestBuilder.addHeader(HttpHeaders.ACCEPT, "application/json");
+      case CollectorConstants.PARSE_XML_PATH ->
+          requestBuilder.addHeader(HttpHeaders.ACCEPT, "text/xml,application/xml");
+      default ->
+          requestBuilder.addHeader(HttpHeaders.ACCEPT, "*/*");
     }
 
-    // Authorization
     HttpProtocol.Authorization authorization = httpProtocol.getAuthorization();
     if (authorization != null) {
-      String authHeader = "";
+      String authHeader = null;
+
       switch (authorization.getType()) {
-        case CollectorConstants.BEARER_TOKEN:
-          authHeader = CollectorConstants.BEARER + " " + authorization.getBearerTokenToken();
-          break;
-        case BASIC_AUTH:
-          if (CommonUtil.isNullOrBlank(authorization.getBasicAuthUsername())
-              && CommonUtil.isNullOrBlank(authorization.getBasicAuthPassword())) {
+        case CollectorConstants.BEARER_TOKEN -> {
+          if (!CommonUtil.isNullOrBlank(authorization.getBearerTokenToken())) {
+            authHeader = CollectorConstants.BEARER + " " + authorization.getBearerTokenToken();
+          }
+        }
+        case BASIC_AUTH -> {
+          if (!CommonUtil.isNullOrBlank(authorization.getBasicAuthUsername())
+              && !CommonUtil.isNullOrBlank(authorization.getBasicAuthPassword())) {
             String authStr = authorization.getBasicAuthUsername() + ":" + authorization.getBasicAuthPassword();
             String encodedAuth = new String(Base64.encodeBase64(authStr.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
             authHeader = BASIC + " " + encodedAuth;
           }
-          break;
-        default:
-          log.error("Unsupported authorization type: {}", authorization.getType());
-          return null;
+        }
+        default -> log.error("Unsupported authorization type: {}", authorization.getType());
       }
-      requestBuilder.addHeader(HttpHeaders.AUTHORIZATION, authHeader);
+
+      if (!CommonUtil.isNullOrBlank(authHeader)) {
+        requestBuilder.addHeader(HttpHeaders.AUTHORIZATION, authHeader);
+      }
     }
 
-    // Body
     if (!CommonUtil.isNullOrBlank(httpProtocol.getPayload())) {
       requestBuilder.setEntity(new StringEntity(httpProtocol.getPayload(), ContentType.APPLICATION_JSON));
     }

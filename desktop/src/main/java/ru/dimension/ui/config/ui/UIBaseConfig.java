@@ -52,65 +52,69 @@ public final class UIBaseConfig {
 
   public static void configure(DimensionDI.Builder builder) {
     builder
-        // BaseFrameConfig
-        .provideNamed(JSplitPane.class, "splitProfileListButtonsAndStatus", ServiceLocator.singleton(
-            () -> GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, 200)
-        ))
-        .provideNamed(JPanel.class, "jPanelProfileStatus", ServiceLocator.singleton(() -> {
-          JPanel panel = new JPanel(new BorderLayout());
-          panel.setBorder(new EtchedBorder());
-          LaF.setBackgroundConfigPanel(LafColorGroup.CONFIG_PANEL, panel);
-          return panel;
-        }))
-        .provideNamed(JTabbedPane.class, "mainTabPane", ServiceLocator.singleton(() -> {
-          MainTab mainTab = new MainTab();
-          mainTab.add(new JPanel(), MainTabPane.WORKSPACE.getName());
-          mainTab.add(new JPanel(), MainTabPane.DASHBOARD.getName());
-          mainTab.add(new JPanel(), MainTabPane.REPORT.getName());
-          mainTab.add(new JPanel(), MainTabPane.ADHOC.getName());
-          return mainTab;
-        }))
+        .provideNamed(JSplitPane.class,   "splitProfileListButtonsAndStatus", ServiceLocator.singleton(UIBaseConfig::createSplitPane))
+        .provideNamed(JPanel.class,       "jPanelProfileStatus",              ServiceLocator.singleton(UIBaseConfig::createProfileStatusPanel))
+        .provideNamed(JTabbedPane.class,  "mainTabPane",                      ServiceLocator.singleton(UIBaseConfig::createMainTabPane))
 
-        // ToolbarConfig
-        .provideNamed(JButton.class, "toolbarConfigButton", ServiceLocator.singleton(() -> {
-          JButton jButton = new JButton(ru.dimension.ui.helper.GUIHelper.loadIcon("/icons/config.png"));
-          jButton.setActionCommand(CONFIGURATION.name());
-          jButton.setMnemonic('C');
-          jButton.setText("Configuration");
-          jButton.setToolTipText("Application configuration, model and data loading pipelines");
-          jButton.setBorder(ru.dimension.ui.helper.GUIHelper.getBorderForButton(LaF.getColorBorder(LafColorGroup.BORDER)));
-          return jButton;
-        }))
-        .provideNamed(JButton.class, "toolbarTemplateButton", ServiceLocator.singleton(() -> {
-          JButton jButton = new JButton(ru.dimension.ui.helper.GUIHelper.loadIcon("/icons/template.png"));
-          jButton.setActionCommand(TEMPLATE.name());
-          jButton.setMnemonic('T');
-          jButton.setText("Templates");
-          jButton.setToolTipText("List of templates");
-          jButton.setBorder(ru.dimension.ui.helper.GUIHelper.getBorderForButton(LaF.getColorBorder(LafColorGroup.BORDER)));
-          return jButton;
-        }))
+        .provideNamed(JButton.class, "toolbarConfigButton",   ServiceLocator.singleton(UIBaseConfig::createToolbarConfigButton))
+        .provideNamed(JButton.class, "toolbarTemplateButton", ServiceLocator.singleton(UIBaseConfig::createToolbarTemplateButton))
 
-        // Workspace Module Factories
-        .bindFactory(ModelModuleFactory.class, ModelModule.class)
-        .bindFactory(ManageModuleFactory.class, ManageModule.class)
-        .bindFactory(ConfigModuleFactory.class, ConfigModule.class)
-        .bindFactory(ChartsModuleFactory.class, ChartsModule.class)
+        .bindFactory(ModelModuleFactory.class,          ModelModule.class)
+        .bindFactory(ManageModuleFactory.class,         ManageModule.class)
+        .bindFactory(ConfigModuleFactory.class,         ConfigModule.class)
+        .bindFactory(ChartsModuleFactory.class,         ChartsModule.class)
         .bindFactory(ManageModulePresenterFactory.class, ManagePresenter.class)
 
-        // Dashboard/Preview Module Factories
         .bindFactory(PreviewConfigModuleFactory.class, PreviewConfigModule.class)
         .bindFactory(PreviewChartsModuleFactory.class, PreviewChartsModule.class)
 
-        // Report Module Factories
-        .bindFactory(PlaygroundModuleFactory.class, PlaygroundModule.class)
-        .bindFactory(DesignModuleFactory.class, DesignModule.class)
-        .bindFactory(MetricColumnPanelFactory.class, MetricColumnPanel.class)
+        .bindFactory(PlaygroundModuleFactory.class,    PlaygroundModule.class)
+        .bindFactory(DesignModuleFactory.class,        DesignModule.class)
+        .bindFactory(MetricColumnPanelFactory.class,   MetricColumnPanel.class)
 
-        // AdHoc Module Factories
-        .bindFactory(AdHocModelModuleFactory.class, AdHocModelModule.class)
+        .bindFactory(AdHocModelModuleFactory.class,  AdHocModelModule.class)
         .bindFactory(AdHocConfigModuleFactory.class, AdHocConfigModule.class)
         .bindFactory(AdHocChartsModuleFactory.class, AdHocChartsModule.class)
-        .bindFactory(PreviewModuleFactory.class, PreviewModule.class);
+        .bindFactory(PreviewModuleFactory.class,     PreviewModule.class);
+  }
+
+  private static JSplitPane createSplitPane() {
+    return GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, 200);
+  }
+
+  private static JPanel createProfileStatusPanel() {
+    JPanel panel = new JPanel(new BorderLayout());
+    panel.setBorder(new EtchedBorder());
+    LaF.setBackgroundConfigPanel(LafColorGroup.CONFIG_PANEL, panel);
+    return panel;
+  }
+
+  private static JTabbedPane createMainTabPane() {
+    MainTab mainTab = new MainTab();
+    mainTab.add(new JPanel(), MainTabPane.WORKSPACE.getName());
+    mainTab.add(new JPanel(), MainTabPane.DASHBOARD.getName());
+    mainTab.add(new JPanel(), MainTabPane.REPORT.getName());
+    mainTab.add(new JPanel(), MainTabPane.ADHOC.getName());
+    return mainTab;
+  }
+
+  private static JButton createToolbarConfigButton() {
+    JButton jButton = new JButton(GUIHelper.loadIcon("/icons/config.png"));
+    jButton.setActionCommand(CONFIGURATION.name());
+    jButton.setMnemonic('C');
+    jButton.setText("Configuration");
+    jButton.setToolTipText("Application configuration, model and data loading pipelines");
+    jButton.setBorder(GUIHelper.getBorderForButton(LaF.getColorBorder(LafColorGroup.BORDER)));
+    return jButton;
+  }
+
+  private static JButton createToolbarTemplateButton() {
+    JButton jButton = new JButton(GUIHelper.loadIcon("/icons/template.png"));
+    jButton.setActionCommand(TEMPLATE.name());
+    jButton.setMnemonic('T');
+    jButton.setText("Templates");
+    jButton.setToolTipText("List of templates");
+    jButton.setBorder(GUIHelper.getBorderForButton(LaF.getColorBorder(LafColorGroup.BORDER)));
+    return jButton;
   }
 }

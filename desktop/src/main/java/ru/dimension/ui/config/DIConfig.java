@@ -5,6 +5,7 @@ import ru.dimension.ui.config.core.HandlersAndManagersConfig;
 import ru.dimension.ui.config.core.RoutingSecurityStateConfig;
 import ru.dimension.ui.config.ui.UIBaseConfig;
 import ru.dimension.ui.config.ui.UIComponentsConfig;
+import ru.dimension.ui.config.ui.UIHandlersConfig;
 import ru.dimension.ui.config.ui.ViewAndPresenterConfig;
 
 /**
@@ -27,6 +28,7 @@ public final class DIConfig {
     ViewAndPresenterConfig.configure(builder);
     UIBaseConfig.configure(builder);
     UIComponentsConfig.configure(builder);
+    UIHandlersConfig.configure(builder);
 
     builder.buildAndInit();
   }

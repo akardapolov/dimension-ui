@@ -29,8 +29,6 @@ import ru.dimension.ui.laf.LaF;
 
 @Log4j2
 public class ChartsView extends JPanel {
-  private final Map<ChartModule, PropertyChangeListener> collapseListeners = new HashMap<>();
-
   private final JXTaskPaneContainer cardContainer;
   private final JScrollPane cardScrollPane;
   private final JPanel cardPanel;
@@ -101,12 +99,6 @@ public class ChartsView extends JPanel {
     cardContainer.repaint();
   }
 
-  public void clearAllCharts() {
-    cardContainer.removeAll();
-    cardContainer.revalidate();
-    cardContainer.repaint();
-  }
-
   void centerComponentInScrollPane(Component component) {
     SwingUtilities.invokeLater(() -> {
       Point componentPos = SwingUtilities.convertPoint(
@@ -116,12 +108,37 @@ public class ChartsView extends JPanel {
       );
 
       JViewport viewport = cardScrollPane.getViewport();
-      Rectangle viewRect = viewport.getViewRect();
-      int centerY = viewRect.height / 2;
-      int componentCenterY = componentPos.y + (component.getHeight() / 2);
-      int targetY = Math.max(0, componentCenterY - centerY);
+      int topMargin = 10;
+      int targetY = Math.max(0, componentPos.y - topMargin);
 
-      viewport.setViewPosition(new Point(0, targetY));
+      int startY = viewport.getViewPosition().y;
+      int distance = targetY - startY;
+
+      if (Math.abs(distance) < 5) {
+        viewport.setViewPosition(new Point(0, targetY));
+        return;
+      }
+
+      final int DURATION = 500;
+      final int DELAY = 15;
+      final long startTime = System.currentTimeMillis();
+
+      javax.swing.Timer timer = new javax.swing.Timer(DELAY, null);
+      timer.addActionListener(e -> {
+        long now = System.currentTimeMillis();
+        long elapsed = now - startTime;
+        float progress = (float) elapsed / DURATION;
+
+        if (progress >= 1.0f) {
+          viewport.setViewPosition(new Point(0, targetY));
+          timer.stop();
+        } else {
+          double ease = 0.5 * (1 - Math.cos(progress * Math.PI));
+          int newY = (int) (startY + (distance * ease));
+          viewport.setViewPosition(new Point(0, newY));
+        }
+      });
+      timer.start();
     });
   }
 }

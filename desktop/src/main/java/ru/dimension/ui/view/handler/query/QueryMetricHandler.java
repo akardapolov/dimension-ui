@@ -1,9 +1,9 @@
 package ru.dimension.ui.view.handler.query;
 
-import java.util.List;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.util.List;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -18,7 +18,7 @@ import ru.dimension.ui.view.panel.config.query.MetricQueryPanel;
 
 @Log4j2
 @Singleton
-public class QueryMetricHandler implements ListSelectionListener {
+public final class QueryMetricHandler implements ListSelectionListener {
 
   private final ProfileManager profileManager;
   private final MetricQueryPanel metricQueryPanel;
@@ -37,33 +37,34 @@ public class QueryMetricHandler implements ListSelectionListener {
   @Override
   public void valueChanged(ListSelectionEvent e) {
     ListSelectionModel listSelectionModel = (ListSelectionModel) e.getSource();
-    if (!e.getValueIsAdjusting()) {
-      if (listSelectionModel.isSelectionEmpty()) {
-        log.info("Clearing profile fields");
-      } else {
-        int metricId = getSelectedMetricId(listSelectionModel);
-        String queryName = mainQueryPanel.getQueryName().getText();
-        Metric metric = getMetricById(metricId, queryName);
-
-        metricQueryPanel.getDefaultCheckBox().setEnabled(false);
-        metricQueryPanel.getNameMetric().setEditable(false);
-        metricQueryPanel.getXTextFile().setEnabled(false);
-        metricQueryPanel.getYComboBox().setEnabled(false);
-        metricQueryPanel.getDimensionComboBox().setEnabled(false);
-        metricQueryPanel.getGroupFunction().setEnabled(false);
-        metricQueryPanel.getChartType().setEnabled(false);
-
-        metricQueryPanel.getNameMetric().setText(metric.getName());
-        metricQueryPanel.getDefaultCheckBox().setSelected(metric.getIsDefault());
-        metricQueryPanel.getXTextFile().setText(metric.getXAxis().getColName());
-        metricQueryPanel.getYComboBox().setSelectedItem(metric.getYAxis().getColName());
-        metricQueryPanel.getDimensionComboBox().setSelectedItem(metric.getGroup().getColName());
-        metricQueryPanel.getGroupFunction().setSelectedItem(metric.getSafeGroupFunction().toString());
-        metricQueryPanel.getChartType().setSelectedItem(metric.getSafeChartType().toString());
-
-        GUIHelper.disableButton(metricQueryPanel.getMetricQueryButtonPanel(), true);
-      }
+    if (e.getValueIsAdjusting()) {
+      return;
     }
+    if (listSelectionModel.isSelectionEmpty()) {
+      return;
+    }
+
+    int metricId = getSelectedMetricId(listSelectionModel);
+    String queryName = mainQueryPanel.getQueryName().getText();
+    Metric metric = getMetricById(metricId, queryName);
+
+    metricQueryPanel.getDefaultCheckBox().setEnabled(false);
+    metricQueryPanel.getNameMetric().setEditable(false);
+    metricQueryPanel.getXTextFile().setEnabled(false);
+    metricQueryPanel.getYComboBox().setEnabled(false);
+    metricQueryPanel.getDimensionComboBox().setEnabled(false);
+    metricQueryPanel.getGroupFunction().setEnabled(false);
+    metricQueryPanel.getChartType().setEnabled(false);
+
+    metricQueryPanel.getNameMetric().setText(metric.getName());
+    metricQueryPanel.getDefaultCheckBox().setSelected(metric.getIsDefault());
+    metricQueryPanel.getXTextFile().setText(metric.getXAxis().getColName());
+    metricQueryPanel.getYComboBox().setSelectedItem(metric.getYAxis().getColName());
+    metricQueryPanel.getDimensionComboBox().setSelectedItem(metric.getGroup().getColName());
+    metricQueryPanel.getGroupFunction().setSelectedItem(metric.getSafeGroupFunction().toString());
+    metricQueryPanel.getChartType().setSelectedItem(metric.getSafeChartType().toString());
+
+    GUIHelper.disableButton(metricQueryPanel.getMetricQueryButtonPanel(), true);
   }
 
   private int getSelectedMetricId(ListSelectionModel listSelectionModel) {
@@ -72,18 +73,16 @@ public class QueryMetricHandler implements ListSelectionListener {
                                        listSelectionModel, TaskColumnNames.ID.getColName());
   }
 
-  private Metric getMetricById(int metricId,
-                               String queryName) {
-    List<Metric> metricslist = profileManager.getQueryInfoList()
-        .stream()
+  private Metric getMetricById(int metricId, String queryName) {
+    List<Metric> metrics = profileManager.getQueryInfoList().stream()
         .filter(f -> f.getName().equals(queryName))
         .findAny()
         .orElseThrow(() -> new NotFoundException("Not found query: " + queryName))
         .getMetricList();
 
-    return metricslist.stream()
+    return metrics.stream()
         .filter(f -> f.getId() == metricId)
         .findAny()
-        .orElseThrow(() -> new NotFoundException("Not found query: " + queryName));
+        .orElseThrow(() -> new NotFoundException("Not found metric: " + metricId));
   }
 }

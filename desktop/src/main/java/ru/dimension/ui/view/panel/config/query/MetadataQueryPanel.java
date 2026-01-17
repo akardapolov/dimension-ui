@@ -1,12 +1,11 @@
 package ru.dimension.ui.view.panel.config.query;
 
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.GridLayout;
-import java.util.ResourceBundle;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import java.util.ResourceBundle;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -15,12 +14,12 @@ import javax.swing.JPanel;
 import javax.swing.border.Border;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import ru.dimension.db.model.profile.table.IType;
-import ru.dimension.db.model.profile.table.TType;
 import org.jdesktop.swingx.JXTextField;
 import org.jdesktop.swingx.JXTitledSeparator;
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import org.painlessgridbag.PainlessGridBag;
+import ru.dimension.db.model.profile.table.IType;
+import ru.dimension.db.model.profile.table.TType;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.model.table.JXTableCase;
@@ -54,10 +53,11 @@ public class MetadataQueryPanel extends JPanel {
                             @Named("timestampComboBox") DetailedComboBox timestampComboBox,
                             @Named("tableType") JComboBox<TType> tableType,
                             @Named("indexType") JComboBox<IType> tableIndex) {
-    this.timestampComboBox = timestampComboBox;
-    this.timestampComboBox.setEnabled(false);
-
     this.bundleDefault = Internationalization.getInternationalizationBundle();
+
+    this.timestampComboBox = timestampComboBox;
+    this.timestampComboBox.setToolTipText(bundleDefault.getString("mTimestamp"));
+    this.timestampComboBox.setEnabled(false);
 
     this.configMetadataCase = configMetadataCase;
 
@@ -79,14 +79,16 @@ public class MetadataQueryPanel extends JPanel {
     this.compression = new JCheckBox("Compression");
     this.compression.setToolTipText("Compression");
 
-    this.tableName = new JXTextField(bundleDefault.getString("metaName"));
+    this.tableName = new JXTextField(bundleDefault.getString("mTableName"));
+    this.tableName.setToolTipText(bundleDefault.getString("mTableName"));
     this.tableName.setEditable(false);
 
     this.tableType = tableType;
-    this.tableType.setToolTipText("TableType");
+    this.tableType.setToolTipText(bundleDefault.getString("mTableType"));
     this.tableType.setEnabled(false);
     AutoCompleteDecorator.decorate(this.tableType);
     this.tableIndex = tableIndex;
+    this.tableIndex.setToolTipText(bundleDefault.getString("mTableIndex"));
     this.tableIndex.setEnabled(false);
     AutoCompleteDecorator.decorate(this.tableIndex);
 
@@ -102,7 +104,7 @@ public class MetadataQueryPanel extends JPanel {
     JPanel tablePanel = new JPanel();
     JPanel tableTitlePanel = new JPanel();
     JPanel tableDataPanel = new JPanel();
-    tableDataPanel.setLayout(new GridLayout(2, 4, 5, 0));
+    tableDataPanel.setLayout(new GridLayout(2, 5, 5, 0));
     JPanel columnPanel = new JPanel();
     PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(), false);
     PainlessGridBag gblBtn = new PainlessGridBag(btnPanel, PGHelper.getPGConfig(0), false);
@@ -122,19 +124,19 @@ public class MetadataQueryPanel extends JPanel {
 
     tableTitlePanel.setLayout(new BorderLayout());
     JXTitledSeparator tableTitle = new JXTitledSeparator("Table");
-    tableTitle.setPreferredSize(new Dimension(1345, 5));
-    tableTitlePanel.add(tableTitle, BorderLayout.WEST);
-    tableTitlePanel.add(compression, BorderLayout.EAST);
+    tableTitlePanel.add(tableTitle, BorderLayout.CENTER);
 
     tableDataPanel.add(new JLabel("Name"));
     tableDataPanel.add(new JLabel("Type"));
     tableDataPanel.add(new JLabel("Index"));
     tableDataPanel.add(timestamp);
+    tableDataPanel.add(new JLabel(""));
 
     tableDataPanel.add(tableName);
     tableDataPanel.add(tableType);
     tableDataPanel.add(tableIndex);
     tableDataPanel.add(timestampComboBox);
+    tableDataPanel.add(compression);
 
     gblTable.row()
         .cell(tableTitlePanel).fillX();

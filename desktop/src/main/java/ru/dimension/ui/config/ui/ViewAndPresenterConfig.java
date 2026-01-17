@@ -22,13 +22,11 @@ public final class ViewAndPresenterConfig {
 
   public static void configure(DimensionDI.Builder builder) {
     builder
-        // Views
         .bindNamed(ToolbarView.class, "toolbarView", ToolbarViewImpl.class)
         .bindNamed(ConfigView.class, "configView", ConfigViewImpl.class)
         .bindNamed(TemplateView.class, "templateView", TemplateViewImpl.class)
         .bindNamed(ProgressbarView.class, "progressbarView", ProgressbarViewImpl.class)
 
-        // Presenters (resolution via ServiceLocator)
         .provideNamed(ToolbarPresenter.class, "toolbarPresenter", () -> ServiceLocator.get(ToolbarPresenter.class))
         .provideNamed(ProgressbarPresenter.class, "progressbarPresenter", () -> ServiceLocator.get(ProgressbarPresenter.class))
         .provideNamed(ConfigPresenter.class, "configPresenter", () -> ServiceLocator.get(ConfigPresenter.class))

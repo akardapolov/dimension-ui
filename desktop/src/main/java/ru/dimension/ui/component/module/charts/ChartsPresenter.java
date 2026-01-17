@@ -130,10 +130,11 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
 
     ChartModule taskPane = new ChartModule(component, chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
 
-    String keyValue = KeyHelper.getKey(model.getProfileManager(), key, cProfile);
-    taskPane.setTitle(keyValue);
+    KeyHelper.TitleInfo titleInfo = KeyHelper.getTitle(model.getProfileManager(), key, cProfile);
+    taskPane.setTitle(titleInfo.getShortTitle());
+    taskPane.setToolTipText(titleInfo.getFullTitle());
 
-    log.info("Add task pane: {}", keyValue);
+    log.info("Add task pane: {}", cProfile.getColName());
 
     PropertyChangeListener collapseListener = evt -> {
       if (!model.isProgrammaticChange() &&

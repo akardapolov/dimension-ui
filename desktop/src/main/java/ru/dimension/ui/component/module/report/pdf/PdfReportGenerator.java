@@ -37,6 +37,7 @@ import javax.imageio.ImageIO;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.module.chart.ReportChartModule;
 import ru.dimension.ui.helper.DesignHelper;
+import ru.dimension.ui.helper.FileNameSanitizer;
 import ru.dimension.ui.helper.FilesHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
@@ -217,7 +218,9 @@ public class PdfReportGenerator {
     String dateFrom = getDateFormat(chartModule.getModel().getChartInfo().getCustomBegin());
     String dateTo = getDateFormat(chartModule.getModel().getChartInfo().getCustomEnd());
 
-    String fileName = chartModule.getModel().getMetric().getName().trim().replace(" ", "_").toLowerCase();
+    String rawFileName = chartModule.getModel().getMetric().getName();
+    String fileName = FileNameSanitizer.sanitize(rawFileName);
+
     String description = chartModule.getModel().getDescription().getText();
     String nameFunction = chartModule.getModel().getMetric().getGroupFunction().name();
 
@@ -250,7 +253,8 @@ public class PdfReportGenerator {
       dataReport.put("description", description);
       dataReport.put("pathChart", pathPNG);
     } catch (IOException ex) {
-      throw new RuntimeException(ex);
+      log.error("Failed to save chart image to: {}", filePath, ex);
+      throw new RuntimeException("Failed to save chart image: " + ex.getMessage(), ex);
     }
 
     return dataReport;

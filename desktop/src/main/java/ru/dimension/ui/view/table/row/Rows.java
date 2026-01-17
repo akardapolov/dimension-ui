@@ -3,14 +3,17 @@ package ru.dimension.ui.view.table.row;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.apache.hc.core5.http.Method;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.cstype.CSType;
 import ru.dimension.db.model.profile.cstype.CType;
 import ru.dimension.db.model.profile.cstype.SType;
 import ru.dimension.tt.annotation.ColumnKind;
 import ru.dimension.tt.annotation.TTColumn;
+import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.db.DBType;
+import ru.dimension.ui.model.parse.ParseType;
 import ru.dimension.ui.model.type.ConnectionType;
 
 public class Rows {
@@ -197,6 +200,97 @@ public class Rows {
     public void setType(String type) { this.type = type; }
     public DBType getDbType() { return dbType; }
     public void setDbType(DBType dbType) { this.dbType = dbType; }
+  }
+
+  @Data
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class ConnectionTemplateRow {
+    @TTColumn(name = "ID", order = 0, visible = false)
+    private int id;
+
+    @TTColumn(name = "Name", order = 1, editable = false)
+    private String name;
+
+    @TTColumn(name = "User Name", order = 2, editable = false)
+    private String userName;
+
+    @TTColumn(name = "Password", order = 3, editable = false, visible = false)
+    private String password;
+
+    @TTColumn(name = "URL", order = 4, editable = false)
+    private String url;
+
+    @TTColumn(name = "Jar", order = 5, editable = false)
+    private String jar;
+
+    @TTColumn(name = "Driver", order = 6, editable = false)
+    private String driver;
+
+    @TTColumn(name = "Type", order = 7, editable = false)
+    private String type;
+
+    @TTColumn(name = "HTTP Method", order = 8, editable = false)
+    private String httpMethod;
+
+    @TTColumn(name = "HTTP Parse Type", order = 9, editable = false)
+    private String httpParseType;
+
+    public ConnectionTemplateRow(ru.dimension.ui.model.config.Connection c) {
+      this.id = c.getId();
+      this.name = c.getName();
+      this.userName = c.getUserName();
+      this.password = c.getPassword();
+      this.url = c.getUrl();
+      this.jar = c.getJar();
+      this.driver = c.getDriver();
+
+      ConnectionType connType = c.getType() != null ? c.getType() : ConnectionType.JDBC;
+      this.type = connType.getName();
+
+      Method method = c.getHttpMethod();
+      this.httpMethod = method != null ? method.name() : "";
+
+      ParseType parseType = c.getParseType();
+      this.httpParseType = parseType != null ? parseType.name() : "";
+    }
+  }
+
+  public static ConnectionTemplateRow mapConnection(Connection connection) {
+    if (connection == null) {
+      return null;
+    }
+
+    ConnectionTemplateRow row = new ConnectionTemplateRow();
+    row.setId(connection.getId());
+    row.setName(connection.getName());
+    row.setUserName(connection.getUserName());
+    row.setPassword(connection.getPassword());
+    row.setUrl(connection.getUrl());
+    row.setJar(connection.getJar());
+    row.setDriver(connection.getDriver());
+
+    ConnectionType connType = connection.getType() != null ? connection.getType() : ConnectionType.JDBC;
+    row.setType(connType.getName());
+
+    Method httpMethod = connection.getHttpMethod();
+    row.setHttpMethod(httpMethod != null ? httpMethod.name() : "");
+
+    ParseType parseType = connection.getParseType();
+    row.setHttpParseType(parseType != null ? parseType.name() : "");
+
+    return row;
+  }
+
+  public static java.util.List<ConnectionTemplateRow> mapList(java.util.Collection<Connection> connections) {
+    if (connections == null) {
+      return java.util.Collections.emptyList();
+    }
+
+    return connections.stream()
+        .map(Rows::mapConnection)
+        .filter(java.util.Objects::nonNull)
+        .collect(java.util.stream.Collectors.toList());
   }
 
   @NoArgsConstructor

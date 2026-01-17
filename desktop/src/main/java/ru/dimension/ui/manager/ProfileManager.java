@@ -9,6 +9,7 @@ import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.TaskInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
+import ru.dimension.ui.model.type.ConnectionType;
 
 public interface ProfileManager {
 
@@ -105,6 +106,12 @@ public interface ProfileManager {
                                 RunStatus runStatus);
 
   List<QueryInfo> getQueryInfoListByConnDriver(String connDriver);
+
+  List<QueryInfo> getQueryInfoListByConnectionType(ConnectionType connectionType);
+
+  List<QueryInfo> getOrphanQueryInfoList();
+
+  List<QueryInfo> getHttpOrphanQueryInfoList();
 
   void updateCache();
 

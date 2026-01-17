@@ -1,45 +1,36 @@
 package ru.dimension.ui.view.handler.task;
 
-import static ru.dimension.ui.model.view.tab.ConnectionTypeTabPane.JDBC;
-
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
-import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.ResourceBundle;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.swing.JCheckBox;
-import javax.swing.ListSelectionModel;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
+import javax.swing.SwingUtilities;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import ru.dimension.tt.swing.TTTable;
-import ru.dimension.ui.exception.NotFoundException;
-import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.manager.TemplateManager;
 import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TaskInfo;
+import ru.dimension.ui.model.sql.GatherDataMode;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.type.ConnectionType;
-import ru.dimension.ui.model.view.tab.ConfigEditTabPane;
-import ru.dimension.ui.prompt.Internationalization;
-import ru.dimension.ui.view.handler.MouseListenerImpl;
+import ru.dimension.ui.view.handler.core.AbstractTableSelectionHandler;
+import ru.dimension.ui.view.handler.core.ButtonPanelBindings;
+import ru.dimension.ui.view.handler.core.ConfigSelectionContext;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.task.MultiSelectQueryPanel;
 import ru.dimension.ui.view.panel.config.task.TaskPanel;
-import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.view.table.row.Rows.ConnectionRow;
 import ru.dimension.ui.view.table.row.Rows.QueryRow;
 import ru.dimension.ui.view.table.row.Rows.QueryTableRow;
@@ -47,510 +38,324 @@ import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
 @Log4j2
 @Singleton
-public class TaskSelectionHandler extends MouseListenerImpl
-    implements ListSelectionListener, ItemListener, ChangeListener {
+public final class TaskSelectionHandler extends AbstractTableSelectionHandler<TaskRow> {
 
   private final ProfileManager profileManager;
   private final TemplateManager templateManager;
-
-  private final JXTableCase taskCase;
-  private final JXTableCase profileCase;
+  private final ConfigSelectionContext context;
+  private final TaskPanel taskPanel;
+  private final MultiSelectQueryPanel multiSelectPanel;
+  private final ButtonPanel buttonPanel;
+  private final JCheckBox checkboxConfig;
   private final JXTableCase connectionCase;
   private final JXTableCase queryCase;
 
-  private final ConfigTab configTab;
-  private final TaskPanel taskPanel;
-  private final MultiSelectQueryPanel multiSelectQueryPanel;
-  private final ButtonPanel taskButtonPanel;
-  private final JCheckBox checkboxConfig;
-  private Boolean isSelected;
-  private List<List<?>> connectionDataList;
-  private int taskId = -1;
-  private final ResourceBundle bundleDefault;
-
   @Inject
-  public TaskSelectionHandler(@Named("profileManager") ProfileManager profileManager,
-                              @Named("templateManager") TemplateManager templateManager,
-                              @Named("taskConfigCase") JXTableCase taskCase,
-                              @Named("profileConfigCase") JXTableCase profileCase,
+  public TaskSelectionHandler(@Named("taskConfigCase") JXTableCase taskCase,
                               @Named("connectionConfigCase") JXTableCase connectionCase,
                               @Named("queryConfigCase") JXTableCase queryCase,
-                              @Named("jTabbedPaneConfig") ConfigTab configTab,
+                              @Named("profileManager") ProfileManager profileManager,
+                              @Named("templateManager") TemplateManager templateManager,
+                              @Named("configSelectionContext") ConfigSelectionContext context,
                               @Named("taskConfigPanel") TaskPanel taskPanel,
-                              @Named("multiSelectQueryPanel") MultiSelectQueryPanel multiSelectQueryPanel,
-                              @Named("taskButtonPanel") ButtonPanel taskButtonPanel,
+                              @Named("multiSelectQueryPanel") MultiSelectQueryPanel multiSelectPanel,
+                              @Named("taskButtonPanel") ButtonPanel buttonPanel,
                               @Named("checkboxConfig") JCheckBox checkboxConfig) {
-    this.profileManager = profileManager;
-    this.templateManager = templateManager;
-
-    this.bundleDefault = Internationalization.getInternationalizationBundle();
-
-    this.taskCase = taskCase;
-    this.profileCase = profileCase;
+    super(taskCase);
     this.connectionCase = connectionCase;
     this.queryCase = queryCase;
-    this.taskCase.getJxTable().getSelectionModel().addListSelectionListener(this);
-    this.taskCase.getJxTable().addMouseListener(this);
-
-    this.configTab = configTab;
+    this.profileManager = profileManager;
+    this.templateManager = templateManager;
+    this.context = context;
     this.taskPanel = taskPanel;
-    this.multiSelectQueryPanel = multiSelectQueryPanel;
-    this.taskButtonPanel = taskButtonPanel;
-
+    this.multiSelectPanel = multiSelectPanel;
+    this.buttonPanel = buttonPanel;
     this.checkboxConfig = checkboxConfig;
-    this.checkboxConfig.addItemListener(this);
-    this.isSelected = false;
 
-    this.configTab.addChangeListener(this);
+    this.checkboxConfig.addItemListener(e -> {
+      if (e.getStateChange() == ItemEvent.SELECTED) {
+        applyHierarchyMode();
+      } else {
+        applyFullMode();
+      }
+    });
+
+    taskPanel.getTaskConnectionComboBox().addItemListener(e -> {
+      if (e.getStateChange() == ItemEvent.SELECTED) {
+        updateQueryMultiSelect(context.getSelectedTaskId());
+      }
+    });
+
+    bind();
   }
 
   @Override
-  public void valueChanged(ListSelectionEvent e) {
-    ListSelectionModel listSelectionModel = (ListSelectionModel) e.getSource();
+  protected void onSelection(Optional<TaskRow> item) {
+    Integer id = item.map(TaskRow::getId).orElse(null);
+    context.setSelectedTaskId(id);
+    ButtonPanelBindings.setViewMode(buttonPanel, id != null);
 
-    if (configTab.isEnabledAt(1)) {
-      configTab.setSelectedTab(ConfigEditTabPane.TASK);
+    updateFields(id);
+    updateQueryMultiSelect(id);
+
+    if (checkboxConfig.isSelected()) {
+      applyHierarchyMode();
+    }
+  }
+
+  private void updateFields(Integer id) {
+    if (id == null) {
+      taskPanel.getJTextFieldTask().setText("");
+      taskPanel.getJTextFieldDescription().setText("");
+      return;
+    }
+    TaskInfo info = profileManager.getTaskInfoById(id);
+    if (info != null) {
+      taskPanel.getJTextFieldTask().setText(info.getName());
+      taskPanel.getJTextFieldDescription().setText(info.getDescription());
+      taskPanel.getRadioButtonPanel().setSelectedRadioButton(info.getPullTimeout() + " sec");
+      syncConnectionCombo(info.getConnectionId());
+    }
+  }
+
+  private void syncConnectionCombo(int connectionId) {
+    List<ConnectionInfo> all = profileManager.getConnectionInfoList();
+    List<List<?>> data = new ArrayList<>();
+
+    all.stream().filter(c -> c.getId() == connectionId).forEach(c -> data.add(toComboRow(c)));
+    all.stream().filter(c -> c.getId() != connectionId).forEach(c -> data.add(toComboRow(c)));
+
+    taskPanel.getTaskConnectionComboBox().setTableData(data);
+
+    if (!data.isEmpty()) {
+      taskPanel.getTaskConnectionComboBox().setSelectedIndex(0);
+    }
+  }
+
+  private List<?> toComboRow(ConnectionInfo c) {
+    return Arrays.asList(c.getName(), c.getUserName(), c.getUrl(), c.getJar(), c.getDriver(),
+                         c.getType() != null ? c.getType() : ConnectionType.JDBC);
+  }
+
+  private void updateQueryMultiSelect(Integer id) {
+    TTTable<QueryTableRow, JXTable> ttSelected = multiSelectPanel.getSelectedQueryCase().getTypedTable();
+    TTTable<QueryTableRow, JXTable> ttAvailable = multiSelectPanel.getQueryListCase().getTypedTable();
+    TTTable<QueryTableRow, JXTable> ttTemplate = multiSelectPanel.getTemplateListQueryCase().getTypedTable();
+
+    List<Integer> selectedIds = (id == null) ? List.of() :
+        Optional.ofNullable(profileManager.getTaskInfoById(id))
+            .map(TaskInfo::getQueryInfoList).orElse(List.of());
+
+    List<QueryInfo> allQueries = profileManager.getQueryInfoList();
+
+    // Fill selected queries (unchanged)
+    ttSelected.setItems(allQueries.stream()
+                            .filter(q -> selectedIds.contains(q.getId()))
+                            .map(q -> new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()))
+                            .collect(Collectors.toList()));
+
+    // Build available queries list based on combinations
+    List<QueryTableRow> availableRows = buildAvailableQueryList(id, selectedIds);
+    ttAvailable.setItems(availableRows);
+
+    // Fill template queries
+    String driver = getSelectedDriver();
+    if (driver != null) {
+      ttTemplate.setItems(templateManager.getQueryListByConnDriver(driver).stream()
+                              .map(q -> new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()))
+                              .collect(Collectors.toList()));
+    } else {
+      ttTemplate.setItems(List.of());
+    }
+  }
+
+  private List<QueryTableRow> buildAvailableQueryList(Integer taskId, List<Integer> selectedIds) {
+    List<QueryTableRow> result = new ArrayList<>();
+    Set<Integer> addedIds = new HashSet<>(selectedIds);
+
+    String driver = getSelectedDriver();
+    ConnectionType connectionType = getSelectedConnectionType();
+    boolean hasConnection = hasSelectedConnection();
+
+    // 1) HTTP: do NOT depend on driver
+    if (hasConnection && connectionType == ConnectionType.HTTP) {
+
+      // Option A: show all BY_CLIENT_HTTP queries (recommended)
+      profileManager.getQueryInfoList().stream()
+          .filter(q -> q.getGatherDataMode() == GatherDataMode.BY_CLIENT_HTTP)
+          .filter(q -> !addedIds.contains(q.getId()))
+          .forEach(q -> {
+            result.add(new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()));
+            addedIds.add(q.getId());
+          });
+
+      // OR Option B: show only orphan BY_CLIENT_HTTP queries (your current behavior intent)
+      // profileManager.getHttpOrphanQueryInfoList()...
+
+      return result;
     }
 
-    if (!e.getValueIsAdjusting()) {
-      if (listSelectionModel.isSelectionEmpty()) {
-        log.info("Clearing profile fields");
+    // 2) JDBC-like: driver-based
+    if (driver != null) {
+      profileManager.getQueryInfoListByConnDriver(driver).stream()
+          .filter(q -> !addedIds.contains(q.getId()))
+          .forEach(q -> {
+            result.add(new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()));
+            addedIds.add(q.getId());
+          });
+    }
+    // 3) No connection selected: show all orphan
+    else if (!hasConnection) {
+      profileManager.getOrphanQueryInfoList().stream()
+          .filter(q -> !addedIds.contains(q.getId()))
+          .forEach(q -> {
+            result.add(new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()));
+            addedIds.add(q.getId());
+          });
+    }
 
-        clearMultiSelectionPanel();
-        taskId = -1;
+    return result;
+  }
 
-        multiSelectQueryPanel.getJTabbedPaneQuery().setSelectedIndex(0);
+  private ConnectionType getSelectedConnectionType() {
+    try {
+      Object typeObj = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(5);
+      if (typeObj instanceof ConnectionType) {
+        return (ConnectionType) typeObj;
+      }
+      return ConnectionType.valueOf(typeObj.toString());
+    } catch (Exception e) {
+      return null;
+    }
+  }
 
-        taskPanel.getJTextFieldTask().setEditable(false);
-        taskPanel.getJTextFieldDescription().setEditable(false);
-        taskPanel.getTaskConnectionComboBox().setEnabled(false);
-        taskPanel.getRadioButtonPanel().setButtonNotView();
-        multiSelectQueryPanel.getUnPickBtn().setEnabled(false);
-        multiSelectQueryPanel.getPickBtn().setEnabled(false);
-        multiSelectQueryPanel.getPickAllBtn().setEnabled(false);
-        multiSelectQueryPanel.getUnPickAllBtn().setEnabled(false);
+  private boolean hasSelectedConnection() {
+    try {
+      List<?> row = taskPanel.getTaskConnectionComboBox().getSelectedRow();
+      return row != null && !row.isEmpty() && row.get(0) != null;
+    } catch (Exception e) {
+      return false;
+    }
+  }
 
-        List<ConnectionInfo> connectionAll = profileManager.getConnectionInfoList();
-        this.connectionDataList = new LinkedList<>();
-        connectionAll.forEach(connection -> {
-          if (connection.getType() != null) {
-            connectionDataList.add(
-                new ArrayList<>(Arrays.asList(connection.getName(), connection.getUserName(),
-                                              connection.getUrl(), connection.getJar(),
-                                              connection.getDriver(), connection.getType())));
-          } else {
-            connectionDataList.add(
-                new ArrayList<>(Arrays.asList(connection.getName(), connection.getUserName(),
-                                              connection.getUrl(), connection.getJar(),
-                                              connection.getDriver(), "JDBC")));
-          }
-        });
+  private String getSelectedDriver() {
+    try {
+      Object v = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(4);
+      return v == null ? null : v.toString();
+    } catch (Exception e) {
+      return null;
+    }
+  }
 
-        taskPanel.getJTextFieldTask().setText("");
-        taskPanel.getJTextFieldTask().setPrompt(bundleDefault.getString("tName"));
-        taskPanel.getJTextFieldDescription().setText("");
-        taskPanel.getJTextFieldDescription().setPrompt(bundleDefault.getString("tDesc"));
-        taskPanel.getTaskConnectionComboBox().setTableData(connectionDataList);
-        taskPanel.getTaskConnectionComboBox().setEnabled(false);
+  private void applyHierarchyMode() {
+    Integer tId = context.getSelectedTaskId();
+    TTTable<ConnectionRow, JXTable> ttConn = connectionCase.getTypedTable();
+    TTTable<QueryRow, JXTable> ttQuery = queryCase.getTypedTable();
 
-      } else {
-        clearMultiSelectionPanel();
+    if (tId == null) {
+      connectionCase.clearTable();
+      queryCase.clearTable();
+      return;
+    }
 
-        taskId = getSelectedTaskId();
+    TaskInfo info = profileManager.getTaskInfoById(tId);
+    if (info == null) {
+      connectionCase.clearTable();
+      queryCase.clearTable();
+      return;
+    }
 
-        if (taskId == -1) {
+    ConnectionInfo ci = profileManager.getConnectionInfoById(info.getConnectionId());
+    if (ci != null) {
+      ttConn.setItems(List.of(new ConnectionRow(ci.getId(), ci.getName(), ci.getType(), ci.getDbType())));
+    } else {
+      ttConn.setItems(List.of());
+    }
+
+    ttQuery.setItems(info.getQueryInfoList().stream()
+                         .map(profileManager::getQueryInfoById)
+                         .filter(Objects::nonNull)
+                         .map(q -> new QueryRow(q.getId(), q.getName()))
+                         .collect(Collectors.toList()));
+
+    selectFirstRow(connectionCase);
+    selectFirstRow(queryCase);
+  }
+
+  private void applyFullMode() {
+    Integer currentConnId = context.getSelectedConnectionId();
+    Integer currentQueryId = context.getSelectedQueryId();
+
+    TTTable<ConnectionRow, JXTable> ttConn = connectionCase.getTypedTable();
+    TTTable<QueryRow, JXTable> ttQuery = queryCase.getTypedTable();
+
+    List<ConnectionRow> connRows = profileManager.getConnectionInfoList().stream()
+        .map(c -> {
+          ConnectionInfo ci = profileManager.getConnectionInfoById(c.getId());
+          return new ConnectionRow(c.getId(), c.getName(), c.getType(), ci != null ? ci.getDbType() : null);
+        })
+        .collect(Collectors.toList());
+    ttConn.setItems(connRows);
+
+    List<QueryRow> queryRows = profileManager.getQueryInfoList().stream()
+        .map(q -> new QueryRow(q.getId(), q.getName()))
+        .collect(Collectors.toList());
+    ttQuery.setItems(queryRows);
+
+    restoreConnectionSelection(connRows, currentConnId);
+    restoreQuerySelection(queryRows, currentQueryId);
+  }
+
+  private void restoreConnectionSelection(List<ConnectionRow> rows, Integer connId) {
+    if (connId == null || rows.isEmpty()) {
+      return;
+    }
+
+    JXTable table = connectionCase.getJxTable();
+    if (table == null) {
+      return;
+    }
+
+    SwingUtilities.invokeLater(() -> {
+      for (int i = 0; i < rows.size(); i++) {
+        if (Objects.equals(rows.get(i).getId(), connId)) {
+          table.setRowSelectionInterval(i, i);
           return;
         }
-
-        TaskInfo taskInfo = profileManager.getTaskInfoById(taskId);
-        if (Objects.isNull(taskInfo)) {
-          throw new NotFoundException("Not found task: " + taskId);
-        }
-
-        taskPanel.getJTextFieldTask().setText(taskInfo.getName());
-        taskPanel.getJTextFieldDescription().setText(taskInfo.getDescription());
-        taskPanel.getRadioButtonPanel().setSelectedRadioButton(taskInfo.getPullTimeout() + " sec");
-
-        ConnectionInfo connectionInfo = profileManager.getConnectionInfoById(taskInfo.getConnectionId());
-        if (Objects.isNull(connectionInfo)) {
-          throw new NotFoundException("Not found connection: " + taskInfo.getConnectionId());
-        }
-        List<ConnectionInfo> connectionAll = profileManager.getConnectionInfoList();
-        if (connectionInfo.getType() == null) {
-          connectionInfo.setType(ConnectionType.JDBC);
-        }
-        List<List<?>> connectionData = new LinkedList<>();
-        connectionData.add(
-            new ArrayList<>(Arrays.asList(connectionInfo.getName(), connectionInfo.getUserName(),
-                                          connectionInfo.getUrl(), connectionInfo.getJar(),
-                                          connectionInfo.getDriver(), connectionInfo.getType())));
-        connectionAll.stream()
-            .filter(f -> f.getId() != connectionInfo.getId())
-            .forEach(connection -> {
-              String type = connection.getType() != null ? String.valueOf(connection.getType()) : "JDBC";
-              connectionData.add(Arrays.asList(
-                  connection.getName(), connection.getUserName(),
-                  connection.getUrl(), connection.getJar(),
-                  connection.getDriver(), type
-              ));
-            });
-
-        taskPanel.getTaskConnectionComboBox().setTableData(connectionData);
-
-        if (Objects.isNull(profileManager.getTaskInfoById(taskId))) {
-          throw new NotFoundException("Not found task: " + taskId);
-        } else {
-          List<QueryTableRow> selectedRows = profileManager.getTaskInfoById(taskId)
-              .getQueryInfoList()
-              .stream()
-              .map(queryId -> {
-                QueryInfo queryInfo = profileManager.getQueryInfoById(queryId);
-                if (Objects.isNull(queryInfo)) {
-                  throw new NotFoundException("Not found query: " + queryId);
-                }
-                return new QueryTableRow(
-                    queryInfo.getId(),
-                    queryInfo.getName(),
-                    queryInfo.getDescription(),
-                    queryInfo.getText()
-                );
-              })
-              .collect(Collectors.toList());
-
-          TTTable<QueryTableRow, JXTable> selectedTT = multiSelectQueryPanel.getSelectedQueryCase().getTypedTable();
-          selectedTT.setItems(selectedRows);
-        }
-
-        String connName = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(0).toString();
-        Object connDriver = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(4);
-
-        if (connDriver != null) {
-          log.info("Connection's {} driver: {}", connName, connDriver);
-          fillAvailableQueryList(connDriver.toString());
-        }
-        fillConnectionCheckboxIsSelected(isSelected);
-        fillQueryCheckboxIsSelected(isSelected);
-
-        GUIHelper.disableButton(taskButtonPanel, !isSelected);
       }
-    }
+    });
   }
 
-  private int getSelectedTaskId() {
-    int selectedRow = taskCase.getJxTable().getSelectedRow();
-    if (selectedRow < 0) {
-      return -1;
-    }
-    TTTable<TaskRow, JXTable> tt = taskCase.getTypedTable();
-    TaskRow row = tt.model().itemAt(selectedRow);
-    return row != null ? row.getId() : -1;
-  }
-
-  private void clearMultiSelectionPanel() {
-    TTTable<QueryTableRow, JXTable> selectedTT = multiSelectQueryPanel.getSelectedQueryCase().getTypedTable();
-    TTTable<QueryTableRow, JXTable> queryListTT = multiSelectQueryPanel.getQueryListCase().getTypedTable();
-    TTTable<QueryTableRow, JXTable> templateTT = multiSelectQueryPanel.getTemplateListQueryCase().getTypedTable();
-
-    selectedTT.setItems(new ArrayList<>());
-    queryListTT.setItems(new ArrayList<>());
-    templateTT.setItems(new ArrayList<>());
-  }
-
-  private void fillAvailableQueryList(String connDriver) {
-    List<String> listSelectedQueryForExclude = getSelectedQueryNameList();
-
-    // Configuration
-    List<String> connectionDrivers = getConnectionDriverAll();
-    connectionDrivers.removeIf(q -> q == null || connDriver.contains(q));
-
-    List<QueryInfo> queryListOfUnsuitableConnDriver = connectionDrivers.stream()
-        .flatMap(driver -> profileManager.getQueryInfoListByConnDriver(driver).stream())
-        .collect(Collectors.toList());
-
-    List<QueryInfo> queryListOfUnsuitableConnType = profileManager.getQueryInfoList().stream()
-        .filter(q -> profileManager.getConnectionInfoList().stream()
-            .anyMatch(c -> c.getType() != null &&
-                c.getType().equals(ConnectionType.HTTP) &&
-                c.getName().equals(q.getName())))
-        .collect(Collectors.toList());
-
-    List<QueryTableRow> queryListRows = profileManager.getQueryInfoList().stream()
-        .filter(q -> !listSelectedQueryForExclude.contains(q.getName()))
-        .filter(q -> !queryListOfUnsuitableConnDriver.contains(q))
-        .filter(q -> !queryListOfUnsuitableConnType.contains(q))
-        .map(q -> new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()))
-        .collect(Collectors.toList());
-
-    TTTable<QueryTableRow, JXTable> queryListTT = multiSelectQueryPanel.getQueryListCase().getTypedTable();
-    queryListTT.setItems(queryListRows);
-
-    // Template
-    List<QueryTableRow> templateRows = templateManager.getQueryListByConnDriver(connDriver).stream()
-        .map(q -> new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()))
-        .collect(Collectors.toList());
-
-    TTTable<QueryTableRow, JXTable> templateTT = multiSelectQueryPanel.getTemplateListQueryCase().getTypedTable();
-    templateTT.setItems(templateRows);
-  }
-
-  private List<String> getSelectedQueryNameList() {
-    List<String> queryListNames = new ArrayList<>();
-    TTTable<QueryTableRow, JXTable> selectedTT = multiSelectQueryPanel.getSelectedQueryCase().getTypedTable();
-    List<QueryTableRow> items = selectedTT.model().items();
-    for (QueryTableRow row : items) {
-      queryListNames.add(row.getName());
-    }
-    return queryListNames;
-  }
-
-  private List<String> getConnectionDriverAll() {
-    List<ConnectionInfo> connectionInfoList = profileManager.getConnectionInfoList();
-    return connectionInfoList.stream()
-        .map(ConnectionInfo::getDriver)
-        .distinct()
-        .collect(Collectors.toList());
-  }
-
-  @Override
-  public void mouseClicked(MouseEvent e) {
-    if (configTab.isEnabledAt(1)) {
-      configTab.setSelectedTab(ConfigEditTabPane.TASK);
-    }
-  }
-
-  @Override
-  public void itemStateChanged(ItemEvent e) {
-    if (e.getStateChange() == ItemEvent.SELECTED) {
-      GUIHelper.disableButton(taskButtonPanel, false);
-      isSelected = true;
-      fillConnectionCheckboxIsSelected(true);
-      fillQueryCheckboxIsSelected(true);
-    } else {
-      GUIHelper.disableButton(taskButtonPanel, true);
-      isSelected = false;
-      fillConnectionCheckboxIsSelected(false);
-      fillQueryCheckboxIsSelected(false);
-    }
-  }
-
-  public void fillConnectionCheckboxIsSelected(Boolean isSelected) {
-    connectionCase.clearTable();
-    TTTable<ConnectionRow, JXTable> tt = connectionCase.getTypedTable();
-    List<ConnectionRow> rows = new ArrayList<>();
-
-    if (taskCase.getJxTable().getRowCount() > 0) {
-      if (taskCase.getJxTable().getSelectedRow() == -1) {
-        taskCase.getJxTable().setRowSelectionInterval(0, 0);
-      }
+  private void restoreQuerySelection(List<QueryRow> rows, Integer queryId) {
+    if (queryId == null || rows.isEmpty()) {
+      return;
     }
 
-    if (isSelected) {
-      if (profileCase.getJxTable().getRowCount() > 0) {
-        int taskId = getSelectedTaskId();
-        if (taskId != -1) {
-          TaskInfo task = profileManager.getTaskInfoById(taskId);
-          if (Objects.isNull(task)) {
-            throw new NotFoundException("Not found task: " + taskId);
-          }
+    JXTable table = queryCase.getJxTable();
+    if (table == null) {
+      return;
+    }
 
-          ConnectionInfo connection = profileManager.getConnectionInfoById(task.getConnectionId());
-          if (Objects.isNull(connection)) {
-            throw new NotFoundException("Not found connection: " + task.getConnectionId());
-          }
-
-          ConnectionInfo connectionInfo = profileManager.getConnectionInfoById(connection.getId());
-
-          rows.add(new ConnectionRow(
-              connection.getId(),
-              connection.getName(),
-              connection.getType(),
-              connectionInfo.getDbType()
-          ));
+    SwingUtilities.invokeLater(() -> {
+      for (int i = 0; i < rows.size(); i++) {
+        if (Objects.equals(rows.get(i).getId(), queryId)) {
+          table.setRowSelectionInterval(i, i);
+          return;
         }
       }
-    } else {
-      rows = profileManager.getConnectionInfoList().stream()
-          .map(c -> {
-            ConnectionInfo connectionInfo = profileManager.getConnectionInfoById(c.getId());
-            return new ConnectionRow(
-                c.getId(),
-                c.getName(),
-                c.getType(),
-                connectionInfo.getDbType()
-            );
-          })
-          .collect(Collectors.toList());
-    }
-
-    tt.setItems(rows);
+    });
   }
 
-  public void fillQueryCheckboxIsSelected(Boolean isSelected) {
-    queryCase.clearTable();
-    TTTable<QueryRow, JXTable> tt = queryCase.getTypedTable();
-    List<QueryRow> rows = new ArrayList<>();
+  private void selectFirstRow(JXTableCase tableCase) {
+    JXTable table = tableCase.getJxTable();
+    if (table == null) return;
 
-    if (taskCase.getJxTable().getRowCount() > 0) {
-      if (taskCase.getJxTable().getSelectedRow() == -1) {
-        taskCase.getJxTable().setRowSelectionInterval(0, 0);
+    SwingUtilities.invokeLater(() -> {
+      if (table.getRowCount() > 0) {
+        table.setRowSelectionInterval(0, 0);
+      } else {
+        table.clearSelection();
       }
-    }
-
-    if (isSelected) {
-      if (taskCase.getJxTable().getRowCount() > 0) {
-        int taskId = getSelectedTaskId();
-        if (taskId != -1) {
-          if (Objects.isNull(profileManager.getTaskInfoById(taskId))) {
-            throw new NotFoundException("Not found task: " + taskId);
-          } else {
-            rows = profileManager.getTaskInfoById(taskId).getQueryInfoList().stream()
-                .map(queryId -> {
-                  QueryInfo queryIn = profileManager.getQueryInfoById(queryId);
-                  if (Objects.isNull(queryIn)) {
-                    throw new NotFoundException("Not found query: " + queryId);
-                  }
-                  return new QueryRow(queryIn.getId(), queryIn.getName());
-                })
-                .collect(Collectors.toList());
-          }
-        }
-      }
-    } else {
-      rows = profileManager.getQueryInfoList().stream()
-          .map(e -> new QueryRow(e.getId(), e.getName()))
-          .collect(Collectors.toList());
-    }
-
-    tt.setItems(rows);
-  }
-
-  @Override
-  public void stateChanged(ChangeEvent changeEvent) {
-    if (!isSelected) {
-      if (configTab.getSelectedIndex() == 1) {
-        if (taskId == -1) {
-          clearMultiSelectionPanel();
-
-          multiSelectQueryPanel.getJTabbedPaneQuery().setSelectedIndex(0);
-
-          taskPanel.getJTextFieldTask().setEditable(false);
-          taskPanel.getJTextFieldDescription().setEditable(false);
-          taskPanel.getTaskConnectionComboBox().setEnabled(false);
-          taskPanel.getRadioButtonPanel().setButtonNotView();
-          multiSelectQueryPanel.getUnPickBtn().setEnabled(false);
-          multiSelectQueryPanel.getPickBtn().setEnabled(false);
-          multiSelectQueryPanel.getPickAllBtn().setEnabled(false);
-          multiSelectQueryPanel.getUnPickAllBtn().setEnabled(false);
-
-          List<ConnectionInfo> connectionAll = profileManager.getConnectionInfoList();
-          if (!connectionAll.isEmpty()) {
-            this.connectionDataList = new LinkedList<>();
-            connectionAll.forEach(connection -> {
-              if (connection.getType() != null) {
-                connectionDataList.add(
-                    new ArrayList<>(Arrays.asList(connection.getName(), connection.getUserName(),
-                                                  connection.getUrl(), connection.getJar(),
-                                                  connection.getDriver(), connection.getType())));
-              } else {
-                connectionDataList.add(
-                    new ArrayList<>(Arrays.asList(connection.getName(), connection.getUserName(),
-                                                  connection.getUrl(), connection.getJar(),
-                                                  connection.getDriver(), "JDBC")));
-              }
-            });
-
-            taskPanel.getJTextFieldTask().setText("");
-            taskPanel.getJTextFieldTask().setPrompt(bundleDefault.getString("tName"));
-            taskPanel.getJTextFieldDescription().setText("");
-            taskPanel.getJTextFieldDescription().setPrompt(bundleDefault.getString("tDesc"));
-            taskPanel.getTaskConnectionComboBox().setTableData(connectionDataList);
-            taskPanel.getTaskConnectionComboBox().setEnabled(false);
-
-            String connName = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(0).toString();
-            Object connDriver = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(4);
-
-            if (connDriver != null) {
-              fillAvailableQueryList(connDriver.toString());
-            }
-
-          } else {
-            taskPanel.getTaskConnectionComboBox().setTableData(java.util.Collections.emptyList());
-          }
-        } else {
-          clearMultiSelectionPanel();
-
-          TaskInfo taskInfo = profileManager.getTaskInfoById(taskId);
-          if (Objects.isNull(taskInfo)) {
-            throw new NotFoundException("Not found task: " + taskId);
-          }
-
-          taskPanel.getJTextFieldTask().setText(taskInfo.getName());
-          taskPanel.getJTextFieldDescription().setText(taskInfo.getDescription());
-          taskPanel.getRadioButtonPanel().setSelectedRadioButton(taskInfo.getPullTimeout() + " sec");
-
-          ConnectionInfo connectionInfo = profileManager.getConnectionInfoById(taskInfo.getConnectionId());
-          if (Objects.isNull(connectionInfo)) {
-            throw new NotFoundException("Not found connection: " + taskInfo.getConnectionId());
-          }
-          List<ConnectionInfo> connectionAll = profileManager.getConnectionInfoList();
-          List<List<?>> connectionData = new LinkedList<>();
-          if (connectionInfo.getType() != null) {
-            connectionData.add(
-                new ArrayList<>(Arrays.asList(connectionInfo.getName(), connectionInfo.getUserName(),
-                                              connectionInfo.getUrl(), connectionInfo.getJar(),
-                                              connectionInfo.getDriver(), connectionInfo.getType())));
-          } else {
-            connectionData.add(
-                new ArrayList<>(Arrays.asList(connectionInfo.getName(), connectionInfo.getUserName(),
-                                              connectionInfo.getUrl(), connectionInfo.getJar(),
-                                              connectionInfo.getDriver(), JDBC)));
-          }
-          connectionAll.stream()
-              .filter(f -> f.getId() != connectionInfo.getId())
-              .forEach(connection -> {
-                String type = connection.getType() != null ? String.valueOf(connection.getType()) : JDBC.getName();
-                connectionData.add(Arrays.asList(
-                    connection.getName(), connection.getUserName(),
-                    connection.getUrl(), connection.getJar(),
-                    connection.getDriver(), type
-                ));
-              });
-
-          taskPanel.getTaskConnectionComboBox().setTableData(connectionData);
-
-          List<QueryTableRow> selectedRows = profileManager.getTaskInfoById(taskId)
-              .getQueryInfoList()
-              .stream()
-              .map(queryId -> {
-                QueryInfo queryInfo = profileManager.getQueryInfoById(queryId);
-                if (Objects.isNull(queryInfo)) {
-                  throw new NotFoundException("Not found query: " + queryId);
-                }
-                return new QueryTableRow(
-                    queryInfo.getId(),
-                    queryInfo.getName(),
-                    queryInfo.getDescription(),
-                    queryInfo.getText()
-                );
-              })
-              .collect(Collectors.toList());
-
-          TTTable<QueryTableRow, JXTable> selectedTT = multiSelectQueryPanel.getSelectedQueryCase().getTypedTable();
-          selectedTT.setItems(selectedRows);
-
-          String connName = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(0).toString();
-          Object connDriver = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(4);
-
-          if (connDriver != null) {
-            log.info("Connection's {} driver: {}", connName, connDriver);
-            fillAvailableQueryList(connDriver.toString());
-          }
-          fillConnectionCheckboxIsSelected(isSelected);
-          fillQueryCheckboxIsSelected(isSelected);
-
-          GUIHelper.disableButton(taskButtonPanel, !isSelected);
-        }
-      }
-    }
+    });
   }
 }

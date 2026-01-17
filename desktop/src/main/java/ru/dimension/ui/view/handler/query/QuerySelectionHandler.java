@@ -5,20 +5,17 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JCheckBox;
-import javax.swing.ListSelectionModel;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import ru.dimension.db.model.profile.CProfile;
@@ -33,10 +30,10 @@ import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.table.JXTableCase;
-import ru.dimension.ui.model.view.tab.ConfigEditTabPane;
 import ru.dimension.ui.prompt.Internationalization;
 import ru.dimension.ui.view.handler.CommonViewHandler;
-import ru.dimension.ui.view.handler.MouseListenerImpl;
+import ru.dimension.ui.view.handler.core.AbstractTableSelectionHandler;
+import ru.dimension.ui.view.handler.core.ConfigSelectionContext;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.query.MainQueryPanel;
 import ru.dimension.ui.view.panel.config.query.MetadataQueryPanel;
@@ -48,14 +45,16 @@ import ru.dimension.ui.view.table.row.Rows.QueryRow;
 
 @Log4j2
 @Singleton
-public class QuerySelectionHandler extends MouseListenerImpl implements ListSelectionListener, ItemListener,
-    CommonViewHandler {
+public final class QuerySelectionHandler extends AbstractTableSelectionHandler<QueryRow>
+    implements ItemListener, CommonViewHandler {
 
   private final ProfileManager profileManager;
+
   private final JXTableCase queryCase;
   private final JXTableCase taskCase;
   private final JXTableCase connectionCase;
   private final JXTableCase profileCase;
+
   private final MainQueryPanel mainQueryPanel;
   private final MetadataQueryPanel metadataQueryPanel;
   private final MetricQueryPanel metricQueryPanel;
@@ -64,12 +63,15 @@ public class QuerySelectionHandler extends MouseListenerImpl implements ListSele
   private final JXTableCase configMetadataCase;
   private final ButtonPanel queryButtonPanel;
   private final JCheckBox checkboxConfig;
-  private Boolean isSelected;
+
+  private final ConfigSelectionContext selectionContext;
+
+  private boolean isSelected;
   private final ResourceBundle bundleDefault;
 
   @Inject
   public QuerySelectionHandler(@Named("profileManager") ProfileManager profileManager,
-                               @Named("jTabbedPaneConfig") ConfigTab configTab,
+                               @Named("configTab") ConfigTab configTab,
                                @Named("queryConfigPanel") QueryPanel queryPanel,
                                @Named("queryConfigCase") JXTableCase queryCase,
                                @Named("taskConfigCase") JXTableCase taskCase,
@@ -80,254 +82,240 @@ public class QuerySelectionHandler extends MouseListenerImpl implements ListSele
                                @Named("checkboxConfig") JCheckBox checkboxConfig,
                                @Named("mainQueryPanel") MainQueryPanel mainQueryPanel,
                                @Named("metadataQueryPanel") MetadataQueryPanel metadataQueryPanel,
-                               @Named("metricQueryPanel") MetricQueryPanel metricQueryPanel) {
+                               @Named("metricQueryPanel") MetricQueryPanel metricQueryPanel,
+                               @Named("configSelectionContext") ConfigSelectionContext selectionContext) {
+    super(queryCase);
     this.profileManager = profileManager;
     this.queryCase = queryCase;
     this.profileCase = profileCase;
     this.taskCase = taskCase;
     this.connectionCase = connectionCase;
+
     this.mainQueryPanel = mainQueryPanel;
     this.metadataQueryPanel = metadataQueryPanel;
     this.metricQueryPanel = metricQueryPanel;
-    this.queryCase.getJxTable().getSelectionModel().addListSelectionListener(this);
-    this.queryCase.getJxTable().addMouseListener(this);
+
     this.configTab = configTab;
     this.queryPanel = queryPanel;
     this.configMetadataCase = configMetadataCase;
+
     this.queryButtonPanel = queryButtonPanel;
     this.checkboxConfig = checkboxConfig;
+    this.selectionContext = selectionContext;
+
     this.checkboxConfig.addItemListener(this);
     this.isSelected = false;
 
     this.bundleDefault = Internationalization.getInternationalizationBundle();
+
+    bind();
   }
 
   @Override
-  public void valueChanged(ListSelectionEvent e) {
-    ListSelectionModel listSelectionModel = (ListSelectionModel) e.getSource();
+  protected void onSelection(Optional<QueryRow> item) {
+    Integer queryId = item.map(QueryRow::getId).orElse(null);
+    selectionContext.setSelectedQueryId(queryId);
 
-    if (configTab.isEnabledAt(3)) {
-      configTab.setSelectedTab(ConfigEditTabPane.QUERY);
+    if (queryId == null) {
+      clearAll();
+      applyCheckboxState();
+      return;
     }
 
-    if (!e.getValueIsAdjusting()) {
-      if (listSelectionModel.isSelectionEmpty()) {
-        log.info("Clearing profile fields");
-        mainQueryPanel.getQueryName().setEditable(false);
-        mainQueryPanel.getQueryDescription().setEditable(false);
-        mainQueryPanel.getQuerySqlText().setEditable(false);
-        mainQueryPanel.getQueryGatherDataComboBox().setEnabled(false);
-        mainQueryPanel.getQueryName().setText("");
-        mainQueryPanel.getQueryName().setPrompt(bundleDefault.getString("qName"));
-        mainQueryPanel.getQueryDescription().setText("");
-        mainQueryPanel.getQueryDescription().setPrompt(bundleDefault.getString("qDesc"));
-        mainQueryPanel.getQuerySqlText().setText("");
-        metadataQueryPanel.getEditMetadata().setEnabled(false);
-        metadataQueryPanel.getSaveMetadata().setEnabled(false);
-        metadataQueryPanel.getConfigMetadataCase().getJxTable().setEditable(false);
-        configMetadataCase.clearTable();
-        metricQueryPanel.getConfigMetricCase().getDefaultTableModel().getDataVector().removeAllElements();
-        metricQueryPanel.getConfigMetricCase().getDefaultTableModel().fireTableDataChanged();
-        metricQueryPanel.getNameMetric().setText("");
-        metricQueryPanel.getNameMetric().setPrompt(bundleDefault.getString("metricName"));
-        metricQueryPanel.getDefaultCheckBox().setSelected(false);
-      } else {
-        int queryId = getSelectedQueryId();
-        QueryInfo queryInfo = profileManager.getQueryInfoById(queryId);
+    QueryInfo queryInfo = profileManager.getQueryInfoById(queryId);
+    if (queryInfo == null) {
+      throw new NotFoundException("Not found query: " + queryId);
+    }
 
-        if (Objects.isNull(queryInfo)) {
-          throw new NotFoundException("Not found query: " + queryId);
-        }
+    mainQueryPanel.getQueryName().setText(queryInfo.getName());
+    mainQueryPanel.getQueryDescription().setText(queryInfo.getDescription());
+    mainQueryPanel.getQueryGatherDataComboBox().setSelectedItem(queryInfo.getGatherDataMode());
+    mainQueryPanel.getQuerySqlText().setText(queryInfo.getText());
 
-        mainQueryPanel.getQueryName().setText(queryInfo.getName());
-        mainQueryPanel.getQueryDescription().setText(queryInfo.getDescription());
-        mainQueryPanel.getQueryGatherDataComboBox().setSelectedItem(queryInfo.getGatherDataMode());
+    TableInfo tableInfo = profileManager.getTableInfoByTableName(queryInfo.getName());
+    if (tableInfo == null) {
+      throw new NotFoundException("Not found table: " + queryInfo.getName());
+    }
 
-        mainQueryPanel.getQuerySqlText().setText(queryInfo.getText());
+    fillMetadataAndMetrics(queryId, queryInfo, tableInfo);
+    applyCheckboxState();
+    applyMetadataAvailability(queryInfo.getId());
+  }
 
-        TableInfo tableInfo = profileManager.getTableInfoByTableName(queryInfo.getName());
+  private void clearAll() {
+    mainQueryPanel.getQueryName().setEditable(false);
+    mainQueryPanel.getQueryDescription().setEditable(false);
+    mainQueryPanel.getQuerySqlText().setEditable(false);
+    mainQueryPanel.getQueryGatherDataComboBox().setEnabled(false);
 
-        List<CProfile> cProfileList = tableInfo.getCProfiles();
+    mainQueryPanel.getQueryName().setText("");
+    mainQueryPanel.getQueryName().setPrompt(bundleDefault.getString("qName"));
+    mainQueryPanel.getQueryDescription().setText("");
+    mainQueryPanel.getQueryDescription().setPrompt(bundleDefault.getString("qDesc"));
+    mainQueryPanel.getQuerySqlText().setText("");
 
-        List<String> xAxisList = new ArrayList<>();
-        List<String> yAxisList = new ArrayList<>();
-        List<String> dimensionList = new ArrayList<>();
+    metadataQueryPanel.getEditMetadata().setEnabled(false);
+    metadataQueryPanel.getSaveMetadata().setEnabled(false);
+    metadataQueryPanel.getConfigMetadataCase().getJxTable().setEditable(false);
 
-        TTTable<MetadataRow, JXTable> tt = configMetadataCase.getTypedTable();
-        tt.setItems(Collections.emptyList());
+    configMetadataCase.clearTable();
 
-        if (cProfileList != null) {
-          List<MetadataRow> metadataRows = cProfileList.stream()
-              .filter(f -> !f.getCsType().isTimeStamp())
-              .map(cProfile -> {
-                boolean isDimension = tableInfo.getDimensionColumnList() != null &&
-                    tableInfo.getDimensionColumnList().contains(cProfile.getColName());
-                return new MetadataRow(cProfile, isDimension);
-              })
-              .collect(Collectors.toList());
+    metricQueryPanel.getConfigMetricCase().getDefaultTableModel().getDataVector().removeAllElements();
+    metricQueryPanel.getConfigMetricCase().getDefaultTableModel().fireTableDataChanged();
+    metricQueryPanel.getNameMetric().setText("");
+    metricQueryPanel.getNameMetric().setPrompt(bundleDefault.getString("metricName"));
+    metricQueryPanel.getDefaultCheckBox().setSelected(false);
+  }
 
-          tt.setItems(metadataRows);
+  private void fillMetadataAndMetrics(int queryId, QueryInfo queryInfo, TableInfo tableInfo) {
+    List<CProfile> cProfiles = tableInfo.getCProfiles();
 
-          fillConfigMetadata(tableInfo, configMetadataCase);
+    TTTable<MetadataRow, JXTable> ttMeta = configMetadataCase.getTypedTable();
+    ttMeta.setItems(Collections.emptyList());
 
-          cProfileList.stream()
-              .filter(f -> !f.getCsType().isTimeStamp())
-              .forEach(cProfile -> xAxisList.add(cProfile.getColName()));
+    List<String> yAxisList = new ArrayList<>();
 
-          cProfileList.stream()
-              .filter(f -> !f.getCsType().isTimeStamp())
-              .forEach(cProfile -> yAxisList.add(cProfile.getColName()));
+    if (cProfiles != null) {
+      List<MetadataRow> metadataRows = cProfiles.stream()
+          .filter(f -> !f.getCsType().isTimeStamp())
+          .map(cProfile -> {
+            boolean isDimension = tableInfo.getDimensionColumnList() != null &&
+                tableInfo.getDimensionColumnList().contains(cProfile.getColName());
+            return new MetadataRow(cProfile, isDimension);
+          })
+          .collect(Collectors.toList());
 
-          cProfileList.stream()
-              .filter(f -> !f.getCsType().isTimeStamp())
-              .forEach(cProfile -> dimensionList.add(cProfile.getColDbTypeName()));
-        }
+      ttMeta.setItems(metadataRows);
 
-        DefaultComboBoxModel<String> cbModelY = new DefaultComboBoxModel<>();
-        for (String s : yAxisList) {
-          cbModelY.addElement(s);
-        }
-        metricQueryPanel.getYComboBox().setModel(cbModelY);
+      fillConfigMetadata(tableInfo, configMetadataCase);
 
-        DefaultComboBoxModel<String> cbModelDimension = new DefaultComboBoxModel<>();
-        for (String s : yAxisList) {
-          cbModelDimension.addElement(s);
-        }
-        metricQueryPanel.getDimensionComboBox().setModel(cbModelDimension);
+      cProfiles.stream()
+          .filter(f -> !f.getCsType().isTimeStamp())
+          .forEach(cProfile -> yAxisList.add(cProfile.getColName()));
+    }
 
-        List<List<?>> connectionData = new LinkedList<>();
-        profileManager.getTaskInfoList().stream()
-            .filter(f -> f.getQueryInfoList().stream().anyMatch(qId -> qId == queryId))
-            .findAny()
-            .ifPresentOrElse(t -> {
-                               ConnectionInfo connectionInfo = profileManager.getConnectionInfoById(t.getConnectionId());
-                               if (Objects.isNull(connectionInfo)) {
-                                 throw new NotFoundException("Not found task: " + t.getConnectionId());
-                               }
-                               connectionData.add(
-                                   new ArrayList<>(Arrays.asList(connectionInfo.getName(),
-                                                                 connectionInfo.getUserName(),
-                                                                 connectionInfo.getUrl(),
-                                                                 connectionInfo.getJar(),
-                                                                 connectionInfo.getDriver(),
-                                                                 connectionInfo.getType())));
-                             },
-                             () -> log.info("Not found query by query id: {}", queryId));
+    DefaultComboBoxModel<String> cbModelY = new DefaultComboBoxModel<>();
+    for (String s : yAxisList) {
+      cbModelY.addElement(s);
+    }
+    metricQueryPanel.getYComboBox().setModel(cbModelY);
 
-        metadataQueryPanel.getEditMetadata().setEnabled(true);
-        metadataQueryPanel.getQueryConnectionMetadataComboBox().setTableData(connectionData);
-        metadataQueryPanel.getTableName().setText(tableInfo.getTableName());
-        if (tableInfo.getTableType() != null) {
-          metadataQueryPanel.getTableType().setSelectedItem(tableInfo.getTableType());
-        } else {
-          metadataQueryPanel.getTableType().setSelectedItem(TType.TIME_SERIES);
-        }
-        if (tableInfo.getIndexType() != null) {
-          metadataQueryPanel.getTableIndex().setSelectedItem(tableInfo.getIndexType());
-        } else {
-          metadataQueryPanel.getTableIndex().setSelectedItem(IType.LOCAL);
-        }
+    DefaultComboBoxModel<String> cbModelDimension = new DefaultComboBoxModel<>();
+    for (String s : yAxisList) {
+      cbModelDimension.addElement(s);
+    }
+    metricQueryPanel.getDimensionComboBox().setModel(cbModelDimension);
 
-        metadataQueryPanel.getCompression().setEnabled(Boolean.FALSE);
-        metadataQueryPanel.getCompression().setSelected(Boolean.TRUE.equals(tableInfo.getCompression()));
+    List<List<?>> connectionData = new LinkedList<>();
+    profileManager.getTaskInfoList().stream()
+        .filter(t -> t.getQueryInfoList().stream().anyMatch(qId -> qId == queryId))
+        .findAny()
+        .ifPresentOrElse(t -> {
+          ConnectionInfo ci = profileManager.getConnectionInfoById(t.getConnectionId());
+          if (ci == null) {
+            throw new NotFoundException("Not found task: " + t.getConnectionId());
+          }
+          connectionData.add(new ArrayList<>(Arrays.asList(
+              ci.getName(), ci.getUserName(), ci.getUrl(), ci.getJar(), ci.getDriver(), ci.getType()
+          )));
+        }, () -> log.info("Not found query by query id: {}", queryId));
 
-        List<List<?>> timestampListAll = new LinkedList<>();
-        List<List<?>> timestampList = new LinkedList<>();
-        timestampList.add(new ArrayList<>(Arrays.asList(" ", " ")));
+    metadataQueryPanel.getQueryConnectionMetadataComboBox().setTableData(connectionData);
+    metadataQueryPanel.getTableName().setText(tableInfo.getTableName());
 
-        if (cProfileList != null) {
-          cProfileList.forEach(cProfile -> timestampListAll.add(
-              new ArrayList<>(Arrays.asList(cProfile.getColName(), cProfile.getCsType().getSType(),
-                                            cProfile.getCsType().isTimeStamp()))));
-        }
+    metadataQueryPanel.getTableType().setSelectedItem(tableInfo.getTableType() != null ? tableInfo.getTableType() : TType.TIME_SERIES);
+    metadataQueryPanel.getTableIndex().setSelectedItem(tableInfo.getIndexType() != null ? tableInfo.getIndexType() : IType.LOCAL);
 
-        timestampListAll.stream().filter(f -> f.get(2).equals(true))
-            .forEach(t -> timestampList.set(0, new ArrayList<>(Arrays.asList(t.get(0), t.get(1)))));
-        timestampListAll.stream().filter(f -> f.get(2).equals(false))
-            .forEach(t -> timestampList.add(new ArrayList<>(Arrays.asList(t.get(0), t.get(1)))));
+    metadataQueryPanel.getCompression().setEnabled(Boolean.FALSE);
+    metadataQueryPanel.getCompression().setSelected(Boolean.TRUE.equals(tableInfo.getCompression()));
 
-        metadataQueryPanel.getTimestampComboBox().setTableData(timestampList);
-        metricQueryPanel.getXTextFile().setText((String) timestampList.get(0).get(0));
+    List<List<?>> timestampListAll = new LinkedList<>();
+    List<List<?>> timestampList = new LinkedList<>();
+    timestampList.add(new ArrayList<>(Arrays.asList(" ", " ")));
 
-        metricQueryPanel.getConfigMetricCase().getDefaultTableModel().getDataVector().removeAllElements();
-        metricQueryPanel.getConfigMetricCase().getDefaultTableModel().fireTableDataChanged();
-        List<Metric> metrics = queryInfo.getMetricList();
-        for (Metric m : metrics) {
-          metricQueryPanel.getConfigMetricCase().getDefaultTableModel()
-              .addRow(new Object[]{m.getId(),
-                  m.getName(),
-                  m.getIsDefault(),
-                  m.getXAxis().getColName(),
-                  m.getYAxis().getColName(),
-                  m.getGroup().getColName(),
-                  m.getSafeGroupFunction().toString(),
-                  m.getSafeChartType().toString()});
-        }
-        if (metricQueryPanel.getConfigMetricCase().getJxTable().getRowCount() != 0) {
-          metricQueryPanel.getConfigMetricCase().getJxTable().setRowSelectionInterval(0, 0);
-        } else {
-          metricQueryPanel.getNameMetric().setText("");
-          metricQueryPanel.getNameMetric().setPrompt(bundleDefault.getString("metricName"));
-        }
+    if (cProfiles != null) {
+      cProfiles.forEach(cProfile -> timestampListAll.add(
+          new ArrayList<>(Arrays.asList(cProfile.getColName(), cProfile.getCsType().getSType(), cProfile.getCsType().isTimeStamp()))
+      ));
+    }
 
-        GUIHelper.disableButton(queryButtonPanel, !isSelected);
-        metadataQueryPanel.getEditMetadata().setEnabled(!isSelected);
-        metadataQueryPanel.getLoadMetadata().setEnabled(!isSelected);
-        GUIHelper.disableButton(metricQueryPanel.getMetricQueryButtonPanel(), !isSelected);
+    timestampListAll.stream().filter(f -> f.get(2).equals(true))
+        .forEach(t -> timestampList.set(0, new ArrayList<>(Arrays.asList(t.get(0), t.get(1)))));
+    timestampListAll.stream().filter(f -> f.get(2).equals(false))
+        .forEach(t -> timestampList.add(new ArrayList<>(Arrays.asList(t.get(0), t.get(1)))));
 
-        if (queryCase.getJxTable().getRowCount() > 0) {
-          profileManager.getTaskInfoList()
-              .stream()
-              .flatMap(t -> t.getQueryInfoList().stream())
-              .distinct()
-              .filter(id -> Objects.equals(id, queryInfo.getId()))
-              .findAny()
-              .ifPresentOrElse(
-                  q -> {
-                    metadataQueryPanel.getEditMetadata().setEnabled(!isSelected);
-                    metadataQueryPanel.getLoadMetadata().setEnabled(!isSelected);
-                  },
-                  () -> {
-                    metadataQueryPanel.getEditMetadata().setEnabled(false);
-                    metadataQueryPanel.getLoadMetadata().setEnabled(false);
-                  }
-              );
-        }
-      }
+    metadataQueryPanel.getTimestampComboBox().setTableData(timestampList);
+    metricQueryPanel.getXTextFile().setText((String) timestampList.get(0).get(0));
+
+    metricQueryPanel.getConfigMetricCase().getDefaultTableModel().getDataVector().removeAllElements();
+    metricQueryPanel.getConfigMetricCase().getDefaultTableModel().fireTableDataChanged();
+
+    for (Metric m : queryInfo.getMetricList()) {
+      metricQueryPanel.getConfigMetricCase().getDefaultTableModel()
+          .addRow(new Object[]{
+              m.getId(),
+              m.getName(),
+              m.getIsDefault(),
+              m.getXAxis().getColName(),
+              m.getYAxis().getColName(),
+              m.getGroup().getColName(),
+              m.getSafeGroupFunction().toString(),
+              m.getSafeChartType().toString()
+          });
+    }
+
+    if (metricQueryPanel.getConfigMetricCase().getJxTable().getRowCount() != 0) {
+      metricQueryPanel.getConfigMetricCase().getJxTable().setRowSelectionInterval(0, 0);
+    } else {
+      metricQueryPanel.getNameMetric().setText("");
+      metricQueryPanel.getNameMetric().setPrompt(bundleDefault.getString("metricName"));
+    }
+
+    metadataQueryPanel.getEditMetadata().setEnabled(true);
+  }
+
+  private void applyMetadataAvailability(int queryId) {
+    if (queryCase.getJxTable().getRowCount() <= 0) {
+      return;
+    }
+
+    boolean usedInAnyTask = profileManager.getTaskInfoList().stream()
+        .flatMap(t -> t.getQueryInfoList().stream())
+        .distinct()
+        .anyMatch(id -> Objects.equals(id, queryId));
+
+    if (usedInAnyTask) {
+      metadataQueryPanel.getEditMetadata().setEnabled(!isSelected);
+      metadataQueryPanel.getLoadMetadata().setEnabled(!isSelected);
+    } else {
+      metadataQueryPanel.getEditMetadata().setEnabled(false);
+      metadataQueryPanel.getLoadMetadata().setEnabled(false);
     }
   }
 
-  private int getSelectedQueryId() {
-    int selectedRow = queryCase.getJxTable().getSelectedRow();
-    if (selectedRow < 0) {
-      return -1;
-    }
-    TTTable<QueryRow, JXTable> tt = queryCase.getTypedTable();
-    QueryRow row = tt.model().itemAt(selectedRow);
-    return row != null ? row.getId() : -1;
-  }
+  private void applyCheckboxState() {
+    GUIHelper.disableButton(queryButtonPanel, !isSelected);
 
-  @Override
-  public void mouseClicked(MouseEvent e) {
-    if (configTab.isEnabledAt(3)) {
-      configTab.setSelectedTab(ConfigEditTabPane.QUERY);
-    }
+    metadataQueryPanel.getEditMetadata().setEnabled(!isSelected && metadataQueryPanel.getEditMetadata().isEnabled());
+    metadataQueryPanel.getLoadMetadata().setEnabled(!isSelected && metadataQueryPanel.getLoadMetadata().isEnabled());
+
+    GUIHelper.disableButton(metricQueryPanel.getMetricQueryButtonPanel(), !isSelected);
   }
 
   @Override
   public void itemStateChanged(ItemEvent e) {
     if (e.getStateChange() == ItemEvent.SELECTED) {
+      isSelected = true;
       GUIHelper.disableButton(queryButtonPanel, false);
       metadataQueryPanel.getEditMetadata().setEnabled(false);
       metadataQueryPanel.getLoadMetadata().setEnabled(false);
       GUIHelper.disableButton(metricQueryPanel.getMetricQueryButtonPanel(), false);
-      isSelected = true;
     } else {
+      isSelected = false;
       GUIHelper.disableButton(queryButtonPanel, true);
       metadataQueryPanel.getEditMetadata().setEnabled(true);
       metadataQueryPanel.getLoadMetadata().setEnabled(true);
       GUIHelper.disableButton(metricQueryPanel.getMetricQueryButtonPanel(), true);
-      isSelected = false;
     }
   }
 }

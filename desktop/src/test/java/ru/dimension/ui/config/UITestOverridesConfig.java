@@ -21,47 +21,39 @@ public final class UITestOverridesConfig {
    * Applies test-specific bindings to the DI builder.
    *
    * @param builder The DI builder to configure.
-   * @param mockInstance The instance of HandlerMock containing the mock objects.
+   * @param mock    The instance of HandlerMock containing the mock objects/UI components.
    * @param tempDir The temporary directory for test file operations.
    */
-  public static void configure(DimensionDI.Builder builder, HandlerMock mockInstance, File tempDir) {
-    // --- Core Overrides ---
+  public static void configure(DimensionDI.Builder builder, HandlerMock mock, File tempDir) {
 
-    // Override FilesHelper to use the temporary directory for tests
-    builder.provide(FilesHelper.class, ServiceLocator.singleton(
-        () -> new FilesHelper(tempDir.getAbsolutePath())
-    ));
+    // --- 1. Core Helpers ---
+    // Override FilesHelper to use the JUnit @TempDir
+    builder.provide(FilesHelper.class,
+                    ServiceLocator.singleton(() -> new FilesHelper(tempDir.getAbsolutePath())));
 
-    // --- UI Component Overrides ---
+    // --- 2. Button Panels (Mocks) ---
+    // Injecting pre-created button panels from HandlerMock to control clicks in tests
+    builder.provideNamed(ButtonPanel.class, "queryButtonPanel",       ServiceLocator.singleton(mock::getButtonQueryPanelMock));
+    builder.provideNamed(ButtonPanel.class, "profileButtonPanel",     ServiceLocator.singleton(mock::getButtonProfilePanelMock));
+    builder.provideNamed(ButtonPanel.class, "taskButtonPanel",        ServiceLocator.singleton(mock::getButtonTaskPanelMock));
+    builder.provideNamed(ButtonPanel.class, "connectionButtonPanel",  ServiceLocator.singleton(mock::getButtonConnectionPanelMock));
+    builder.provideNamed(ButtonPanel.class, "metricQueryButtonPanel", ServiceLocator.singleton(mock::getButtonMetricQueryPanelMock));
 
-    // Override ButtonPanels to use the mock instances from HandlerMock
-    builder.provideNamed(ButtonPanel.class, "queryButtonPanel",
-                         ServiceLocator.singleton(mockInstance::getButtonQueryPanelMock));
-    builder.provideNamed(ButtonPanel.class, "profileButtonPanel",
-                         ServiceLocator.singleton(mockInstance::getButtonProfilePanelMock));
-    builder.provideNamed(ButtonPanel.class, "taskButtonPanel",
-                         ServiceLocator.singleton(mockInstance::getButtonTaskPanelMock));
-    builder.provideNamed(ButtonPanel.class, "connectionButtonPanel",
-                         ServiceLocator.singleton(mockInstance::getButtonConnectionPanelMock));
-    builder.provideNamed(ButtonPanel.class, "metricQueryButtonPanel",
-                         ServiceLocator.singleton(mockInstance::getButtonMetricQueryPanelMock));
+    // --- 3. Main Configuration Views ---
+    // Override the composite tab view that holds the tables below
+    builder.provideNamed(ConfigTab.class, "configTab", ServiceLocator.singleton(mock::getConfigTab));
 
-    // Override the main configuration tab container
-    builder.provideNamed(ConfigTab.class, "jTabbedPaneConfig",
-                         ServiceLocator.singleton(mockInstance::getConfigTab));
+    // --- 4. Configuration Tables ---
+    // Injecting tables used in the ConfigTab to inspect their contents in tests
+    builder.provideNamed(JXTableCase.class, "profileConfigCase",    ServiceLocator.singleton(mock::getProfileCase));
+    builder.provideNamed(JXTableCase.class, "taskConfigCase",       ServiceLocator.singleton(mock::getTaskCase));
+    builder.provideNamed(JXTableCase.class, "connectionConfigCase", ServiceLocator.singleton(mock::getConnectionCase));
+    builder.provideNamed(JXTableCase.class, "queryConfigCase",      ServiceLocator.singleton(mock::getQueryCase));
 
-    // Override the tables used in the config panels
-    builder.provideNamed(JXTableCase.class, "profileConfigCase",
-                         ServiceLocator.singleton(mockInstance::getProfileCase));
-    builder.provideNamed(JXTableCase.class, "taskConfigCase",
-                         ServiceLocator.singleton(mockInstance::getTaskCase));
-    builder.provideNamed(JXTableCase.class, "connectionConfigCase",
-                         ServiceLocator.singleton(mockInstance::getConnectionCase));
-    builder.provideNamed(JXTableCase.class, "queryConfigCase",
-                         ServiceLocator.singleton(mockInstance::getQueryCase));
-
-    builder.provideNamed(JXTableCase.class, "taskListCase", ServiceLocator.singleton(mockInstance::getTaskListCase));
-    builder.provideNamed(JXTableCase.class, "selectedTaskCase", ServiceLocator.singleton(mockInstance::getSelectedTaskCase));
-    builder.provideNamed(JXTableCase.class, "templateListTaskCase", ServiceLocator.singleton(mockInstance::getTemplateListTaskCase));
+    // --- 5. Task Execution Tables ---
+    // Tables related to task lists and selections
+    builder.provideNamed(JXTableCase.class, "taskListCase",         ServiceLocator.singleton(mock::getTaskListCase));
+    builder.provideNamed(JXTableCase.class, "selectedTaskCase",     ServiceLocator.singleton(mock::getSelectedTaskCase));
+    builder.provideNamed(JXTableCase.class, "templateListTaskCase", ServiceLocator.singleton(mock::getTemplateListTaskCase));
   }
 }

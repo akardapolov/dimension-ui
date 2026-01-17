@@ -40,7 +40,6 @@ public class ModelPresenter {
     this.model = model;
     this.view = view;
 
-    // Register listeners once. They will check 'currentKey' dynamically.
     this.view.setColumnToggleListener(this::handleColumnToggle);
     this.view.setMetricToggleListener(this::handleMetricToggle);
   }
@@ -90,7 +89,6 @@ public class ModelPresenter {
     }
   }
 
-  // --- List Selection Handlers ---
   public void handleProfileSelection(int profileId) {
     ProfileInfo profileInfo = model.getProfileManager().getProfileInfoById(profileId);
     if (profileInfo == null) return;
@@ -126,8 +124,10 @@ public class ModelPresenter {
 
     TableInfo tableInfo = model.getProfileManager().getTableInfoByTableName(queryInfo.getName());
 
-    var entry = model.getQueryKeyMap().getOrDefault(currentKey,
-                                                    new AbstractMap.SimpleEntry<>(new ArrayList<>(), new ArrayList<>()));
+    var entry = model.getQueryKeyMap().getOrDefault(
+        currentKey,
+        new AbstractMap.SimpleEntry<>(new ArrayList<>(), new ArrayList<>())
+    );
 
     List<Metric> selectedMetrics = entry.getKey();
     List<CProfile> selectedColumns = entry.getValue();

@@ -96,7 +96,7 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
                         @Named("taskConfigCase") JXTableCase taskCase,
                         @Named("connectionConfigCase") JXTableCase connectionCase,
                         @Named("queryConfigCase") JXTableCase queryCase,
-                        @Named("jTabbedPaneConfig") ConfigTab configTab,
+                        @Named("configTab") ConfigTab configTab,
                         @Named("profileConfigPanel") ProfilePanel profilePanel,
                         @Named("taskConfigPanel") TaskPanel taskPanel,
                         @Named("connectionConfigPanel") ConnectionPanel connectionPanel,

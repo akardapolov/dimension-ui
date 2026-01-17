@@ -5,13 +5,22 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.swing.SwingUtilities;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.parallel.Isolated;
+import ru.dimension.di.ServiceLocator;
 import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.HandlerMock;
 import ru.dimension.ui.exception.NotFoundException;
@@ -19,16 +28,31 @@ import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.config.Profile;
 import ru.dimension.ui.model.config.Query;
 import ru.dimension.ui.model.config.Task;
+import ru.dimension.ui.model.info.ProfileInfo;
+import ru.dimension.ui.view.handler.core.ConfigSelectionContext;
 import ru.dimension.ui.view.table.row.Rows;
 import ru.dimension.ui.view.table.row.Rows.ProfileRow;
 
-
 @Log4j2
+@Isolated
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class ProfileEditHandlerTest extends HandlerMock {
 
   Profile profileNewExpected, profileCopiedNew, profileCopiedExpected;
 
   Connection connectionExpectedNew;
+
+  @BeforeEach
+  public void resetContext() {
+    if (configSelectionContextLazy != null) {
+      ConfigSelectionContext ctx = configSelectionContextLazy.get();
+      ctx.setSelectedProfileId(null);
+      ctx.setSelectedTaskId(null);
+      ctx.setSelectedConnectionId(null);
+      ctx.setSelectedQueryId(null);
+    }
+  }
 
   @BeforeAll
   public void setUpLocal() throws IOException {
@@ -59,6 +83,7 @@ public class ProfileEditHandlerTest extends HandlerMock {
   }
 
   @Test
+  @Order(1)
   public void create_new_profile_test() {
     startTabView();
 
@@ -71,10 +96,33 @@ public class ProfileEditHandlerTest extends HandlerMock {
   }
 
   @Test
-  public void copy_new_profile_test() {
+  @Order(2)
+  public void copy_new_profile_test() throws InterruptedException, InvocationTargetException {
+    assertNotNull(profileButtonPanelHandlerLazy.get());
+    assertNotNull(profilePanelLazy.get());
+    assertNotNull(configurationManagerLazy.get());
+
     startTabView();
 
     createNewTestData(profileCopiedNew);
+
+    selectProfileInTable(profileCopiedNew.getName());
+
+    waitForEvents();
+
+    int lastRow = profileCase.getJxTable().getRowCount() - 1;
+    profileCase.getJxTable().setRowSelectionInterval(lastRow, lastRow);
+
+    waitForEvents();
+
+    Profile createdProfile = configurationManagerLazy.get()
+        .getConfigList(Profile.class).stream()
+        .filter(p -> p.getName().equals("Test profile copied"))
+        .findFirst()
+        .orElseThrow();
+
+    ConfigSelectionContext context = ServiceLocator.get(ConfigSelectionContext.class, "configSelectionContext");
+    context.setSelectedProfileId(createdProfile.getId());
 
     buttonProfilePanelMock.getBtnCopy().doClick();
     buttonProfilePanelMock.getBtnSave().doClick();
@@ -85,7 +133,21 @@ public class ProfileEditHandlerTest extends HandlerMock {
     assertEquals(profileCopiedExpected, profileActual);
   }
 
+  private void selectProfileInTable(String profileName) throws InterruptedException, InvocationTargetException {
+    TTTable<ProfileRow, JXTable> tt = profileCase.getTypedTable();
+    JXTable table = profileCase.getJxTable();
+
+    for (int i = 0; i < tt.model().items().size(); i++) {
+      if (tt.model().items().get(i).getName().equals(profileName)) {
+        int finalI = i;
+        SwingUtilities.invokeAndWait(() -> table.setRowSelectionInterval(finalI, finalI));
+        break;
+      }
+    }
+  }
+
   @Test
+  @Order(3)
   public void copy_new_profile_duplicate_test() {
     assertNotNull(profileButtonPanelHandlerLazy.get());
     assertNotNull(profilePanelLazy.get());

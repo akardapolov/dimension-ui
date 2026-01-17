@@ -1,6 +1,5 @@
 package ru.dimension.ui.component.module.preview.charts;
 
-import java.awt.event.WindowAdapter;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.log4j.Log4j2;
@@ -78,8 +77,11 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
         model.getSqlQueryState(), model.getDStore()
     );
 
-    String keyValue = KeyHelper.getKey(model.getProfileManager(), key, chartKey.getCProfile());
-    chartModule.setTitle(keyValue);
+    KeyHelper.TitleInfo titleInfo = KeyHelper.getTitle(model.getProfileManager(), key, chartKey.getCProfile());
+    chartModule.setTitle(titleInfo.getShortTitle());
+    chartModule.setToolTipText(titleInfo.getFullTitle());
+
+    log.info("Add task pane: {}", titleInfo.getFullTitle());
 
     chartModule.initializeUI().run();
 
@@ -161,10 +163,11 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
 
     PRChartModule taskPane = new PRChartModule(component, chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
 
-    String keyValue = KeyHelper.getKey(model.getProfileManager(), key, cProfile);
-    taskPane.setTitle(keyValue);
+    KeyHelper.TitleInfo titleInfo = KeyHelper.getTitle(model.getProfileManager(), key, cProfile);
+    taskPane.setTitle(titleInfo.getShortTitle());
+    taskPane.setToolTipText(titleInfo.getFullTitle());
 
-    log.info("Add task pane: {}", keyValue);
+    log.info("Add task pane: {}", titleInfo.getFullTitle());
 
     view.addChartCard(taskPane, (module, error) -> {
       if (error != null) {

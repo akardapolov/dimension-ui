@@ -16,12 +16,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.bus.EventBus;
 import ru.dimension.ui.component.broker.Destination;
+import ru.dimension.ui.component.broker.Message;
+import ru.dimension.ui.component.broker.MessageAction;
 import ru.dimension.ui.component.broker.MessageBroker;
+import ru.dimension.ui.component.broker.MessageBroker.Action;
 import ru.dimension.ui.component.broker.MessageBroker.Block;
 import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
@@ -59,7 +63,7 @@ import ru.dimension.ui.view.table.row.Rows.MetricRow;
 import ru.dimension.ui.view.table.row.Rows.PickableQueryRow;
 
 @Log4j2
-public class PlaygroundPresenter implements ActionListener {
+public class PlaygroundPresenter implements ActionListener, MessageAction {
   private final PlaygroundModel model;
   private PlaygroundView view;
 
@@ -89,6 +93,8 @@ public class PlaygroundPresenter implements ActionListener {
         .register(eventBus);
 
     setupEventHandlers();
+
+    broker.addReceiver(Destination.withDefault(model.getComponent()), this);
   }
 
   private void setupEventHandlers() {
@@ -123,6 +129,11 @@ public class PlaygroundPresenter implements ActionListener {
   }
 
   private void handleNeedSaveComment(SaveCommentEvent event) {
+    QueryReportData data = model.getMapReportData().get(event.getKey());
+    if (data == null) {
+      return;
+    }
+
     ProfileTaskQueryKey key = event.getKey();
     CProfile cProfile = event.getCProfile();
     String comment = event.getComment();
@@ -139,6 +150,8 @@ public class PlaygroundPresenter implements ActionListener {
   }
 
   private void handleNeedSaveGroupFunction(SaveGroupFunctionEvent event) {
+    log.info("Event: {}", event);
+
     ProfileTaskQueryKey key = event.getKey();
     CProfile cProfile = event.getCProfile();
     GroupFunction groupFunction = event.getGroupFunction();
@@ -198,10 +211,11 @@ public class PlaygroundPresenter implements ActionListener {
     ReportChartModule taskPane =
         new ReportChartModule(model.getComponent(), chartKey, key, metric, queryInfo, chartInfoCopy, tableInfo, dStore);
 
-    String keyValue = KeyHelper.getKey(model.getProfileManager(), key, cProfile);
-    taskPane.setTitle(keyValue);
+    KeyHelper.TitleInfo titleInfo = KeyHelper.getTitle(model.getProfileManager(), key, cProfile);
+    taskPane.setTitle(titleInfo.getShortTitle());
+    taskPane.setToolTipText(titleInfo.getFullTitle());
 
-    log.info("Add task pane: {}", keyValue);
+    log.info("Add task pane: {}", titleInfo.getFullTitle());
 
     view.addChartCard(taskPane, (module, error) -> {
       if (error != null) {
@@ -468,5 +482,22 @@ public class PlaygroundPresenter implements ActionListener {
         .filter(MetricColumnPanel.class::isInstance)
         .map(MetricColumnPanel.class::cast)
         .anyMatch(card -> key.equals(card.getKey()));
+  }
+
+  @Override
+  public void receive(Message message) {
+    log.info("Message received >>> {} with action >>> {}", message.destination(), message.action());
+
+    if (message.action() == null) {
+      return;
+    }
+
+    if (message.action() == Action.NEED_TO_SAVE_COMMENT) {
+      ProfileTaskQueryKey key = message.parameters().get("key");
+      CProfile cProfile = message.parameters().get("cProfile");
+      String comment = message.parameters().get("comment");
+
+      SwingUtilities.invokeLater(() -> handleNeedSaveComment(new SaveCommentEvent(model.getComponent(), key, cProfile, comment)));
+    }
   }
 }

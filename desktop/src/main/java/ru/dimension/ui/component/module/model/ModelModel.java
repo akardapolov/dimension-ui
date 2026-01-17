@@ -6,7 +6,9 @@ import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.db.model.profile.CProfile;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ModelModel {
 
