@@ -9,6 +9,8 @@ import ru.dimension.db.model.profile.cstype.CSType;
 import ru.dimension.tt.swing.icon.RowIconProvider;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.db.DBType;
+import ru.dimension.ui.model.type.ConnectionStatus;
+import ru.dimension.ui.view.table.icon.adhoc.ConnectionStatusIcon;
 import ru.dimension.ui.view.table.icon.adhoc.DBTypeIcon;
 import ru.dimension.ui.view.table.icon.adhoc.TableIcon;
 import ru.dimension.ui.view.table.icon.adhoc.TimestampIcon;
@@ -25,6 +27,10 @@ import ru.dimension.ui.view.table.row.Rows.ProfileRow;
 import ru.dimension.ui.view.table.row.Rows.QueryRow;
 import ru.dimension.ui.view.table.row.Rows.QueryTableRow;
 import ru.dimension.ui.view.table.row.Rows.TaskRow;
+import ru.dimension.ui.view.table.row.Rows.TemplateConnectionRow;
+import ru.dimension.ui.view.table.row.Rows.TemplateMetricRow;
+import ru.dimension.ui.view.table.row.Rows.TemplateQueryRow;
+import ru.dimension.ui.view.table.row.Rows.TemplateTaskRow;
 import ru.dimension.ui.view.table.row.Rows.TimestampRow;
 
 public class ModelIconProviders {
@@ -33,6 +39,7 @@ public class ModelIconProviders {
   private static final Color TASK_COLOR    = new Color(0xEAB308);
   private static final Color QUERY_COLOR   = new Color(0xEF4444);
   private static final Color DESIGN_COLOR  = new Color(0x8B5CF6);
+  private static final Color METRIC_COLOR  = new Color(0x10B981);
 
   private static final RowIconProvider.RowIcon DEFAULT_ROW_ICON =
       new RowIconProvider.RowIcon(new DTGroupIcon(null), null);
@@ -41,8 +48,6 @@ public class ModelIconProviders {
       new RowIconProvider.RowIcon(new DBTypeIcon(null), "Database Connection");
 
   private ModelIconProviders() {}
-
-  // ==================== Existing Providers ====================
 
   public static RowIconProvider<DesignRow> forDesignRow() {
     return row -> new RowIconProvider.RowIcon(
@@ -65,6 +70,13 @@ public class ModelIconProviders {
     );
   }
 
+  public static RowIconProvider<TemplateTaskRow> forTemplateTaskRow() {
+    return row -> new RowIconProvider.RowIcon(
+        new VectorIcons.Task(TASK_COLOR),
+        row != null ? row.getName() : "Task"
+    );
+  }
+
   public static RowIconProvider<QueryRow> forQueryRow() {
     return row -> new RowIconProvider.RowIcon(
         new VectorIcons.Query(QUERY_COLOR),
@@ -73,6 +85,13 @@ public class ModelIconProviders {
   }
 
   public static RowIconProvider<QueryTableRow> forQueryTableRow() {
+    return row -> new RowIconProvider.RowIcon(
+        new VectorIcons.Query(QUERY_COLOR),
+        row != null ? row.getName() : "Query"
+    );
+  }
+
+  public static RowIconProvider<TemplateQueryRow> forTemplateQueryRow() {
     return row -> new RowIconProvider.RowIcon(
         new VectorIcons.Query(QUERY_COLOR),
         row != null ? row.getName() : "Query"
@@ -128,6 +147,27 @@ public class ModelIconProviders {
     };
   }
 
+  public static RowIconProvider<TemplateMetricRow> forTemplateMetricRow() {
+    return row -> {
+      if (row == null) return DEFAULT_ROW_ICON;
+      String name = row.getName();
+
+      if (row.hasOrigin() && row.getOrigin().getYAxis() != null) {
+        DTGroup group = extractDTGroup(row.getOrigin().getYAxis());
+        String typeInfo = getTooltipForDTGroup(group);
+        String tooltip = (name != null && !name.isBlank())
+            ? name + " (" + typeInfo + ")"
+            : typeInfo;
+        return new RowIconProvider.RowIcon(new DTGroupIcon(group), tooltip);
+      }
+
+      return new RowIconProvider.RowIcon(
+          new VectorIcons.Metric(METRIC_COLOR),
+          name
+      );
+    };
+  }
+
   public static RowIconProvider<MetadataRow> forMetadataRow() {
     return row -> {
       if (row == null) return DEFAULT_ROW_ICON;
@@ -147,12 +187,6 @@ public class ModelIconProviders {
     };
   }
 
-  // ==================== New AdHoc Providers ====================
-
-  /**
-   * Provider for ConnectionRow with DBType lookup function.
-   * Use when DBType is stored externally (e.g., in ProfileManager).
-   */
   public static RowIconProvider<ConnectionRow> forConnectionRow(Function<Integer, DBType> dbTypeLookup) {
     return row -> {
       if (row == null) return DEFAULT_CONNECTION_ICON;
@@ -169,9 +203,6 @@ public class ModelIconProviders {
     };
   }
 
-  /**
-   * Provider for ConnectionRow when DBType is embedded in the row.
-   */
   public static RowIconProvider<ConnectionRow> forConnectionRow() {
     return row -> {
       if (row == null) return DEFAULT_CONNECTION_ICON;
@@ -188,9 +219,24 @@ public class ModelIconProviders {
     };
   }
 
-  /**
-   * Provider for EntityRow representing tables.
-   */
+  public static RowIconProvider<TemplateConnectionRow> forTemplateConnectionRow() {
+    return row -> {
+      if (row == null) return DEFAULT_CONNECTION_ICON;
+
+      DBType dbType = row.getDbType();
+      if (dbType == null) dbType = DBType.UNKNOWN;
+
+      String name = row.getName();
+      String typeInfo = getTooltipForDBType(dbType);
+      String tooltip = (name != null && !name.isBlank()) ? name + " [" + typeInfo + "]" : typeInfo;
+
+      return new RowIconProvider.RowIcon(
+          new DBTypeIcon(dbType),
+          tooltip
+      );
+    };
+  }
+
   public static RowIconProvider<EntityRow> forTableRow() {
     return row -> new RowIconProvider.RowIcon(
         new TableIcon(),
@@ -198,9 +244,6 @@ public class ModelIconProviders {
     );
   }
 
-  /**
-   * Provider for EntityRow representing views.
-   */
   public static RowIconProvider<EntityRow> forViewRow() {
     return row -> new RowIconProvider.RowIcon(
         new ViewIcon(),
@@ -208,9 +251,6 @@ public class ModelIconProviders {
     );
   }
 
-  /**
-   * Provider for TimestampRow.
-   */
   public static RowIconProvider<TimestampRow> forTimestampRow() {
     return row -> new RowIconProvider.RowIcon(
         new TimestampIcon(),
@@ -218,9 +258,6 @@ public class ModelIconProviders {
     );
   }
 
-  /**
-   * Provider for ConnectionTemplateRow.
-   */
   public static RowIconProvider<ConnectionTemplateRow> forConnectionTemplateRow() {
     return row -> {
       if (row == null) return DEFAULT_CONNECTION_ICON;
@@ -237,12 +274,19 @@ public class ModelIconProviders {
     };
   }
 
+  public static RowIconProvider.RowIcon forConnectionStatus(ConnectionStatus status) {
+    return new RowIconProvider.RowIcon(
+        new ConnectionStatusIcon(status),
+        ConnectionStatusIcon.getTooltip(status)
+    );
+  }
+
   private static DBType guessDbType(ConnectionTemplateRow row) {
-    String blob = String.valueOf(row.getType()) + " " +
-        String.valueOf(row.getUrl()) + " " +
-        String.valueOf(row.getDriver()) + " " +
-        String.valueOf(row.getJar()) + " " +
-        String.valueOf(row.getHttpMethod());
+    String blob = row.getType() + " " +
+        row.getUrl() + " " +
+        row.getDriver() + " " +
+        row.getJar() + " " +
+        row.getHttpMethod();
 
     String s = blob.toLowerCase();
 
@@ -257,8 +301,6 @@ public class ModelIconProviders {
 
     return DBType.UNKNOWN;
   }
-
-  // ==================== Helper Methods ====================
 
   public static DTGroup extractDTGroup(CProfile cProfile) {
     if (cProfile == null) return null;

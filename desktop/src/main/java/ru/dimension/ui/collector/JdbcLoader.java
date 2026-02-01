@@ -17,6 +17,10 @@ public interface JdbcLoader {
   default long getSysdate(String statement,
                           Connection connection,
                           Logger log) {
+    if (connection == null) {
+      throw new IllegalArgumentException("Connection cannot be null");
+    }
+
     long sysdate = 0;
 
     log.info("Query to get sysdate: {}", statement);

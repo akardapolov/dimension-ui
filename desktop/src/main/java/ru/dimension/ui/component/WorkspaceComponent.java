@@ -1,11 +1,14 @@
 package ru.dimension.ui.component;
 
 import jakarta.inject.Inject;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.util.function.Consumer;
+import javax.swing.JComponent;
+import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
-import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.chart.HelperChart;
 import ru.dimension.ui.component.module.ChartsModule;
@@ -31,7 +34,6 @@ public class WorkspaceComponent implements HelperChart, ProfileStartStopListener
   private JSplitPane mainSplitPane;
 
   private JSplitPane manageConfigChartsSplitPane;
-
   private JSplitPane manageConfigSplitPane;
 
   private final EventListener eventListener;
@@ -49,7 +51,7 @@ public class WorkspaceComponent implements HelperChart, ProfileStartStopListener
   private final ChartsModuleFactory chartsModuleFactory;
   private ChartsModule chartsModule;
 
-  private final MessageBroker broker = MessageBroker.getInstance();
+  private static final int TOP_HEIGHT_PX = 70;
 
   @Inject
   public WorkspaceComponent(ModelModuleFactory modelModuleFactory,
@@ -70,28 +72,83 @@ public class WorkspaceComponent implements HelperChart, ProfileStartStopListener
   }
 
   private void initializeComponents() {
-    mainSplitPane = GUIHelper.getJSplitPane(JSplitPane.HORIZONTAL_SPLIT, 10, 170);
-
-    manageConfigChartsSplitPane = GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, 70);
-    manageConfigChartsSplitPane.setDividerLocation(70);
-    manageConfigChartsSplitPane.setResizeWeight(0.5);
-
     manageModule = manageModuleFactory.create(component);
-    modelModule = modelModuleFactory.create(component);
+    modelModule  = modelModuleFactory.create(component);
     configModule = configModuleFactory.create(component);
     chartsModule = chartsModuleFactory.create(component);
 
-    manageConfigSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-    manageConfigSplitPane.setLeftComponent(manageModule.getView());
-    manageConfigSplitPane.setRightComponent(configModule.getView());
-    manageConfigSplitPane.setDividerLocation(0.2);
-    manageConfigSplitPane.setResizeWeight(0.2);
+    mainSplitPane = GUIHelper.getJSplitPane(JSplitPane.HORIZONTAL_SPLIT, 10, 170);
+    mainSplitPane.setResizeWeight(0.0);
 
-    manageConfigChartsSplitPane.setTopComponent(manageConfigSplitPane);
-    manageConfigChartsSplitPane.setBottomComponent(chartsModule.getView());
+    manageConfigSplitPane = createManageConfigSplit();
+
+    manageConfigChartsSplitPane = createRightVerticalSplit(
+        manageConfigSplitPane,
+        chartsModule.getView(),
+        TOP_HEIGHT_PX,
+        0.2
+    );
 
     mainSplitPane.setLeftComponent(modelModule.getView());
     mainSplitPane.setRightComponent(manageConfigChartsSplitPane);
+  }
+
+  private JSplitPane createManageConfigSplit() {
+    JSplitPane sp = GUIHelper.getJSplitPane(JSplitPane.HORIZONTAL_SPLIT, 10, 170);
+    sp.setContinuousLayout(true);
+    sp.setResizeWeight(0.2);
+
+    sp.setLeftComponent(manageModule.getView());
+    sp.setRightComponent(configModule.getView());
+    return sp;
+  }
+
+  private JSplitPane createRightVerticalSplit(JComponent top,
+                                              JComponent bottom,
+                                              int topHeightPx,
+                                              double topHorizontalDividerRatio) {
+
+    JComponent shrinkableTop = shrinkable(top);
+
+    JSplitPane sp = new JSplitPane(JSplitPane.VERTICAL_SPLIT) {
+      private boolean inited = false;
+
+      @Override
+      public void addNotify() {
+        super.addNotify();
+        if (!inited) {
+          inited = true;
+
+          setDividerLocation(topHeightPx);
+
+          if (top instanceof JSplitPane topSplit) {
+            topSplit.setDividerLocation(topHorizontalDividerRatio);
+          }
+        }
+      }
+    };
+
+    sp.setOneTouchExpandable(true);
+    sp.setDividerSize(10);
+    sp.setContinuousLayout(true);
+
+    sp.setResizeWeight(0.0);
+
+    sp.setTopComponent(shrinkableTop);
+    sp.setBottomComponent(bottom);
+
+    return sp;
+  }
+
+  private static JComponent shrinkable(JComponent inner) {
+    JPanel p = new JPanel(new BorderLayout()) {
+      @Override
+      public Dimension getMinimumSize() {
+        return new Dimension(0, 0);
+      }
+    };
+    p.add(inner, BorderLayout.CENTER);
+    return p;
   }
 
   @Override

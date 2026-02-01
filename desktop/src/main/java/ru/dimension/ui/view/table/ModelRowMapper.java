@@ -16,9 +16,6 @@ import ru.dimension.ui.view.table.row.Rows.ProfileRow;
 import ru.dimension.ui.view.table.row.Rows.QueryRow;
 import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
-/**
- * Responsible for converting Domain objects into UI Row objects.
- */
 public class ModelRowMapper {
 
   public static List<ProfileRow> mapProfiles(List<ProfileInfo> infos) {

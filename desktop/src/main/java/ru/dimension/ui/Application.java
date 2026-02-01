@@ -1,23 +1,20 @@
 package ru.dimension.ui;
 
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.di.ServiceLocator;
 import ru.dimension.ui.config.DIConfig;
+import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LaFType;
 import ru.dimension.ui.prompt.Internationalization;
 import ru.dimension.ui.view.BaseFrame;
+import ru.dimension.ui.view.LoadingDialog;
 
 @Log4j2
 public class Application {
 
-  /**
-   * Use LaF parameter in VM option to enable dark, light or default theme
-   * <p>
-   * Supported any of: "-DLaF=dark", "-DLaF=light", "-DLaF=default"
-   * <p>
-   * Example: java -DLaF=dark -Dfile.encoding=UTF8 -jar desktop-1.0-SNAPSHOT-jar-with-dependencies.jar
-   */
   public static void main(String... args) {
     System.getProperties().setProperty("oracle.jdbc.J2EE13Compliant", "true");
 
@@ -46,9 +43,51 @@ public class Application {
       log.catching(e);
     }
 
-    DIConfig.init();
+    SwingUtilities.invokeLater(() -> {
+      LoadingDialog loadingDialog = new LoadingDialog();
+      loadingDialog.setMessage("Loading...");
+      loadingDialog.setVisible(true);
 
-    BaseFrame baseFrame = ServiceLocator.get(BaseFrame.class);
-    baseFrame.setVisible(true);
+      new SwingWorker<BaseFrame, String>() {
+
+        @Override
+        protected BaseFrame doInBackground() {
+          DIConfig.init();
+
+          try {
+            GUIHelper.prewarmRegistry();
+          } catch (Throwable ignore) {}
+
+          BaseFrame baseFrame = ServiceLocator.get(BaseFrame.class);
+
+          baseFrame.initUi();
+
+          return baseFrame;
+        }
+
+        @Override
+        protected void process(java.util.List<String> chunks) {
+          if (!chunks.isEmpty()) {
+            loadingDialog.setMessage(chunks.getLast());
+          }
+        }
+
+        @Override
+        protected void done() {
+          try {
+            loadingDialog.lockCancel("Opening UI...");
+
+            BaseFrame baseFrame = get();
+            baseFrame.setVisible(true);
+
+          } catch (Exception e) {
+            log.catching(e);
+            System.exit(1);
+          } finally {
+            loadingDialog.dispose();
+          }
+        }
+      }.execute();
+    });
   }
 }

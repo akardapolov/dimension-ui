@@ -14,6 +14,7 @@ import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.db.DBType;
 import ru.dimension.ui.model.parse.ParseType;
+import ru.dimension.ui.model.type.ConnectionStatus;
 import ru.dimension.ui.model.type.ConnectionType;
 
 public class Rows {
@@ -164,8 +165,11 @@ public class Rows {
     @TTColumn(name = "Name", order = 1, editable = false)
     private String name;
 
-    @TTColumn(name = "Type", order = 2, editable = false)
+    @TTColumn(name = "Type", order = 2, editable = false, minWidth = 40, maxWidth = 50, preferredWidth = 40)
     private String type;
+
+    @TTColumn(name = "Status", order = 3, editable = false, minWidth = 40, maxWidth = 50, preferredWidth = 40)
+    private ConnectionStatus status;
 
     private DBType dbType;
 
@@ -177,12 +181,14 @@ public class Rows {
       this.id = id;
       this.name = name;
       this.type = connectionType != null ? connectionType.getName() : ConnectionType.JDBC.getName();
+      this.status = ConnectionStatus.NOT_CONNECTED;
     }
 
     public ConnectionRow(int id, String name, String type) {
       this.id = id;
       this.name = name;
       this.type = type;
+      this.status = ConnectionStatus.NOT_CONNECTED;
     }
 
     public ConnectionRow(int id, String name, ConnectionType connectionType, DBType dbType) {
@@ -190,6 +196,15 @@ public class Rows {
       this.name = name;
       this.type = connectionType != null ? connectionType.getName() : ConnectionType.JDBC.getName();
       this.dbType = dbType;
+      this.status = ConnectionStatus.NOT_CONNECTED;
+    }
+
+    public ConnectionRow(int id, String name, ConnectionType connectionType, DBType dbType, ConnectionStatus status) {
+      this.id = id;
+      this.name = name;
+      this.type = connectionType != null ? connectionType.getName() : ConnectionType.JDBC.getName();
+      this.dbType = dbType;
+      this.status = status != null ? status : ConnectionStatus.NOT_CONNECTED;
     }
 
     public int getId() { return id; }
@@ -200,6 +215,8 @@ public class Rows {
     public void setType(String type) { this.type = type; }
     public DBType getDbType() { return dbType; }
     public void setDbType(DBType dbType) { this.dbType = dbType; }
+    public ConnectionStatus getStatus() { return status; }
+    public void setStatus(ConnectionStatus status) { this.status = status; }
   }
 
   @Data
@@ -494,6 +511,93 @@ public class Rows {
       }
       this.dimension = dimension;
       this.origin = cProfile;
+    }
+
+    public boolean hasOrigin() {
+      return origin != null;
+    }
+  }
+
+  @Data
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class TemplateTaskRow {
+    @TTColumn(name = "ID", order = 0, visible = false)
+    private int id;
+
+    @TTColumn(name = "Name", order = 1, editable = false)
+    private String name;
+
+    @TTColumn(name = "Timeout", order = 2, editable = false)
+    private String timeout;
+  }
+
+  @Data
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class TemplateConnectionRow {
+    @TTColumn(name = "ID", order = 0, visible = false)
+    private int id;
+
+    @TTColumn(name = "Name", order = 1, editable = false)
+    private String name;
+
+    @TTColumn(name = "Type", order = 2, editable = false)
+    private String type;
+
+    private DBType dbType;
+
+    public TemplateConnectionRow(int id, String name, String type) {
+      this(id, name, type, DBType.UNKNOWN);
+    }
+  }
+
+  @Data
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class TemplateQueryRow {
+    @TTColumn(name = "ID", order = 0, visible = false)
+    private int id;
+
+    @TTColumn(name = "Name", order = 1, editable = false)
+    private String name;
+
+    @TTColumn(name = "Gather Data Mode", order = 2, editable = false)
+    private String gatherDataMode;
+  }
+
+  @Data
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class TemplateMetricRow {
+    @TTColumn(name = "ID", order = 0, visible = false)
+    private int id;
+
+    @TTColumn(name = "Name", order = 1, editable = false)
+    private String name;
+
+    @TTColumn(name = "Is Default", order = 2, editable = false)
+    private boolean isDefault;
+
+    @TTColumn(name = "X Axis", order = 3, editable = false)
+    private String xAxis;
+
+    @TTColumn(name = "Y Axis", order = 4, editable = false)
+    private String yAxis;
+
+    @TTColumn(name = "Group", order = 5, editable = false)
+    private String group;
+
+    @TTColumn(name = "Group Function", order = 6, editable = false)
+    private String groupFunction;
+
+    @TTColumn(name = "Chart Type", order = 7, editable = false)
+    private String chartType;
+
+    private Metric origin;
+
+    public TemplateMetricRow(int id, String name, boolean isDefault, String xAxis, String yAxis, String group, String groupFunction, String chartType) {
+      this(id, name, isDefault, xAxis, yAxis, group, groupFunction, chartType, null);
     }
 
     public boolean hasOrigin() {

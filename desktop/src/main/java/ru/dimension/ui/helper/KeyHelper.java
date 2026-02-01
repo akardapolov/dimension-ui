@@ -1,7 +1,5 @@
 package ru.dimension.ui.helper;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.manager.ProfileManager;
@@ -15,19 +13,14 @@ public final class KeyHelper {
   private static final int VALUE_MAX_CHARS = 30;
   private static final int COLUMN_MAX_CHARS = 30;
 
-  private static final int TD_PROFILE_WIDTH_PX = 200;
-  private static final int TD_TASK_WIDTH_PX    = 220;
-  private static final int TD_QUERY_WIDTH_PX   = 200;
+  private static final int TD_PROFILE_WIDTH_PX = 240;
+  private static final int TD_TASK_WIDTH_PX    = 240;
+  private static final int TD_QUERY_WIDTH_PX   = 240;
   private static final int TD_COLUMN_WIDTH_PX  = 300;
 
   private KeyHelper() {}
 
-  @AllArgsConstructor
-  @Getter
-  public static class TitleInfo {
-    private final String shortTitle;
-    private final String fullTitle;
-  }
+  public record TitleInfo(String shortTitle, String fullTitle) {}
 
   public static AdHocKey getAdHocKey(ConnectionInfo connectionInfo, String tableName, CProfile cProfile) {
     return new AdHocKey(connectionInfo.getId(), tableName, cProfile.getColId());
@@ -41,9 +34,6 @@ public final class KeyHelper {
     return id + "_" + tableName;
   }
 
-  /**
-   * Возвращает TitleInfo с коротким title для отображения и полным для tooltip
-   */
   public static TitleInfo getTitle(ProfileManager profileManager,
                                    ProfileTaskQueryKey key,
                                    CProfile cProfile) {
@@ -58,17 +48,14 @@ public final class KeyHelper {
       columnNameFull = "";
     }
 
-    // Форматируем column name с поддержкой Prometheus
     ColumnNameFormatter.FormattedName formattedColumn =
         ColumnNameFormatter.format(columnNameFull, COLUMN_MAX_CHARS);
 
-    // Короткие значения для отображения
     String shortProfile = truncateWithEllipsis(profileName, VALUE_MAX_CHARS);
     String shortTask = truncateWithEllipsis(taskName, VALUE_MAX_CHARS);
     String shortQuery = truncateWithEllipsis(queryName, VALUE_MAX_CHARS);
     String shortColumn = formattedColumn.getShortName();
 
-    // Полные значения для tooltip
     String fullProfile = profileName;
     String fullTask = taskName;
     String fullQuery = queryName;
@@ -80,13 +67,10 @@ public final class KeyHelper {
     return new TitleInfo(shortTitle, fullTitle);
   }
 
-  /**
-   * Обратная совместимость — возвращает короткий title
-   */
   public static String getKey(ProfileManager profileManager,
                               ProfileTaskQueryKey key,
                               CProfile cProfile) {
-    return getTitle(profileManager, key, cProfile).getShortTitle();
+    return getTitle(profileManager, key, cProfile).shortTitle();
   }
 
   private static String getProfileName(ProfileManager profileManager, ProfileTaskQueryKey key) {
@@ -149,7 +133,10 @@ public final class KeyHelper {
   }
 
   private static String td(String label, String value, int widthPx) {
-    return String.format("<td width='%d'><b>%s</b> %s</td>", widthPx, esc(label), esc(value));
+    return String.format(
+        "<td width='%d' style='white-space: nowrap;'><b>%s</b>&nbsp;%s</td>",
+        widthPx, esc(label), esc(value)
+    );
   }
 
   private static String titleHtml(String profile, String task, String query, String column) {

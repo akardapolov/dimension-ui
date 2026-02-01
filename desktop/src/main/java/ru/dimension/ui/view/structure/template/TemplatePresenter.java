@@ -27,22 +27,24 @@ import javax.swing.table.DefaultTableModel;
 import lombok.extern.log4j.Log4j2;
 import org.apache.hc.core5.http.Method;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTextArea;
+import ru.dimension.tt.api.TT;
+import ru.dimension.tt.api.TTRegistry;
+import ru.dimension.tt.swing.TTTable;
+import ru.dimension.tt.swing.TableUi;
+import ru.dimension.tt.swingx.JXTableTables;
 import ru.dimension.ui.exception.EmptyNameException;
 import ru.dimension.ui.exception.EntityExistException;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.helper.GUIHelper;
-import ru.dimension.ui.model.column.QueryColumnNames;
-import ru.dimension.ui.model.column.TaskColumnNames;
 import ru.dimension.ui.model.config.ConfigClasses;
 import ru.dimension.ui.model.config.ConfigEntity;
 import ru.dimension.ui.model.config.Connection;
-import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.config.Profile;
 import ru.dimension.ui.model.config.Query;
 import ru.dimension.ui.model.config.Table;
 import ru.dimension.ui.model.config.Task;
-import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.tab.ConnectionTypeTabPane;
 import ru.dimension.ui.bus.EventBus;
@@ -62,6 +64,10 @@ import ru.dimension.ui.router.event.EventListener;
 import ru.dimension.ui.view.panel.template.TemplateConnPanel;
 import ru.dimension.ui.view.panel.template.TemplateEditPanel;
 import ru.dimension.ui.view.panel.template.TemplateHTTPConnPanel;
+import ru.dimension.ui.view.table.row.Rows.TemplateConnectionRow;
+import ru.dimension.ui.view.table.row.Rows.TemplateMetricRow;
+import ru.dimension.ui.view.table.row.Rows.TemplateQueryRow;
+import ru.dimension.ui.view.table.row.Rows.TemplateTaskRow;
 
 @Log4j2
 @Singleton
@@ -80,13 +86,13 @@ public class TemplatePresenter extends WindowAdapter
   private final JButton templateSaveJButton;
   private final TemplateEditPanel templateEditPanel;
 
-  private final JXTableCase templateTaskCase;
-  private final JXTableCase templateConnCase;
-  private final JXTableCase templateQueryCase;
+  private final TTTable<TemplateTaskRow, JXTable> templateTaskTable;
+  private final TTTable<TemplateConnectionRow, JXTable> templateConnTable;
+  private final TTTable<TemplateQueryRow, JXTable> templateQueryTable;
+  private final TTTable<TemplateMetricRow, JXTable> templateMetricsTable;
 
   private final TemplateConnPanel templateConnPanel;
   private final TemplateHTTPConnPanel templateHTTPConnPanel;
-  private final JXTableCase templateMetricsCase;
   private final ConnTypeTab connectionTabPane;
 
   private final JXTextArea taskDescription;
@@ -107,13 +113,13 @@ public class TemplatePresenter extends WindowAdapter
                            @Named("templateLoadJButton") JButton templateLoadJButton,
                            @Named("templateSaveJButton") JButton templateSaveJButton,
                            @Named("templateEditPanel") TemplateEditPanel templateEditPanel,
-                           @Named("templateTaskCase") JXTableCase templateTaskCase,
-                           @Named("templateConnCase") JXTableCase templateConnCase,
-                           @Named("templateQueryCase") JXTableCase templateQueryCase,
+                           @Named("templateTaskCase") TTTable<TemplateTaskRow, JXTable> templateTaskTable,
+                           @Named("templateConnCase") TTTable<TemplateConnectionRow, JXTable> templateConnTable,
+                           @Named("templateQueryCase") TTTable<TemplateQueryRow, JXTable> templateQueryTable,
+                           @Named("templateMetricsCase") TTTable<TemplateMetricRow, JXTable> templateMetricsTable,
                            @Named("templateConnPanel") TemplateConnPanel templateConnPanel,
                            @Named("templateHTTPConnPanel") TemplateHTTPConnPanel templateHTTPConnPanel,
                            @Named("templateConnectionTab") ConnTypeTab connectionTabPane,
-                           @Named("templateMetricsCase") JXTableCase templateMetricsCase,
                            @Named("templateTaskDescription") JXTextArea taskDescription,
                            @Named("templateQueryDescription") JXTextArea queryDescription,
                            @Named("templateQueryText") RSyntaxTextArea queryText) {
@@ -132,17 +138,17 @@ public class TemplatePresenter extends WindowAdapter
 
     this.templateEditPanel = templateEditPanel;
 
-    this.templateTaskCase = templateTaskCase;
-    this.templateConnCase = templateConnCase;
-    this.templateQueryCase = templateQueryCase;
+    this.templateTaskTable = templateTaskTable;
+    this.templateConnTable = templateConnTable;
+    this.templateQueryTable = templateQueryTable;
 
-    this.templateTaskCase.getJxTable().getSelectionModel().addListSelectionListener(this);
-    this.templateConnCase.getJxTable().getSelectionModel().addListSelectionListener(this);
-    this.templateQueryCase.getJxTable().getSelectionModel().addListSelectionListener(this);
+    this.templateTaskTable.table().getSelectionModel().addListSelectionListener(this);
+    this.templateConnTable.table().getSelectionModel().addListSelectionListener(this);
+    this.templateQueryTable.table().getSelectionModel().addListSelectionListener(this);
 
     this.templateConnPanel = templateConnPanel;
     this.templateHTTPConnPanel = templateHTTPConnPanel;
-    this.templateMetricsCase = templateMetricsCase;
+    this.templateMetricsTable = templateMetricsTable;
 
     this.connectionTabPane = connectionTabPane;
 
@@ -189,15 +195,17 @@ public class TemplatePresenter extends WindowAdapter
   public void valueChanged(ListSelectionEvent e) {
     ListSelectionModel listSelectionModel = (ListSelectionModel) e.getSource();
 
-    // prevents double events
     if (!e.getValueIsAdjusting()) {
       if (listSelectionModel.isSelectionEmpty()) {
         log.info("Clearing task fields");
       } else {
-        if (e.getSource() == templateTaskCase.getJxTable().getSelectionModel()) {
+        if (e.getSource() == templateTaskTable.table().getSelectionModel()) {
           log.info("Fire on tasks..");
-          int taskId = GUIHelper.getIdByColumnName(templateTaskCase.getJxTable(), templateTaskCase.getDefaultTableModel(),
-                                                   listSelectionModel, TaskColumnNames.ID.getColName());
+          int selectedRow = templateTaskTable.table().getSelectedRow();
+          if (selectedRow == -1) return;
+          int modelRow = templateTaskTable.table().convertRowIndexToModel(selectedRow);
+          TemplateTaskRow row = templateTaskTable.model().itemAt(modelRow);
+          int taskId = row.getId();
 
           Task task = templateManager.getConfigList(Task.class)
               .stream()
@@ -213,24 +221,22 @@ public class TemplatePresenter extends WindowAdapter
 
           List<Query> queryList = templateManager.getConfigList(Query.class);
 
-          templateQueryCase.getDefaultTableModel().getDataVector().removeAllElements();
-          templateQueryCase.getDefaultTableModel().fireTableDataChanged();
-          task.getQueryList()
-              .forEach(query -> queryList.stream()
-                  .filter(f -> f.getId() == query)
-                  .forEach(queryIn -> {
-                    templateQueryCase.getDefaultTableModel().addRow(
-                        new Object[]{queryIn.getId(), queryIn.getName(), queryIn.getGatherDataMode().name()});
-                  }));
+          List<TemplateQueryRow> queryRows = task.getQueryList().stream()
+              .flatMap(queryId -> queryList.stream()
+                  .filter(f -> f.getId() == queryId)
+                  .map(q -> new TemplateQueryRow(q.getId(), q.getName(), q.getGatherDataMode().name())))
+              .toList();
+          templateQueryTable.setItems(queryRows);
 
           taskDescription.setText(task.getDescription());
 
-          templateConnCase.getDefaultTableModel().getDataVector().removeAllElements();
-          templateConnCase.getDefaultTableModel().fireTableDataChanged();
-          templateConnCase.getDefaultTableModel()
-              .addRow(new Object[]{connection.getId(), connection.getName(), connection.getType()});
+          List<TemplateConnectionRow> connRows = Collections.singletonList(
+              new TemplateConnectionRow(connection.getId(), connection.getName(),
+                                        connection.getType() != null ? connection.getType().getName() : ru.dimension.ui.model.type.ConnectionType.JDBC.getName())
+          );
+          templateConnTable.setItems(connRows);
 
-          if (connection.getType() == null || connection.getType().equals(ConnectionType.JDBC)) {
+          if (connection.getType() == null || connection.getType().equals(ru.dimension.ui.model.type.ConnectionType.JDBC)) {
             templateConnPanel.getConnectionName().setText(connection.getName());
             templateConnPanel.getConnectionURL().setText(connection.getUrl());
             templateConnPanel.getConnectionUserName().setText(connection.getUserName());
@@ -241,7 +247,7 @@ public class TemplatePresenter extends WindowAdapter
             connectionTabPane.setSelectedTab(ConnectionTypeTabPane.JDBC);
             connectionTabPane.setEnabledTab(ConnectionTypeTabPane.JDBC, true);
             connectionTabPane.setEnabledTab(ConnectionTypeTabPane.HTTP, false);
-          } else if (connection.getType().equals(ConnectionType.HTTP)) {
+          } else if (connection.getType().equals(ru.dimension.ui.model.type.ConnectionType.HTTP)) {
             templateHTTPConnPanel.getConnectionName().setText(connection.getName());
             templateHTTPConnPanel.getConnectionURL().setText(connection.getUrl());
 
@@ -251,23 +257,23 @@ public class TemplatePresenter extends WindowAdapter
             connectionTabPane.setEnabledTab(ConnectionTypeTabPane.JDBC, false);
           }
 
-          templateConnCase.getJxTable().setRowSelectionInterval(0, 0);
-          templateQueryCase.getJxTable().setRowSelectionInterval(0, 0);
+          templateConnTable.table().setRowSelectionInterval(0, 0);
+          templateQueryTable.table().setRowSelectionInterval(0, 0);
 
           log.info("Task ID: {}", taskId);
         }
 
-        if (e.getSource() == templateConnCase.getJxTable().getSelectionModel()) {
+        if (e.getSource() == templateConnTable.table().getSelectionModel()) {
           log.info("Fire on connections..");
         }
-        if (e.getSource() == templateQueryCase.getJxTable().getSelectionModel()) {
+        if (e.getSource() == templateQueryTable.table().getSelectionModel()) {
           log.info("Fire on queries..");
-          templateMetricsCase.getDefaultTableModel().getDataVector().removeAllElements();
-          templateMetricsCase.getDefaultTableModel().fireTableDataChanged();
 
-          int queryId = GUIHelper.getIdByColumnName(templateQueryCase.getJxTable(),
-                                                    templateQueryCase.getDefaultTableModel(), listSelectionModel,
-                                                    QueryColumnNames.ID.getColName());
+          int selectedRow = templateQueryTable.table().getSelectedRow();
+          if (selectedRow == -1) return;
+          int modelRow = templateQueryTable.table().convertRowIndexToModel(selectedRow);
+          TemplateQueryRow row = templateQueryTable.model().itemAt(modelRow);
+          int queryId = row.getId();
 
           Query query = templateManager.getConfigList(Query.class)
               .stream()
@@ -275,17 +281,19 @@ public class TemplatePresenter extends WindowAdapter
               .findAny()
               .orElseThrow(() -> new NotFoundException("Not found query: " + queryId));
 
-          for (Metric m : query.getMetricList()) {
-            templateMetricsCase.getDefaultTableModel()
-                .addRow(new Object[]{m.getId(),
-                    m.getName(),
-                    m.getIsDefault(),
-                    m.getXAxis().getColName(),
-                    m.getYAxis().getColName(),
-                    m.getGroup().getColName(),
-                    m.getGroupFunction().toString(),
-                    m.getChartType().toString()});
-          }
+          List<TemplateMetricRow> metricRows = query.getMetricList().stream()
+              .map(m -> new TemplateMetricRow(
+                  m.getId(),
+                  m.getName(),
+                  m.getIsDefault(),
+                  m.getXAxis() != null ? m.getXAxis().getColName() : "",
+                  m.getYAxis() != null ? m.getYAxis().getColName() : "",
+                  m.getGroup() != null ? m.getGroup().getColName() : "",
+                  m.getGroupFunction() != null ? m.getGroupFunction().toString() : "",
+                  m.getChartType() != null ? m.getChartType().toString() : ""
+              ))
+              .toList();
+          templateMetricsTable.setItems(metricRows);
 
           queryDescription.setText(query.getDescription());
           queryText.setText(query.getText());
@@ -298,11 +306,13 @@ public class TemplatePresenter extends WindowAdapter
     if (ConfigClasses.Task.equals(ConfigClasses.fromClass(clazz))) {
       log.info("Task..");
 
-      templateManager.getConfigList(Task.class)
-          .forEach(e -> templateTaskCase.getDefaultTableModel()
-              .addRow(new Object[]{e.getId(), e.getName(), e.getPullTimeout() + " sec."}));
+      List<TemplateTaskRow> taskRows = templateManager.getConfigList(Task.class)
+          .stream()
+          .map(e -> new TemplateTaskRow(e.getId(), e.getName(), e.getPullTimeout() + " sec."))
+          .toList();
+      templateTaskTable.setItems(taskRows);
 
-      templateTaskCase.getJxTable().setRowSelectionInterval(0, 0);
+      templateTaskTable.table().setRowSelectionInterval(0, 0);
     }
 
     if (ConfigClasses.Connection.equals(ConfigClasses.fromClass(clazz))) {
@@ -317,30 +327,36 @@ public class TemplatePresenter extends WindowAdapter
   @Override
   public void actionPerformed(ActionEvent e) {
     this.arrText.clear();
-    int taskId = GUIHelper.getIdByColumnName(templateTaskCase.getJxTable(),
-                                             templateTaskCase.getDefaultTableModel(), templateTaskCase.getJxTable()
-                                                 .getSelectionModel(),
-                                             QueryColumnNames.ID.getColName());
+    int selectedTaskRow = templateTaskTable.table().getSelectedRow();
+    if (selectedTaskRow == -1) return;
+    int modelTaskRow = templateTaskTable.table().convertRowIndexToModel(selectedTaskRow);
+    TemplateTaskRow taskRow = templateTaskTable.model().itemAt(modelTaskRow);
+    int taskId = taskRow.getId();
+
     Task task = templateManager.getConfigList(Task.class)
         .stream()
         .filter(f -> f.getId() == taskId)
         .findAny()
         .orElseThrow(() -> new NotFoundException("Not found task: " + taskId));
 
-    int connId = GUIHelper.getIdByColumnName(templateConnCase.getJxTable(),
-                                             templateConnCase.getDefaultTableModel(), templateConnCase.getJxTable()
-                                                 .getSelectionModel(),
-                                             QueryColumnNames.ID.getColName());
+    int selectedConnRow = templateConnTable.table().getSelectedRow();
+    if (selectedConnRow == -1) return;
+    int modelConnRow = templateConnTable.table().convertRowIndexToModel(selectedConnRow);
+    TemplateConnectionRow connRow = templateConnTable.model().itemAt(modelConnRow);
+    int connId = connRow.getId();
+
     Connection connection = templateManager.getConfigList(Connection.class)
         .stream()
         .filter(f -> f.getId() == connId)
         .findAny()
         .orElseThrow(() -> new NotFoundException("Not found connection: " + connId));
 
-    int queryId = GUIHelper.getIdByColumnName(templateQueryCase.getJxTable(),
-                                              templateQueryCase.getDefaultTableModel(), templateQueryCase.getJxTable()
-                                                  .getSelectionModel(),
-                                              QueryColumnNames.ID.getColName());
+    int selectedQueryRow = templateQueryTable.table().getSelectedRow();
+    if (selectedQueryRow == -1) return;
+    int modelQueryRow = templateQueryTable.table().convertRowIndexToModel(selectedQueryRow);
+    TemplateQueryRow queryRow = templateQueryTable.model().itemAt(modelQueryRow);
+    int queryId = queryRow.getId();
+
     Query query = templateManager.getConfigList(Query.class)
         .stream()
         .filter(f -> f.getId() == queryId)
@@ -387,20 +403,16 @@ public class TemplatePresenter extends WindowAdapter
           .toList();
       templateEditPanel.updateModelTemplateEditQueryCase(queryList);
 
-      // Check profile name
       changeStatusIfEntityExist(Profile.class, templateEditPanel.getProfileName().getText());
 
-      // Check task name
       changeStatusIfEntityExist(Task.class, templateEditPanel.getTaskName().getText());
 
-      // Check connection name
-      if (connection.getType() == null || connection.getType().equals(ConnectionType.JDBC)) {
+      if (connection.getType() == null || connection.getType().equals(ru.dimension.ui.model.type.ConnectionType.JDBC)) {
         changeStatusIfEntityExist(Connection.class, templateEditPanel.getConnName().getText());
-      } else if (connection.getType().equals(ConnectionType.HTTP)) {
+      } else if (connection.getType().equals(ru.dimension.ui.model.type.ConnectionType.HTTP)) {
         changeStatusIfEntityExist(Connection.class, templateEditPanel.getJTextFieldHttpName().getText());
       }
 
-      // Check query name
       DefaultTableModel defaultTableModel = templateEditPanel.getTemplateQueryCase().getDefaultTableModel();
 
       for (int rowIndex = 0; rowIndex < defaultTableModel.getRowCount(); rowIndex++) {
@@ -414,20 +426,16 @@ public class TemplatePresenter extends WindowAdapter
           !templateEditPanel.getTaskName().getText().trim().isEmpty() &&
           (!templateEditPanel.getConnName().getText().trim().isEmpty() ||
               !templateEditPanel.getJTextFieldHttpName().getText().trim().isEmpty())) {
-        // Check profile name
         raiseAnErrorIfEntityExist(Profile.class, templateEditPanel.getProfileName().getText());
 
-        // Check task name
         raiseAnErrorIfEntityExist(Task.class, templateEditPanel.getTaskName().getText());
 
-        // Check connection name
-        if (connection.getType() == null || connection.getType().equals(ConnectionType.JDBC)) {
+        if (connection.getType() == null || connection.getType().equals(ru.dimension.ui.model.type.ConnectionType.JDBC)) {
           raiseAnErrorIfEntityExist(Connection.class, templateEditPanel.getConnName().getText());
-        } else if (connection.getType().equals(ConnectionType.HTTP)) {
+        } else if (connection.getType().equals(ru.dimension.ui.model.type.ConnectionType.HTTP)) {
           raiseAnErrorIfEntityExist(Connection.class, templateEditPanel.getJTextFieldHttpName().getText());
         }
 
-        // Check query name
         DefaultTableModel defaultTableModel = templateEditPanel.getTemplateQueryCase().getDefaultTableModel();
 
         for (int rowIndex = 0; rowIndex < defaultTableModel.getRowCount(); rowIndex++) {
@@ -435,7 +443,6 @@ public class TemplatePresenter extends WindowAdapter
           raiseAnErrorIfEntityExist(Query.class, queryName);
         }
 
-        // Save query and table
         List<Integer> quiryIdList = new ArrayList<>();
 
         int queryMaxId = configurationManager.getConfigList(Query.class)
@@ -461,7 +468,6 @@ public class TemplatePresenter extends WindowAdapter
 
           configurationManager.addConfig(saveQuery, Query.class);
 
-          // Save table
           Table table = new Table();
           table.setTableName(saveQuery.getName());
           configurationManager.addConfig(table, Table.class);
@@ -471,7 +477,6 @@ public class TemplatePresenter extends WindowAdapter
           queryMaxId++;
         }
 
-        // Save connection
         int connMaxId = configurationManager.getConfigList(Connection.class)
             .stream()
             .map(ru.dimension.ui.model.config.Connection::getId)
@@ -480,14 +485,14 @@ public class TemplatePresenter extends WindowAdapter
 
         connection.setId(connMaxId);
 
-        if (connection.getType() == null || connection.getType().equals(ConnectionType.JDBC)) {
+        if (connection.getType() == null || connection.getType().equals(ru.dimension.ui.model.type.ConnectionType.JDBC)) {
           connection.setName(templateEditPanel.getConnName().getText());
           connection.setUrl(templateEditPanel.getConnUrl().getText());
           connection.setJar(templateEditPanel.getConnJar().getText());
           connection.setUserName(templateEditPanel.getConnUserName().getText());
           connection.setPassword(encryptDecrypt.encrypt(String.valueOf(templateEditPanel.getConnPassword()
                                                                            .getPassword())));
-        } else if (connection.getType().equals(ConnectionType.HTTP)) {
+        } else if (connection.getType().equals(ru.dimension.ui.model.type.ConnectionType.HTTP)) {
           connection.setName(templateEditPanel.getJTextFieldHttpName().getText());
           connection.setUrl(templateEditPanel.getJTextFieldHttpURL().getText());
 
@@ -505,7 +510,6 @@ public class TemplatePresenter extends WindowAdapter
 
         eventBus.publish(new ConnectionAddEvent(connection.getId(), connection.getName(), connection.getType()));
 
-        // Save task
         int taskMaxId = configurationManager.getConfigList(Task.class)
             .stream()
             .map(ru.dimension.ui.model.config.Task::getId)
@@ -520,7 +524,6 @@ public class TemplatePresenter extends WindowAdapter
 
         configurationManager.addConfig(task, Task.class);
 
-        // Save profile
         int profileMaxId = configurationManager.getConfigList(Profile.class)
             .stream()
             .map(Profile::getId)
@@ -677,4 +680,9 @@ public class TemplatePresenter extends WindowAdapter
   @Override
   public void keyReleased(KeyEvent keyEvent) {
   }
+
+  public TTTable<TemplateTaskRow, JXTable> getTemplateTaskTable() { return templateTaskTable; }
+  public TTTable<TemplateConnectionRow, JXTable> getTemplateConnTable() { return templateConnTable; }
+  public TTTable<TemplateQueryRow, JXTable> getTemplateQueryTable() { return templateQueryTable; }
+  public TTTable<TemplateMetricRow, JXTable> getTemplateMetricsTable() { return templateMetricsTable; }
 }

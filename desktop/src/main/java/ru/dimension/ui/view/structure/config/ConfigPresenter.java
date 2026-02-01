@@ -9,10 +9,24 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import javax.swing.JCheckBox;
+import javax.swing.SwingUtilities;
+import javax.swing.table.TableColumn;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.jdesktop.swingx.JXTable;
 import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.bus.EventBus;
@@ -21,19 +35,22 @@ import ru.dimension.ui.bus.event.ProfileRemoveEvent;
 import ru.dimension.ui.helper.event.EventRouteRegistry;
 import ru.dimension.ui.helper.event.EventUtils;
 import ru.dimension.ui.manager.ConfigurationManager;
+import ru.dimension.ui.manager.ConnectionPoolManager;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.config.ConfigClasses;
-import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.config.Profile;
 import ru.dimension.ui.model.config.Query;
 import ru.dimension.ui.model.config.Task;
 import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.table.JXTableCase;
+import ru.dimension.ui.model.type.ConnectionStatus;
+import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.ConfigState;
 import ru.dimension.ui.router.event.EventListener;
 import ru.dimension.ui.router.listener.ConfigListener;
 import ru.dimension.ui.state.NavigatorState;
 import ru.dimension.ui.view.structure.ConfigView;
+import ru.dimension.ui.view.table.renderer.ConnectionStatusCellRenderer;
 import ru.dimension.ui.view.table.row.Rows.ConnectionRow;
 import ru.dimension.ui.view.table.row.Rows.ProfileRow;
 import ru.dimension.ui.view.table.row.Rows.QueryRow;
@@ -43,11 +60,15 @@ import ru.dimension.ui.view.table.row.Rows.TaskRow;
 @Singleton
 public class ConfigPresenter extends WindowAdapter implements ConfigListener {
 
+  private static final int CONNECTION_CHECK_TIMEOUT_SECONDS = 10;
+  private static final int THREAD_POOL_SIZE = 4;
+
   private final ConfigView configView;
   private final NavigatorState navigatorState;
   private final EventListener eventListener;
   private final ConfigurationManager configurationManager;
   private final ProfileManager profileManager;
+  private final ConnectionPoolManager connectionPoolManager;
 
   private final JXTableCase profileCase;
   private final JXTableCase taskCase;
@@ -58,6 +79,16 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
 
   private final EventRouteRegistry eventRegistry;
 
+  private final Map<Integer, ConnectionStatus> connectionStatusMap = new ConcurrentHashMap<>();
+  private final ExecutorService connectionCheckExecutor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+  private boolean statusRendererApplied = false;
+
+  private volatile boolean statusCheckPerformed = false;
+  private volatile boolean statusCheckInProgress = false;
+
+  // Store the current check future to allow cancellation
+  private volatile CompletableFuture<Void> currentCheckFuture = null;
+
   @Inject
   public ConfigPresenter(@Named("configView") ConfigView configView,
                          @Named("navigatorState") NavigatorState navigatorState,
@@ -65,6 +96,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
                          @Named("eventBus") EventBus eventBus,
                          @Named("configurationManager") ConfigurationManager configurationManager,
                          @Named("profileManager") ProfileManager profileManager,
+                         @Named("connectionPoolManager") ConnectionPoolManager connectionPoolManager,
                          @Named("profileConfigCase") JXTableCase profileCase,
                          @Named("taskConfigCase") JXTableCase taskCase,
                          @Named("connectionConfigCase") JXTableCase connectionCase,
@@ -75,6 +107,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
     this.eventListener = eventListener;
     this.configurationManager = configurationManager;
     this.profileManager = profileManager;
+    this.connectionPoolManager = connectionPoolManager;
 
     this.profileCase = profileCase;
     this.taskCase = taskCase;
@@ -95,11 +128,20 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
   @Override
   public void windowClosing(WindowEvent e) {
     log.info("Window configuration closing event received");
+
+    // Cancel any ongoing checks
+    if (currentCheckFuture != null) {
+      currentCheckFuture.cancel(true);
+    }
+
+    connectionCheckExecutor.shutdownNow();
   }
 
   @Override
   public void fireShowConfig(ConfigState configState) {
     if (configState == ConfigState.SHOW) {
+      // Start check asynchronously - don't block showing the config
+      startConnectionStatusCheckAsync();
       this.configView.showConfig(navigatorState.getSelectedProfile());
     }
     if (configState == ConfigState.HIDE) {
@@ -122,6 +164,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
     if (Connection.equals(ConfigClasses.fromClass(clazz))) {
       log.info("Connection..");
       fillConnectionTable();
+      applyStatusRendererIfNeeded();
     }
 
     if (Query.equals(ConfigClasses.fromClass(clazz))) {
@@ -148,14 +191,16 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
 
   private void fillConnectionTable() {
     TTTable<ConnectionRow, JXTable> tt = connectionCase.getTypedTable();
-    List<ConnectionRow> rows = configurationManager.getConfigList(Connection.class).stream()
+    List<ConnectionRow> rows = configurationManager.getConfigList(ru.dimension.ui.model.config.Connection.class).stream()
         .map(e -> {
           ConnectionInfo connectionInfo = profileManager.getConnectionInfoById(e.getId());
+          ConnectionStatus status = connectionStatusMap.getOrDefault(e.getId(), ConnectionStatus.NOT_CONNECTED);
           return new ConnectionRow(
               e.getId(),
               e.getName(),
               e.getType(),
-              connectionInfo.getDbType()
+              connectionInfo.getDbType(),
+              status
           );
         })
         .collect(Collectors.toList());
@@ -170,12 +215,316 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
     tt.setItems(rows);
   }
 
+  private void applyStatusRendererIfNeeded() {
+    if (statusRendererApplied) {
+      return;
+    }
+
+    JXTable table = connectionCase.getJxTable();
+    if (table == null) {
+      return;
+    }
+
+    SwingUtilities.invokeLater(() -> {
+      try {
+        int statusColumnIndex = findColumnIndex(table, "Status");
+        if (statusColumnIndex >= 0) {
+          TableColumn column = table.getColumnModel().getColumn(statusColumnIndex);
+          column.setCellRenderer(new ConnectionStatusCellRenderer());
+          statusRendererApplied = true;
+          log.info("Status column renderer applied successfully");
+        }
+      } catch (Exception e) {
+        log.debug("Could not apply status renderer: {}", e.getMessage());
+      }
+    });
+  }
+
+  private int findColumnIndex(JXTable table, String columnName) {
+    for (int i = 0; i < table.getColumnCount(); i++) {
+      if (columnName.equals(table.getColumnName(i))) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Starts connection status check asynchronously without blocking.
+   */
+  private void startConnectionStatusCheckAsync() {
+    // Already completed - don't restart
+    if (statusCheckPerformed) {
+      log.debug("Connection status check already performed, skipping");
+      return;
+    }
+
+    // Currently running - don't start another
+    if (statusCheckInProgress) {
+      log.debug("Connection status check already in progress, skipping");
+      return;
+    }
+
+    // Run the check initiation on a separate thread to not block EDT
+    CompletableFuture.runAsync(this::startConnectionStatusCheck, connectionCheckExecutor);
+  }
+
+  /**
+   * Performs the actual connection status check.
+   * Should be called from a background thread.
+   */
+  private void startConnectionStatusCheck() {
+    // Double-check with synchronization
+    synchronized (this) {
+      if (statusCheckPerformed || statusCheckInProgress) {
+        log.debug("Connection status check already performed or in progress (synchronized check)");
+        return;
+      }
+      statusCheckInProgress = true;
+    }
+
+    try {
+      List<ru.dimension.ui.model.config.Connection> connections =
+          configurationManager.getConfigList(ru.dimension.ui.model.config.Connection.class);
+
+      if (connections.isEmpty()) {
+        log.debug("No connections to check");
+        markCheckCompleted();
+        return;
+      }
+
+      // Check if executor is still usable
+      if (connectionCheckExecutor.isShutdown() || connectionCheckExecutor.isTerminated()) {
+        log.warn("Connection check executor is shutdown, cannot check connections");
+        markCheckCompleted();
+        return;
+      }
+
+      log.info("Starting connection status check for {} connections", connections.size());
+
+      // Set all to CONNECTING state
+      for (ru.dimension.ui.model.config.Connection conn : connections) {
+        connectionStatusMap.put(conn.getId(), ConnectionStatus.CONNECTING);
+      }
+
+      SwingUtilities.invokeLater(this::updateConnectionTableStatus);
+
+      AtomicInteger completedCount = new AtomicInteger(0);
+      int totalCount = connections.size();
+
+      // Create all futures with individual timeouts
+      List<CompletableFuture<Void>> futures = connections.stream()
+          .map(conn -> createConnectionCheckFutureWithTimeout(conn, completedCount, totalCount))
+          .collect(Collectors.toList());
+
+      // Combine all futures
+      currentCheckFuture = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+          .orTimeout(CONNECTION_CHECK_TIMEOUT_SECONDS * 2L, TimeUnit.SECONDS)
+          .whenComplete((result, throwable) -> {
+            if (throwable != null) {
+              if (throwable instanceof TimeoutException) {
+                log.warn("Connection status check timed out");
+              } else {
+                log.error("Error during connection status check: {}", throwable.getMessage());
+              }
+              // Mark remaining connections as NOT_CONNECTED
+              markRemainingConnectionsAsFailed(connections);
+            }
+            markCheckCompleted();
+            log.info("All connection status checks finished");
+          });
+
+    } catch (Exception e) {
+      log.error("Exception starting connection status check: {}", e.getMessage());
+      markCheckCompleted();
+    }
+  }
+
+  /**
+   * Marks remaining connections that haven't been checked as NOT_CONNECTED.
+   */
+  private void markRemainingConnectionsAsFailed(List<ru.dimension.ui.model.config.Connection> connections) {
+    for (ru.dimension.ui.model.config.Connection conn : connections) {
+      ConnectionStatus currentStatus = connectionStatusMap.get(conn.getId());
+      if (currentStatus == ConnectionStatus.CONNECTING) {
+        connectionStatusMap.put(conn.getId(), ConnectionStatus.NOT_CONNECTED);
+      }
+    }
+    SwingUtilities.invokeLater(this::updateConnectionTableStatus);
+  }
+
+  /**
+   * Marks the check as completed.
+   */
+  private void markCheckCompleted() {
+    synchronized (this) {
+      statusCheckInProgress = false;
+      statusCheckPerformed = true;
+      currentCheckFuture = null;
+    }
+  }
+
+  /**
+   * Creates a CompletableFuture for checking a single connection with timeout.
+   */
+  private CompletableFuture<Void> createConnectionCheckFutureWithTimeout(
+      ru.dimension.ui.model.config.Connection conn,
+      AtomicInteger completedCount,
+      int totalCount) {
+
+    return CompletableFuture.supplyAsync(() -> {
+          try {
+            return checkConnectionStatus(conn);
+          } catch (Exception e) {
+            log.error("Exception checking connection {}: {}", conn.getName(), e.getMessage());
+            return ConnectionStatus.NOT_CONNECTED;
+          }
+        }, connectionCheckExecutor)
+        .orTimeout(CONNECTION_CHECK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .exceptionally(ex -> {
+          if (ex instanceof TimeoutException || (ex.getCause() instanceof TimeoutException)) {
+            log.warn("Connection check timed out for {}", conn.getName());
+          } else {
+            log.error("Async exception during connection check for {}: {}",
+                      conn.getName(), ex.getMessage());
+          }
+          return ConnectionStatus.NOT_CONNECTED;
+        })
+        .thenAccept(status -> {
+          connectionStatusMap.put(conn.getId(), status);
+          log.debug("Connection {} check completed with status: {}", conn.getName(), status);
+        })
+        .whenComplete((result, throwable) -> {
+          int completed = completedCount.incrementAndGet();
+          SwingUtilities.invokeLater(this::updateConnectionTableStatus);
+          log.debug("Connection check progress: {}/{}", completed, totalCount);
+        });
+  }
+
+  private ConnectionStatus checkConnectionStatus(ru.dimension.ui.model.config.Connection connection) {
+    try {
+      ConnectionInfo connectionInfo = profileManager.getConnectionInfoById(connection.getId());
+      if (connectionInfo == null) {
+        log.warn("ConnectionInfo not found for connection id: {}", connection.getId());
+        return ConnectionStatus.NOT_CONNECTED;
+      }
+
+      ConnectionType type = connection.getType();
+      if (type == null) {
+        type = ConnectionType.JDBC;
+      }
+
+      switch (type) {
+        case JDBC:
+          return checkJdbcConnection(connectionInfo);
+        case HTTP:
+          return checkHttpConnection(connectionInfo);
+        default:
+          log.warn("Unknown connection type: {} for connection: {}", type, connection.getName());
+          return ConnectionStatus.NOT_CONNECTED;
+      }
+    } catch (Exception e) {
+      log.error("Error checking connection {}: {}", connection.getName(), e.getMessage());
+      return ConnectionStatus.NOT_CONNECTED;
+    }
+  }
+
+  private ConnectionStatus checkJdbcConnection(ConnectionInfo connectionInfo) {
+    try {
+      log.debug("Checking JDBC connection: {} (id={})", connectionInfo.getName(), connectionInfo.getId());
+
+      BasicDataSource dataSource = connectionPoolManager.getDatasource(connectionInfo);
+
+      if (dataSource == null) {
+        log.warn("Failed to create datasource for connection: {}", connectionInfo.getName());
+        return ConnectionStatus.NOT_CONNECTED;
+      }
+
+      try (java.sql.Connection testConnection = dataSource.getConnection()) {
+        if (testConnection != null && !testConnection.isClosed()) {
+          boolean isValid = testConnection.isValid(3);
+
+          if (isValid) {
+            log.info("JDBC connection {} is READY", connectionInfo.getName());
+            return ConnectionStatus.READY;
+          } else {
+            log.warn("JDBC connection {} failed validation", connectionInfo.getName());
+            return ConnectionStatus.NOT_CONNECTED;
+          }
+        } else {
+          log.warn("JDBC connection {} returned null or closed connection", connectionInfo.getName());
+          return ConnectionStatus.NOT_CONNECTED;
+        }
+      } catch (SQLException sqlEx) {
+        log.error("SQL error testing connection {}: {}", connectionInfo.getName(), sqlEx.getMessage());
+        return ConnectionStatus.NOT_CONNECTED;
+      }
+    } catch (Exception e) {
+      log.error("Error checking JDBC connection {}: {}", connectionInfo.getName(), e.getMessage());
+      return ConnectionStatus.NOT_CONNECTED;
+    }
+  }
+
+  private ConnectionStatus checkHttpConnection(ConnectionInfo connectionInfo) {
+    try {
+      String urlString = connectionInfo.getUrl();
+      if (urlString == null || urlString.isEmpty()) {
+        return ConnectionStatus.NOT_CONNECTED;
+      }
+
+      if (!urlString.startsWith("http://") && !urlString.startsWith("https://")) {
+        urlString = "http://" + urlString;
+      }
+
+      URI uri = URI.create(urlString);
+
+      HttpURLConnection connection = (HttpURLConnection) uri.toURL().openConnection();
+      connection.setRequestMethod("HEAD"); // Use HEAD instead of GET - faster
+      connection.setConnectTimeout(3000);  // Reduced timeout
+      connection.setReadTimeout(3000);     // Reduced timeout
+      connection.setInstanceFollowRedirects(true);
+      connection.setRequestProperty("User-Agent", "Mozilla/5.0");
+      connection.setRequestProperty("Accept", "*/*");
+
+      int responseCode = connection.getResponseCode();
+      connection.disconnect();
+
+      return (responseCode >= 200 && responseCode < 400)
+          ? ConnectionStatus.READY
+          : ConnectionStatus.NOT_CONNECTED;
+
+    } catch (Exception e) {
+      log.error("Error checking HTTP connection {}: {}", connectionInfo.getName(), e.getMessage());
+      return ConnectionStatus.NOT_CONNECTED;
+    }
+  }
+
+  private void updateConnectionTableStatus() {
+    TTTable<ConnectionRow, JXTable> tt = connectionCase.getTypedTable();
+    if (tt == null) {
+      return;
+    }
+
+    for (int i = 0; i < tt.model().getRowCount(); i++) {
+      ConnectionRow row = tt.model().itemAt(i);
+      if (row != null) {
+        ConnectionStatus newStatus = connectionStatusMap.getOrDefault(row.getId(), ConnectionStatus.NOT_CONNECTED);
+        row.setStatus(newStatus);
+      }
+    }
+
+    tt.model().fireTableDataChanged();
+  }
+
   public void fireProfileAdd(ProfileAddEvent event) {
     log.info("Received {} via MBassador", event);
 
     clearAllTables();
     refillAllTables();
     checkProfileListState();
+
+    // Reset check when profiles change so new connections can be checked
+    resetConnectionStatusCheck();
   }
 
   public void fireProfileRemove(ProfileRemoveEvent event) {
@@ -184,6 +533,9 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
     clearAllTables();
     refillAllTables();
     checkProfileListState();
+
+    // Reset check when profiles change
+    resetConnectionStatusCheck();
   }
 
   private void checkProfileListState() {
@@ -206,7 +558,89 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
   private void refillAllTables() {
     fillProfileModel(Profile.class);
     fillProfileModel(Task.class);
-    fillProfileModel(Connection.class);
+    fillProfileModel(ru.dimension.ui.model.config.Connection.class);
     fillProfileModel(Query.class);
+  }
+
+  public void updateConnectionStatus(int connectionId, ConnectionStatus status) {
+    connectionStatusMap.put(connectionId, status);
+    SwingUtilities.invokeLater(this::updateConnectionTableStatus);
+  }
+
+  public ConnectionStatus getConnectionStatus(int connectionId) {
+    return connectionStatusMap.getOrDefault(connectionId, ConnectionStatus.NOT_CONNECTED);
+  }
+
+  /**
+   * Resets the connection status check state, allowing a new check to be performed.
+   * Call this when connections are added/removed/modified.
+   */
+  public void resetConnectionStatusCheck() {
+    synchronized (this) {
+      // Cancel ongoing check if any
+      if (currentCheckFuture != null) {
+        currentCheckFuture.cancel(true);
+        currentCheckFuture = null;
+      }
+
+      statusCheckPerformed = false;
+      statusCheckInProgress = false;
+      connectionStatusMap.clear();
+    }
+    log.debug("Connection status check reset");
+  }
+
+  /**
+   * Rechecks a single connection status.
+   */
+  public void recheckConnection(int connectionId) {
+    // Check if executor is still usable
+    if (connectionCheckExecutor.isShutdown() || connectionCheckExecutor.isTerminated()) {
+      log.warn("Connection check executor is shutdown, cannot recheck connection");
+      return;
+    }
+
+    ru.dimension.ui.model.config.Connection connection = configurationManager
+        .getConfigList(ru.dimension.ui.model.config.Connection.class)
+        .stream()
+        .filter(c -> c.getId() == connectionId)
+        .findFirst()
+        .orElse(null);
+
+    if (connection != null) {
+      connectionStatusMap.put(connectionId, ConnectionStatus.CONNECTING);
+      SwingUtilities.invokeLater(this::updateConnectionTableStatus);
+
+      CompletableFuture.supplyAsync(() -> {
+            try {
+              return checkConnectionStatus(connection);
+            } catch (Exception e) {
+              log.error("Error rechecking connection {}: {}", connection.getName(), e.getMessage());
+              return ConnectionStatus.NOT_CONNECTED;
+            }
+          }, connectionCheckExecutor)
+          .orTimeout(CONNECTION_CHECK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+          .exceptionally(ex -> {
+            log.error("Async exception rechecking connection {}: {}", connectionId, ex.getMessage());
+            return ConnectionStatus.NOT_CONNECTED;
+          })
+          .thenAccept(status -> {
+            connectionStatusMap.put(connectionId, status);
+            log.info("Recheck completed for connection {} with status: {}", connection.getName(), status);
+          })
+          .whenComplete((result, throwable) -> {
+            SwingUtilities.invokeLater(this::updateConnectionTableStatus);
+          });
+    }
+  }
+
+  /**
+   * Forces recheck of all connections.
+   * Use this for manual refresh functionality.
+   */
+  public void recheckAllConnections() {
+    log.info("Force rechecking all connections");
+    resetConnectionStatusCheck();
+    startConnectionStatusCheckAsync();
   }
 }

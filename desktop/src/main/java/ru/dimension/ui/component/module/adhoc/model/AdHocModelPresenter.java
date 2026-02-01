@@ -1,5 +1,6 @@
 package ru.dimension.ui.component.module.adhoc.model;
 
+import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -9,7 +10,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
@@ -39,12 +43,12 @@ import ru.dimension.ui.helper.KeyHelper;
 import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.config.ConfigClasses;
-import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.db.DBType;
 import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.gui.ChartInfo;
+import ru.dimension.ui.model.type.ConnectionStatus;
 import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.state.AdHocStateManager;
@@ -64,6 +68,8 @@ public class AdHocModelPresenter implements HelperChart {
   private final AtomicBoolean running = new AtomicBoolean(false);
   private final AtomicBoolean removingConnection = new AtomicBoolean(false);
 
+  private final ExecutorService connectionCheckExecutor = Executors.newFixedThreadPool(1);
+
   private Thread periodicTask;
   private java.sql.Connection connection;
   private String connectionName = "";
@@ -81,7 +87,92 @@ public class AdHocModelPresenter implements HelperChart {
   }
 
   public void loadConnections() {
-    loadModel(Connection.class);
+    loadModel(ru.dimension.ui.model.config.Connection.class);
+    startConnectionStatusCheck();
+  }
+
+  public void startConnectionStatusCheck() {
+    List<ru.dimension.ui.model.config.Connection> connections = model.getConfigurationManager()
+        .getConfigList(ru.dimension.ui.model.config.Connection.class);
+
+    List<ru.dimension.ui.model.config.Connection> jdbcConnections = connections.stream()
+        .filter(c -> c.getType() == null || c.getType().equals(ConnectionType.JDBC))
+        .toList();
+
+    if (jdbcConnections.isEmpty()) {
+      return;
+    }
+
+    SwingUtilities.invokeLater(() -> {
+      view.setConnectionCheckInProgress(true);
+      view.showStatusMessage("Checking connections...");
+    });
+
+    AtomicInteger completedCount = new AtomicInteger(0);
+    int totalCount = jdbcConnections.size();
+
+    for (ru.dimension.ui.model.config.Connection conn : jdbcConnections) {
+      model.setConnectionStatus(conn.getId(), ConnectionStatus.CONNECTING);
+      model.markConnectionBeingChecked(conn.getId());
+      SwingUtilities.invokeLater(() -> view.updateConnectionStatus(conn.getId(), ConnectionStatus.CONNECTING));
+
+      connectionCheckExecutor.submit(() -> {
+        checkConnectionAsync(conn.getId(), () -> {
+          int completed = completedCount.incrementAndGet();
+          if (completed >= totalCount) {
+            SwingUtilities.invokeLater(() -> {
+              view.setConnectionCheckInProgress(false);
+              view.showStatusMessage("Connection check completed");
+              log.info("All connection checks completed");
+            });
+          } else {
+            SwingUtilities.invokeLater(() ->
+                                           view.showStatusMessage("Checking connections... (" + completed + "/" + totalCount + ")")
+            );
+          }
+        });
+      });
+    }
+  }
+
+  private void checkConnectionAsync(int connectionId, Runnable onComplete) {
+    try {
+      ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(connectionId);
+      if (connectionInfo == null) {
+        log.warn("ConnectionInfo is null for connectionId: {}", connectionId);
+        updateConnectionStatusOnComplete(connectionId, ConnectionStatus.NOT_CONNECTED, onComplete);
+        return;
+      }
+
+      log.info("Checking connection: {} (id={})", connectionInfo.getName(), connectionId);
+
+      model.getConnectionPoolManager().createDataSource(connectionInfo);
+
+      try (Connection testConnection = model.getConnectionPoolManager().getConnection(connectionInfo)) {
+        if (testConnection != null && !testConnection.isClosed()) {
+          log.info("Connection {} is valid", connectionId);
+          updateConnectionStatusOnComplete(connectionId, ConnectionStatus.READY, onComplete);
+        } else {
+          log.warn("Connection {} returned invalid connection", connectionId);
+          updateConnectionStatusOnComplete(connectionId, ConnectionStatus.NOT_CONNECTED, onComplete);
+        }
+      }
+    } catch (Exception e) {
+      log.error("Failed to check connection {}: {}", connectionId, e.getMessage());
+      updateConnectionStatusOnComplete(connectionId, ConnectionStatus.NOT_CONNECTED, onComplete);
+    }
+  }
+
+  private void updateConnectionStatusOnComplete(int connectionId, ConnectionStatus status, Runnable onComplete) {
+    model.setConnectionStatus(connectionId, status);
+    model.unmarkConnectionBeingChecked(connectionId);
+
+    SwingUtilities.invokeLater(() -> {
+      view.updateConnectionStatus(connectionId, status);
+      if (onComplete != null) {
+        onComplete.run();
+      }
+    });
   }
 
   public void addConnection(int connectionId, String connectionName, ConnectionType type) {
@@ -89,11 +180,22 @@ public class AdHocModelPresenter implements HelperChart {
       ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(connectionId);
       DBType dbType = connectionInfo != null ? connectionInfo.getDbType() : null;
 
-      SwingUtilities.invokeLater(() ->
-                                     view.addConnectionRow(new ConnectionRow(connectionId, connectionName, ConnectionType.JDBC, dbType))
-      );
-      log.info("Added connection to AdHoc model: id={}, name={}, dbType={}",
-               connectionId, connectionName, dbType);
+      model.setConnectionStatus(connectionId, ConnectionStatus.CONNECTING);
+      model.markConnectionBeingChecked(connectionId);
+
+      SwingUtilities.invokeLater(() -> {
+        ConnectionRow row = new ConnectionRow(connectionId, connectionName, ConnectionType.JDBC, dbType, ConnectionStatus.CONNECTING);
+        view.addConnectionRow(row);
+        view.showStatusMessage("Checking new connection: " + connectionName);
+      });
+
+      connectionCheckExecutor.submit(() -> {
+        checkConnectionAsync(connectionId, () -> {
+          view.showStatusMessage("Connection check completed for: " + connectionName);
+        });
+      });
+
+      log.info("Added connection to AdHoc model: id={}, name={}, dbType={}", connectionId, connectionName, dbType);
     }
   }
 
@@ -119,6 +221,8 @@ public class AdHocModelPresenter implements HelperChart {
         }
 
         model.clearSelectionState(connectionId);
+        model.removeConnectionStatus(connectionId);
+        model.unmarkConnectionBeingChecked(connectionId);
         view.removeConnectionRowById(connectionId);
         log.info("Removed connection from AdHoc model: id={}", connectionId);
 
@@ -163,7 +267,7 @@ public class AdHocModelPresenter implements HelperChart {
       if (!e.getValueIsAdjusting() && !view.isBlockConnectionAction()) {
         ConnectionRow row = view.getSelectedConnectionRow();
         if (row != null) {
-          runActionConnection(row.getName());
+          handleConnectionSelection(row);
         }
       }
     });
@@ -192,6 +296,43 @@ public class AdHocModelPresenter implements HelperChart {
     });
 
     view.getTableViewPane().addChangeListener(event -> triggerActionForSelectedRow());
+  }
+
+  private void handleConnectionSelection(ConnectionRow row) {
+    if (row == null) {
+      return;
+    }
+
+    ConnectionStatus status = model.getConnectionStatus(row.getId());
+
+    if (status == ConnectionStatus.CONNECTING) {
+      view.showStatusMessage("Connection '" + row.getName() + "' is being checked, please wait...");
+      clearAllDependentDataAndState();
+      view.setDependentUIEnabled(false);
+      return;
+    }
+
+    if (status == ConnectionStatus.NOT_CONNECTED) {
+      view.showStatusMessage("Connection '" + row.getName() + "' is not available. Check connection settings.");
+      clearAllDependentDataAndState();
+      view.setDependentUIEnabled(false);
+      return;
+    }
+
+    if (status == ConnectionStatus.READY) {
+      view.setDependentUIEnabled(true);
+      runActionConnection(row.getName());
+    }
+  }
+
+  private void clearAllDependentDataAndState() {
+    tProfile = null;
+    dStore = null;
+    connection = null;
+    currentConnectionId = 0;
+    connectionName = "";
+
+    view.clearAllDependentData();
   }
 
   private void setupCheckboxListener() {
@@ -384,6 +525,12 @@ public class AdHocModelPresenter implements HelperChart {
     ConnectionRow connectionRow = view.getSelectedConnectionRow();
     if (connectionRow == null) return;
 
+    if (!model.isConnectionReady(connectionRow.getId())) {
+      log.warn("Connection {} is not ready, cannot proceed", connectionRow.getId());
+      running.set(false);
+      return;
+    }
+
     currentConnectionId = connectionRow.getId();
     connectionName = connectionRow.getName();
 
@@ -573,8 +720,12 @@ public class AdHocModelPresenter implements HelperChart {
       tProfile = dStore.loadJdbcTableMetadata(connection, queryText, getSProfile(tableName, connectionInfo.getDbType()));
       log.info("Loaded metadata for table: {}", tableName);
 
-      if (tProfile.getCProfiles() == null) {
-        throw new RuntimeException("Error while loading metadata for table name: " + tableName);
+      if (tProfile.getCProfiles() == null || tProfile.getCProfiles().isEmpty()) {
+        log.warn("No columns found for table: {}. The table might be empty or have unsupported column types.", tableName);
+        view.getStatusLabel().setText("No columns found for table: " + tableName);
+        view.clearColumnTable();
+        view.clearTimestampTable();
+        return;
       }
 
       TableInfo tableInfo = new TableInfo(tProfile);
@@ -585,13 +736,18 @@ public class AdHocModelPresenter implements HelperChart {
 
       if (view.getTimestampTable().model().getRowCount() == 0) {
         handleNoTimestampColumns(tableName);
-        return;
       } else {
         selectFirstTimestamp();
       }
 
       view.getStatusLabel().setText("Table/view name: " + tableName);
+    } catch (SQLException e) {
+      log.error("SQL error loading table {}: {}", tableName, e.getMessage());
+      view.getStatusLabel().setText("SQL error: " + e.getMessage());
+      view.clearColumnTable();
+      view.clearTimestampTable();
     } catch (Exception e) {
+      log.error("Error loading table {}: {}", tableName, e.getMessage());
       handleTableViewError(e);
     }
   }
@@ -632,11 +788,10 @@ public class AdHocModelPresenter implements HelperChart {
   }
 
   private void handleTableViewError(Exception e) {
-    view.getStatusLabel().setText(e.getMessage());
+    view.getStatusLabel().setText("Error: " + e.getMessage());
     view.clearColumnTable();
     view.clearTimestampTable();
-    log.catching(e);
-    throw new RuntimeException(e);
+    log.error("Error loading table metadata", e);
   }
 
   public SProfile getSProfile(String tableName, DBType dbType) {
@@ -646,16 +801,26 @@ public class AdHocModelPresenter implements HelperChart {
     sProfile.setIndexType(IType.GLOBAL);
     sProfile.setCompression(true);
     sProfile.setCsTypeMap(new HashMap<>());
-    sProfile.setBackendType(switch (dbType) {
-      case CLICKHOUSE -> BType.CLICKHOUSE;
-      case POSTGRES -> BType.POSTGRES;
-      case ORACLE -> BType.ORACLE;
-      case MSSQL -> BType.MSSQL;
-      case MYSQL -> BType.MYSQL;
-      case DUCKDB -> BType.DUCKDB;
-      case FIREBIRD -> BType.FIREBIRD;
-      default -> throw new IllegalArgumentException("Unsupported DB type: " + dbType);
-    });
+
+    try {
+      sProfile.setBackendType(switch (dbType) {
+        case CLICKHOUSE -> BType.CLICKHOUSE;
+        case POSTGRES -> BType.POSTGRES;
+        case ORACLE -> BType.ORACLE;
+        case MSSQL -> BType.MSSQL;
+        case MYSQL -> BType.MYSQL;
+        case DUCKDB -> BType.DUCKDB;
+        case FIREBIRD -> BType.FIREBIRD;
+        default -> {
+          log.warn("Unknown DB type: {}, using BERKLEYDB as default", dbType);
+          yield BType.BERKLEYDB;
+        }
+      });
+    } catch (Exception e) {
+      log.error("Error setting backend type for DB type: {}", dbType, e);
+      sProfile.setBackendType(BType.BERKLEYDB);
+    }
+
     return sProfile;
   }
 
@@ -675,6 +840,12 @@ public class AdHocModelPresenter implements HelperChart {
     if (connectionRow == null || connectionRow.getId() <= 0) return;
 
     int connectionId = connectionRow.getId();
+
+    if (!model.isConnectionReady(connectionId)) {
+      log.warn("Connection {} is not ready, skipping reloadTables", connectionId);
+      return;
+    }
+
     ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(connectionId);
     if (connectionInfo == null) {
       log.debug("ConnectionInfo is null for connectionId: {}, skipping reloadTables", connectionId);
@@ -807,12 +978,13 @@ public class AdHocModelPresenter implements HelperChart {
   public <T> void loadModel(Class<T> clazz) {
     if (ConfigClasses.Connection.equals(ConfigClasses.fromClass(clazz))) {
       log.info("Loading connection..");
-      model.getConfigurationManager().getConfigList(Connection.class).stream()
+      model.getConfigurationManager().getConfigList(ru.dimension.ui.model.config.Connection.class).stream()
           .filter(e -> e.getType() == null || e.getType().equals(ConnectionType.JDBC))
           .forEach(e -> {
             ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(e.getId());
             DBType dbType = connectionInfo != null ? connectionInfo.getDbType() : null;
-            view.addConnectionRow(new ConnectionRow(e.getId(), e.getName(), ConnectionType.JDBC, dbType));
+            ConnectionStatus status = model.getConnectionStatus(e.getId());
+            view.addConnectionRow(new ConnectionRow(e.getId(), e.getName(), ConnectionType.JDBC, dbType, status));
           });
     }
   }
@@ -881,5 +1053,30 @@ public class AdHocModelPresenter implements HelperChart {
   private void clearColumnAndTimestamp() {
     view.clearColumnTable();
     view.clearTimestampTable();
+  }
+
+  public void updateConnectionStatus(int connectionId, ConnectionStatus status) {
+    model.setConnectionStatus(connectionId, status);
+    SwingUtilities.invokeLater(() -> view.updateConnectionStatus(connectionId, status));
+  }
+
+  public void recheckConnection(int connectionId) {
+    model.setConnectionStatus(connectionId, ConnectionStatus.CONNECTING);
+    model.markConnectionBeingChecked(connectionId);
+    SwingUtilities.invokeLater(() -> {
+      view.updateConnectionStatus(connectionId, ConnectionStatus.CONNECTING);
+      view.showStatusMessage("Rechecking connection...");
+    });
+
+    connectionCheckExecutor.submit(() -> {
+      checkConnectionAsync(connectionId, () -> {
+        log.info("Recheck completed for connection {}", connectionId);
+        view.showStatusMessage("Connection recheck completed");
+      });
+    });
+  }
+
+  public void shutdown() {
+    connectionCheckExecutor.shutdownNow();
   }
 }

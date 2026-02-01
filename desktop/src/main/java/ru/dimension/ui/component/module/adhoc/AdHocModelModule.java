@@ -20,6 +20,7 @@ import ru.dimension.ui.manager.AdHocDatabaseManager;
 import ru.dimension.ui.manager.ConfigurationManager;
 import ru.dimension.ui.manager.ConnectionPoolManager;
 import ru.dimension.ui.manager.ProfileManager;
+import ru.dimension.ui.model.type.ConnectionStatus;
 import ru.dimension.ui.router.event.EventListener;
 
 public class AdHocModelModule implements MessageAction {
@@ -70,5 +71,17 @@ public class AdHocModelModule implements MessageAction {
 
   public void onConnectionRemove(ConnectionRemoveEvent event) {
     presenter.removeConnection(event.connectionId());
+  }
+
+  public void updateConnectionStatus(int connectionId, ConnectionStatus status) {
+    presenter.updateConnectionStatus(connectionId, status);
+  }
+
+  public void recheckConnection(int connectionId) {
+    presenter.recheckConnection(connectionId);
+  }
+
+  public void shutdown() {
+    presenter.shutdown();
   }
 }

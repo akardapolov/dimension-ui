@@ -22,19 +22,24 @@ import javax.swing.KeyStroke;
 import javax.swing.border.EtchedBorder;
 import lombok.extern.log4j.Log4j2;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTextArea;
 import org.jdesktop.swingx.JXTitledSeparator;
 import org.painlessgridbag.PainlessGridBag;
+import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.config.Query;
 import ru.dimension.ui.model.config.Task;
-import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.view.tab.ConnectionTypeTabPane;
 import ru.dimension.ui.view.panel.template.TemplateConnPanel;
 import ru.dimension.ui.view.panel.template.TemplateHTTPConnPanel;
 import ru.dimension.ui.view.structure.TemplateView;
 import ru.dimension.ui.view.tab.ConnTypeTab;
+import ru.dimension.ui.view.table.row.Rows.TemplateConnectionRow;
+import ru.dimension.ui.view.table.row.Rows.TemplateMetricRow;
+import ru.dimension.ui.view.table.row.Rows.TemplateQueryRow;
+import ru.dimension.ui.view.table.row.Rows.TemplateTaskRow;
 
 @Log4j2
 @Singleton
@@ -42,9 +47,10 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
 
   private final JButton templateLoadJButton;
 
-  private final JXTableCase templateTaskCase;
-  private final JXTableCase templateConnCase;
-  private final JXTableCase templateQueryCase;
+  private final TTTable<TemplateTaskRow, JXTable> templateTaskTable;
+  private final TTTable<TemplateConnectionRow, JXTable> templateConnTable;
+  private final TTTable<TemplateQueryRow, JXTable> templateQueryTable;
+  private final TTTable<TemplateMetricRow, JXTable> templateMetricsTable;
 
   private final JPanel jPanelLine;
   private final JPanel jPanel0Line;
@@ -54,7 +60,6 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
 
   private final TemplateConnPanel templateConnPanel;
   private final TemplateHTTPConnPanel templateHTTPConnPanel;
-  private final JXTableCase templateMetricsCase;
 
   private final JXTextArea taskDescription;
   private final JXTextArea queryDescription;
@@ -63,26 +68,26 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
 
   @Inject
   public TemplateViewImpl(@Named("templateLoadJButton") JButton templateLoadJButton,
-                          @Named("templateTaskCase") JXTableCase templateTaskCase,
-                          @Named("templateConnCase") JXTableCase templateConnCase,
-                          @Named("templateQueryCase") JXTableCase templateQueryCase,
+                          @Named("templateTaskCase") TTTable<TemplateTaskRow, JXTable> templateTaskTable,
+                          @Named("templateConnCase") TTTable<TemplateConnectionRow, JXTable> templateConnTable,
+                          @Named("templateQueryCase") TTTable<TemplateQueryRow, JXTable> templateQueryTable,
+                          @Named("templateMetricsCase") TTTable<TemplateMetricRow, JXTable> templateMetricsTable,
                           @Named("templateConnPanel") TemplateConnPanel templateConnPanel,
                           @Named("templateHTTPConnPanel") TemplateHTTPConnPanel templateHTTPConnPanel,
                           @Named("templateConnectionTab") ConnTypeTab connectionTabPane,
-                          @Named("templateMetricsCase") JXTableCase templateMetricsCase,
                           @Named("templateTaskDescription") JXTextArea taskDescription,
                           @Named("templateQueryDescription") JXTextArea queryDescription,
                           @Named("templateQueryText") RSyntaxTextArea queryText) {
 
     this.templateLoadJButton = templateLoadJButton;
 
-    this.templateTaskCase = templateTaskCase;
-    this.templateConnCase = templateConnCase;
-    this.templateQueryCase = templateQueryCase;
+    this.templateTaskTable = templateTaskTable;
+    this.templateConnTable = templateConnTable;
+    this.templateQueryTable = templateQueryTable;
+    this.templateMetricsTable = templateMetricsTable;
 
     this.templateConnPanel = templateConnPanel;
     this.templateHTTPConnPanel = templateHTTPConnPanel;
-    this.templateMetricsCase = templateMetricsCase;
 
     this.taskDescription = taskDescription;
     this.queryDescription = queryDescription;
@@ -91,10 +96,6 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
     this.connectionTabPane = connectionTabPane;
     this.connectionTabPane.add(this.templateConnPanel, ConnectionTypeTabPane.JDBC.getName());
     this.connectionTabPane.add(this.templateHTTPConnPanel, ConnectionTypeTabPane.HTTP.getName());
-
-    this.templateTaskCase.getJxTable().getColumnExt(0).setVisible(false);
-    this.templateConnCase.getJxTable().getColumnExt(0).setVisible(false);
-    this.templateQueryCase.getJxTable().getColumnExt(0).setVisible(false);
 
     this.jPanelLine = new JPanel(new GridLayout(1, 7, 5, 5));
     this.jPanel0Line = new JPanel(new GridLayout(1, 3, 5, 5));
@@ -131,9 +132,9 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
     jPanel0Line.add(new JXTitledSeparator("Connection"));
     jPanel0Line.add(new JXTitledSeparator("Query"));
 
-    jPanel1Line.add(this.templateTaskCase.getJScrollPane());
-    jPanel1Line.add(this.templateConnCase.getJScrollPane());
-    jPanel1Line.add(this.templateQueryCase.getJScrollPane());
+    jPanel1Line.add(this.templateTaskTable.scrollPane());
+    jPanel1Line.add(this.templateConnTable.scrollPane());
+    jPanel1Line.add(this.templateQueryTable.scrollPane());
 
     jPanel2Line.add(fillTaskPanel());
     jPanel2Line.add(fillConnPanel());
@@ -215,7 +216,7 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
     gbl.row()
         .cell(new JXTitledSeparator("Metrics")).fillX();
     gbl.row()
-        .cellXYRemainder(templateMetricsCase.getJScrollPane()).fillXY();
+        .cellXYRemainder(templateMetricsTable.scrollPane()).fillXY();
 
     gbl.done();
     return jPanel;

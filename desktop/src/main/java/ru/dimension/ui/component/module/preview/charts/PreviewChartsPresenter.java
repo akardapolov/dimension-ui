@@ -78,10 +78,10 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
     );
 
     KeyHelper.TitleInfo titleInfo = KeyHelper.getTitle(model.getProfileManager(), key, chartKey.getCProfile());
-    chartModule.setTitle(titleInfo.getShortTitle());
-    chartModule.setToolTipText(titleInfo.getFullTitle());
+    chartModule.setTitle(titleInfo.shortTitle());
+    chartModule.setToolTipText(titleInfo.fullTitle());
 
-    log.info("Add task pane: {}", titleInfo.getFullTitle());
+    log.info("Add task pane: {}", titleInfo.fullTitle());
 
     chartModule.initializeUI().run();
 
@@ -164,10 +164,10 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
     PRChartModule taskPane = new PRChartModule(component, chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
 
     KeyHelper.TitleInfo titleInfo = KeyHelper.getTitle(model.getProfileManager(), key, cProfile);
-    taskPane.setTitle(titleInfo.getShortTitle());
-    taskPane.setToolTipText(titleInfo.getFullTitle());
+    taskPane.setTitle(titleInfo.shortTitle());
+    taskPane.setToolTipText(titleInfo.fullTitle());
 
-    log.info("Add task pane: {}", titleInfo.getFullTitle());
+    log.info("Add task pane: {}", titleInfo.fullTitle());
 
     view.addChartCard(taskPane, (module, error) -> {
       if (error != null) {

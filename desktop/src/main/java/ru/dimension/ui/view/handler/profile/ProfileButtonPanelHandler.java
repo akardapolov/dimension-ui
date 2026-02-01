@@ -6,6 +6,7 @@ import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import javax.swing.JCheckBox;
 import javax.swing.JOptionPane;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
@@ -31,6 +32,7 @@ import ru.dimension.ui.view.handler.core.ConfigSelectionContext;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.profile.MultiSelectTaskPanel;
 import ru.dimension.ui.view.panel.config.profile.ProfilePanel;
+import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
 @Log4j2
@@ -45,6 +47,11 @@ public final class ProfileButtonPanelHandler implements ButtonPanelBindings.Crud
   private final MultiSelectTaskPanel multiSelectPanel;
   private final ButtonPanel buttonPanel;
   private final JXTableCase profileCase;
+  private final JXTableCase taskCase;
+  private final JXTableCase connectionCase;
+  private final JXTableCase queryCase;
+  private final ConfigTab configTab;
+  private final JCheckBox checkboxConfig;
   private boolean isNew = false;
 
   @Inject
@@ -55,7 +62,12 @@ public final class ProfileButtonPanelHandler implements ButtonPanelBindings.Crud
                                    @Named("profileConfigPanel") ProfilePanel profilePanel,
                                    @Named("multiSelectPanel") MultiSelectTaskPanel multiSelectPanel,
                                    @Named("profileButtonPanel") ButtonPanel buttonPanel,
-                                   @Named("profileConfigCase") JXTableCase profileCase) {
+                                   @Named("profileConfigCase") JXTableCase profileCase,
+                                   @Named("taskConfigCase") JXTableCase taskCase,
+                                   @Named("connectionConfigCase") JXTableCase connectionCase,
+                                   @Named("queryConfigCase") JXTableCase queryCase,
+                                   @Named("configTab") ConfigTab configTab,
+                                   @Named("checkboxConfig") JCheckBox checkboxConfig) {
     this.profileManager = profileManager;
     this.templateManager = templateManager;
     this.eventBus = eventBus;
@@ -64,7 +76,11 @@ public final class ProfileButtonPanelHandler implements ButtonPanelBindings.Crud
     this.multiSelectPanel = multiSelectPanel;
     this.buttonPanel = buttonPanel;
     this.profileCase = profileCase;
-
+    this.taskCase = taskCase;
+    this.connectionCase = connectionCase;
+    this.queryCase = queryCase;
+    this.configTab = configTab;
+    this.checkboxConfig = checkboxConfig;
 
     ButtonPanelBindings.bind(buttonPanel, this);
   }
@@ -172,7 +188,18 @@ public final class ProfileButtonPanelHandler implements ButtonPanelBindings.Crud
     profilePanel.getJTextFieldDescription().setEditable(edit);
     multiSelectPanel.getPickBtn().setEnabled(edit);
     multiSelectPanel.getUnPickBtn().setEnabled(edit);
-    profileCase.getJxTable().setEnabled(!edit);
+
+    boolean enable = !edit;
+    profileCase.getJxTable().setEnabled(enable);
+    taskCase.getJxTable().setEnabled(enable);
+    connectionCase.getJxTable().setEnabled(enable);
+    queryCase.getJxTable().setEnabled(enable);
+    checkboxConfig.setEnabled(enable);
+
+    configTab.setEnabledAt(0, true);
+    configTab.setEnabledAt(1, enable);
+    configTab.setEnabledAt(2, enable);
+    configTab.setEnabledAt(3, enable);
   }
 
   private List<Integer> processSelectedTasks() {

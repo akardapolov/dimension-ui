@@ -17,10 +17,12 @@ import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.RowFilter;
+import javax.swing.SwingUtilities;
 import javax.swing.border.EtchedBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.TableModelEvent;
+import javax.swing.table.TableColumn;
 import javax.swing.table.TableRowSorter;
 import lombok.Data;
 import lombok.Setter;
@@ -33,7 +35,9 @@ import ru.dimension.tt.swing.TTTable;
 import ru.dimension.tt.swing.TableUi;
 import ru.dimension.tt.swingx.JXTableTables;
 import ru.dimension.ui.laf.LaF;
+import ru.dimension.ui.model.type.ConnectionStatus;
 import ru.dimension.ui.view.table.icon.ModelIconProviders;
+import ru.dimension.ui.view.table.renderer.ConnectionStatusCellRenderer;
 import ru.dimension.ui.view.table.row.Rows.ColumnRow;
 import ru.dimension.ui.view.table.row.Rows.ConnectionRow;
 import ru.dimension.ui.view.table.row.Rows.EntityRow;
@@ -77,6 +81,9 @@ public class AdHocModelView extends JPanel {
   @Setter
   private boolean ignoreColumnCheckboxEvents = false;
 
+  private boolean statusRendererApplied = false;
+  private boolean connectionCheckInProgress = false;
+
   public interface EntityCheckboxChangeListener {
     void onTableCheckboxChanged(EntityRow row, boolean selected, int modelRow);
     void onViewCheckboxChanged(EntityRow row, boolean selected, int modelRow);
@@ -110,6 +117,7 @@ public class AdHocModelView extends JPanel {
     setupLayout();
     setupTableFilter();
     setupCheckboxListeners();
+    applyStatusRenderer();
   }
 
   private TTTable<ConnectionRow, JXTable> createConnectionTable() {
@@ -134,6 +142,40 @@ public class AdHocModelView extends JPanel {
     }
 
     return tt;
+  }
+
+  private void applyStatusRenderer() {
+    SwingUtilities.invokeLater(() -> {
+      if (statusRendererApplied) {
+        return;
+      }
+
+      JXTable table = connectionTable.table();
+      if (table == null) {
+        return;
+      }
+
+      try {
+        int statusColumnIndex = findColumnIndex(table, "Status");
+        if (statusColumnIndex >= 0) {
+          TableColumn column = table.getColumnModel().getColumn(statusColumnIndex);
+          column.setCellRenderer(new ConnectionStatusCellRenderer());
+          statusRendererApplied = true;
+          log.info("AdHoc Status column renderer applied successfully");
+        }
+      } catch (Exception e) {
+        log.debug("Could not apply status renderer in AdHoc: {}", e.getMessage());
+      }
+    });
+  }
+
+  private int findColumnIndex(JXTable table, String columnName) {
+    for (int i = 0; i < table.getColumnCount(); i++) {
+      if (columnName.equals(table.getColumnName(i))) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   private TTTable<EntityRow, JXTable> createTableEntityTable() {
@@ -414,8 +456,78 @@ public class AdHocModelView extends JPanel {
     table.clearSelection();
   }
 
+  public void setConnectionCheckInProgress(boolean inProgress) {
+    this.connectionCheckInProgress = inProgress;
+    setUIEnabled(!inProgress);
+  }
+
+  public void setUIEnabled(boolean enabled) {
+    connectionTable.table().setEnabled(enabled);
+    schemaCatalogCBox.setEnabled(enabled);
+    tableViewPane.setEnabled(enabled);
+    timeStampColumnMetricPane.setEnabled(enabled);
+    tableTable.table().setEnabled(enabled);
+    viewTable.table().setEnabled(enabled);
+    timestampTable.table().setEnabled(enabled);
+    columnTable.table().setEnabled(enabled);
+    tableSearchField.setEnabled(enabled);
+    viewSearchField.setEnabled(enabled);
+    columnSearchField.setEnabled(enabled);
+
+    for (int i = 0; i < tableViewPane.getTabCount(); i++) {
+      tableViewPane.setEnabledAt(i, enabled);
+    }
+    for (int i = 0; i < timeStampColumnMetricPane.getTabCount(); i++) {
+      timeStampColumnMetricPane.setEnabledAt(i, enabled);
+    }
+  }
+
+  public void setDependentUIEnabled(boolean enabled) {
+    schemaCatalogCBox.setEnabled(enabled);
+    tableViewPane.setEnabled(enabled);
+    timeStampColumnMetricPane.setEnabled(enabled);
+    tableTable.table().setEnabled(enabled);
+    viewTable.table().setEnabled(enabled);
+    timestampTable.table().setEnabled(enabled);
+    columnTable.table().setEnabled(enabled);
+    tableSearchField.setEnabled(enabled);
+    viewSearchField.setEnabled(enabled);
+    columnSearchField.setEnabled(enabled);
+
+    for (int i = 0; i < tableViewPane.getTabCount(); i++) {
+      tableViewPane.setEnabledAt(i, enabled);
+    }
+    for (int i = 0; i < timeStampColumnMetricPane.getTabCount(); i++) {
+      timeStampColumnMetricPane.setEnabledAt(i, enabled);
+    }
+  }
+
+  public void clearAllDependentData() {
+    blockTableAction = true;
+    blockViewAction = true;
+    blockTimestampAction = true;
+    blockColumnAction = true;
+
+    try {
+      schemaCatalogCBox.removeAllItems();
+      clearTableTable();
+      clearViewTable();
+      clearTimestampTable();
+      clearColumnTable();
+      tableSearchField.setText("");
+      viewSearchField.setText("");
+      columnSearchField.setText("");
+    } finally {
+      blockTableAction = false;
+      blockViewAction = false;
+      blockTimestampAction = false;
+      blockColumnAction = false;
+    }
+  }
+
   public void addConnectionRow(ConnectionRow row) {
     connectionTable.model().addItem(row);
+    applyStatusRenderer();
   }
 
   public void removeConnectionRowById(int connectionId) {
@@ -571,5 +683,40 @@ public class AdHocModelView extends JPanel {
     } finally {
       ignoreColumnCheckboxEvents = false;
     }
+  }
+
+  public void updateConnectionStatus(int connectionId, ConnectionStatus status) {
+    for (int i = 0; i < connectionTable.model().getRowCount(); i++) {
+      ConnectionRow row = connectionTable.model().itemAt(i);
+      if (row != null && row.getId() == connectionId) {
+        row.setStatus(status);
+        connectionTable.model().fireTableRowsUpdated(i, i);
+        break;
+      }
+    }
+  }
+
+  public void updateAllConnectionStatuses(ConnectionStatus status) {
+    for (int i = 0; i < connectionTable.model().getRowCount(); i++) {
+      ConnectionRow row = connectionTable.model().itemAt(i);
+      if (row != null) {
+        row.setStatus(status);
+      }
+    }
+    connectionTable.model().fireTableDataChanged();
+  }
+
+  public ConnectionRow getConnectionRowById(int connectionId) {
+    for (int i = 0; i < connectionTable.model().getRowCount(); i++) {
+      ConnectionRow row = connectionTable.model().itemAt(i);
+      if (row != null && row.getId() == connectionId) {
+        return row;
+      }
+    }
+    return null;
+  }
+
+  public void showStatusMessage(String message) {
+    statusLabel.setText(message);
   }
 }

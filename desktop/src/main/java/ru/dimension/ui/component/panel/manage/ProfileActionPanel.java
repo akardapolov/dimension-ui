@@ -17,6 +17,9 @@ import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.model.ActionName;
 import ru.dimension.ui.model.RunStatus;
+import ru.dimension.ui.view.icon.PreviewIcon;
+import ru.dimension.ui.view.icon.StartIcon;
+import ru.dimension.ui.view.icon.StopIcon;
 
 @Log4j2
 @Data
@@ -35,11 +38,10 @@ public class ProfileActionPanel extends JPanel {
 
     ImageIcon startIcon = GUIHelper.loadIcon("/icons/start.png");
     ImageIcon stopIcon = GUIHelper.loadIcon("/icons/stop.png");
-    ImageIcon previewIcon = GUIHelper.loadIcon("/icons/preview.png");
 
     this.start = new JButton(ActionName.START.getDescription(), startIcon);
     this.stop = new JButton(ActionName.STOP.getDescription(), stopIcon);
-    this.preview = new JButton(ActionName.PREVIEW.getDescription(), previewIcon);
+    this.preview = new JButton(ActionName.PREVIEW.getDescription(), new PreviewIcon(16));
 
     this.start.setMargin(new Insets(5, 10, 5, 10));
     this.stop.setMargin(new Insets(5, 10, 5, 10));

@@ -3,6 +3,7 @@ package ru.dimension.ui.config.ui;
 import static ru.dimension.ui.model.view.TemplateAction.LOAD;
 import static ru.dimension.ui.model.view.TemplateAction.SAVE;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -23,7 +24,6 @@ import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.model.column.ConnectionColumnNames;
 import ru.dimension.ui.model.column.MetricsColumnNames;
 import ru.dimension.ui.model.column.QueryColumnNames;
-import ru.dimension.ui.model.column.TaskColumnNames;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.view.custom.DetailedComboBox;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
@@ -36,6 +36,10 @@ import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.view.table.icon.ModelIconProviders;
 import ru.dimension.ui.view.table.row.Rows.ConnectionTemplateRow;
 import ru.dimension.ui.view.table.row.Rows.MetadataRow;
+import ru.dimension.ui.view.table.row.Rows.TemplateConnectionRow;
+import ru.dimension.ui.view.table.row.Rows.TemplateMetricRow;
+import ru.dimension.ui.view.table.row.Rows.TemplateQueryRow;
+import ru.dimension.ui.view.table.row.Rows.TemplateTaskRow;
 
 public final class UIFactory {
 
@@ -105,14 +109,31 @@ public final class UIFactory {
     );
   }
 
-  public static JXTableCase createTemplateTaskCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(7, new String[]{
-        TaskColumnNames.ID.getColName(),
-        TaskColumnNames.NAME.getColName(),
-        TaskColumnNames.PULL_TIMEOUT.getColName()
-    });
-    jxTableCase.getJxTable().getTableHeader().setVisible(true);
-    return jxTableCase;
+  private static TTRegistry getSharedRegistry() {
+    return TT.builder()
+        .scanPackages("ru.dimension.ui.view.table.row")
+        .build();
+  }
+
+  private static void configureStandardJXTable(JXTable table) {
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setGridColor(Color.GRAY);
+    table.setIntercellSpacing(new Dimension(1, 1));
+    table.getTableHeader().setVisible(true);
+  }
+
+  public static TTTable<TemplateTaskRow, JXTable> createTemplateTaskCase() {
+    TTTable<TemplateTaskRow, JXTable> tt = JXTableTables.create(
+        getSharedRegistry(),
+        TemplateTaskRow.class,
+        TableUi.<TemplateTaskRow>builder()
+            .rowIcon(ModelIconProviders.forTemplateTaskRow())
+            .rowIconInColumn("name")
+            .build()
+    );
+    configureStandardJXTable(tt.table());
+    return tt;
   }
 
   public static JXTextArea createTemplateTaskDescription() {
@@ -162,24 +183,30 @@ public final class UIFactory {
     return textArea;
   }
 
-  public static JXTableCase createTemplateConnCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(7, new String[]{
-        ConnectionColumnNames.ID.getColName(),
-        ConnectionColumnNames.NAME.getColName(),
-        ConnectionColumnNames.TYPE.getColName()
-    });
-    jxTableCase.getJxTable().getTableHeader().setVisible(true);
-    return jxTableCase;
+  public static TTTable<TemplateConnectionRow, JXTable> createTemplateConnCase() {
+    TTTable<TemplateConnectionRow, JXTable> tt = JXTableTables.create(
+        getSharedRegistry(),
+        TemplateConnectionRow.class,
+        TableUi.<TemplateConnectionRow>builder()
+            .rowIcon(ModelIconProviders.forTemplateConnectionRow())
+            .rowIconInColumn("name")
+            .build()
+    );
+    configureStandardJXTable(tt.table());
+    return tt;
   }
 
-  public static JXTableCase createTemplateQueryCase() {
-    JXTableCase jxTableCase = GUIHelper.getJXTableCase(7, new String[]{
-        QueryColumnNames.ID.getColName(),
-        QueryColumnNames.NAME.getColName(),
-        QueryColumnNames.GATHER.getColName()
-    });
-    jxTableCase.getJxTable().getTableHeader().setVisible(true);
-    return jxTableCase;
+  public static TTTable<TemplateQueryRow, JXTable> createTemplateQueryCase() {
+    TTTable<TemplateQueryRow, JXTable> tt = JXTableTables.create(
+        getSharedRegistry(),
+        TemplateQueryRow.class,
+        TableUi.<TemplateQueryRow>builder()
+            .rowIcon(ModelIconProviders.forTemplateQueryRow())
+            .rowIconInColumn("name")
+            .build()
+    );
+    configureStandardJXTable(tt.table());
+    return tt;
   }
 
   public static JButton createTemplateLoadJButton() {
@@ -231,8 +258,8 @@ public final class UIFactory {
     JXTable table = tt.table();
     table.setShowVerticalLines(true);
     table.setShowHorizontalLines(true);
-    table.setGridColor(java.awt.Color.GRAY);
-    table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+    table.setGridColor(Color.GRAY);
+    table.setIntercellSpacing(new Dimension(1, 1));
     table.setEditable(true);
 
     if (table.getColumnExt("Column ID") != null) {
@@ -267,6 +294,33 @@ public final class UIFactory {
     return jxTableCase;
   }
 
+  public static TTTable<TemplateMetricRow, JXTable> createTemplateMetricsCase() {
+    TTTable<TemplateMetricRow, JXTable> tt = JXTableTables.create(
+        getSharedRegistry(),
+        TemplateMetricRow.class,
+        TableUi.<TemplateMetricRow>builder()
+            .rowIcon(ModelIconProviders.forTemplateMetricRow())
+            .rowIconInColumn("name")
+            .build()
+    );
+
+    JXTable table = tt.table();
+    configureStandardJXTable(table);
+    table.setEditable(false);
+
+    if (table.getColumnExt(MetricsColumnNames.ID.getColName()) != null) {
+      table.getColumnExt(MetricsColumnNames.ID.getColName()).setVisible(false);
+    }
+
+    if (table.getColumnCount() > 1) {
+      TableColumn col = table.getColumnModel().getColumn(1);
+      col.setMinWidth(30);
+      col.setMaxWidth(50);
+    }
+
+    return tt;
+  }
+
   public static JXTableCase createConnectionTemplateCase() {
     TTRegistry registry = TT.builder()
         .scanPackages("ru.dimension.ui.view.table.row")
@@ -284,8 +338,8 @@ public final class UIFactory {
     JXTable table = tt.table();
     table.setShowVerticalLines(true);
     table.setShowHorizontalLines(true);
-    table.setGridColor(java.awt.Color.GRAY);
-    table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+    table.setGridColor(Color.GRAY);
+    table.setIntercellSpacing(new Dimension(1, 1));
 
     return new JXTableCase(tt);
   }

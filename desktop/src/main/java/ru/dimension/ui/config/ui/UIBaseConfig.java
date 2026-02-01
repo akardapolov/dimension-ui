@@ -19,20 +19,7 @@ import ru.dimension.ui.component.module.PreviewModule;
 import ru.dimension.ui.component.module.adhoc.AdHocChartsModule;
 import ru.dimension.ui.component.module.adhoc.AdHocConfigModule;
 import ru.dimension.ui.component.module.adhoc.AdHocModelModule;
-import ru.dimension.ui.component.module.factory.AdHocChartsModuleFactory;
-import ru.dimension.ui.component.module.factory.AdHocConfigModuleFactory;
-import ru.dimension.ui.component.module.factory.AdHocModelModuleFactory;
-import ru.dimension.ui.component.module.factory.ChartsModuleFactory;
-import ru.dimension.ui.component.module.factory.ConfigModuleFactory;
-import ru.dimension.ui.component.module.factory.DesignModuleFactory;
-import ru.dimension.ui.component.module.factory.ManageModuleFactory;
-import ru.dimension.ui.component.module.factory.ManageModulePresenterFactory;
-import ru.dimension.ui.component.module.factory.MetricColumnPanelFactory;
-import ru.dimension.ui.component.module.factory.ModelModuleFactory;
-import ru.dimension.ui.component.module.factory.PlaygroundModuleFactory;
-import ru.dimension.ui.component.module.factory.PreviewChartsModuleFactory;
-import ru.dimension.ui.component.module.factory.PreviewConfigModuleFactory;
-import ru.dimension.ui.component.module.factory.PreviewModuleFactory;
+import ru.dimension.ui.component.module.factory.*;
 import ru.dimension.ui.component.module.manage.ManagePresenter;
 import ru.dimension.ui.component.module.preview.PreviewChartsModule;
 import ru.dimension.ui.component.module.preview.PreviewConfigModule;
@@ -43,6 +30,8 @@ import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.model.view.tab.MainTabPane;
+import ru.dimension.ui.view.icon.ConfigurationIcon;
+import ru.dimension.ui.view.icon.TemplateIcon;
 import ru.dimension.ui.view.tab.MainTab;
 
 public final class UIBaseConfig {
@@ -52,25 +41,26 @@ public final class UIBaseConfig {
 
   public static void configure(DimensionDI.Builder builder) {
     builder
-        .provideNamed(JSplitPane.class,   "splitProfileListButtonsAndStatus", ServiceLocator.singleton(UIBaseConfig::createSplitPane))
-        .provideNamed(JPanel.class,       "jPanelProfileStatus",              ServiceLocator.singleton(UIBaseConfig::createProfileStatusPanel))
-        .provideNamed(JTabbedPane.class,  "mainTabPane",                      ServiceLocator.singleton(UIBaseConfig::createMainTabPane))
+        .provideNamed(JSplitPane.class,  "splitProfileListButtonsAndStatus", ServiceLocator.singleton(UIBaseConfig::createSplitPane))
+        .provideNamed(JPanel.class,      "jPanelProfileStatus",              ServiceLocator.singleton(UIBaseConfig::createProfileStatusPanel))
+        .provideNamed(JTabbedPane.class, "mainTabPane",                      ServiceLocator.singleton(UIBaseConfig::createMainTabPane))
 
         .provideNamed(JButton.class, "toolbarConfigButton",   ServiceLocator.singleton(UIBaseConfig::createToolbarConfigButton))
         .provideNamed(JButton.class, "toolbarTemplateButton", ServiceLocator.singleton(UIBaseConfig::createToolbarTemplateButton))
 
-        .bindFactory(ModelModuleFactory.class,          ModelModule.class)
-        .bindFactory(ManageModuleFactory.class,         ManageModule.class)
-        .bindFactory(ConfigModuleFactory.class,         ConfigModule.class)
-        .bindFactory(ChartsModuleFactory.class,         ChartsModule.class)
+        .bindFactory(ModelModuleFactory.class,           ModelModule.class)
+        .bindFactory(ManageModuleFactory.class,          ManageModule.class)
+        .bindFactory(ConfigModuleFactory.class,          ConfigModule.class)
+        .bindFactory(ChartsModuleFactory.class,          ChartsModule.class)
+
         .bindFactory(ManageModulePresenterFactory.class, ManagePresenter.class)
 
         .bindFactory(PreviewConfigModuleFactory.class, PreviewConfigModule.class)
         .bindFactory(PreviewChartsModuleFactory.class, PreviewChartsModule.class)
 
-        .bindFactory(PlaygroundModuleFactory.class,    PlaygroundModule.class)
-        .bindFactory(DesignModuleFactory.class,        DesignModule.class)
-        .bindFactory(MetricColumnPanelFactory.class,   MetricColumnPanel.class)
+        .bindFactory(PlaygroundModuleFactory.class,  PlaygroundModule.class)
+        .bindFactory(DesignModuleFactory.class,      DesignModule.class)
+        .bindFactory(MetricColumnPanelFactory.class, MetricColumnPanel.class)
 
         .bindFactory(AdHocModelModuleFactory.class,  AdHocModelModule.class)
         .bindFactory(AdHocConfigModuleFactory.class, AdHocConfigModule.class)
@@ -99,7 +89,7 @@ public final class UIBaseConfig {
   }
 
   private static JButton createToolbarConfigButton() {
-    JButton jButton = new JButton(GUIHelper.loadIcon("/icons/config.png"));
+    JButton jButton = new JButton(new ConfigurationIcon(18, 18));
     jButton.setActionCommand(CONFIGURATION.name());
     jButton.setMnemonic('C');
     jButton.setText("Configuration");
@@ -109,7 +99,7 @@ public final class UIBaseConfig {
   }
 
   private static JButton createToolbarTemplateButton() {
-    JButton jButton = new JButton(GUIHelper.loadIcon("/icons/template.png"));
+    JButton jButton = new JButton(new TemplateIcon(18, 18));
     jButton.setActionCommand(TEMPLATE.name());
     jButton.setMnemonic('T');
     jButton.setText("Templates");

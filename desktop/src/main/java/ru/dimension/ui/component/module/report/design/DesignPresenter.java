@@ -451,10 +451,10 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
               .ifPresent(taskPane.getModel().getDescription()::setText);
 
           KeyHelper.TitleInfo titleInfo = KeyHelper.getTitle(model.getProfileManager(), key, chartKey.getCProfile());
-          taskPane.setTitle(titleInfo.getShortTitle());
-          taskPane.setToolTipText(titleInfo.getFullTitle());
+          taskPane.setTitle(titleInfo.shortTitle());
+          taskPane.setToolTipText(titleInfo.fullTitle());
 
-          log.info("Add task pane: {}", titleInfo.getFullTitle());
+          log.info("Add task pane: {}", titleInfo.fullTitle());
 
           view.addChartCard(taskPane, (module, error) -> {
             if (error != null) {
@@ -655,10 +655,10 @@ public class DesignPresenter implements ActionListener, ListSelectionListener, M
     );
 
     KeyHelper.TitleInfo titleInfo = KeyHelper.getTitle(model.getProfileManager(), key, cProfile);
-    taskPane.setTitle(titleInfo.getShortTitle());
-    taskPane.setToolTipText(titleInfo.getFullTitle());
+    taskPane.setTitle(titleInfo.shortTitle());
+    taskPane.setToolTipText(titleInfo.fullTitle());
 
-    log.info("Add task pane: {}", titleInfo.getFullTitle());
+    log.info("Add task pane: {}", titleInfo.fullTitle());
 
     view.addChartCard(taskPane, (module, error) -> {
       if (error != null) {

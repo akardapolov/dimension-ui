@@ -29,7 +29,7 @@ public final class RoutingSecurityStateConfig {
         .bindNamed(EventBus.class, "eventBus", EventBusImpl.class)
 
         // Security
-        .provideNamed(EncryptDecrypt.class, "encryptDecrypt", ServiceLocator.singleton(EncryptDecrypt::new))
+        .bindNamed(EncryptDecrypt.class, "encryptDecrypt", EncryptDecrypt.class)
 
         // State
         .bindNamed(NavigatorState.class, "navigatorState", NavigatorStateImpl.class)

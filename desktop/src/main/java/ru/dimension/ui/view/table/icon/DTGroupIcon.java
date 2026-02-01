@@ -15,17 +15,12 @@ import java.awt.geom.Rectangle2D;
 import javax.swing.Icon;
 import ru.dimension.db.metadata.DTGroup;
 
-/**
- * Icon representing a data type group.
- * Renders vector symbols mimicking DBeaver data type icons.
- */
 public class DTGroupIcon implements Icon {
 
   private static final int SIZE = 14;
   private final Color color;
   private final DTGroup group;
 
-  // Font for text-based icons (123, abc, etc.)
   private static final Font ICON_FONT = new Font("SansSerif", Font.BOLD, 9);
   private static final Font TINY_FONT = new Font("SansSerif", Font.BOLD, 8);
 
@@ -39,19 +34,19 @@ public class DTGroupIcon implements Icon {
       return Color.GRAY;
     }
     return switch (group) {
-      case INTEGER  -> new Color(0x4CAF50);  // Green
-      case FLOAT    -> new Color(0x2196F3);  // Blue
-      case STRING   -> new Color(0xFF9800);  // Orange
-      case DATETIME -> new Color(0xBB86FC);  // Purple
-      case BINARY   -> new Color(0x607D8B);  // Blue Grey
-      case ARRAY    -> new Color(0xE91E63);  // Pink
-      case MAP      -> new Color(0x00BCD4);  // Cyan
-      case SET      -> new Color(0xCDDC39);  // Lime
-      case BOOLEAN  -> new Color(0xF44336);  // Red
-      case NETWORK  -> new Color(0x3F51B5);  // Indigo
-      case JSON     -> new Color(0xFFC107);  // Amber
-      case SPATIAL  -> new Color(0x009688);  // Teal
-      case INTERVAL -> new Color(0x795548);  // Brown
+      case INTEGER  -> new Color(0x4CAF50);
+      case FLOAT    -> new Color(0x2196F3);
+      case STRING   -> new Color(0xFF9800);
+      case DATETIME -> new Color(0xBB86FC);
+      case BINARY   -> new Color(0x607D8B);
+      case ARRAY    -> new Color(0xE91E63);
+      case MAP      -> new Color(0x00BCD4);
+      case SET      -> new Color(0xCDDC39);
+      case BOOLEAN  -> new Color(0xF44336);
+      case NETWORK  -> new Color(0x3F51B5);
+      case JSON     -> new Color(0xFFC107);
+      case SPATIAL  -> new Color(0x009688);
+      case INTERVAL -> new Color(0x795548);
     };
   }
 
@@ -59,18 +54,15 @@ public class DTGroupIcon implements Icon {
   public void paintIcon(Component c, Graphics g, int x, int y) {
     Graphics2D g2 = (Graphics2D) g.create();
 
-    // High-quality rendering settings
     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
     g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
     g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
 
     g2.setColor(color);
 
-    // Default stroke
     g2.setStroke(new BasicStroke(1.2f));
 
     if (group == null) {
-      // Unknown type: Simple outlined circle
       g2.drawOval(x + 2, y + 2, SIZE - 5, SIZE - 5);
       g2.dispose();
       return;
@@ -84,15 +76,12 @@ public class DTGroupIcon implements Icon {
       case STRING -> drawCenteredText(g2, "abc", x, y, ICON_FONT);
 
       case DATETIME -> {
-        // Clock Face
         g2.draw(new Ellipse2D.Double(x + 1, y + 1, SIZE - 3, SIZE - 3));
-        // Hands (3 o'clock)
-        g2.draw(new Line2D.Double(x + 7, y + 7, x + 7, y + 3.5)); // Minute hand
-        g2.draw(new Line2D.Double(x + 7, y + 7, x + 10, y + 7));  // Hour hand
+        g2.draw(new Line2D.Double(x + 7, y + 7, x + 7, y + 3.5));
+        g2.draw(new Line2D.Double(x + 7, y + 7, x + 10, y + 7));
       }
 
       case BOOLEAN -> {
-        // Checkbox with checkmark
         g2.draw(new Rectangle2D.Double(x + 2, y + 2, SIZE - 4, SIZE - 4));
         Path2D check = new Path2D.Double();
         check.moveTo(x + 4, y + 7);
@@ -111,33 +100,29 @@ public class DTGroupIcon implements Icon {
       case JSON -> drawCenteredText(g2, "JS", x, y, TINY_FONT);
 
       case SET -> {
-        // Venn Diagram (two overlapping circles)
         g2.draw(new Ellipse2D.Double(x + 1, y + 3, 8, 8));
         g2.draw(new Ellipse2D.Double(x + 5, y + 3, 8, 8));
       }
 
       case SPATIAL -> {
-        // Location Pin / Geometry
         Path2D path = new Path2D.Double();
         path.moveTo(x + 7, y + 13);
         path.lineTo(x + 2, y + 4);
         path.lineTo(x + 12, y + 4);
         path.closePath();
-        g2.fill(path); // Filled triangle looks better for Spatial
+        g2.fill(path);
       }
 
       case NETWORK -> {
-        // Network Graph (3 connected nodes)
-        g2.fillOval(x + 6, y + 1, 3, 3); // Top
-        g2.fillOval(x + 2, y + 9, 3, 3); // Left
-        g2.fillOval(x + 10, y + 9, 3, 3); // Right
+        g2.fillOval(x + 6, y + 1, 3, 3);
+        g2.fillOval(x + 2, y + 9, 3, 3);
+        g2.fillOval(x + 10, y + 9, 3, 3);
         g2.drawLine(x + 7, y + 3, x + 4, y + 10);
         g2.drawLine(x + 8, y + 3, x + 11, y + 10);
         g2.drawLine(x + 4, y + 10, x + 11, y + 10);
       }
 
       case INTERVAL -> {
-        // Hourglass / Range
         Path2D path = new Path2D.Double();
         path.moveTo(x + 3, y + 2);
         path.lineTo(x + 11, y + 2);
@@ -153,19 +138,14 @@ public class DTGroupIcon implements Icon {
     g2.dispose();
   }
 
-  /**
-   * Helper to center text perfectly within the 14x14 box
-   */
   private void drawCenteredText(Graphics2D g2, String text, int x, int y, Font font) {
     g2.setFont(font);
     FontMetrics fm = g2.getFontMetrics();
 
-    // Calculate precise center
     double textWidth = fm.getStringBounds(text, g2).getWidth();
     double textHeight = fm.getAscent() - fm.getDescent();
 
     double cx = x + (SIZE - textWidth) / 2.0;
-    // Basic baseline calculation for vertical centering
     double cy = y + (SIZE + textHeight) / 2.0 - 1;
 
     g2.drawString(text, (float) cx, (float) cy);

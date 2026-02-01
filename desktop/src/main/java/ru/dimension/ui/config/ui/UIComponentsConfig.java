@@ -15,6 +15,7 @@ import ru.dimension.db.model.profile.table.IType;
 import ru.dimension.db.model.profile.table.TType;
 import ru.dimension.di.DimensionDI;
 import ru.dimension.di.ServiceLocator;
+import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.sql.GatherDataMode;
@@ -94,9 +95,10 @@ public final class UIComponentsConfig {
         .provideNamed(MetadataQueryPanel.class, "metadataQueryPanel", s(UIFactory::createMetadataQueryPanel))
         .provideNamed(MetricQueryPanel.class,   "metricQueryPanel",   s(UIFactory::createMetricQueryPanel))
 
-        .provideNamed(JXTableCase.class, "templateTaskCase",  s(UIFactory::createTemplateTaskCase))
-        .provideNamed(JXTableCase.class, "templateConnCase",  s(UIFactory::createTemplateConnCase))
-        .provideNamed(JXTableCase.class, "templateQueryCase", s(UIFactory::createTemplateQueryCase))
+        .provideNamed(TTTable.class, "templateTaskCase",    s(UIFactory::createTemplateTaskCase))
+        .provideNamed(TTTable.class, "templateConnCase",    s(UIFactory::createTemplateConnCase))
+        .provideNamed(TTTable.class, "templateQueryCase",   s(UIFactory::createTemplateQueryCase))
+        .provideNamed(TTTable.class, "templateMetricsCase", s(UIFactory::createTemplateMetricsCase))
 
         .provideNamed(JXTextArea.class, "templateTaskDescription",  s(UIFactory::createTemplateTaskDescription))
         .provideNamed(JXTextArea.class, "templateQueryDescription", s(UIFactory::createTemplateQueryDescription))
@@ -119,7 +121,6 @@ public final class UIComponentsConfig {
 
         .provideNamed(JXTableCase.class, "configMetadataCase",     s(UIFactory::createConfigMetadataCase))
         .provideNamed(JXTableCase.class, "configMetricCase",       s(UIFactory::createMetricsCase))
-        .provideNamed(JXTableCase.class, "templateMetricsCase",    s(UIFactory::createMetricsCase))
         .provideNamed(JXTableCase.class, "connectionTemplateCase", s(UIFactory::createConnectionTemplateCase))
 
         .provideNamed(MultiSelectTaskPanel.class,  "multiSelectPanel",      s(UIFactory::createMultiSelectPanel))

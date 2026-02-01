@@ -92,18 +92,24 @@ public class ConnectionPoolManagerImpl implements ConnectionPoolManager {
 
   @Override
   public Connection getConnection(ConnectionInfo connectionInfo) {
-    if (connectionInfo == null || connectionInfo.getId() <= 0) {
-      throw new IllegalArgumentException("ConnectionInfo cannot be null");
-    }
+    try {
+      BasicDataSource dataSource = getDatasource(connectionInfo);
+      if (dataSource == null) {
+        log.error("DataSource is null for connection: {}", connectionInfo.getName());
+        return null;
+      }
 
-    if (!connectionMap.containsKey(connectionInfo.getId())) {
-      Connection connection = futureExecutionWithTimeout(5, connectionInfo);
-      connectionMap.put(connectionInfo.getId(), List.of(connection));
-    }
+      Connection connection = dataSource.getConnection();
+      if (connection == null || connection.isClosed()) {
+        log.error("Connection is null or closed for: {}", connectionInfo.getName());
+        return null;
+      }
 
-    return connectionMap.get(connectionInfo.getId()).stream()
-        .findAny()
-        .orElseThrow(() -> new IllegalStateException("Connection not found"));
+      return connection;
+    } catch (Exception e) {
+      log.error("Failed to get connection for: {}", connectionInfo.getName(), e);
+      return null;
+    }
   }
 
   @Override

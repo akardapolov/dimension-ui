@@ -10,19 +10,14 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 import javax.swing.Icon;
 
-/**
- * Icon representing a database view.
- * Renders an eye symbol in DBeaver style (view = "looking at" data).
- */
 public class ViewIcon implements Icon {
 
   private static final int SIZE = 14;
   private final Color color;
   private final Color irisColor;
 
-  // DBeaver-style view colors
-  private static final Color DEFAULT_COLOR = new Color(0x2196F3);      // Blue
-  private static final Color DEFAULT_IRIS_COLOR = new Color(0x1565C0); // Darker blue
+  private static final Color DEFAULT_COLOR = new Color(0x2196F3);
+  private static final Color DEFAULT_IRIS_COLOR = new Color(0x1565C0);
 
   public ViewIcon() {
     this(DEFAULT_COLOR, DEFAULT_IRIS_COLOR);
@@ -46,7 +41,6 @@ public class ViewIcon implements Icon {
     g2.setColor(color);
     g2.setStroke(new BasicStroke(1.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 
-    // Eye outline shape (almond shape)
     Path2D eye = new Path2D.Double();
     eye.moveTo(x + 1, y + 7);
     eye.curveTo(x + 2, y + 3, x + 5, y + 2, x + 7, y + 2);
@@ -56,14 +50,11 @@ public class ViewIcon implements Icon {
     eye.closePath();
     g2.draw(eye);
 
-    // Iris (outer circle)
     g2.setColor(irisColor);
     g2.draw(new Ellipse2D.Double(x + 4, y + 4, 6, 6));
 
-    // Pupil (filled inner circle)
     g2.fill(new Ellipse2D.Double(x + 5.5, y + 5.5, 3, 3));
 
-    // Light reflection
     g2.setColor(Color.WHITE);
     g2.fill(new Ellipse2D.Double(x + 5, y + 5, 1.5, 1.5));
 

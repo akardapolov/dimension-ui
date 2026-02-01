@@ -11,14 +11,10 @@ import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
 import javax.swing.Icon;
 
-/**
- * Pure Java2D implementations of "Dimension Style" icons (Geometric/Abstract).
- */
 public class VectorIcons {
 
   private static final int SIZE = 16;
 
-  // Helper to setup anti-aliasing
   private static Graphics2D config(Graphics g) {
     Graphics2D g2 = (Graphics2D) g.create();
     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -27,7 +23,6 @@ public class VectorIcons {
     return g2;
   }
 
-  // --- 1. Profile Icon (The Isometric Cube) ---
   public static class Profile implements Icon {
     private final Color color;
     public Profile(Color color) { this.color = color; }
@@ -63,7 +58,6 @@ public class VectorIcons {
     @Override public int getIconHeight() { return SIZE; }
   }
 
-  // --- 2. Task Icon (The Vector Sparkline) ---
   public static class Task implements Icon {
     private final Color color;
     public Task(Color color) { this.color = color; }
@@ -93,7 +87,6 @@ public class VectorIcons {
     @Override public int getIconHeight() { return SIZE; }
   }
 
-  // --- 3. Query Icon (The Prism) ---
   public static class Query implements Icon {
     private final Color color;
     public Query(Color color) { this.color = color; }
@@ -122,7 +115,6 @@ public class VectorIcons {
     @Override public int getIconHeight() { return SIZE; }
   }
 
-  // --- 4. Design Icon (The Blueprint/Layout) ---
   public static class Design implements Icon {
     private final Color color;
     public Design(Color color) { this.color = color; }
@@ -133,18 +125,40 @@ public class VectorIcons {
       g2.setColor(color);
       g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 
-      // Main sheet
       g2.draw(new Rectangle2D.Double(x + 3, y + 2, 10, 12));
 
-      // Header line
       g2.draw(new Line2D.Double(x + 5, y + 5, x + 11, y + 5));
 
-      // Content blocks
       g2.fill(new Rectangle2D.Double(x + 5, y + 7, 2, 2));
       g2.draw(new Line2D.Double(x + 8, y + 8, x + 11, y + 8));
 
       g2.fill(new Rectangle2D.Double(x + 5, y + 10, 2, 2));
       g2.draw(new Line2D.Double(x + 8, y + 11, x + 11, y + 11));
+
+      g2.dispose();
+    }
+    @Override public int getIconWidth() { return SIZE; }
+    @Override public int getIconHeight() { return SIZE; }
+  }
+
+  public static class Metric implements Icon {
+    private final Color color;
+    public Metric(Color color) { this.color = color; }
+
+    @Override
+    public void paintIcon(Component c, Graphics g, int x, int y) {
+      Graphics2D g2 = config(g);
+      g2.setColor(color);
+      g2.setStroke(new BasicStroke(1.5f));
+
+      // Axis
+      g2.draw(new Line2D.Double(x + 2, y + 2, x + 2, y + 13));
+      g2.draw(new Line2D.Double(x + 2, y + 13, x + 14, y + 13));
+
+      // Bars
+      g2.fillRect(x + 4, y + 8, 2, 5);
+      g2.fillRect(x + 7, y + 5, 2, 8);
+      g2.fillRect(x + 10, y + 9, 2, 4);
 
       g2.dispose();
     }

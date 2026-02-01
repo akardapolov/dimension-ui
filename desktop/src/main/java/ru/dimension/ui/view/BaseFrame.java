@@ -100,6 +100,7 @@ public class BaseFrame extends JFrame {
                    @Named("localDB") DStore dStore,
                    TaskExecutorPool taskExecutorPool,
                    FilesHelper filesHelper) throws HeadlessException {
+
     this.mainTabPane = mainTabPane;
 
     this.toolbarView = toolbarView;
@@ -130,10 +131,13 @@ public class BaseFrame extends JFrame {
 
     this.setTitle("Dimension UI");
     this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    this.setSize(new Dimension(400, 300));
-    this.setExtendedState(JFrame.MAXIMIZED_BOTH); //todo window max size
-    this.setVisible(true);
+    this.getContentPane().setLayout(new BorderLayout());
 
+    this.setSize(new Dimension(400, 300));
+    this.setExtendedState(JFrame.MAXIMIZED_BOTH);
+  }
+
+  public void initUi() {
     initializeTabComponents();
 
     this.addMainArea((Container) this.toolbarView, BorderLayout.NORTH);
@@ -161,7 +165,6 @@ public class BaseFrame extends JFrame {
     addTab(panel, DASHBOARD_TAB_INDEX);
   }
 
-
   private void initializeReportTab() {
     ReportComponent component = createReportComponent();
     JPanel panel = createComponentPanel(component.getMainTabPane());
@@ -176,7 +179,6 @@ public class BaseFrame extends JFrame {
 
   private WorkspaceComponent createWorkspaceComponent() {
     WorkspaceComponent workspace = ServiceLocator.get(WorkspaceComponent.class);
-
     eventListener.addProfileStartStopListener(workspace);
     return workspace;
   }
@@ -202,16 +204,10 @@ public class BaseFrame extends JFrame {
   }
 
   private void addTab(Container container, int index) {
-    fillJTabbedPane(container, index);
-  }
-
-  private void fillJTabbedPane(Container container,
-                               int index) {
     this.mainTabPane.setComponentAt(index, container);
   }
 
-  public void addMainArea(Container container,
-                          String constraints) {
+  public void addMainArea(Container container, String constraints) {
     this.add(container, constraints);
   }
 
@@ -229,7 +225,6 @@ public class BaseFrame extends JFrame {
     cleanupResources();
     System.exit(0);
   }
-
 
   private void stopAllRunningTasks() {
     profileManager.getProfileInfoList().forEach(profileInfo ->

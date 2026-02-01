@@ -119,7 +119,6 @@ public class GUIHelper {
         ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
     );
 
-    // Set scrollbar width if specified (>0)
     if (scrollBarWidth > 0) {
       JScrollBar verticalScrollBar = scrollPane.getVerticalScrollBar();
       verticalScrollBar.setPreferredSize(new Dimension(scrollBarWidth, verticalScrollBar.getPreferredSize().height));
@@ -283,7 +282,6 @@ public class GUIHelper {
     JComboBox<CType> comboCType = new JComboBox<>(CType.values());
 
     JXTable jxTable = new JXTable(defaultTableModel) {
-      //  Determine editor to be used by row
       public TableCellEditor getCellEditor(int row,
                                            int column) {
         int modelColumn = convertColumnIndexToModel(column);
@@ -613,5 +611,9 @@ public class GUIHelper {
     table.setIntercellSpacing(new java.awt.Dimension(1, 1));
     table.setEditable(false);
     table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+  }
+
+  public static void prewarmRegistry() {
+    getRegistry();
   }
 }

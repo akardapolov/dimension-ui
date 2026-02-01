@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.manager.AdHocDatabaseManager;
@@ -11,6 +12,7 @@ import ru.dimension.ui.manager.ConfigurationManager;
 import ru.dimension.ui.manager.ConnectionPoolManager;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.config.Connection;
+import ru.dimension.ui.model.type.ConnectionStatus;
 import ru.dimension.ui.router.event.EventListener;
 
 @Data
@@ -24,6 +26,8 @@ public class AdHocModelModel {
   private final AdHocDatabaseManager adHocDatabaseManager;
 
   private final Map<Integer, Map<String, Set<Integer>>> selectionState = new HashMap<>();
+  private final Map<Integer, ConnectionStatus> connectionStatusMap = new ConcurrentHashMap<>();
+  private final Set<Integer> connectionsBeingChecked = ConcurrentHashMap.newKeySet();
 
   public AdHocModelModel(ProfileManager profileManager,
                          ConfigurationManager configurationManager,
@@ -88,5 +92,45 @@ public class AdHocModelModel {
   public void clearSelectionState(int connectionId) {
     selectionState.remove(connectionId);
     log.info("Cleared selection state for connection: {}", connectionId);
+  }
+
+  public void setConnectionStatus(int connectionId, ConnectionStatus status) {
+    connectionStatusMap.put(connectionId, status);
+  }
+
+  public ConnectionStatus getConnectionStatus(int connectionId) {
+    return connectionStatusMap.getOrDefault(connectionId, ConnectionStatus.NOT_CONNECTED);
+  }
+
+  public void removeConnectionStatus(int connectionId) {
+    connectionStatusMap.remove(connectionId);
+  }
+
+  public Map<Integer, ConnectionStatus> getAllConnectionStatuses() {
+    return new HashMap<>(connectionStatusMap);
+  }
+
+  public boolean isConnectionReady(int connectionId) {
+    return ConnectionStatus.READY.equals(connectionStatusMap.get(connectionId));
+  }
+
+  public void markConnectionBeingChecked(int connectionId) {
+    connectionsBeingChecked.add(connectionId);
+  }
+
+  public void unmarkConnectionBeingChecked(int connectionId) {
+    connectionsBeingChecked.remove(connectionId);
+  }
+
+  public boolean isConnectionBeingChecked(int connectionId) {
+    return connectionsBeingChecked.contains(connectionId);
+  }
+
+  public boolean hasConnectionsBeingChecked() {
+    return !connectionsBeingChecked.isEmpty();
+  }
+
+  public int getConnectionsBeingCheckedCount() {
+    return connectionsBeingChecked.size();
   }
 }
