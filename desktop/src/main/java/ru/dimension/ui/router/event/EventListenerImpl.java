@@ -46,6 +46,8 @@ public class EventListenerImpl implements EventListener {
       new ConcurrentHashMap<>();
   private final Map<ProfileTaskQueryKey, CollectStartStopListener> collectStartStopDashboardListenerMap =
       new ConcurrentHashMap<>();
+  private final Map<ProfileTaskQueryKey, CollectStartStopListener> collectStartStopZoomListenerMap =
+      new ConcurrentHashMap<>();
 
   @Inject
   public EventListenerImpl() {
@@ -130,10 +132,17 @@ public class EventListenerImpl implements EventListener {
   }
 
   @Override
+  public void addCollectStartStopZoomListener(ProfileTaskQueryKey profileTaskQueryKey,
+                                              CollectStartStopListener collectStartStopListener) {
+    collectStartStopZoomListenerMap.put(profileTaskQueryKey, collectStartStopListener);
+  }
+
+  @Override
   public void fireOnStartCollect(ProfileTaskQueryKey profileTaskQueryKey) {
     fireStartCollect(collectStartStopListenerMap.get(profileTaskQueryKey), profileTaskQueryKey);
     fireStartCollect(collectStartStopPreviewListenerMap.get(profileTaskQueryKey), profileTaskQueryKey);
     fireStartCollect(collectStartStopDashboardListenerMap.get(profileTaskQueryKey), profileTaskQueryKey);
+    fireStartCollect(collectStartStopZoomListenerMap.get(profileTaskQueryKey), profileTaskQueryKey);
   }
 
   @Override
@@ -141,6 +150,7 @@ public class EventListenerImpl implements EventListener {
     fireStopCollect(collectStartStopListenerMap.get(profileTaskQueryKey), profileTaskQueryKey);
     fireStopCollect(collectStartStopPreviewListenerMap.get(profileTaskQueryKey), profileTaskQueryKey);
     fireStopCollect(collectStartStopDashboardListenerMap.get(profileTaskQueryKey), profileTaskQueryKey);
+    fireStopCollect(collectStartStopZoomListenerMap.get(profileTaskQueryKey), profileTaskQueryKey);
   }
 
   private void fireStartCollect(CollectStartStopListener listener, ProfileTaskQueryKey key) {
@@ -163,6 +173,11 @@ public class EventListenerImpl implements EventListener {
   @Override
   public void clearListenerDashboardByKey(ProfileTaskQueryKey profileTaskQueryKey) {
     collectStartStopDashboardListenerMap.remove(profileTaskQueryKey);
+  }
+
+  @Override
+  public void clearListenerZoomByKey(ProfileTaskQueryKey profileTaskQueryKey) {
+    collectStartStopZoomListenerMap.remove(profileTaskQueryKey);
   }
 
   @Override

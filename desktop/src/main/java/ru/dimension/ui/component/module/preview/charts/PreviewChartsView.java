@@ -24,9 +24,12 @@ public class PreviewChartsView extends JPanel {
   private final JXTaskPaneContainer cardContainer;
   private final JScrollPane cardScrollPane;
 
+  private final PreviewChartsModel model;
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
   public PreviewChartsView(PreviewChartsModel model) {
+    this.model = model;
+
     setBorder(new EtchedBorder());
     LaF.setBackgroundColor(CHART_PANEL, this);
 

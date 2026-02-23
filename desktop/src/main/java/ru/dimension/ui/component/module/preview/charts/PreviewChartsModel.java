@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentMap;
 import lombok.Data;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.module.chart.PRChartModule;
@@ -16,6 +17,7 @@ import ru.dimension.ui.state.SqlQueryState;
 @Data
 public class PreviewChartsModel {
 
+  private final MessageBroker.Component component;
   private final ProfileManager profileManager;
   private final SqlQueryState sqlQueryState;
   private final DStore dStore;
@@ -27,9 +29,11 @@ public class PreviewChartsModel {
 
   private ChartDetailDialog chartDetailDialog;
 
-  public PreviewChartsModel(ProfileManager profileManager,
+  public PreviewChartsModel(MessageBroker.Component component,
+                            ProfileManager profileManager,
                             SqlQueryState sqlQueryState,
                             DStore dStore) {
+    this.component = component;
     this.profileManager = profileManager;
     this.sqlQueryState = sqlQueryState;
     this.dStore = dStore;

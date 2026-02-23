@@ -26,6 +26,7 @@ import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.module.base.BaseUnitPresenter;
 import ru.dimension.ui.component.module.chart.main.ChartModel;
 import ru.dimension.ui.component.panel.LegendPanel;
+import ru.dimension.ui.component.panel.popup.FilterPanel;
 import ru.dimension.ui.component.panel.popup.RealtimeStateProvider;
 import ru.dimension.ui.exception.SeriesExceedException;
 import ru.dimension.ui.helper.DateHelper;
@@ -141,7 +142,14 @@ public class RealtimeUnitPresenter extends BaseUnitPresenter<RealtimeUnitView> i
 
   @Override
   public void updateChart() {
-    updateChartInternal(null, null);
+    FilterPanel filterPanel = view.getRealTimeFilterPanel();
+    if (filterPanel.hasActiveFilters()) {
+      Map<CProfile, LinkedHashSet<String>> activeFilters = filterPanel.getActiveFilters();
+      Map<String, Color> currentSeriesColorMap = filterPanel.getSeriesColorMap();
+      updateChartInternal(currentSeriesColorMap, activeFilters);
+    } else {
+      updateChartInternal(null, null);
+    }
   }
 
   @Override
@@ -246,7 +254,7 @@ public class RealtimeUnitPresenter extends BaseUnitPresenter<RealtimeUnitView> i
     if (GatherDataMode.BY_CLIENT_JDBC.equals(queryInfo.getGatherDataMode())) {
       return new ClientRealtimeSCP(sqlQueryState, dStore, config, key, topMapSelected);
     } else if (GatherDataMode.BY_CLIENT_HTTP.equals(queryInfo.getGatherDataMode())) {
-        return new ClientRealtimeSCP(sqlQueryState, dStore, config, key, topMapSelected);
+      return new ClientRealtimeSCP(sqlQueryState, dStore, config, key, topMapSelected);
     } else {
       return new ServerRealtimeSCP(sqlQueryState, dStore, config, key, topMapSelected);
     }

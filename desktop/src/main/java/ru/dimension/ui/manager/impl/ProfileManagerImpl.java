@@ -60,9 +60,6 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
     this.loadDataToCache();
   }
 
-  /**
-   * Get by id
-   **/
   @Override
   public ProfileInfo getProfileInfoById(int profileId) {
     return this.appCache.getProfileInfo(profileId);
@@ -83,9 +80,6 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
     return this.appCache.getQueryInfo(queryId);
   }
 
-  /**
-   * Get list
-   **/
   @Override
   public List<ProfileInfo> getProfileInfoList() {
     return List.copyOf(this.appCache.getProfileInfoMap().values());
@@ -194,9 +188,6 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
     appCache.putChartInfo(chartInfo);
   }
 
-  /**
-   * Update
-   **/
   @Override
   public void updateProfile(ProfileInfo profileInfo) {
     Profile profile = configurationManager.getConfig(Profile.class, profileInfo.getName());
@@ -268,29 +259,25 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
   }
 
   @Override
-  public void deleteProfile(int profileId,
-                            String profileName) {
+  public void deleteProfile(int profileId, String profileName) {
     configurationManager.deleteConfig(profileName, Profile.class);
     appCache.deleteProfileInfo(profileId);
   }
 
   @Override
-  public void deleteTask(int taskId,
-                         String taskName) {
+  public void deleteTask(int taskId, String taskName) {
     configurationManager.deleteConfig(taskName, Task.class);
     appCache.deleteTaskInfo(taskId);
   }
 
   @Override
-  public void deleteConnection(int connectionId,
-                               String connectionName) {
+  public void deleteConnection(int connectionId, String connectionName) {
     configurationManager.deleteConfig(connectionName, Connection.class);
     appCache.deleteConnectionInfo(connectionId);
   }
 
   @Override
-  public void deleteQuery(int queryId,
-                          String queryName) {
+  public void deleteQuery(int queryId, String queryName) {
     configurationManager.deleteConfig(queryName, Query.class);
     appCache.deleteQueryInfo(queryId);
   }
@@ -311,14 +298,19 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
     return this.appCache.getProfileInfo(profileId)
         .getTaskInfoList()
         .stream()
-        .flatMap(taskId -> this.appCache.getQueryInfo().keySet().stream()
-            .map(queryId -> new ProfileTaskQueryKey(profileId, taskId, queryId)))
+        .flatMap(taskId -> {
+          TaskInfo taskInfo = this.appCache.getTaskInfo(taskId);
+          if (taskInfo == null) {
+            return java.util.stream.Stream.empty();
+          }
+          return taskInfo.getQueryInfoList().stream()
+              .map(queryId -> new ProfileTaskQueryKey(profileId, taskId, queryId));
+        })
         .collect(Collectors.toList());
   }
 
   @Override
-  public List<QueryInfo> getQueryInfoList(int profileId,
-                                          int taskId) {
+  public List<QueryInfo> getQueryInfoList(int profileId, int taskId) {
     return this.appCache.getTaskInfo(taskId)
         .getQueryInfoList().stream()
         .map(this.appCache::getQueryInfo)
@@ -373,7 +365,6 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
               .setDescription(task.getDescription())
               .setPullTimeout(task.getPullTimeout())
               .setConnectionId(task.getConnectionId())
-
               .setQueryInfoList(task.getQueryList())
               .setTableInfoList(getTableInfoList(queryIdNameMap, task.getQueryList()).stream()
                                     .map(TableInfo::getTableName).toList())
@@ -461,8 +452,7 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
     return list;
   }
 
-  private List<ChartInfo> getChartInfoList(List<Integer> queryIdList,
-                                           int pullTimeout) {
+  private List<ChartInfo> getChartInfoList(List<Integer> queryIdList, int pullTimeout) {
     return queryIdList.stream().map(queryId -> {
       ChartInfo chartInfo = new ChartInfo();
       chartInfo.setId(queryId);
@@ -519,8 +509,7 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
   }
 
   @Override
-  public void setProfileInfoStatusById(int profileId,
-                                       RunStatus runStatus) {
+  public void setProfileInfoStatusById(int profileId, RunStatus runStatus) {
     this.appCache.getProfileInfo(profileId).setStatus(runStatus);
   }
 
@@ -582,8 +571,6 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
 
   @Override
   public void loadDeltaLocalServerTime(ProfileTaskQueryKey profileTaskQueryKey) {
-    // TODO move this method to another layer
-
     TaskInfo taskInfo = appCache.getTaskInfo(profileTaskQueryKey.getTaskId());
     ConnectionInfo connectionInfo = appCache.getConnectionInfo(taskInfo.getConnectionId());
     QueryInfo queryInfo = appCache.getQueryInfo(profileTaskQueryKey.getQueryId());
@@ -608,5 +595,4 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
       log.catching(e);
     }
   }
-
 }

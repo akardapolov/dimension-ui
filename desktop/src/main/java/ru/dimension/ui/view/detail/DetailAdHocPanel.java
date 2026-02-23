@@ -50,7 +50,7 @@ import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.view.detail.insight.InsightPanel;
 import ru.dimension.ui.view.detail.pivot.MainPivotDashboardPanel;
-import ru.dimension.ui.view.detail.raw.RawDataDashboardPanel;
+import ru.dimension.ui.view.detail.raw.RawDataAdHocPanel;
 import ru.dimension.ui.view.detail.top.MainTopDashboardPanel;
 
 @Log4j2
@@ -185,7 +185,8 @@ public class DetailAdHocPanel extends JPanel implements IDetailPanel, DetailActi
     return actualTopMapSelected;
   }
 
-  private void addTopTab(JTabbedPane tabs, long begin, long end, Map<CProfile, LinkedHashSet<String>> actualTopMapSelected) {
+  private void addTopTab(JTabbedPane tabs, long begin, long end,
+                         Map<CProfile, LinkedHashSet<String>> actualTopMapSelected) {
     MainTopDashboardPanel mainTopPanel = new MainTopDashboardPanel(
         dStore, scheduledExecutorService, tableInfo, metric, cProfile,
         begin, end, seriesColorMap, seriesType, actualTopMapSelected);
@@ -211,8 +212,11 @@ public class DetailAdHocPanel extends JPanel implements IDetailPanel, DetailActi
     tabs.setTabComponentAt(separatorIndex, createTextSeparator(rangeSeparator));
   }
 
-  private void initializeRawTab(JTabbedPane sourceTabbedPane, int selectedIndex, JPanel rawPlaceholder,
-                                long begin, long end) {
+  private void initializeRawTab(JTabbedPane sourceTabbedPane,
+                                int selectedIndex,
+                                JPanel rawPlaceholder,
+                                long begin,
+                                long end) {
     log.info("Lazy initializing '{}' tab content in background.", TAB_TITLE_RAW);
 
     rawPlaceholder.add(ProgressBarHelper.createProgressBar("Initializing..."), BorderLayout.CENTER);
@@ -221,23 +225,33 @@ public class DetailAdHocPanel extends JPanel implements IDetailPanel, DetailActi
 
     scheduledExecutorService.submit(() -> {
       try {
-        boolean isRealtimePanel = MessageBroker.Panel.REALTIME.equals(panel);
-        final RawDataDashboardPanel rawDataPanel = new RawDataDashboardPanel(dStore, tableInfo, cProfile, begin, end, !isRealtimePanel);
+        Map<String, Color> filterColors = GroupFunction.COUNT.equals(metric.getGroupFunction())
+            ? seriesColorMap
+            : null;
 
-        SwingUtilities.invokeLater(() -> sourceTabbedPane.setComponentAt(selectedIndex, rawDataPanel));
+        final RawDataAdHocPanel rawDataPanel = new RawDataAdHocPanel(
+            dStore, tableInfo, cProfile, begin, end, true, filterColors);
+
+        SwingUtilities.invokeLater(
+            () -> sourceTabbedPane.setComponentAt(selectedIndex, rawDataPanel));
       } catch (Exception e) {
         log.error("Failed to initialize Raw tab content", e);
         SwingUtilities.invokeLater(() -> {
           JPanel errorPanel = new JPanel(new BorderLayout());
-          errorPanel.add(new JLabel("Error loading data. See logs for details."), BorderLayout.CENTER);
+          errorPanel.add(new JLabel("Error loading data. See logs for details."),
+                         BorderLayout.CENTER);
           sourceTabbedPane.setComponentAt(selectedIndex, errorPanel);
         });
       }
     });
   }
 
-  private void initializeBreakdownTab(JTabbedPane sourceTabbedPane, int selectedIndex, JPanel breakdownPlaceholder,
-                                      long begin, long end, Map<CProfile, LinkedHashSet<String>> actualTopMapSelected) {
+  private void initializeBreakdownTab(JTabbedPane sourceTabbedPane,
+                                      int selectedIndex,
+                                      JPanel breakdownPlaceholder,
+                                      long begin,
+                                      long end,
+                                      Map<CProfile, LinkedHashSet<String>> actualTopMapSelected) {
     log.info("Lazy initializing '{}' tab content.", TAB_TITLE_BREAKDOWN);
 
     breakdownPlaceholder.add(ProgressBarHelper.createProgressBar("Initializing..."), BorderLayout.CENTER);
@@ -263,8 +277,12 @@ public class DetailAdHocPanel extends JPanel implements IDetailPanel, DetailActi
     return chartInfoCopy;
   }
 
-  private void initializeInsightTab(JTabbedPane sourceTabbedPane, int selectedIndex, JPanel insightPlaceholder,
-                                    long begin, long end, Map<CProfile, LinkedHashSet<String>> actualTopMapSelected) {
+  private void initializeInsightTab(JTabbedPane sourceTabbedPane,
+                                    int selectedIndex,
+                                    JPanel insightPlaceholder,
+                                    long begin,
+                                    long end,
+                                    Map<CProfile, LinkedHashSet<String>> actualTopMapSelected) {
     log.info("Lazy initializing '{}' tab content.", TAB_TITLE_INSIGHT);
 
     insightPlaceholder.add(ProgressBarHelper.createProgressBar("Initializing..."), BorderLayout.CENTER);
@@ -286,13 +304,15 @@ public class DetailAdHocPanel extends JPanel implements IDetailPanel, DetailActi
 
         InsightPanel insightPanel = new InsightPanel(chart);
 
-        SwingUtilities.invokeLater(() -> sourceTabbedPane.setComponentAt(selectedIndex, insightPanel));
+        SwingUtilities.invokeLater(
+            () -> sourceTabbedPane.setComponentAt(selectedIndex, insightPanel));
 
       } catch (Exception ex) {
         log.catching(ex);
         SwingUtilities.invokeLater(() -> {
           JPanel errorPanel = new JPanel(new BorderLayout());
-          errorPanel.add(new JLabel("Error loading insights: " + ex.getMessage()), BorderLayout.CENTER);
+          errorPanel.add(new JLabel("Error loading insights: " + ex.getMessage()),
+                         BorderLayout.CENTER);
           sourceTabbedPane.setComponentAt(selectedIndex, errorPanel);
         });
       }
@@ -306,7 +326,8 @@ public class DetailAdHocPanel extends JPanel implements IDetailPanel, DetailActi
     mainPanel.repaint();
   }
 
-  public void updateSeriesColor(Map<CProfile, LinkedHashSet<String>> topMapSelected, Map<String, Color> newSeriesColorMap) {
+  public void updateSeriesColor(Map<CProfile, LinkedHashSet<String>> topMapSelected,
+                                Map<String, Color> newSeriesColorMap) {
     this.topMapSelected = topMapSelected;
 
     seriesColorMap.clear();

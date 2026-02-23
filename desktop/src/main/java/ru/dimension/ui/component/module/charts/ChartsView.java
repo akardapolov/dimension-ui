@@ -101,6 +101,10 @@ public class ChartsView extends JPanel {
 
   void centerComponentInScrollPane(Component component) {
     SwingUtilities.invokeLater(() -> {
+      if (!component.isShowing()) {
+        return;
+      }
+
       Point componentPos = SwingUtilities.convertPoint(
           component.getParent(),
           component.getLocation(),
@@ -109,7 +113,10 @@ public class ChartsView extends JPanel {
 
       JViewport viewport = cardScrollPane.getViewport();
       int topMargin = 10;
-      int targetY = Math.max(0, componentPos.y - topMargin);
+
+      int maxScrollY = Math.max(0, cardPanel.getPreferredSize().height - viewport.getHeight());
+
+      int targetY = Math.max(0, Math.min(componentPos.y - topMargin, maxScrollY));
 
       int startY = viewport.getViewPosition().y;
       int distance = targetY - startY;
@@ -135,6 +142,9 @@ public class ChartsView extends JPanel {
         } else {
           double ease = 0.5 * (1 - Math.cos(progress * Math.PI));
           int newY = (int) (startY + (distance * ease));
+
+          newY = Math.max(0, Math.min(newY, maxScrollY));
+
           viewport.setViewPosition(new Point(0, newY));
         }
       });

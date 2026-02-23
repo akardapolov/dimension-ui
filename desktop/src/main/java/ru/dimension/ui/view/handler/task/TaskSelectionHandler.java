@@ -148,17 +148,14 @@ public final class TaskSelectionHandler extends AbstractTableSelectionHandler<Ta
 
     List<QueryInfo> allQueries = profileManager.getQueryInfoList();
 
-    // Fill selected queries (unchanged)
     ttSelected.setItems(allQueries.stream()
                             .filter(q -> selectedIds.contains(q.getId()))
                             .map(q -> new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()))
                             .collect(Collectors.toList()));
 
-    // Build available queries list based on combinations
     List<QueryTableRow> availableRows = buildAvailableQueryList(id, selectedIds);
     ttAvailable.setItems(availableRows);
 
-    // Fill template queries
     String driver = getSelectedDriver();
     if (driver != null) {
       ttTemplate.setItems(templateManager.getQueryListByConnDriver(driver).stream()
@@ -177,10 +174,7 @@ public final class TaskSelectionHandler extends AbstractTableSelectionHandler<Ta
     ConnectionType connectionType = getSelectedConnectionType();
     boolean hasConnection = hasSelectedConnection();
 
-    // 1) HTTP: do NOT depend on driver
     if (hasConnection && connectionType == ConnectionType.HTTP) {
-
-      // Option A: show all BY_CLIENT_HTTP queries (recommended)
       profileManager.getQueryInfoList().stream()
           .filter(q -> q.getGatherDataMode() == GatherDataMode.BY_CLIENT_HTTP)
           .filter(q -> !addedIds.contains(q.getId()))
@@ -189,13 +183,9 @@ public final class TaskSelectionHandler extends AbstractTableSelectionHandler<Ta
             addedIds.add(q.getId());
           });
 
-      // OR Option B: show only orphan BY_CLIENT_HTTP queries (your current behavior intent)
-      // profileManager.getHttpOrphanQueryInfoList()...
-
       return result;
     }
 
-    // 2) JDBC-like: driver-based
     if (driver != null) {
       profileManager.getQueryInfoListByConnDriver(driver).stream()
           .filter(q -> !addedIds.contains(q.getId()))
@@ -204,15 +194,13 @@ public final class TaskSelectionHandler extends AbstractTableSelectionHandler<Ta
             addedIds.add(q.getId());
           });
     }
-    // 3) No connection selected: show all orphan
-    else if (!hasConnection) {
-      profileManager.getOrphanQueryInfoList().stream()
-          .filter(q -> !addedIds.contains(q.getId()))
-          .forEach(q -> {
-            result.add(new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()));
-            addedIds.add(q.getId());
-          });
-    }
+
+    profileManager.getOrphanQueryInfoList().stream()
+        .filter(q -> !addedIds.contains(q.getId()))
+        .forEach(q -> {
+          result.add(new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()));
+          addedIds.add(q.getId());
+        });
 
     return result;
   }

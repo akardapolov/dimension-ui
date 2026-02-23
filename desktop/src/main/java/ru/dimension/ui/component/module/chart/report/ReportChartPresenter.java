@@ -23,6 +23,7 @@ import ru.dimension.ui.component.chart.history.HistorySCP;
 import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.module.base.BaseUnitPresenter;
 import ru.dimension.ui.component.panel.LegendPanel;
+import ru.dimension.ui.component.panel.popup.FilterPanel;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
@@ -61,7 +62,14 @@ public class ReportChartPresenter extends BaseUnitPresenter<ReportChartView>
 
   @Override
   public void updateChart() {
-    updateChartInternal(null, null);
+    FilterPanel filterPanel = view.getHistoryFilterPanel();
+    if (filterPanel.hasActiveFilters()) {
+      Map<CProfile, LinkedHashSet<String>> activeFilters = filterPanel.getActiveFilters();
+      Map<String, Color> currentSeriesColorMap = filterPanel.getSeriesColorMap();
+      updateChartInternal(currentSeriesColorMap, activeFilters);
+    } else {
+      updateChartInternal(null, null);
+    }
   }
 
   @Override
@@ -154,20 +162,17 @@ public class ReportChartPresenter extends BaseUnitPresenter<ReportChartView>
     Metric metricCopy = metric.copy();
     ChartInfo chartInfoCopy = model.getChartInfo().copy();
 
-    // Group function -> chart type
     GroupFunction groupFunction = UIState.INSTANCE.getHistoryGroupFunction(chartKey);
     if (groupFunction != null) {
       metricCopy.setGroupFunction(groupFunction);
       metricCopy.setChartType(GroupFunction.COUNT.equals(groupFunction) ? ChartType.STACKED : ChartType.LINEAR);
     }
 
-    // Range: local -> global -> default DAY
     RangeHistory local = UIState.INSTANCE.getHistoryRange(chartKey);
     RangeHistory global = UIState.INSTANCE.getHistoryRangeAll(component.name());
     chartInfoCopy.setRangeHistory(Objects.requireNonNullElse(local,
                                                              Objects.requireNonNullElse(global, RangeHistory.DAY)));
 
-    // Custom range populate
     if (chartInfoCopy.getRangeHistory() == RangeHistory.CUSTOM) {
       ChartRange customRange = UIState.INSTANCE.getHistoryCustomRange(chartKey);
       if (customRange != null) {
@@ -182,7 +187,6 @@ public class ReportChartPresenter extends BaseUnitPresenter<ReportChartView>
       }
     }
 
-    // Time range / normalization functions
     TimeRangeFunction timeRangeFunction = UIState.INSTANCE.getTimeRangeFunction(chartKey);
     if (timeRangeFunction != null) {
       metricCopy.setTimeRangeFunction(timeRangeFunction);
@@ -267,7 +271,6 @@ public class ReportChartPresenter extends BaseUnitPresenter<ReportChartView>
     view.getHistoryFilterPanel().initializeChartPanel(model.getChartKey(), model.getTableInfo(), Panel.HISTORY);
   }
 
-  // UI actions
   public void handleGroupFunctionChange(String action, GroupFunction function) {
     metric.setGroupFunction(function);
     metric.setChartType(GroupFunction.COUNT.equals(function) ? ChartType.STACKED : ChartType.LINEAR);

@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentMap;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.db.model.profile.TProfile;
 import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageAction;
@@ -19,6 +20,7 @@ import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.module.adhoc.AdHocChartModule;
+import ru.dimension.ui.component.module.adhoc.raw.AdHocRawPanel;
 import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.helper.KeyHelper;
 import ru.dimension.ui.model.AdHocChartKey;
@@ -46,7 +48,6 @@ public class AdHocChartsPresenter implements MessageAction {
     this.model = model;
     this.view = view;
 
-    view.setTabChangeListener(this::handleTabChange);
     view.setTabChangeListener(this::handleTabChange);
     view.setTabCloseListener(this::handleTabClose);
   }
@@ -102,6 +103,15 @@ public class AdHocChartsPresenter implements MessageAction {
 
     keysToRemove.forEach(model.getChartPanes()::remove);
 
+    List<AdHocKey> rawKeysToRemove = new ArrayList<>();
+    model.getRawPanes().forEach((adHocKey, rawMap) -> {
+      String rawGlobalKey = adHocKey.getConnectionId() + "_" + adHocKey.getTableName();
+      if (globalKey.equals(rawGlobalKey)) {
+        rawKeysToRemove.add(adHocKey);
+      }
+    });
+    rawKeysToRemove.forEach(model.getRawPanes()::remove);
+
     view.removeAllChartsByGlobalKey(globalKey);
   }
 
@@ -116,6 +126,8 @@ public class AdHocChartsPresenter implements MessageAction {
       case HISTORY_RANGE_CHANGE -> handleHistoryRangeChange(message);
       case ADD_CHART -> handleAddChart(message);
       case REMOVE_CHART -> handleRemoveChart(message);
+      case ADD_RAW_PANEL -> handleAddRawPanel(message);
+      case REMOVE_RAW_PANEL -> handleRemoveRawPanel(message);
       case REMOVE_ALL_CHARTS_FOR_CONNECTION -> handleRemoveAllChartsForConnection(message);
       case REMOVE_ALL_CHARTS_FOR_TABLE_OR_VIEW -> handleRemoveAllChartsForTableOrView(message);
       case CHART_LEGEND_STATE_ALL -> chartLegendStateAll(message);
@@ -167,6 +179,15 @@ public class AdHocChartsPresenter implements MessageAction {
       if (chartGlobalKey.equals(model.getGlobalKey())) {
         val.values().forEach(chartModule ->
                                  chartModule.setCollapsed(ChartCardState.EXPAND_ALL.equals(cardState))
+        );
+      }
+    });
+
+    model.getRawPanes().forEach((key, val) -> {
+      String rawGlobalKey = key.getConnectionId() + "_" + key.getTableName();
+      if (rawGlobalKey.equals(model.getGlobalKey())) {
+        val.values().forEach(rawPanel ->
+                                 rawPanel.setCollapsed(ChartCardState.EXPAND_ALL.equals(cardState))
         );
       }
     });
@@ -262,6 +283,79 @@ public class AdHocChartsPresenter implements MessageAction {
     }
   }
 
+  private void handleAddRawPanel(Message message) {
+    ConnectionInfo connectionInfo = message.parameters().get("connectionInfo");
+    String activeTab = message.parameters().get("activeTab");
+    String tableName = message.parameters().get("tableName");
+    CProfile cProfile = message.parameters().get("cProfile");
+    TProfile tProfile = message.parameters().get("tProfile");
+    Boolean isRegularTable = message.parameters().get("isRegularTable");
+
+    log.info("Adding raw panel for connection: {}, table: {}, column: {}, isRegular: {}",
+             connectionInfo.getName(), tableName, cProfile.getColName(),
+             isRegularTable != null ? isRegularTable : "unknown");
+
+    AdHocKey adHocKey = new AdHocKey(connectionInfo.getId(), tableName, cProfile.getColId());
+    String adHocTabKey = getAdHocTabKey(connectionInfo, activeTab, tableName);
+    String globalKey = KeyHelper.getGlobalKey(connectionInfo.getId(), tableName);
+
+    DStore dStore = model.getAdHocDatabaseManager().getDataBase(connectionInfo);
+
+    AdHocRawPanel rawPanel = new AdHocRawPanel(dStore, tProfile, cProfile, null);
+    String keyValue = getRawKey(cProfile);
+    rawPanel.setTitle(keyValue);
+
+    view.addRawCard(
+        adHocTabKey,
+        globalKey,
+        connectionInfo.getId(),
+        rawPanel,
+        () -> {
+          model.getRawPanes()
+              .computeIfAbsent(adHocKey, k -> new ConcurrentHashMap<>())
+              .put(cProfile, rawPanel);
+
+          rawPanel.revalidate();
+          rawPanel.repaint();
+
+          log.info("Raw panel added successfully for column: {}", cProfile.getColName());
+        }
+    );
+  }
+
+  private void handleRemoveRawPanel(Message message) {
+    ConnectionInfo connectionInfo = message.parameters().get("connectionInfo");
+    String activeTab = message.parameters().get("activeTab");
+    String tableName = message.parameters().get("tableName");
+    CProfile cProfile = message.parameters().get("cProfile");
+
+    log.info("Removing raw panel for connection: {}, table: {}, column: {}",
+             connectionInfo.getName(), tableName, cProfile.getColName());
+
+    AdHocKey adHocKey = new AdHocKey(connectionInfo.getId(), tableName, cProfile.getColId());
+    String adHocTabKey = getAdHocTabKey(connectionInfo, activeTab, tableName);
+
+    ConcurrentMap<CProfile, AdHocRawPanel> rawMap = model.getRawPanes().get(adHocKey);
+    if (rawMap == null) {
+      log.warn("No raw map found for adHocKey: {}", adHocKey);
+      return;
+    }
+
+    AdHocRawPanel rawPanel = rawMap.get(cProfile);
+    if (rawPanel == null) {
+      log.warn("No raw panel found for cProfile: {}", cProfile);
+      return;
+    }
+
+    log.info("Remove raw panel: {}", rawPanel.getTitle());
+    view.removeChartCard(adHocTabKey, rawPanel);
+    rawMap.remove(cProfile);
+
+    if (rawMap.isEmpty()) {
+      model.getRawPanes().remove(adHocKey);
+    }
+  }
+
   private void handleRemoveAllChartsForConnection(Message message) {
     int connectionId = message.parameters().get("connectionId");
     log.info("Removing all charts for connectionId: {}", connectionId);
@@ -288,15 +382,34 @@ public class AdHocChartsPresenter implements MessageAction {
       model.getChartPanes().remove(key);
     }
 
+    List<AdHocKey> rawKeysToRemove = new ArrayList<>();
+    model.getRawPanes().forEach((adHocKey, rawMap) -> {
+      if (adHocKey.getConnectionId() == connectionId) {
+        rawKeysToRemove.add(adHocKey);
+      }
+    });
+    for (AdHocKey key : rawKeysToRemove) {
+      model.getRawPanes().remove(key);
+    }
+
     view.removeAllChartsByConnectionId(connectionId);
 
-    log.info("Removed all charts for connectionId: {}. Removed {} chart groups.", connectionId, keysToRemove.size());
+    log.info("Removed all charts and raw panels for connectionId: {}. Removed {} chart groups, {} raw groups.",
+             connectionId, keysToRemove.size(), rawKeysToRemove.size());
   }
 
   public String getKey(CProfile cProfile) {
     String columnName = cProfile.getColName();
 
     String keyValue = String.format("Column: %s", columnName);
+
+    return keyValue.length() > 300 ? keyValue.substring(0, 300) + " ... " : keyValue;
+  }
+
+  public String getRawKey(CProfile cProfile) {
+    String columnName = cProfile.getColName();
+
+    String keyValue = String.format("Raw: %s", columnName);
 
     return keyValue.length() > 300 ? keyValue.substring(0, 300) + " ... " : keyValue;
   }

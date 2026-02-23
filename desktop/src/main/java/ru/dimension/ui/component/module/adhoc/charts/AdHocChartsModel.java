@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentMap;
 import lombok.Data;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.module.adhoc.AdHocChartModule;
+import ru.dimension.ui.component.module.adhoc.raw.AdHocRawPanel;
 import ru.dimension.ui.manager.AdHocDatabaseManager;
 import ru.dimension.ui.manager.ConnectionPoolManager;
 import ru.dimension.ui.manager.ProfileManager;
@@ -23,8 +24,10 @@ public class AdHocChartsModel {
   private ChartCardState chartCardState = ChartCardState.EXPAND_ALL;
 
   private final ConcurrentMap<AdHocKey, ConcurrentMap<CProfile, AdHocChartModule>> chartPanes = new ConcurrentHashMap<>();
+  private final ConcurrentMap<AdHocKey, ConcurrentMap<CProfile, AdHocRawPanel>> rawPanes = new ConcurrentHashMap<>();
 
   private final StringBuilder globalKey;
+
   public AdHocChartsModel(ProfileManager profileManager,
                           ConnectionPoolManager connectionPoolManager,
                           AdHocDatabaseManager adHocDatabaseManager) {

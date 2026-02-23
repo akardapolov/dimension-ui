@@ -30,6 +30,7 @@ import ru.dimension.ui.state.SqlQueryState;
 @Log4j2
 public class PRChartModule extends JXTaskPane implements IRealTimePreviewChart {
 
+  @Getter
   private final PRChartModel model;
   @Getter
   private final PRChartView view;

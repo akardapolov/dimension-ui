@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.PatternSyntaxException;
@@ -110,19 +111,16 @@ public class FilterPanel extends ConfigPopupPanel {
     table.setEditable(false);
     table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-    // Hide ID column
     if (table.getColumnExt("ID") != null) {
       table.getColumnExt("ID").setVisible(false);
     }
 
-    // Hide Pick column (checkbox) if it exists, as we select by row click here
     if (table.getColumnExt("Pick") != null) {
       table.getColumnExt("Pick").setVisible(false);
     } else if (table.getColumnExt("pick") != null) {
       table.getColumnExt("pick").setVisible(false);
     }
 
-    // Setup sorter for filtering
     columnSorter = new TableRowSorter<>(tt.model());
     table.setRowSorter(columnSorter);
 
@@ -180,7 +178,6 @@ public class FilterPanel extends ConfigPopupPanel {
       public void changedUpdate(DocumentEvent e) { filterFilters(); }
     });
 
-    // Update selection logic for TTTable
     columnsTable.table().getSelectionModel().addListSelectionListener(e -> {
       if (!e.getValueIsAdjusting()) {
         int viewRow = columnsTable.table().getSelectedRow();
@@ -199,8 +196,6 @@ public class FilterPanel extends ConfigPopupPanel {
   private void handleColumnSelection(ColumnRow rowItem) {
     if (rowItem == null) return;
 
-    // Find the original CProfile from allColumns based on the name from the row
-    // (Assuming Name is unique enough for the table view)
     this.selectedColumn = allColumns.stream()
         .filter(p -> p.getColName().equals(rowItem.getName()))
         .findFirst()
@@ -251,6 +246,17 @@ public class FilterPanel extends ConfigPopupPanel {
     filterSearch.setText("");
   }
 
+  public boolean hasActiveFilters() {
+    Map<CProfile, LinkedHashSet<String>> filterMap = filtersPanel.getFilterSelectedMap();
+    return filterMap != null
+        && !filterMap.isEmpty()
+        && filterMap.values().stream().anyMatch(set -> set != null && !set.isEmpty());
+  }
+
+  public Map<CProfile, LinkedHashSet<String>> getActiveFilters() {
+    return filtersPanel.getFilterSelectedMap();
+  }
+
   private void loadColumns() {
     if (tableInfo == null) return;
 
@@ -258,7 +264,6 @@ public class FilterPanel extends ConfigPopupPanel {
         .filter(profile -> !profile.getCsType().isTimeStamp())
         .collect(Collectors.toList());
 
-    // Convert CProfiles to ColumnRows for the TTTable
     List<ColumnRow> rows = allColumns.stream()
         .map(cProfile -> new ColumnRow(cProfile, false))
         .collect(Collectors.toList());

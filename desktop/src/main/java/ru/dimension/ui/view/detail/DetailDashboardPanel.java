@@ -351,8 +351,11 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
     }
   }
 
-  private void initializeRawTab(JTabbedPane sourceTabbedPane, int selectedIndex, JPanel rawPlaceholder,
-                                long begin, long end) {
+  private void initializeRawTab(JTabbedPane sourceTabbedPane,
+                                int selectedIndex,
+                                JPanel rawPlaceholder,
+                                long begin,
+                                long end) {
     log.info("Lazy initializing '{}' tab content in background.", TAB_TITLE_RAW);
 
     rawPlaceholder.add(ProgressBarHelper.createProgressBar("Initializing..."), BorderLayout.CENTER);
@@ -362,10 +365,16 @@ public class DetailDashboardPanel extends JPanel implements IDetailPanel, Detail
     scheduledExecutorService.submit(() -> {
       try {
         boolean isRealtimePanel = MessageBroker.Panel.REALTIME.equals(panel);
-        final RawDataDashboardPanel rawDataPanel = new RawDataDashboardPanel(
-            dStore, tableInfo, cProfile, begin, end, !isRealtimePanel);
 
-        SwingUtilities.invokeLater(() -> sourceTabbedPane.setComponentAt(selectedIndex, rawDataPanel));
+        Map<String, Color> filterColors = GroupFunction.COUNT.equals(metric.getGroupFunction())
+            ? seriesColorMap
+            : null;
+
+        final RawDataDashboardPanel rawDataPanel = new RawDataDashboardPanel(
+            dStore, tableInfo, cProfile, begin, end, !isRealtimePanel, filterColors);
+
+        SwingUtilities.invokeLater(
+            () -> sourceTabbedPane.setComponentAt(selectedIndex, rawDataPanel));
       } catch (Exception e) {
         log.error("Failed to initialize Raw tab content", e);
         SwingUtilities.invokeLater(() -> {

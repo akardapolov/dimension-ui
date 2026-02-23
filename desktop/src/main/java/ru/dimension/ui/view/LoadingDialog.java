@@ -31,12 +31,16 @@ public class LoadingDialog extends JDialog {
   private final JLabel lblLoading;
   private final JButton btnCancel;
   private final AnimationPanel animationPanel;
+  private final JPanel titlePanel;
 
   private static final Color BG_COLOR = new Color(245, 247, 250);
   private static final Color BORDER_COLOR = new Color(200, 200, 200);
   private static final Color BUTTON_COLOR_NORMAL = new Color(229, 115, 115);
   private static final Color BUTTON_COLOR_HOVER = new Color(239, 83, 80);
   private static final Color BUTTON_TEXT_COLOR = Color.WHITE;
+  private static final Color TITLE_TEXT_COLOR = new Color(45, 50, 60);
+
+  private static Color titleBarColor = new Color(185, 205, 225);
 
   public LoadingDialog() {
     setUndecorated(true);
@@ -48,6 +52,15 @@ public class LoadingDialog extends JDialog {
     JPanel contentPane = new JPanel(new BorderLayout());
     contentPane.setBackground(BG_COLOR);
     contentPane.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+
+    titlePanel = new JPanel(new BorderLayout());
+    titlePanel.setBackground(titleBarColor);
+    titlePanel.setBorder(BorderFactory.createEmptyBorder(9, 0, 9, 0));
+
+    JLabel titleLabel = new JLabel("Dimension-UI", SwingConstants.CENTER);
+    titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 19));
+    titleLabel.setForeground(TITLE_TEXT_COLOR);
+    titlePanel.add(titleLabel, BorderLayout.CENTER);
 
     animationPanel = new AnimationPanel();
     animationPanel.setPreferredSize(new Dimension(420, 160));
@@ -80,6 +93,7 @@ public class LoadingDialog extends JDialog {
       System.exit(0);
     });
 
+    contentPane.add(titlePanel, BorderLayout.NORTH);
     contentPane.add(centerPanel, BorderLayout.CENTER);
     contentPane.add(btnCancel, BorderLayout.SOUTH);
 
@@ -89,17 +103,29 @@ public class LoadingDialog extends JDialog {
     animationPanel.start();
   }
 
+  public static void setTitleBarColor(Color color) {
+    titleBarColor = color;
+  }
+
+  public static Color getTitleBarColor() {
+    return titleBarColor;
+  }
+
+  public void updateTitleBarColor(Color color) {
+    titleBarColor = color;
+    titlePanel.setBackground(color);
+    titlePanel.repaint();
+  }
+
   @Override
   public void setVisible(boolean visible) {
     if (visible) {
       if (isOpacitySupported()) {
-        // Windows, macOS, Linux with compositor
         setOpacity(0f);
         super.setVisible(true);
         centerOnScreen();
         fadeIn();
       } else {
-        // WSL, Linux without compositor
         setLocation(-10000, -10000);
         super.setVisible(true);
         SwingUtilities.invokeLater(this::centerOnScreen);
@@ -171,8 +197,8 @@ public class LoadingDialog extends JDialog {
   }
 
   private static class AnimationPanel extends JPanel {
-    private static final Color COLOR_DISK_BODY = new Color(70, 130, 180); // Steel Blue
-    private static final Color COLOR_RAM_BODY = new Color(60, 179, 113);  // Sea Green
+    private static final Color COLOR_DISK_BODY = new Color(70, 130, 180);
+    private static final Color COLOR_RAM_BODY = new Color(60, 179, 113);
     private static final Color COLOR_WIRE = new Color(200, 200, 210);
 
     private final Timer timer;

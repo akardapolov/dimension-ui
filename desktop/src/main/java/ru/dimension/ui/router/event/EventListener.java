@@ -35,10 +35,15 @@ public interface EventListener extends ToolbarListener, ConfigListener, Template
   void addCollectStartStopDashboardListener(ProfileTaskQueryKey profileTaskQueryKey,
                                             CollectStartStopListener collectStartStopListener);
 
+  void addCollectStartStopZoomListener(ProfileTaskQueryKey profileTaskQueryKey,
+                                       CollectStartStopListener collectStartStopListener);
+
   void clearListenerWorkspaceByKey(ProfileTaskQueryKey profileTaskQueryKey);
   <T> void clearListenerPreviewByClass(Class<T> genericClass);
 
   void clearListenerDashboardByKey(ProfileTaskQueryKey profileTaskQueryKey);
+
+  void clearListenerZoomByKey(ProfileTaskQueryKey profileTaskQueryKey);
 
   boolean isProfileOnDashboardRunning(int profileId);
 }

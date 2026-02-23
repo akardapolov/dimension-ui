@@ -25,6 +25,7 @@ import ru.dimension.ui.component.module.analyze.CustomAction;
 import ru.dimension.ui.component.module.base.BaseUnitPresenter;
 import ru.dimension.ui.component.module.chart.main.ChartModel;
 import ru.dimension.ui.component.panel.LegendPanel;
+import ru.dimension.ui.component.panel.popup.FilterPanel;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
@@ -145,7 +146,14 @@ public class InsightUnitPresenter extends BaseUnitPresenter<InsightUnitView> imp
 
   @Override
   public void updateChart() {
-    updateChartInternal(null, null);
+    FilterPanel filterPanel = view.getInsightFilterPanel();
+    if (filterPanel.hasActiveFilters()) {
+      Map<CProfile, LinkedHashSet<String>> activeFilters = filterPanel.getActiveFilters();
+      Map<String, Color> currentSeriesColorMap = filterPanel.getSeriesColorMap();
+      updateChartInternal(currentSeriesColorMap, activeFilters);
+    } else {
+      updateChartInternal(null, null);
+    }
   }
 
   @Override

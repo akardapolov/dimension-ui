@@ -16,6 +16,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.border.EtchedBorder;
+import org.jdesktop.swingx.JXTaskPane;
 import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.jdesktop.swingx.VerticalLayout;
 import org.painlessgridbag.PainlessGridBag;
@@ -34,7 +35,6 @@ public class AdHocChartsView extends JPanel {
 
   private Consumer<String> tabChangeListener;
 
-  /** (tabKey, globalKey) **/
   private BiConsumer<String, String> tabCloseListener;
 
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -79,7 +79,56 @@ public class AdHocChartsView extends JPanel {
                            AdHocChartModule taskPane,
                            BiConsumer<AdHocChartModule, Exception> onComplete) {
 
-    JPanel tabPanel = tabPanels.computeIfAbsent(tabKey, k -> {
+    JPanel tabPanel = getOrCreateTabPanel(tabKey, globalKey, connectionId);
+
+    JXTaskPaneContainer container = tabContainers.get(tabKey);
+    container.add(taskPane);
+    container.revalidate();
+    container.repaint();
+
+    int index = tabbedPane.indexOfComponent(tabPanel);
+    if (index != -1) {
+      tabbedPane.setSelectedIndex(index);
+    }
+
+    SwingTaskRunner.runWithProgress(
+        taskPane,
+        executor,
+        taskPane::initializeUI,
+        e -> {
+          removeChartCard(tabKey, taskPane);
+          onComplete.accept(null, e);
+        },
+        () -> createProgressBar("Loading, please wait..."),
+        () -> onComplete.accept(taskPane, null)
+    );
+  }
+
+  public void addRawCard(String tabKey,
+                         String globalKey,
+                         int connectionId,
+                         JXTaskPane rawPanel,
+                         Runnable onComplete) {
+
+    JPanel tabPanel = getOrCreateTabPanel(tabKey, globalKey, connectionId);
+
+    JXTaskPaneContainer container = tabContainers.get(tabKey);
+    container.add(rawPanel);
+    container.revalidate();
+    container.repaint();
+
+    int index = tabbedPane.indexOfComponent(tabPanel);
+    if (index != -1) {
+      tabbedPane.setSelectedIndex(index);
+    }
+
+    if (onComplete != null) {
+      onComplete.run();
+    }
+  }
+
+  private JPanel getOrCreateTabPanel(String tabKey, String globalKey, int connectionId) {
+    return tabPanels.computeIfAbsent(tabKey, k -> {
       JXTaskPaneContainer container = new JXTaskPaneContainer();
       LaF.setBackgroundColor(REPORT, container);
       container.setBackgroundPainter(null);
@@ -114,34 +163,12 @@ public class AdHocChartsView extends JPanel {
 
       return panel;
     });
-
-    JXTaskPaneContainer container = tabContainers.get(tabKey);
-    container.add(taskPane);
-    container.revalidate();
-    container.repaint();
-
-    int index = tabbedPane.indexOfComponent(tabPanel);
-    if (index != -1) {
-      tabbedPane.setSelectedIndex(index);
-    }
-
-    SwingTaskRunner.runWithProgress(
-        taskPane,
-        executor,
-        taskPane::initializeUI,
-        e -> {
-          removeChartCard(tabKey, taskPane);
-          onComplete.accept(null, e);
-        },
-        () -> createProgressBar("Loading, please wait..."),
-        () -> onComplete.accept(taskPane, null)
-    );
   }
 
-  public void removeChartCard(String tabKey, AdHocChartModule taskPane) {
+  public void removeChartCard(String tabKey, JComponent component) {
     JXTaskPaneContainer container = tabContainers.get(tabKey);
-    if (container != null && taskPane != null) {
-      container.remove(taskPane);
+    if (container != null && component != null) {
+      container.remove(component);
       container.revalidate();
       container.repaint();
 
@@ -239,7 +266,6 @@ public class AdHocChartsView extends JPanel {
   }
 
   public void removeAllChartsByGlobalKey(String globalKey) {
-    // find all panels with such globalKey, then remove their tabs
     List<String> toRemove = new ArrayList<>();
     tabPanels.forEach((tabKey, panel) -> {
       String gk = (String) panel.getClientProperty("globalKey");

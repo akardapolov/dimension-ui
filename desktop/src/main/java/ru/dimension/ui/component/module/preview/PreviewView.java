@@ -4,20 +4,26 @@ import static ru.dimension.ui.helper.ProgressBarHelper.createProgressBar;
 import static ru.dimension.ui.laf.LafColorGroup.CHART_PANEL;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
-import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.RowFilter;
+import javax.swing.SwingUtilities;
 import javax.swing.border.EtchedBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -58,11 +64,14 @@ public class PreviewView extends JPanel {
   private final TTTable<ColumnRow, JXTable> columnTable;
 
   private JTextField columnSearch;
+  private JCheckBox pickAllCheckbox;
   private TableRowSorter<?> columnSorter;
   private int nameColumnIndex = -1;
   private int pickColumnIndex = -1;
 
   private boolean ignoreCheckboxEvents = false;
+
+  private final AtomicInteger pendingOperations = new AtomicInteger(0);
 
   public interface CheckboxChangeListener {
     void onCheckboxChanged(String columnName, boolean selected);
@@ -81,6 +90,7 @@ public class PreviewView extends JPanel {
   private final JXTaskPaneContainer cardContainer;
   private final JScrollPane cardScrollPane;
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
+  private final ExecutorService pickAllExecutor = Executors.newSingleThreadExecutor();
 
   public PreviewView(PreviewMode mode,
                      PreviewModel model) {
@@ -97,6 +107,10 @@ public class PreviewView extends JPanel {
     setupColumnTableListener();
 
     JPanel columnSearchPanel = new JPanel(new BorderLayout());
+
+    JPanel searchRowPanel = new JPanel();
+    searchRowPanel.setLayout(new BoxLayout(searchRowPanel, BoxLayout.X_AXIS));
+
     columnSearch = new JTextField();
     columnSearch.getDocument().addDocumentListener(new DocumentListener() {
       @Override
@@ -107,9 +121,22 @@ public class PreviewView extends JPanel {
       public void changedUpdate(DocumentEvent e) { updateColumnFilter(); }
     });
     columnSearch.setToolTipText("Search columns...");
-    columnSearchPanel.add(columnSearch, BorderLayout.NORTH);
+
+    pickAllCheckbox = new JCheckBox();
+    pickAllCheckbox.setToolTipText("Pick it all");
+    pickAllCheckbox.setPreferredSize(new Dimension(30, pickAllCheckbox.getPreferredSize().height));
+    pickAllCheckbox.setMinimumSize(new Dimension(30, pickAllCheckbox.getMinimumSize().height));
+    pickAllCheckbox.setMaximumSize(new Dimension(30, Short.MAX_VALUE));
+    pickAllCheckbox.setHorizontalAlignment(JCheckBox.CENTER);
+    pickAllCheckbox.addActionListener(e -> handlePickAllAction(pickAllCheckbox.isSelected()));
+
+    searchRowPanel.add(columnSearch);
+    searchRowPanel.add(Box.createHorizontalStrut(1));
+    searchRowPanel.add(pickAllCheckbox);
+
+    columnSearchPanel.add(searchRowPanel, BorderLayout.NORTH);
     columnSearchPanel.add(columnTable.scrollPane(), BorderLayout.CENTER);
-    columnSearchPanel.setBorder(BorderFactory.createTitledBorder("Columns"));
+    columnSearchPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Columns"));
 
     this.realTimeRangePanel = new RealTimeRangePanel(getLabel("Range: "));
     this.historyRangePanel = new HistoryRangePanel(getLabel("Range: "));
@@ -161,6 +188,67 @@ public class PreviewView extends JPanel {
     gbl.done();
   }
 
+  private void handlePickAllAction(boolean selected) {
+    if (pickColumnIndex < 0) return;
+
+    int count = 0;
+    for (int i = 0; i < columnTable.model().getRowCount(); i++) {
+      ColumnRow row = columnTable.model().itemAt(i);
+      if (row != null && row.isPick() != selected) {
+        count++;
+      }
+    }
+
+    if (count == 0) return;
+
+    String action = selected ? "select" : "deselect";
+    int result = JOptionPane.showConfirmDialog(
+        SwingUtilities.getWindowAncestor(this),
+        "Are you sure you want to " + action + " all " + count + " columns?",
+        "Confirm " + action + " all",
+        JOptionPane.YES_NO_OPTION,
+        JOptionPane.WARNING_MESSAGE
+    );
+
+    if (result != JOptionPane.YES_OPTION) {
+      pickAllCheckbox.setSelected(!selected);
+      return;
+    }
+
+    setPickAllUIEnabled(false);
+
+    pickAllExecutor.submit(() -> {
+      try {
+        for (int i = 0; i < columnTable.model().getRowCount(); i++) {
+          final int rowIndex = i;
+          ColumnRow row = columnTable.model().itemAt(rowIndex);
+          if (row != null && row.isPick() != selected) {
+            SwingUtilities.invokeAndWait(() ->
+                                             columnTable.model().setValueAt(selected, rowIndex, pickColumnIndex)
+            );
+          }
+        }
+      } catch (Exception ex) {
+        SwingUtilities.invokeLater(() ->
+                                       JOptionPane.showMessageDialog(
+                                           SwingUtilities.getWindowAncestor(this),
+                                           "Error during pick all operation: " + ex.getMessage(),
+                                           "Error",
+                                           JOptionPane.ERROR_MESSAGE
+                                       )
+        );
+      } finally {
+        SwingUtilities.invokeLater(() -> setPickAllUIEnabled(true));
+      }
+    });
+  }
+
+  private void setPickAllUIEnabled(boolean enabled) {
+    pickAllCheckbox.setEnabled(enabled);
+    columnSearch.setEnabled(enabled);
+    columnTable.table().setEnabled(enabled);
+  }
+
   public void setColumnSelected(String columnName, boolean selected) {
     ignoreCheckboxEvents = true;
     try {
@@ -199,6 +287,7 @@ public class PreviewView extends JPanel {
   }
 
   public void addChartCard(IPreviewChart taskPane, BiConsumer<IPreviewChart, Exception> onComplete) {
+    pendingOperations.incrementAndGet();
     addTaskPane(taskPane);
 
     SwingTaskRunner.runWithProgress(
@@ -207,11 +296,13 @@ public class PreviewView extends JPanel {
         taskPane::initializeUI,
         e -> {
           removeTaskPane(taskPane);
+          pendingOperations.decrementAndGet();
           onComplete.accept(null, e);
         },
         () -> createProgressBar("Loading preview, please wait..."),
         () -> {
           setColumnSelected(taskPane.getTitle(), true);
+          pendingOperations.decrementAndGet();
           onComplete.accept(taskPane, null);
         }
     );
@@ -252,6 +343,9 @@ public class PreviewView extends JPanel {
   public void updateColumnTables(TableInfo tableInfo) {
     columnTable.setItems(Collections.emptyList());
     populateColumnTable(tableInfo);
+    if (pickAllCheckbox != null) {
+      pickAllCheckbox.setSelected(false);
+    }
   }
 
   private TTTable<ColumnRow, JXTable> createCheckboxTable(TTRegistry registry) {
@@ -271,21 +365,17 @@ public class PreviewView extends JPanel {
     table.setIntercellSpacing(new java.awt.Dimension(1, 1));
     table.setEditable(true);
 
-    // Hide ID column (already set in annotation, but defensive)
     if (table.getColumnExt("ID") != null) {
       table.getColumnExt("ID").setVisible(false);
     }
 
-    // Configure Name column
     if (table.getColumnExt("Name") != null) {
       table.getColumnExt("Name").setEditable(false);
     }
 
-    // Setup sorter for filtering - preserves sort keys when filter changes
     columnSorter = new TableRowSorter<>(tt.model());
     table.setRowSorter(columnSorter);
 
-    // Store column indices for filtering and checkbox updates
     nameColumnIndex = tt.model().schema().modelIndexOf("name");
     pickColumnIndex = tt.model().schema().modelIndexOf("pick");
 

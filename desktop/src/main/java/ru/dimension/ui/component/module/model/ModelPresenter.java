@@ -132,8 +132,8 @@ public class ModelPresenter {
     List<Metric> selectedMetrics = entry.getKey();
     List<CProfile> selectedColumns = entry.getValue();
 
-    view.getColumnTable().setItems(ModelRowMapper.mapColumns(tableInfo, selectedColumns));
-    view.getMetricTable().setItems(ModelRowMapper.mapMetrics(queryInfo.getMetricList(), selectedMetrics));
+    view.setColumnItems(ModelRowMapper.mapColumns(tableInfo, selectedColumns));
+    view.setMetricItems(ModelRowMapper.mapMetrics(queryInfo.getMetricList(), selectedMetrics));
 
     view.selectFirstDetailsRows();
 

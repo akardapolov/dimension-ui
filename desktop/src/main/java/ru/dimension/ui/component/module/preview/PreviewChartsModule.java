@@ -32,7 +32,7 @@ public class PreviewChartsModule {
                              DStore dStore) {
     this.component = component;
 
-    this.model = new PreviewChartsModel(profileManager, sqlQueryState, dStore);
+    this.model = new PreviewChartsModel(component, profileManager, sqlQueryState, dStore);
     this.view = new PreviewChartsView(model);
     this.presenter = new PreviewChartsPresenter(component, model, view);
 

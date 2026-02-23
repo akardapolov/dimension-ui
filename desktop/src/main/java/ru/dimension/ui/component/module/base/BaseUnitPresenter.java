@@ -101,7 +101,15 @@ public abstract class BaseUnitPresenter<V extends UnitView> implements UnitPrese
     Map<CProfile, LinkedHashSet<String>> sanitizedTopMapSelected =
         FilterHelper.sanitizeTopMapSelected(topMapSelected, metric);
 
-    updateChartInternal(preservedColorMap, sanitizedTopMapSelected);
+    boolean filtersEffectivelyEmpty = sanitizedTopMapSelected == null
+        || sanitizedTopMapSelected.isEmpty()
+        || sanitizedTopMapSelected.values().stream().allMatch(LinkedHashSet::isEmpty);
+
+    if (filtersEffectivelyEmpty) {
+      updateChartInternal(null, null);
+    } else {
+      updateChartInternal(preservedColorMap, sanitizedTopMapSelected);
+    }
 
     if (detail instanceof DetailDashboardPanel detailDashboardPanel) {
       detailDashboardPanel.updateSeriesColor(sanitizedTopMapSelected, preservedColorMap);

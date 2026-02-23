@@ -103,7 +103,6 @@ public final class TaskButtonPanelHandler implements ButtonPanelBindings.CrudAct
     setEditMode(true);
   }
 
-
   @Override
   public void onDelete() {
     Integer id = context.getSelectedTaskId();
@@ -170,6 +169,8 @@ public final class TaskButtonPanelHandler implements ButtonPanelBindings.CrudAct
     taskPanel.getRadioButtonPanel().setButtonView();
     if (!edit) taskPanel.getRadioButtonPanel().setButtonNotView();
 
+    setMultiSelectEnabled(edit);
+
     boolean enable = !edit;
     taskCase.getJxTable().setEnabled(enable);
     profileCase.getJxTable().setEnabled(enable);
@@ -181,6 +182,25 @@ public final class TaskButtonPanelHandler implements ButtonPanelBindings.CrudAct
     configTab.setEnabledAt(1, true);
     configTab.setEnabledAt(2, enable);
     configTab.setEnabledAt(3, enable);
+  }
+
+  private void setMultiSelectEnabled(boolean edit) {
+    if (edit) {
+      multiSelectPanel.getPickAllBtn().setEnabled(true);
+      multiSelectPanel.getUnPickAllBtn().setEnabled(true);
+
+      boolean hasSource = multiSelectPanel.getQueryListCase().getJxTable().getRowCount() > 0
+          || multiSelectPanel.getTemplateListQueryCase().getJxTable().getRowCount() > 0;
+      boolean hasSelected = multiSelectPanel.getSelectedQueryCase().getJxTable().getRowCount() > 0;
+
+      multiSelectPanel.getPickBtn().setEnabled(hasSource);
+      multiSelectPanel.getUnPickBtn().setEnabled(hasSelected);
+    } else {
+      multiSelectPanel.getPickBtn().setEnabled(false);
+      multiSelectPanel.getUnPickBtn().setEnabled(false);
+      multiSelectPanel.getPickAllBtn().setEnabled(false);
+      multiSelectPanel.getUnPickAllBtn().setEnabled(false);
+    }
   }
 
   private int getPullTimeout() {

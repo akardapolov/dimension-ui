@@ -105,26 +105,27 @@ public final class MultiSelectQueryHandler {
     List<QueryTableRow> available = new ArrayList<>();
     Set<Integer> addedIds = new HashSet<>();
 
-    if (driver != null) {
-      profileManager.getQueryInfoListByConnDriver(driver).forEach(q -> {
-        available.add(new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()));
-        addedIds.add(q.getId());
-      });
-
-      if (connType == ConnectionType.HTTP) {
-        profileManager.getHttpOrphanQueryInfoList().stream()
-            .filter(q -> !addedIds.contains(q.getId()))
-            .forEach(q -> {
-              available.add(new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()));
-              addedIds.add(q.getId());
-            });
+    if (hasConnection && connType == ConnectionType.HTTP) {
+      profileManager.getHttpOrphanQueryInfoList().stream()
+          .filter(q -> !addedIds.contains(q.getId()))
+          .forEach(q -> {
+            available.add(new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()));
+            addedIds.add(q.getId());
+          });
+    } else {
+      if (driver != null) {
+        profileManager.getQueryInfoListByConnDriver(driver).forEach(q -> {
+          available.add(new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()));
+          addedIds.add(q.getId());
+        });
       }
-    } else if (!hasConnection) {
-      profileManager.getOrphanQueryInfoList()
-          .forEach(q -> available.add(new QueryTableRow(q.getId(),
-                                                                 q.getName(),
-                                                                 q.getDescription(),
-                                                                 q.getText())));
+
+      profileManager.getOrphanQueryInfoList().stream()
+          .filter(q -> !addedIds.contains(q.getId()))
+          .forEach(q -> {
+            available.add(new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()));
+            addedIds.add(q.getId());
+          });
     }
 
     TTTable<QueryTableRow, JXTable> target = panel.getQueryListCase().getTypedTable();

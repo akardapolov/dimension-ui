@@ -21,6 +21,7 @@ import ru.dimension.ui.component.module.adhoc.AdHocConfigModule;
 import ru.dimension.ui.component.module.adhoc.AdHocModelModule;
 import ru.dimension.ui.component.module.factory.*;
 import ru.dimension.ui.component.module.manage.ManagePresenter;
+import ru.dimension.ui.component.module.preview.ZoomModule;
 import ru.dimension.ui.component.module.preview.PreviewChartsModule;
 import ru.dimension.ui.component.module.preview.PreviewConfigModule;
 import ru.dimension.ui.component.module.report.DesignModule;
@@ -57,6 +58,7 @@ public final class UIBaseConfig {
 
         .bindFactory(PreviewConfigModuleFactory.class, PreviewConfigModule.class)
         .bindFactory(PreviewChartsModuleFactory.class, PreviewChartsModule.class)
+        .bindFactory(ZoomModuleFactory.class, ZoomModule.class)
 
         .bindFactory(PlaygroundModuleFactory.class,  PlaygroundModule.class)
         .bindFactory(DesignModuleFactory.class,      DesignModule.class)

@@ -35,6 +35,7 @@ import ru.dimension.tt.swing.TTTable;
 import ru.dimension.tt.swing.TableUi;
 import ru.dimension.tt.swingx.JXTableTables;
 import ru.dimension.ui.laf.LaF;
+import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.model.type.ConnectionStatus;
 import ru.dimension.ui.view.table.icon.ModelIconProviders;
 import ru.dimension.ui.view.table.renderer.ConnectionStatusCellRenderer;
@@ -83,6 +84,18 @@ public class AdHocModelView extends JPanel {
 
   private boolean statusRendererApplied = false;
   private boolean connectionCheckInProgress = false;
+
+  public void setColumnTableEnabled(boolean enabled) {
+    columnTable.table().setEnabled(enabled);
+
+    if (!enabled) {
+      columnTable.table().setToolTipText(
+          "Column selection is disabled for tables without timestamp columns. "
+              + "Use the table/view checkbox to view raw data.");
+    } else {
+      columnTable.table().setToolTipText(null);
+    }
+  }
 
   public interface EntityCheckboxChangeListener {
     void onTableCheckboxChanged(EntityRow row, boolean selected, int modelRow);

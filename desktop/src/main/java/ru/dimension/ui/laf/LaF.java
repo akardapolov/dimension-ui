@@ -118,6 +118,31 @@ public class LaF {
           case DARK -> new Color(55, 55, 59);
         };
       }
+      case ZOOM_PANEL -> {
+        return switch (lafType) {
+          case DEFAULT, LIGHT -> null;
+          case DARK -> new Color(38, 40, 48);
+        };
+      }
+      case ZOOM_PANEL_BORDER -> {
+        return switch (lafType) {
+          case DEFAULT -> Color.darkGray;
+          case LIGHT -> Color.gray;
+          case DARK -> new Color(72, 78, 96);
+        };
+      }
+      case ZOOM_PANEL_TEXT -> {
+        return switch (lafType) {
+          case DEFAULT, LIGHT -> Color.black;
+          case DARK -> new Color(195, 205, 225);
+        };
+      }
+      case ZOOM_PANEL_ACCENT -> {
+        return switch (lafType) {
+          case DEFAULT, LIGHT -> new Color(50, 100, 180);
+          case DARK -> new Color(110, 180, 245);
+        };
+      }
       case BORDER -> {
         return switch (lafType) {
           case DEFAULT -> Color.darkGray;

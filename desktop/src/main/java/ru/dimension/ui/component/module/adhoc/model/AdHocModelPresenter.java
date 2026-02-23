@@ -1,5 +1,8 @@
 package ru.dimension.ui.component.module.adhoc.model;
 
+import java.awt.Cursor;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -60,6 +63,8 @@ import ru.dimension.ui.view.table.row.Rows.TimestampRow;
 @Log4j2
 public class AdHocModelPresenter implements HelperChart {
 
+  private static final int THREAD_POOL_SIZE = 1;
+
   private final AdHocModelModel model;
   private final AdHocModelView view;
   private final MessageBroker broker = MessageBroker.getInstance();
@@ -68,7 +73,7 @@ public class AdHocModelPresenter implements HelperChart {
   private final AtomicBoolean running = new AtomicBoolean(false);
   private final AtomicBoolean removingConnection = new AtomicBoolean(false);
 
-  private final ExecutorService connectionCheckExecutor = Executors.newFixedThreadPool(1);
+  private volatile ExecutorService connectionCheckExecutor;
 
   private Thread periodicTask;
   private java.sql.Connection connection;
@@ -77,13 +82,37 @@ public class AdHocModelPresenter implements HelperChart {
   private TProfile tProfile;
 
   private int currentConnectionId;
+  private boolean hasTimestampColumns = false;
+
+  private boolean rawPanelAddedForTable = false;
+  private String rawPanelTableName = null;
 
   public AdHocModelPresenter(AdHocModelModel model, AdHocModelView view) {
     this.model = model;
     this.view = view;
+    this.connectionCheckExecutor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 
     setupListeners();
     setupCheckboxListener();
+    setupStatusClickListener();
+  }
+
+  private synchronized ExecutorService getOrCreateExecutor() {
+    if (connectionCheckExecutor == null
+        || connectionCheckExecutor.isShutdown()
+        || connectionCheckExecutor.isTerminated()) {
+      connectionCheckExecutor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+      log.debug("Created new AdHoc connection check executor");
+    }
+    return connectionCheckExecutor;
+  }
+
+  private void shutdownExecutor() {
+    ExecutorService executor = connectionCheckExecutor;
+    if (executor != null && !executor.isShutdown()) {
+      executor.shutdownNow();
+      log.debug("AdHoc connection check executor shutdown");
+    }
   }
 
   public void loadConnections() {
@@ -111,12 +140,14 @@ public class AdHocModelPresenter implements HelperChart {
     AtomicInteger completedCount = new AtomicInteger(0);
     int totalCount = jdbcConnections.size();
 
+    ExecutorService executor = getOrCreateExecutor();
+
     for (ru.dimension.ui.model.config.Connection conn : jdbcConnections) {
       model.setConnectionStatus(conn.getId(), ConnectionStatus.CONNECTING);
       model.markConnectionBeingChecked(conn.getId());
       SwingUtilities.invokeLater(() -> view.updateConnectionStatus(conn.getId(), ConnectionStatus.CONNECTING));
 
-      connectionCheckExecutor.submit(() -> {
+      executor.submit(() -> {
         checkConnectionAsync(conn.getId(), () -> {
           int completed = completedCount.incrementAndGet();
           if (completed >= totalCount) {
@@ -189,7 +220,8 @@ public class AdHocModelPresenter implements HelperChart {
         view.showStatusMessage("Checking new connection: " + connectionName);
       });
 
-      connectionCheckExecutor.submit(() -> {
+      ExecutorService executor = getOrCreateExecutor();
+      executor.submit(() -> {
         checkConnectionAsync(connectionId, () -> {
           view.showStatusMessage("Connection check completed for: " + connectionName);
         });
@@ -215,6 +247,9 @@ public class AdHocModelPresenter implements HelperChart {
           connection = null;
           currentConnectionId = 0;
           connectionName = "";
+          hasTimestampColumns = false;
+          rawPanelAddedForTable = false;
+          rawPanelTableName = null;
         } else {
           removeAllChartsForConnection(connectionId);
           releaseConnection(connectionId);
@@ -298,6 +333,72 @@ public class AdHocModelPresenter implements HelperChart {
     view.getTableViewPane().addChangeListener(event -> triggerActionForSelectedRow());
   }
 
+  private void setupStatusClickListener() {
+    JXTable table = view.getConnectionTable().table();
+
+    SwingUtilities.invokeLater(() -> {
+      int statusColumnIndex = findColumnIndex(table, "Status");
+      if (statusColumnIndex < 0) {
+        return;
+      }
+
+      MouseAdapter statusMouseHandler = new MouseAdapter() {
+        @Override
+        public void mouseClicked(MouseEvent e) {
+          int col = table.columnAtPoint(e.getPoint());
+          int row = table.rowAtPoint(e.getPoint());
+          if (col < 0 || row < 0) {
+            return;
+          }
+
+          String colName = table.getColumnName(col);
+          if (!"Status".equals(colName)) {
+            return;
+          }
+
+          Object value = table.getValueAt(row, col);
+          if (value instanceof ConnectionStatus status && status == ConnectionStatus.NOT_CONNECTED) {
+            int modelRow = table.convertRowIndexToModel(row);
+            ConnectionRow connectionRow = view.getConnectionTable().model().itemAt(modelRow);
+            if (connectionRow != null) {
+              recheckConnection(connectionRow.getId());
+            }
+          }
+        }
+
+        @Override
+        public void mouseMoved(MouseEvent e) {
+          int col = table.columnAtPoint(e.getPoint());
+          int row = table.rowAtPoint(e.getPoint());
+          if (col >= 0 && row >= 0) {
+            String colName = table.getColumnName(col);
+            if ("Status".equals(colName)) {
+              Object value = table.getValueAt(row, col);
+              if (value instanceof ConnectionStatus status && status == ConnectionStatus.NOT_CONNECTED) {
+                table.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                return;
+              }
+            }
+          }
+          table.setCursor(Cursor.getDefaultCursor());
+        }
+      };
+
+      table.addMouseListener(statusMouseHandler);
+      table.addMouseMotionListener(statusMouseHandler);
+      log.info("AdHoc status column mouse handler applied successfully");
+    });
+  }
+
+  private int findColumnIndex(JXTable table, String columnName) {
+    for (int i = 0; i < table.getColumnCount(); i++) {
+      if (columnName.equals(table.getColumnName(i))) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   private void handleConnectionSelection(ConnectionRow row) {
     if (row == null) {
       return;
@@ -331,8 +432,12 @@ public class AdHocModelPresenter implements HelperChart {
     connection = null;
     currentConnectionId = 0;
     connectionName = "";
+    hasTimestampColumns = false;
+    rawPanelAddedForTable = false;
+    rawPanelTableName = null;
 
     view.clearAllDependentData();
+    view.setColumnTableEnabled(true);
   }
 
   private void setupCheckboxListener() {
@@ -385,6 +490,17 @@ public class AdHocModelPresenter implements HelperChart {
     String schema = (String) view.getSchemaCatalogCBox().getSelectedItem();
     String fullName = (schema == null || schema.isBlank()) ? name : schema + "." + name;
 
+    if (!hasTimestampColumns && tProfile != null && fullName.equals(tProfile.getTableName())) {
+      if (selected) {
+        handleAddRawPanelForTable(fullName);
+        model.setTableOrViewSelected(currentConnectionId, fullName, true);
+      } else {
+        handleRemoveRawPanelForTable(fullName);
+        model.setTableOrViewSelected(currentConnectionId, fullName, false);
+      }
+      return;
+    }
+
     if (selected) {
       view.setIgnoreTableCheckboxEvents(true);
       view.setIgnoreViewCheckboxEvents(true);
@@ -399,6 +515,79 @@ public class AdHocModelPresenter implements HelperChart {
 
     model.setTableOrViewSelected(currentConnectionId, fullName, false);
     unselectAllColumnsForTable(fullName);
+  }
+
+  private void handleAddRawPanelForTable(String tableName) {
+    if (rawPanelAddedForTable && tableName.equals(rawPanelTableName)) {
+      log.info("Raw panel already added for table: {}", tableName);
+      return;
+    }
+
+    ConnectionRow connectionRow = view.getSelectedConnectionRow();
+    if (connectionRow == null) return;
+
+    ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(connectionRow.getId());
+    if (connectionInfo == null) return;
+
+    String activeTabName = view.getTableViewPane().getTitleAt(view.getTableViewPane().getSelectedIndex());
+    String globalKey = KeyHelper.getGlobalKey(connectionInfo, tableName);
+
+    log.info("No-timestamp mode: adding raw panel for entire table: {}, globalKey: {}",
+             tableName, globalKey);
+
+    CProfile markerProfile = createTableMarkerProfile(tableName);
+
+    broker.sendMessage(Message.builder()
+                           .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
+                           .action(Action.ADD_RAW_PANEL)
+                           .parameter("connectionInfo", connectionInfo)
+                           .parameter("activeTab", activeTabName)
+                           .parameter("tableName", tableName)
+                           .parameter("cProfile", markerProfile)
+                           .parameter("tProfile", tProfile)
+                           .parameter("dbType", connectionInfo.getDbType())
+                           .build());
+
+    rawPanelAddedForTable = true;
+    rawPanelTableName = tableName;
+  }
+
+  private void handleRemoveRawPanelForTable(String tableName) {
+    if (!rawPanelAddedForTable || !tableName.equals(rawPanelTableName)) {
+      log.info("No raw panel to remove for table: {}", tableName);
+      return;
+    }
+
+    ConnectionRow connectionRow = view.getSelectedConnectionRow();
+    if (connectionRow == null) return;
+
+    ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(connectionRow.getId());
+    if (connectionInfo == null) return;
+
+    String activeTabName = view.getTableViewPane().getTitleAt(view.getTableViewPane().getSelectedIndex());
+
+    log.info("No-timestamp mode: removing raw panel for entire table: {}", tableName);
+
+    CProfile markerProfile = createTableMarkerProfile(tableName);
+
+    broker.sendMessage(Message.builder()
+                           .destination(Destination.withDefault(Component.ADHOC, Module.CHARTS))
+                           .action(Action.REMOVE_RAW_PANEL)
+                           .parameter("connectionInfo", connectionInfo)
+                           .parameter("activeTab", activeTabName)
+                           .parameter("tableName", tableName)
+                           .parameter("cProfile", markerProfile)
+                           .build());
+
+    rawPanelAddedForTable = false;
+    rawPanelTableName = null;
+  }
+
+  private CProfile createTableMarkerProfile(String tableName) {
+    CProfile marker = new CProfile();
+    marker.setColId(-1);
+    marker.setColName("* (all columns)");
+    return marker;
   }
 
   private void unselectAllColumnsForTable(String fullTableName) {
@@ -427,6 +616,16 @@ public class AdHocModelPresenter implements HelperChart {
   }
 
   private void handleColumnSelection(boolean selected, int row) {
+    if (!hasTimestampColumns) {
+      log.info("Column selection blocked: no timestamp columns for current table");
+      view.setColumnPickValue(row, false);
+      DialogHelper.showMessageDialog(null,
+                                     "Column selection is not available for tables without timestamp columns.\n"
+                                         + "Use the table/view checkbox to view raw data.",
+                                     "Info");
+      return;
+    }
+
     if (tProfile == null) {
       DialogHelper.showMessageDialog(null, "Table metadata not loaded", "Error");
       view.setColumnPickValue(row, false);
@@ -437,9 +636,7 @@ public class AdHocModelPresenter implements HelperChart {
     if (columnRow == null) return;
 
     int columnId = columnRow.getId();
-    String tableName = tProfile != null ? tProfile.getTableName() : "";
-
-    model.setColumnSelected(currentConnectionId, tableName, columnId, selected);
+    String tableName = tProfile.getTableName();
 
     String activeTab = view.getTableViewPane().getTitleAt(view.getTableViewPane().getSelectedIndex());
     TTTable<EntityRow, JXTable> activeTable = switch (activeTab) {
@@ -449,13 +646,23 @@ public class AdHocModelPresenter implements HelperChart {
     };
 
     if (selected) {
-      boolean wasSelected = model.isTableOrViewSelected(currentConnectionId, tableName);
-      if (!wasSelected) {
-        model.setTableOrViewSelected(currentConnectionId, tableName, true);
+      try {
+        addChart(tableName, columnId);
+
+        boolean wasSelected = model.isTableOrViewSelected(currentConnectionId, tableName);
+        if (!wasSelected) {
+          model.setTableOrViewSelected(currentConnectionId, tableName, true);
+        }
+        model.setColumnSelected(currentConnectionId, tableName, columnId, true);
+        updateTableCheckboxState(activeTable, tableName, true);
+      } catch (Exception e) {
+        log.error("Error adding chart for table {} column {}: {}", tableName, columnId, e.getMessage());
+        view.setColumnPickValue(row, false);
+        String message = e.getMessage() != null ? e.getMessage() : "Failed to add chart";
+        DialogHelper.showMessageDialog(null, message, "Error");
       }
-      updateTableCheckboxState(activeTable, tableName, true);
-      addChart(tableName, columnId);
     } else {
+      model.setColumnSelected(currentConnectionId, tableName, columnId, false);
       Set<Integer> selectedColumns = model.getSelectedColumns(currentConnectionId, tableName);
       if (selectedColumns.isEmpty()) {
         model.setTableOrViewSelected(currentConnectionId, tableName, false);
@@ -488,6 +695,10 @@ public class AdHocModelPresenter implements HelperChart {
 
     tProfile = null;
     dStore = null;
+    hasTimestampColumns = false;
+    rawPanelAddedForTable = false;
+    rawPanelTableName = null;
+    view.setColumnTableEnabled(true);
 
     if (activeTable == null) return;
 
@@ -567,6 +778,10 @@ public class AdHocModelPresenter implements HelperChart {
 
     log.info("Run action for {}: {}", activeTab.toLowerCase(), schemaDotTableOrViewName);
     cleanAllPanels();
+
+    rawPanelAddedForTable = false;
+    rawPanelTableName = null;
+
     loadTableView(schemaDotTableOrViewName);
   }
 
@@ -717,7 +932,7 @@ public class AdHocModelPresenter implements HelperChart {
       String queryText = buildMetadataQuery(tableName, connectionInfo.getDbType());
 
       dStore = model.getAdHocDatabaseManager().getDataBase(connectionInfo);
-      tProfile = dStore.loadJdbcTableMetadata(connection, queryText, getSProfile(tableName, connectionInfo.getDbType()));
+      tProfile = dStore.loadJdbcTableMetadata(connection, queryText, getSProfile(tableName, TType.TIME_SERIES, connectionInfo.getDbType()));
       log.info("Loaded metadata for table: {}", tableName);
 
       if (tProfile.getCProfiles() == null || tProfile.getCProfiles().isEmpty()) {
@@ -725,6 +940,8 @@ public class AdHocModelPresenter implements HelperChart {
         view.getStatusLabel().setText("No columns found for table: " + tableName);
         view.clearColumnTable();
         view.clearTimestampTable();
+        hasTimestampColumns = false;
+        view.setColumnTableEnabled(true);
         return;
       }
 
@@ -735,17 +952,36 @@ public class AdHocModelPresenter implements HelperChart {
       updateColumnDisplays(tProfile.getCProfiles(), tableName);
 
       if (view.getTimestampTable().model().getRowCount() == 0) {
-        handleNoTimestampColumns(tableName);
+        hasTimestampColumns = false;
+
+        SProfile regularSProfile = getSProfile(tableName, TType.REGULAR, connectionInfo.getDbType());
+        regularSProfile.setTableType(TType.REGULAR);
+        tProfile = dStore.loadJdbcTableMetadata(connection, queryText, regularSProfile);
+
+        log.info("No timestamp columns found for table: {}. Raw mode will be used via table/view checkbox.", tableName);
+
+        view.getStatusLabel().setText("Table: " + tableName + " (no timestamp columns — use table checkbox for raw view)");
+        view.setColumnTableEnabled(false);
+
+        boolean wasSelected = model.isTableOrViewSelected(currentConnectionId, tableName);
+        if (wasSelected) {
+          rawPanelAddedForTable = true;
+          rawPanelTableName = tableName;
+        }
       } else {
+        hasTimestampColumns = true;
+        view.setColumnTableEnabled(true);
         selectFirstTimestamp();
+        view.getStatusLabel().setText("Table/view name: " + tableName);
       }
 
-      view.getStatusLabel().setText("Table/view name: " + tableName);
     } catch (SQLException e) {
       log.error("SQL error loading table {}: {}", tableName, e.getMessage());
       view.getStatusLabel().setText("SQL error: " + e.getMessage());
       view.clearColumnTable();
       view.clearTimestampTable();
+      hasTimestampColumns = false;
+      view.setColumnTableEnabled(true);
     } catch (Exception e) {
       log.error("Error loading table {}: {}", tableName, e.getMessage());
       handleTableViewError(e);
@@ -772,11 +1008,6 @@ public class AdHocModelPresenter implements HelperChart {
     model.getProfileManager().updateChart(chartInfo);
   }
 
-  private void handleNoTimestampColumns(String tableName) {
-    view.getStatusLabel().setText("For " + tableName + " timestamp column not found");
-    view.clearColumnTable();
-  }
-
   private void selectFirstTimestamp() {
     view.setBlockTimestampAction(true);
     view.getTimestampTable().table().setRowSelectionInterval(0, 0);
@@ -791,13 +1022,15 @@ public class AdHocModelPresenter implements HelperChart {
     view.getStatusLabel().setText("Error: " + e.getMessage());
     view.clearColumnTable();
     view.clearTimestampTable();
+    hasTimestampColumns = false;
+    view.setColumnTableEnabled(true);
     log.error("Error loading table metadata", e);
   }
 
-  public SProfile getSProfile(String tableName, DBType dbType) {
+  public SProfile getSProfile(String tableName, TType tType, DBType dbType) {
     SProfile sProfile = new SProfile();
     sProfile.setTableName(tableName);
-    sProfile.setTableType(TType.TIME_SERIES);
+    sProfile.setTableType(tType);
     sProfile.setIndexType(IType.GLOBAL);
     sProfile.setCompression(true);
     sProfile.setCsTypeMap(new HashMap<>());
@@ -1015,6 +1248,11 @@ public class AdHocModelPresenter implements HelperChart {
     if (clearSchemaCatalog) {
       view.getSchemaCatalogCBox().removeAllItems();
     }
+
+    hasTimestampColumns = false;
+    rawPanelAddedForTable = false;
+    rawPanelTableName = null;
+    view.setColumnTableEnabled(true);
   }
 
   public void clearSelectionForTableOrView(Message message) {
@@ -1038,6 +1276,11 @@ public class AdHocModelPresenter implements HelperChart {
       model.setColumnSelected(connectionId, tableName, colId, false);
     }
 
+    if (rawPanelAddedForTable && tableName.equals(rawPanelTableName)) {
+      rawPanelAddedForTable = false;
+      rawPanelTableName = null;
+    }
+
     SwingUtilities.invokeLater(() -> {
       updateTableCheckboxState(view.getTableTable(), tableName, false);
       updateTableCheckboxState(view.getViewTable(), tableName, false);
@@ -1053,6 +1296,10 @@ public class AdHocModelPresenter implements HelperChart {
   private void clearColumnAndTimestamp() {
     view.clearColumnTable();
     view.clearTimestampTable();
+    hasTimestampColumns = false;
+    rawPanelAddedForTable = false;
+    rawPanelTableName = null;
+    view.setColumnTableEnabled(true);
   }
 
   public void updateConnectionStatus(int connectionId, ConnectionStatus status) {
@@ -1068,7 +1315,8 @@ public class AdHocModelPresenter implements HelperChart {
       view.showStatusMessage("Rechecking connection...");
     });
 
-    connectionCheckExecutor.submit(() -> {
+    ExecutorService executor = getOrCreateExecutor();
+    executor.submit(() -> {
       checkConnectionAsync(connectionId, () -> {
         log.info("Recheck completed for connection {}", connectionId);
         view.showStatusMessage("Connection recheck completed");
@@ -1077,6 +1325,6 @@ public class AdHocModelPresenter implements HelperChart {
   }
 
   public void shutdown() {
-    connectionCheckExecutor.shutdownNow();
+    shutdownExecutor();
   }
 }
