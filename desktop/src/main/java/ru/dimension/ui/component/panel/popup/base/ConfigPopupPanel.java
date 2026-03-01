@@ -1,4 +1,4 @@
-package ru.dimension.ui.component.panel.popup;
+package ru.dimension.ui.component.panel.popup.base;
 
 import static ru.dimension.ui.laf.LafColorGroup.CHART_PANEL;
 
@@ -18,8 +18,8 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
-import ru.dimension.ui.component.module.analyze.timeseries.popup.CustomPopup;
-import ru.dimension.ui.component.module.analyze.timeseries.popup.CustomPopup.CustomPopupCloseListener;
+import ru.dimension.ui.component.panel.popup.internal.CustomPopup;
+import ru.dimension.ui.component.panel.popup.internal.CustomPopup.CustomPopupCloseListener;
 import ru.dimension.ui.laf.LaF;
 
 public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener {
@@ -31,6 +31,8 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
 
   private final String buttonTextClosed;
   private final String buttonTextOpen;
+
+  private float popupOpacity = 1.0f;
 
   public ConfigPopupPanel() {
     this(() -> {
@@ -69,6 +71,17 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
     this.contentSupplier = newSupplier;
   }
 
+  public void setPopupOpacity(float opacity) {
+    this.popupOpacity = Math.max(0.1f, Math.min(1.0f, opacity));
+    if (popup != null) {
+      popup.setOpacity(this.popupOpacity);
+    }
+  }
+
+  public float getPopupOpacity() {
+    return popupOpacity;
+  }
+
   private void togglePopup() {
     if ((Instant.now().toEpochMilli() - lastPopupCloseTime.toEpochMilli()) < 200) {
       return;
@@ -88,11 +101,9 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
 
     contentPanel = contentSupplier.get();
 
-    // Add mouse listener to detect when mouse leaves the popup area
     contentPanel.addMouseListener(new MouseAdapter() {
       @Override
       public void mouseExited(MouseEvent e) {
-        // Check if the mouse is still within the popup or button area
         if (!isMouseInPopupArea() && !isMouseInButtonArea()) {
           closePopup();
         }
@@ -102,6 +113,8 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
     popup = new CustomPopup(contentPanel,
                             SwingUtilities.getWindowAncestor(this),
                             this);
+
+    popup.setOpacity(popupOpacity);
 
     int defaultX = button.getLocationOnScreen().x;
     int defaultY = button.getLocationOnScreen().y + button.getHeight() + 2;

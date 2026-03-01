@@ -17,6 +17,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.JTabbedPane;
+import javax.swing.SwingUtilities;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import ru.dimension.db.core.DStore;
@@ -28,6 +29,8 @@ import ru.dimension.db.model.profile.table.BType;
 import ru.dimension.db.model.profile.table.IType;
 import ru.dimension.db.model.profile.table.TType;
 import ru.dimension.tt.swing.TTTable;
+import ru.dimension.ui.bus.EventBus;
+import ru.dimension.ui.bus.event.UpdateMetadataColumnsEvent;
 import ru.dimension.ui.collector.HttpLoader;
 import ru.dimension.ui.collector.collect.prometheus.ExporterParser;
 import ru.dimension.ui.collector.http.HttpResponseFetcher;
@@ -43,6 +46,8 @@ import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.type.ConnectionType;
+import ru.dimension.ui.view.dialog.TimestampColumnChooser;
+import ru.dimension.ui.view.dialog.TimestampColumnChooser.TimestampResult;
 import ru.dimension.ui.view.handler.CommonViewHandler;
 import ru.dimension.ui.view.panel.config.query.MetadataQueryPanel;
 import ru.dimension.ui.view.panel.config.query.MetricQueryPanel;
@@ -61,6 +66,7 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
   private final ProfileManager profileManager;
   private final ConnectionPoolManager connectionPoolManager;
   private final JXTableCase configMetadataCase;
+  private final EventBus eventBus;
 
   private final ExporterParser exporterParser;
   private final HttpResponseFetcher httpResponseFetcher;
@@ -87,7 +93,8 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
                               @Named("configTab") ConfigTab configTab,
                               @Named("exporterParser") ExporterParser exporterParser,
                               @Named("httpResponseFetcher") HttpResponseFetcher httpResponseFetcher,
-                              @Named("localDB") DStore dStore) {
+                              @Named("localDB") DStore dStore,
+                              @Named("eventBus") EventBus eventBus) {
     this.profileManager = profileManager;
     this.profileCase = profileCase;
     this.taskCase = taskCase;
@@ -95,6 +102,7 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
     this.queryCase = queryCase;
     this.connectionPoolManager = connectionPoolManager;
     this.configMetadataCase = configMetadataCase;
+    this.eventBus = eventBus;
 
     metadataQueryPanel.getTableName().setEditable(false);
 
@@ -224,6 +232,8 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
       profileManager.updateTable(tableInfo);
 
       fillTableUI(tableInfo);
+
+      publishMetadataUpdate(queryInfo.getId(), queryInfo.getName(), tableInfo.getCProfiles());
       return;
     }
 
@@ -334,7 +344,7 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
     metadataQueryPanel.getTableName().setText(table.getTableName());
     metadataQueryPanel.getTableType().setSelectedItem(table.getTableType());
     metadataQueryPanel.getTableIndex().setSelectedItem(table.getIndexType());
-    metadataQueryPanel.getCompression().setSelected(table.getCompression());
+    metadataQueryPanel.getCompression().setSelected(Boolean.TRUE.equals(table.getCompression()));
     fillTimestampComboBox(table.getCProfiles());
   }
 
@@ -391,13 +401,19 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
 
       tableInfo.setCProfiles(tProfile.getCProfiles());
 
+      autoSelectTimestampColumn(tableInfo);
+
       profileManager.updateQuery(queryInfo);
       profileManager.updateTable(tableInfo);
+
+      updateMetadataUI(tableInfo);
 
       fillTimestampComboBox(tableInfo.getCProfiles());
 
       updateTableInfo(tableInfo);
       fillConfigMetadata(tableInfo, configMetadataCase);
+
+      publishMetadataUpdate(queryInfo.getId(), queryInfo.getName(), tableInfo.getCProfiles());
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }
@@ -436,14 +452,119 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
     tableInfo.setCompression(tProfile.getCompression());
     tableInfo.setCProfiles(tProfile.getCProfiles());
 
+    autoSelectTimestampColumn(tableInfo);
+
     profileManager.updateQuery(queryInfo);
     profileManager.updateTable(tableInfo);
+
+    updateMetadataUI(tableInfo);
 
     fillTimestampComboBox(tableInfo.getCProfiles());
 
     updateTableInfo(tableInfo);
 
     configMetadataCase.getDefaultTableModel().fireTableDataChanged();
+
+    publishMetadataUpdate(queryInfo.getId(), queryInfo.getName(), tableInfo.getCProfiles());
+  }
+
+  private void autoSelectTimestampColumn(TableInfo tableInfo) {
+    if (tableInfo.getCProfiles() == null || tableInfo.getCProfiles().isEmpty()) {
+      return;
+    }
+
+    boolean hasExistingTimestamp = tableInfo.getCProfiles().stream()
+        .anyMatch(cp -> cp.getCsType().isTimeStamp());
+    if (hasExistingTimestamp) {
+      log.debug("Timestamp column already set, skipping auto-selection");
+      ensureDefaults(tableInfo);
+      return;
+    }
+
+    List<CProfile> timestampCandidates = findTimestampColumns(tableInfo.getCProfiles());
+
+    if (timestampCandidates.isEmpty()) {
+      log.info("No timestamp candidate columns found for table: {}", tableInfo.getTableName());
+      ensureDefaults(tableInfo);
+      return;
+    }
+
+    TimestampResult result = TimestampColumnChooser.choose(timestampCandidates);
+
+    if (result == null) {
+      log.info("User cancelled timestamp column selection for table: {}", tableInfo.getTableName());
+      ensureDefaults(tableInfo);
+      return;
+    }
+
+    CProfile selected = result.column();
+
+    tableInfo.getCProfiles().forEach(cp -> cp.getCsType().setTimeStamp(false));
+    selected.getCsType().setTimeStamp(true);
+
+    tableInfo.setCompression(result.compression());
+
+    ensureDefaults(tableInfo);
+
+    log.info("Timestamp column '{}' activated for table '{}', compression={}",
+             selected.getColName(), tableInfo.getTableName(), result.compression());
+  }
+
+  private void ensureDefaults(TableInfo tableInfo) {
+    if (tableInfo.getCompression() == null) {
+      tableInfo.setCompression(true);
+      log.debug("Compression was null, set to true for table: {}", tableInfo.getTableName());
+    }
+    if (tableInfo.getTableType() == null) {
+      tableInfo.setTableType(TType.TIME_SERIES);
+    }
+    if (tableInfo.getIndexType() == null) {
+      tableInfo.setIndexType(IType.LOCAL);
+    }
+    if (tableInfo.getBackendType() == null) {
+      tableInfo.setBackendType(BType.BERKLEYDB);
+    }
+  }
+
+  private void updateMetadataUI(TableInfo tableInfo) {
+    Runnable uiUpdate = () -> {
+      metadataQueryPanel.getTableName().setText(tableInfo.getTableName());
+      metadataQueryPanel.getTableType().setSelectedItem(
+          tableInfo.getTableType() != null ? tableInfo.getTableType() : TType.TIME_SERIES);
+      metadataQueryPanel.getTableIndex().setSelectedItem(
+          tableInfo.getIndexType() != null ? tableInfo.getIndexType() : IType.LOCAL);
+      metadataQueryPanel.getCompression().setSelected(Boolean.TRUE.equals(tableInfo.getCompression()));
+    };
+
+    if (SwingUtilities.isEventDispatchThread()) {
+      uiUpdate.run();
+    } else {
+      SwingUtilities.invokeLater(uiUpdate);
+    }
+  }
+
+  private List<CProfile> findTimestampColumns(List<CProfile> columns) {
+    List<CProfile> result = new ArrayList<>();
+    for (CProfile col : columns) {
+      if (col.getColDbTypeName() != null && isTimestampType(col.getColDbTypeName())) {
+        result.add(col);
+      }
+    }
+    return result;
+  }
+
+  private boolean isTimestampType(String typeName) {
+    String upper = typeName.toUpperCase().trim();
+    return upper.contains("TIMESTAMP") || upper.contains("DATETIME");
+  }
+
+  private void publishMetadataUpdate(int queryId, String queryName, List<CProfile> columns) {
+    if (columns == null) {
+      columns = new ArrayList<>();
+    }
+    log.info("Publishing UpdateMetadataColumnsEvent for queryId={}, queryName={}, columns={}",
+             queryId, queryName, columns.size());
+    eventBus.publish(new UpdateMetadataColumnsEvent(queryId, queryName, columns));
   }
 
   private void fillTimestampComboBox(List<CProfile> cProfileList) {

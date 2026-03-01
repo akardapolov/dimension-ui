@@ -6,8 +6,10 @@ import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import javax.swing.JCheckBox;
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import ru.dimension.tt.swing.TTTable;
@@ -33,6 +35,7 @@ import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.profile.MultiSelectTaskPanel;
 import ru.dimension.ui.view.panel.config.profile.ProfilePanel;
 import ru.dimension.ui.view.tab.ConfigTab;
+import ru.dimension.ui.view.table.row.Rows.ProfileRow;
 import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
 @Log4j2
@@ -135,6 +138,7 @@ public final class ProfileButtonPanelHandler implements ButtonPanelBindings.Crud
     if (JOptionPane.showConfirmDialog(null, "Delete " + info.getName() + "?") == JOptionPane.YES_OPTION) {
       profileManager.deleteProfile(id, info.getName());
       eventBus.publish(new ProfileRemoveEvent(id));
+      selectFirstOrClear();
     }
   }
 
@@ -173,11 +177,56 @@ public final class ProfileButtonPanelHandler implements ButtonPanelBindings.Crud
 
     setEditMode(false);
     eventBus.publish(new ProfileAddEvent());
+
+    restoreProfileSelection(info.getId());
   }
 
   @Override
   public void onCancel() {
+    Integer currentId = context.getSelectedProfileId();
     setEditMode(false);
+    if (currentId != null) {
+      restoreProfileSelection(currentId);
+    } else {
+      selectFirstOrClear();
+    }
+  }
+
+  private void restoreProfileSelection(int targetId) {
+    JXTable table = profileCase.getJxTable();
+    if (table == null) return;
+
+    SwingUtilities.invokeLater(() -> {
+      TTTable<ProfileRow, JXTable> tt = profileCase.getTypedTable();
+      List<ProfileRow> rows = tt.model().items();
+      for (int i = 0; i < rows.size(); i++) {
+        if (Objects.equals(rows.get(i).getId(), targetId)) {
+          table.setRowSelectionInterval(i, i);
+          return;
+        }
+      }
+      selectFirstOrClearInternal(table);
+    });
+  }
+
+  private void selectFirstOrClear() {
+    JXTable table = profileCase.getJxTable();
+    if (table == null) return;
+    SwingUtilities.invokeLater(() -> selectFirstOrClearInternal(table));
+  }
+
+  private void selectFirstOrClearInternal(JXTable table) {
+    if (table.getRowCount() > 0) {
+      table.setRowSelectionInterval(0, 0);
+    } else {
+      table.clearSelection();
+      context.setSelectedProfileId(null);
+      profilePanel.getJTextFieldProfile().setText("");
+      profilePanel.getJTextFieldDescription().setText("");
+      multiSelectPanel.getSelectedTaskCase().clearTable();
+      multiSelectPanel.getTaskListCase().clearTable();
+      ButtonPanelBindings.setViewMode(buttonPanel, false);
+    }
   }
 
   private void setEditMode(boolean edit) {

@@ -1,4 +1,4 @@
-package ru.dimension.ui.component.panel.popup;
+package ru.dimension.ui.component.panel.popup.description;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -14,6 +14,7 @@ import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Action;
+import ru.dimension.ui.component.panel.popup.base.ConfigPopupPanel;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 
 @Log4j2

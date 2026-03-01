@@ -1,4 +1,4 @@
-package ru.dimension.ui.component.panel.popup;
+package ru.dimension.ui.component.panel.popup.filter;
 
 import static ru.dimension.ui.helper.GUIHelper.getJScrollPane;
 
@@ -97,6 +97,9 @@ public class GanttPopupPanel extends GanttCommon {
 
   @Getter
   private final Map<CProfile, LinkedHashSet<String>> filterSelectedMap = new HashMap<>();
+
+  @Setter
+  private Runnable onFilterChanged;
 
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
@@ -345,6 +348,65 @@ public class GanttPopupPanel extends GanttCommon {
 
     currentTable = null;
     filterSelectedMap.clear();
+
+    notifyFilterChanged();
+  }
+
+  public void clearAllFilters() {
+    boolean hadFilters = !filterSelectedMap.isEmpty()
+        && filterSelectedMap.values().stream().anyMatch(s -> s != null && !s.isEmpty());
+
+    filterSelectedMap.values().forEach(LinkedHashSet::clear);
+    filterSelectedMap.clear();
+
+    if (currentTable != null && currentTable.getModel() != null) {
+      for (int i = 0; i < currentTable.getModel().getRowCount(); i++) {
+        currentTable.getModel().setValueAt(false, i, 2);
+      }
+      currentTable.repaint();
+    }
+
+    if (hadFilters && chartKey != null && panelType != null) {
+      Destination destination = buildDestination();
+
+      log.info("Clear all filters, message send to {} with action: {}", destination, Action.REMOVE_CHART_FILTER);
+      LogHelper.logMapSelected(filterSelectedMap);
+
+      MessageBroker.getInstance().sendMessage(Message.builder()
+                                                  .destination(destination)
+                                                  .action(Action.REMOVE_CHART_FILTER)
+                                                  .parameter("topMapSelected", filterSelectedMap)
+                                                  .parameter("seriesColorMap", seriesColorMap)
+                                                  .build());
+    }
+
+    notifyFilterChanged();
+  }
+
+  private Destination buildDestination() {
+    if (chartKey instanceof AdHocChartKey key) {
+      return Destination.builder()
+          .component(component)
+          .module(Module.CHART)
+          .panel(panelType)
+          .block(Block.CHART)
+          .chartKey(key)
+          .build();
+    }
+
+    return Destination.builder()
+        .component(component)
+        .module(Module.CHART)
+        .panel(panelType)
+        .block(Block.CHART)
+        .chartKey(chartKey)
+        .build();
+  }
+
+  private void notifyFilterChanged() {
+    if (onFilterChanged != null) {
+      onFilterChanged.run();
+    }
   }
 
   class TopCheckboxListener implements CellEditorListener {
@@ -381,36 +443,16 @@ public class GanttPopupPanel extends GanttCommon {
           selectedSet.remove(filterValue);
         }
 
-        Destination destination = getDestination(component, panelType, chartKey);
+        Destination destination = buildDestination();
 
         if (topMapSelected.isEmpty() || topMapSelected.values().stream().allMatch(LinkedHashSet::isEmpty)) {
           sendFilterMessage(destination, Action.REMOVE_CHART_FILTER);
         } else {
           sendFilterMessage(destination, Action.ADD_CHART_FILTER);
         }
-      }
-    }
 
-    private static Destination getDestination(MessageBroker.Component component,
-                                              Panel panel,
-                                              ChartKey chartKey) {
-      if (chartKey instanceof AdHocChartKey key) {
-        return Destination.builder()
-            .component(component)
-            .module(Module.CHART)
-            .panel(panel)
-            .block(Block.CHART)
-            .chartKey(key)
-            .build();
+        notifyFilterChanged();
       }
-
-      return Destination.builder()
-          .component(component)
-          .module(Module.CHART)
-          .panel(panel)
-          .block(Block.CHART)
-          .chartKey(chartKey)
-          .build();
     }
 
     private void sendFilterMessage(Destination destination, Action action) {

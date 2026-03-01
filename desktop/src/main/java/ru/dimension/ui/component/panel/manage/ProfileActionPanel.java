@@ -75,6 +75,9 @@ public class ProfileActionPanel extends JPanel {
   }
 
   public void setButtonState(String profileName, RunStatus runStatus) {
+    if (runStatus == null) {
+      runStatus = RunStatus.NOT_RUNNING;
+    }
     status.setTitle(profileName + " >> " + runStatus.getDescription());
     if (RunStatus.RUNNING.equals(runStatus)) {
       start.setEnabled(false);

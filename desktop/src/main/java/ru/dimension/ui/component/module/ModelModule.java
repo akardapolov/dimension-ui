@@ -7,6 +7,8 @@ import ru.dimension.di.Assisted;
 import ru.dimension.ui.bus.EventBus;
 import ru.dimension.ui.bus.event.ProfileAddEvent;
 import ru.dimension.ui.bus.event.ProfileRemoveEvent;
+import ru.dimension.ui.bus.event.UpdateMetadataColumnsEvent;
+import ru.dimension.ui.bus.event.UpdateQueryList;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.module.model.ModelModel;
 import ru.dimension.ui.component.module.model.ModelPresenter;
@@ -24,6 +26,7 @@ public class ModelModule {
   private final ModelModel model;
   @Getter
   private final ModelView view;
+  @Getter
   private final ModelPresenter presenter;
 
   @SuppressWarnings("FieldCanBeLocal")
@@ -40,6 +43,8 @@ public class ModelModule {
     this.eventRegistry = EventRouteRegistry.forComponent(component, EventUtils::getComponent)
         .routeGlobal(ProfileAddEvent.class, this::fireProfileAdd)
         .routeGlobal(ProfileRemoveEvent.class, this::handleProfileRemove)
+        .routeGlobal(UpdateMetadataColumnsEvent.class, this::handleUpdateMetadataColumns)
+        .routeGlobal(UpdateQueryList.class, this::handleUpdateQueryList)
         .register(eventBus);
 
     setupSelectionListeners();
@@ -48,7 +53,6 @@ public class ModelModule {
   }
 
   private void setupSelectionListeners() {
-    // Profile Selection
     view.getProfileTable().table().getSelectionModel().addListSelectionListener(e -> {
       if (!e.getValueIsAdjusting()) {
         view.getProfileTable().selectedItem()
@@ -56,7 +60,6 @@ public class ModelModule {
       }
     });
 
-    // Task Selection
     view.getTaskTable().table().getSelectionModel().addListSelectionListener(e -> {
       if (!e.getValueIsAdjusting()) {
         view.getTaskTable().selectedItem()
@@ -64,10 +67,9 @@ public class ModelModule {
       }
     });
 
-    // Query Selection
     view.getQueryTable().table().getSelectionModel().addListSelectionListener(e -> {
       if (!e.getValueIsAdjusting() && view.getQueryTable().selectedItem().isPresent()) {
-       QueryRow query = view.getQueryTable().selectedItem().get();
+        QueryRow query = view.getQueryTable().selectedItem().get();
         ProfileRow profile = view.getProfileTable().selectedItem().orElse(null);
         TaskRow task = view.getTaskTable().selectedItem().orElse(null);
 
@@ -84,5 +86,15 @@ public class ModelModule {
 
   public void handleProfileRemove(ProfileRemoveEvent event) {
     presenter.handleProfileRemoval(event.profileId());
+  }
+
+  public void handleUpdateMetadataColumns(UpdateMetadataColumnsEvent event) {
+    log.info("Received UpdateMetadataColumnsEvent for queryId={}, queryName={}, columns={}",
+             event.queryId(), event.queryName(), event.columns().size());
+    presenter.handleMetadataColumnsUpdate(event.queryId(), event.queryName(), event.columns());
+  }
+
+  public void handleUpdateQueryList(UpdateQueryList event) {
+    presenter.handleQueryListUpdate(event.taskId());
   }
 }

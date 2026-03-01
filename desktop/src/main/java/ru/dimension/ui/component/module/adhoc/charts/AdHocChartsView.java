@@ -21,6 +21,7 @@ import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.jdesktop.swingx.VerticalLayout;
 import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.ui.component.module.adhoc.AdHocChartModule;
+import ru.dimension.ui.component.module.adhoc.raw.AdHocRawPanel;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
@@ -107,7 +108,7 @@ public class AdHocChartsView extends JPanel {
   public void addRawCard(String tabKey,
                          String globalKey,
                          int connectionId,
-                         JXTaskPane rawPanel,
+                         AdHocRawPanel rawPanel,
                          Runnable onComplete) {
 
     JPanel tabPanel = getOrCreateTabPanel(tabKey, globalKey, connectionId);
@@ -122,9 +123,19 @@ public class AdHocChartsView extends JPanel {
       tabbedPane.setSelectedIndex(index);
     }
 
-    if (onComplete != null) {
-      onComplete.run();
-    }
+    SwingTaskRunner.runWithProgress(
+        rawPanel,
+        executor,
+        rawPanel::initializeUI,
+        e -> {
+          removeChartCard(tabKey, rawPanel);
+          if (onComplete != null) onComplete.run();
+        },
+        () -> createProgressBar("Loading, please wait..."),
+        () -> {
+          if (onComplete != null) onComplete.run();
+        }
+    );
   }
 
   private JPanel getOrCreateTabPanel(String tabKey, String globalKey, int connectionId) {

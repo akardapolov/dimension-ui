@@ -1,4 +1,4 @@
-package ru.dimension.ui.component.module.preview.zoom.internal;
+package ru.dimension.ui.component.module.zoom.internal;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -8,7 +8,7 @@ import javax.swing.*;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.module.chart.PRChartModule;
-import ru.dimension.ui.component.module.preview.zoom.RenderMode;
+import ru.dimension.ui.component.module.zoom.RenderMode;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 

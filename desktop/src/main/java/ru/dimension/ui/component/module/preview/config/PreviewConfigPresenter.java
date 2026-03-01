@@ -1,6 +1,12 @@
 package ru.dimension.ui.component.module.preview.config;
 
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiConsumer;
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 import lombok.extern.log4j.Log4j2;
+import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.di.ServiceLocator;
 import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageBroker;
@@ -9,6 +15,10 @@ import ru.dimension.ui.component.broker.MessageBroker.Module;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.model.ChartConfigState;
 import ru.dimension.ui.component.model.ChartLegendState;
+import ru.dimension.ui.helper.ColorHelper;
+import ru.dimension.ui.manager.ProfileManager;
+import ru.dimension.ui.model.ProfileTaskQueryKey;
+import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.view.RangeRealTime;
 import ru.dimension.ui.state.UIState;
 
@@ -20,16 +30,32 @@ public class PreviewConfigPresenter {
 
   private final MessageBroker.Component component;
 
-  private final PreviewConfigView  view;
+  private final PreviewConfigView view;
 
   private final MessageBroker broker = MessageBroker.getInstance();
+
+  private ConcurrentMap<ProfileTaskQueryKey, ? extends ConcurrentMap<CProfile, ?>> chartPanesRef;
+  private ProfileManager profileManager;
+  private BiConsumer<ProfileTaskQueryKey, CProfile> onChartRemovedFromClear;
 
   public PreviewConfigPresenter(MessageBroker.Component component,
                                 PreviewConfigView view) {
     this.component = component;
-    this.view  = view;
+    this.view = view;
     restoreState();
     setupListeners();
+  }
+
+  public void setChartPanesRef(ConcurrentMap<ProfileTaskQueryKey, ? extends ConcurrentMap<CProfile, ?>> chartPanesRef) {
+    this.chartPanesRef = chartPanesRef;
+  }
+
+  public void setProfileManager(ProfileManager profileManager) {
+    this.profileManager = profileManager;
+  }
+
+  public void setOnChartRemovedFromClear(BiConsumer<ProfileTaskQueryKey, CProfile> onChartRemovedFromClear) {
+    this.onChartRemovedFromClear = onChartRemovedFromClear;
   }
 
   private void restoreState() {
@@ -60,6 +86,37 @@ public class PreviewConfigPresenter {
     view.getRealTimeLegendPanel().setStateChangeConsumer(s -> handleLegend(s == ChartLegendState.SHOW));
     view.getConfigShowHidePanel().setStateChangeConsumer(s -> handleConfig(s == ChartConfigState.SHOW));
     view.getCollapseCardPanel().setStateChangeConsumer(this::handleCollapse);
+    view.getClearButton().addActionListener(e -> handleClearButtonClick());
+  }
+
+  private void handleClearButtonClick() {
+    if (chartPanesRef == null || profileManager == null) {
+      log.warn("Chart panes ref or profile manager not set");
+      return;
+    }
+
+    ColorHelper colorHelper = ServiceLocator.get(ColorHelper.class);
+
+    JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(view);
+    ClearDialog dialog = new ClearDialog(frame, chartPanesRef, profileManager, colorHelper, removeRequest -> {
+      ProfileTaskQueryKey key = removeRequest.key();
+      CProfile cProfile = removeRequest.cProfile();
+
+      Metric metric = new Metric();
+      metric.setYAxis(cProfile);
+
+      broker.sendMessage(Message.builder()
+                             .destination(Destination.withDefault(component, Module.CHARTS))
+                             .action(Action.REMOVE_CHART)
+                             .parameter("key", key)
+                             .parameter("metric", metric)
+                             .build());
+
+      if (onChartRemovedFromClear != null) {
+        onChartRemovedFromClear.accept(key, cProfile);
+      }
+    });
+    dialog.setVisible(true);
   }
 
   private void handleRealTimeRange(RangeRealTime range) {

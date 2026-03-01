@@ -35,6 +35,8 @@ import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.bus.EventBus;
 import ru.dimension.ui.bus.event.ProfileAddEvent;
 import ru.dimension.ui.bus.event.ProfileRemoveEvent;
+import ru.dimension.ui.bus.event.UpdateMetadataColumnsEvent;
+import ru.dimension.ui.bus.event.UpdateQueryList;
 import ru.dimension.ui.helper.event.EventRouteRegistry;
 import ru.dimension.ui.helper.event.EventUtils;
 import ru.dimension.ui.manager.ConfigurationManager;
@@ -124,6 +126,8 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
     this.eventRegistry = EventRouteRegistry.forComponent(Component.CONFIGURATION, EventUtils::getComponent)
         .routeGlobal(ProfileAddEvent.class, this::fireProfileAdd)
         .routeGlobal(ProfileRemoveEvent.class, this::fireProfileRemove)
+        .routeGlobal(UpdateMetadataColumnsEvent.class, this::fireUpdateMetadataColumns)
+        .routeGlobal(UpdateQueryList.class, this::fireUpdateQueryList)
         .register(eventBus);
 
     checkProfileListState();
@@ -582,6 +586,16 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
     checkProfileListState();
 
     resetConnectionStatusCheck();
+  }
+
+  public void fireUpdateMetadataColumns(UpdateMetadataColumnsEvent event) {
+    log.info("Received UpdateMetadataColumnsEvent for queryId={}, queryName={}, columns={}",
+             event.queryId(), event.queryName(), event.columns().size());
+  }
+
+  public void fireUpdateQueryList(UpdateQueryList event) {
+    log.info("Received UpdateQueryList for taskId={}",
+             event.taskId());
   }
 
   private void checkProfileListState() {

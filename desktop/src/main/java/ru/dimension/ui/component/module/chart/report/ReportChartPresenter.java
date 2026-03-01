@@ -23,7 +23,7 @@ import ru.dimension.ui.component.chart.history.HistorySCP;
 import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.module.base.BaseUnitPresenter;
 import ru.dimension.ui.component.panel.LegendPanel;
-import ru.dimension.ui.component.panel.popup.FilterPanel;
+import ru.dimension.ui.component.panel.popup.filter.FilterPanel;
 import ru.dimension.ui.helper.SwingTaskRunner;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;

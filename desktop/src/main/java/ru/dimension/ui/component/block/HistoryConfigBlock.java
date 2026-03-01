@@ -8,9 +8,9 @@ import javax.swing.border.EtchedBorder;
 import ru.dimension.ui.component.block.base.AbstractConfigBlock;
 import ru.dimension.ui.component.panel.FunctionPanel;
 import ru.dimension.ui.component.panel.LegendPanel;
-import ru.dimension.ui.component.panel.popup.ActionPanel;
-import ru.dimension.ui.component.panel.popup.DescriptionPanel;
-import ru.dimension.ui.component.panel.popup.FilterPanel;
+import ru.dimension.ui.component.panel.popup.action.ActionPanel;
+import ru.dimension.ui.component.panel.popup.description.DescriptionPanel;
+import ru.dimension.ui.component.panel.popup.filter.FilterPanel;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.laf.LaF;
 

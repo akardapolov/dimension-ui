@@ -22,16 +22,24 @@ import javax.swing.KeyStroke;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import ru.dimension.tt.swing.TTTable;
+import ru.dimension.ui.bus.EventBus;
+import ru.dimension.ui.bus.event.QueryListChangedEvent;
+import ru.dimension.ui.bus.event.UpdateQueryList;
 import ru.dimension.ui.exception.EmptyNameException;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.exception.NotSelectedRowException;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
+import ru.dimension.ui.model.info.TaskInfo;
+import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.sql.GatherDataMode;
 import ru.dimension.ui.model.table.JXTableCase;
+import ru.dimension.ui.model.view.RangeHistory;
+import ru.dimension.ui.model.view.RangeRealTime;
 import ru.dimension.ui.model.view.handler.LifeCycleStatus;
 import ru.dimension.ui.prompt.Internationalization;
+import ru.dimension.ui.view.dialog.TaskLinkDialog;
 import ru.dimension.ui.view.handler.core.ConfigSelectionContext;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.query.MainQueryPanel;
@@ -45,6 +53,7 @@ import ru.dimension.ui.view.table.row.Rows.QueryRow;
 public final class QueryButtonPanelHandler implements ActionListener {
 
   private final ProfileManager profileManager;
+  private final EventBus eventBus;
 
   private final JXTableCase profileCase;
   private final JXTableCase taskCase;
@@ -66,8 +75,11 @@ public final class QueryButtonPanelHandler implements ActionListener {
   private LifeCycleStatus status;
   private final ResourceBundle bundleDefault;
 
+  private Integer copySourceQueryId;
+
   @Inject
   public QueryButtonPanelHandler(@Named("profileManager") ProfileManager profileManager,
+                                 @Named("eventBus") EventBus eventBus,
                                  @Named("profileConfigCase") JXTableCase profileCase,
                                  @Named("taskConfigCase") JXTableCase taskCase,
                                  @Named("connectionConfigCase") JXTableCase connectionCase,
@@ -81,6 +93,7 @@ public final class QueryButtonPanelHandler implements ActionListener {
                                  @Named("checkboxConfig") JCheckBox checkboxConfig,
                                  @Named("configSelectionContext") ConfigSelectionContext selectionContext) {
     this.profileManager = profileManager;
+    this.eventBus = eventBus;
     this.profileCase = profileCase;
     this.taskCase = taskCase;
     this.connectionCase = connectionCase;
@@ -122,12 +135,14 @@ public final class QueryButtonPanelHandler implements ActionListener {
     });
 
     this.status = LifeCycleStatus.NONE;
+    this.copySourceQueryId = null;
   }
 
   @Override
   public void actionPerformed(ActionEvent e) {
     if (e.getSource() == queryButtonPanel.getBtnNew()) {
       status = LifeCycleStatus.NEW;
+      copySourceQueryId = null;
       setPanelView(false);
       newEmptyPanel();
       clearProfileMetadataCase();
@@ -141,6 +156,8 @@ public final class QueryButtonPanelHandler implements ActionListener {
       if (queryId == null) {
         throw new NotSelectedRowException("The query to copy is not selected. Please select and try again!");
       }
+
+      copySourceQueryId = queryId;
 
       setPanelView(false);
 
@@ -182,6 +199,7 @@ public final class QueryButtonPanelHandler implements ActionListener {
 
         profileManager.deleteQuery(query.getId(), query.getName());
         profileManager.deleteTable(query.getName());
+        profileManager.deleteChart(query.getId());
 
         clearQueryCase();
         refillQueryTable();
@@ -189,6 +207,8 @@ public final class QueryButtonPanelHandler implements ActionListener {
         if (queryCase.getJxTable().getRowCount() > 0) {
           queryCase.getJxTable().setRowSelectionInterval(0, 0);
         }
+
+        eventBus.publish(new QueryListChangedEvent());
       }
       return;
     }
@@ -199,6 +219,7 @@ public final class QueryButtonPanelHandler implements ActionListener {
         throw new NotSelectedRowException("Not selected query. Please select and try again!");
       }
       status = LifeCycleStatus.EDIT;
+      copySourceQueryId = null;
       setPanelView(false);
       return;
     }
@@ -247,6 +268,25 @@ public final class QueryButtonPanelHandler implements ActionListener {
     profileManager.addQuery(queryInfo);
     profileManager.addTable(tableInfo);
 
+    ChartInfo chartInfo;
+    if (LifeCycleStatus.COPY.equals(status) && copySourceQueryId != null) {
+      ChartInfo source = profileManager.getChartInfoById(copySourceQueryId);
+      chartInfo = source != null ? source.copy().setId(queryId) : buildDefaultChartInfo(queryId);
+    } else {
+      chartInfo = buildDefaultChartInfo(queryId);
+    }
+    profileManager.addChart(chartInfo);
+
+    Integer selectedTaskId = TaskLinkDialog.show(profileManager.getTaskInfoList(), profileManager.getConnectionInfoList());
+    if (selectedTaskId != null) {
+      TaskInfo taskInfo = profileManager.getTaskInfoById(selectedTaskId);
+      if (taskInfo != null && !taskInfo.getQueryInfoList().contains(queryId)) {
+        taskInfo.getQueryInfoList().add(queryId);
+        profileManager.updateTask(taskInfo);
+        eventBus.publish(new UpdateQueryList(selectedTaskId));
+      }
+    }
+
     clearQueryCase();
 
     List<QueryInfo> allQueries = profileManager.getQueryInfoList();
@@ -267,6 +307,11 @@ public final class QueryButtonPanelHandler implements ActionListener {
 
     setPanelView(true);
     queryCase.getJxTable().setRowSelectionInterval(selection, selection);
+
+    status = LifeCycleStatus.NONE;
+    copySourceQueryId = null;
+
+    eventBus.publish(new QueryListChangedEvent());
   }
 
   private void saveEdit() {
@@ -317,6 +362,11 @@ public final class QueryButtonPanelHandler implements ActionListener {
     if (selectedIndex >= 0 && queryCase.getJxTable().getRowCount() > 0) {
       queryCase.getJxTable().setRowSelectionInterval(selectedIndex, selectedIndex);
     }
+
+    status = LifeCycleStatus.NONE;
+    copySourceQueryId = null;
+
+    eventBus.publish(new QueryListChangedEvent());
   }
 
   private void cancelEdit() {
@@ -328,6 +378,8 @@ public final class QueryButtonPanelHandler implements ActionListener {
 
       Integer queryId = selectionContext.getSelectedQueryId();
       if (queryId == null) {
+        status = LifeCycleStatus.NONE;
+        copySourceQueryId = null;
         return;
       }
 
@@ -344,6 +396,9 @@ public final class QueryButtonPanelHandler implements ActionListener {
       newEmptyPanel();
       clearProfileMetadataCase();
     }
+
+    status = LifeCycleStatus.NONE;
+    copySourceQueryId = null;
   }
 
   private void newEmptyPanel() {
@@ -417,5 +472,14 @@ public final class QueryButtonPanelHandler implements ActionListener {
   private boolean isNotUsedOnTask(int queryId) {
     return profileManager.getTaskInfoList().stream()
         .noneMatch(task -> task.getQueryInfoList().contains(queryId));
+  }
+
+  private ChartInfo buildDefaultChartInfo(int chartId) {
+    return new ChartInfo()
+        .setId(chartId)
+        .setRangeRealtime(RangeRealTime.TEN_MIN)
+        .setRangeHistory(RangeHistory.DAY)
+        .setPullTimeoutClient(3)
+        .setPullTimeoutServer(1);
   }
 }

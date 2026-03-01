@@ -11,10 +11,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
-import ru.dimension.ui.component.panel.popup.GanttPopupPanel;
+import ru.dimension.ui.component.panel.popup.filter.GanttPopupPanel;
 
 @ExtendWith(MockitoExtension.class)
-public class GanttPopupPanelTest {
+public class GanttAlgorithmSettingsPanelTest {
 
   private GanttPopupPanel ganttPopupPanel;
   @Mock

@@ -62,7 +62,7 @@ import ru.dimension.ui.view.table.row.Rows;
 public class GUIHelper {
   private static TTRegistry REGISTRY;
 
-  private static synchronized TTRegistry getRegistry() {
+  public static synchronized TTRegistry getRegistry() {
     if (REGISTRY == null) {
       REGISTRY = TT.builder()
           .scanPackages("ru.dimension.ui.view.table.row")
@@ -600,11 +600,15 @@ public class GUIHelper {
       return (RowIconProvider<T>) ModelIconProviders.forQueryRow();
     } else if (rowClass.equals(Rows.QueryTableRow.class)) {
       return (RowIconProvider<T>) ModelIconProviders.forQueryTableRow();
+    } else if (rowClass == Rows.TaskLinkRow.class) {
+      return (RowIconProvider<T>) ModelIconProviders.forTaskLinkRow();
+    } else if (rowClass == Rows.TimestampColumnRow.class) {
+      return (RowIconProvider<T>) ModelIconProviders.forTimestampColumnRow();
     }
     return null;
   }
 
-  private static void configureStandardTableProperties(JXTable table) {
+  public static void configureStandardTableProperties(JXTable table) {
     table.setShowVerticalLines(true);
     table.setShowHorizontalLines(true);
     table.setGridColor(java.awt.Color.GRAY);

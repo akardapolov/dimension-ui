@@ -9,8 +9,8 @@ import lombok.Getter;
 import ru.dimension.ui.component.block.base.AbstractConfigBlock;
 import ru.dimension.ui.component.panel.FunctionPanel;
 import ru.dimension.ui.component.panel.LegendPanel;
-import ru.dimension.ui.component.panel.popup.ActionPanel;
-import ru.dimension.ui.component.panel.popup.FilterPanel;
+import ru.dimension.ui.component.panel.popup.action.ActionPanel;
+import ru.dimension.ui.component.panel.popup.filter.FilterPanel;
 import ru.dimension.ui.component.panel.range.RealTimeRangePanel;
 import ru.dimension.ui.laf.LaF;
 

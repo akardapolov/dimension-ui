@@ -28,6 +28,7 @@ import javax.swing.table.TableRowSorter;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTitledSeparator;
+import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.tt.api.TT;
 import ru.dimension.tt.api.TTRegistry;
 import ru.dimension.tt.swing.TTTable;
@@ -237,6 +238,45 @@ public class ModelView extends JPanel {
       metricTable.setItems(items);
     } finally {
       ignoreToggleEvents = false;
+    }
+    updateMetricPickAllState();
+  }
+
+  public void uncheckColumn(CProfile cProfile) {
+    if (columnPickColumnIndex < 0) return;
+    for (int i = 0; i < columnTable.model().getRowCount(); i++) {
+      ColumnRow row = columnTable.model().itemAt(i);
+      if (row != null && row.hasOrigin()
+          && row.getOrigin().getColId() == cProfile.getColId()
+          && row.isPick()) {
+        ignoreToggleEvents = true;
+        try {
+          columnTable.model().setValueAt(false, i, columnPickColumnIndex);
+        } finally {
+          ignoreToggleEvents = false;
+        }
+        break;
+      }
+    }
+    updateColumnPickAllState();
+  }
+
+  public void uncheckMetric(CProfile cProfile) {
+    if (metricPickColumnIndex < 0) return;
+    for (int i = 0; i < metricTable.model().getRowCount(); i++) {
+      MetricRow row = metricTable.model().itemAt(i);
+      if (row != null && row.hasOrigin()
+          && row.getOrigin().getYAxis() != null
+          && row.getOrigin().getYAxis().getColId() == cProfile.getColId()
+          && row.isPick()) {
+        ignoreToggleEvents = true;
+        try {
+          metricTable.model().setValueAt(false, i, metricPickColumnIndex);
+        } finally {
+          ignoreToggleEvents = false;
+        }
+        break;
+      }
     }
     updateMetricPickAllState();
   }

@@ -23,7 +23,7 @@ import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.plaf.basic.CalendarHeaderHandler;
 import org.jdesktop.swingx.plaf.basic.SpinningCalendarHeaderHandler;
 import org.painlessgridbag.PainlessGridBag;
-import ru.dimension.ui.component.panel.popup.ConfigPopupPanel;
+import ru.dimension.ui.component.panel.popup.base.ConfigPopupPanel;
 import ru.dimension.ui.helper.DateHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;

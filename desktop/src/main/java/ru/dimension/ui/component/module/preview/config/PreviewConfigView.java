@@ -3,6 +3,7 @@ package ru.dimension.ui.component.module.preview.config;
 import static ru.dimension.ui.helper.GUIHelper.getLabel;
 import static ru.dimension.ui.laf.LafColorGroup.CHART_PANEL;
 
+import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.border.EtchedBorder;
 import lombok.Getter;
@@ -22,6 +23,7 @@ public class PreviewConfigView extends JPanel {
   private final LegendPanel realTimeLegendPanel;
   private final ConfigShowHidePanel configShowHidePanel;
   private final CollapseCardPanel collapseCardPanel;
+  private final JButton clearButton;
 
   public PreviewConfigView() {
     setBorder(new EtchedBorder());
@@ -31,10 +33,12 @@ public class PreviewConfigView extends JPanel {
     this.realTimeLegendPanel = new LegendPanel(getLabel("Legend: "));
     this.configShowHidePanel = new ConfigShowHidePanel(getLabel("Config: "));
     this.collapseCardPanel = new CollapseCardPanel(getLabel("Dashboard"));
+    this.clearButton = new JButton("Clear");
     this.previewConfigBlock = new PreviewConfigBlock(realTimeRangePanel,
                                                      realTimeLegendPanel,
                                                      configShowHidePanel,
-                                                     collapseCardPanel);
+                                                     collapseCardPanel,
+                                                     clearButton);
 
     buildLayout();
   }

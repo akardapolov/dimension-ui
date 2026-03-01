@@ -47,7 +47,7 @@ import ru.dimension.ui.component.module.analyze.timeseries.algorithm.AlgorithmTy
 import ru.dimension.ui.component.module.analyze.timeseries.algorithm.TimeSeriesAlgorithm;
 import ru.dimension.ui.component.module.analyze.timeseries.algorithm.anomaly.MatrixProfileAlgorithm;
 import ru.dimension.ui.component.module.analyze.timeseries.algorithm.forecast.ARIMAlgorithm;
-import ru.dimension.ui.component.module.analyze.timeseries.popup.PopupPanel;
+import ru.dimension.ui.component.module.analyze.timeseries.AlgorithmSettingsPanel;
 import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
@@ -73,7 +73,7 @@ public abstract class AnalyzeTimeSeriesPanel extends JPanel implements IDetailPa
   protected List<TimeSeriesAlgorithm<?>> listAlgorithm = new ArrayList<>();
   protected List<JRadioButton> jrbListAlgorithm = new ArrayList<>();
   protected ButtonGroup buttonGroup;
-  private final PopupPanel popupPanel;
+  private final AlgorithmSettingsPanel algorithmSettingsPanel;
 
   protected Long begin;
   protected Long end;
@@ -141,10 +141,10 @@ public abstract class AnalyzeTimeSeriesPanel extends JPanel implements IDetailPa
 
     this.insightConfigBlock.getCollapseCardPanel().setState(ChartCardState.EXPAND_ALL);
 
-    this.popupPanel = new PopupPanel();
-    CellEditorListener popupHandler = new TablePopupCellEditorHandler(popupPanel, listAlgorithm);
-    popupPanel.getTable().getJxTable().getDefaultEditor(Object.class).addCellEditorListener(popupHandler);
-    popupPanel.getTable().getJxTable().getDefaultEditor(Object.class).addCellEditorListener(new CellEditorListener() {
+    this.algorithmSettingsPanel = new AlgorithmSettingsPanel();
+    CellEditorListener popupHandler = new TablePopupCellEditorHandler(algorithmSettingsPanel, listAlgorithm);
+    algorithmSettingsPanel.getTable().getJxTable().getDefaultEditor(Object.class).addCellEditorListener(popupHandler);
+    algorithmSettingsPanel.getTable().getJxTable().getDefaultEditor(Object.class).addCellEditorListener(new CellEditorListener() {
       @Override
       public void editingStopped(ChangeEvent e) {
         updateAllCharts();
@@ -165,11 +165,11 @@ public abstract class AnalyzeTimeSeriesPanel extends JPanel implements IDetailPa
     LaF.setBackgroundConfigPanel(CHART_PANEL, topBarPanel);
     PainlessGridBag gblTop = new PainlessGridBag(topBarPanel, PGHelper.getPGConfig(1), false);
     gblTop.row()
-        .cell(jrbPanel).cell(popupPanel)
+        .cell(jrbPanel).cell(algorithmSettingsPanel)
         .cellX(new JPanel(), 1).fillX()
         .cell(insightConfigBlock);
     PGHelper.setConstrainsInsets(gblTop, jrbPanel, 0, 5);
-    PGHelper.setConstrainsInsets(gblTop, popupPanel, 0, 5);
+    PGHelper.setConstrainsInsets(gblTop, algorithmSettingsPanel, 0, 5);
     gblTop.done();
 
     this.jspSettingsChart.setTopComponent(topBarPanel);
@@ -330,15 +330,15 @@ public abstract class AnalyzeTimeSeriesPanel extends JPanel implements IDetailPa
         .map(algorithm -> {
           JRadioButton jRadioButton = new JRadioButton(algorithm.getName());
           jRadioButton.addActionListener(event -> {
-            popupPanel.getTable().getJxTable().clearSelection();
-            popupPanel.getTable().getDefaultTableModel().setRowCount(0);
+            algorithmSettingsPanel.getTable().getJxTable().clearSelection();
+            algorithmSettingsPanel.getTable().getDefaultTableModel().setRowCount(0);
 
             JRadioButton selectedButton = (JRadioButton) event.getSource();
             String selectedText = selectedButton.getText();
-            popupPanel.getTextField().setText(selectedText);
+            algorithmSettingsPanel.getTextField().setText(selectedText);
 
             for (Map.Entry<String, String> entry : algorithm.getParameters().entrySet()) {
-              popupPanel.getTable().getDefaultTableModel()
+              algorithmSettingsPanel.getTable().getDefaultTableModel()
                   .addRow(new Object[]{entry.getKey(), entry.getValue()});
             }
 
@@ -354,12 +354,12 @@ public abstract class AnalyzeTimeSeriesPanel extends JPanel implements IDetailPa
 
     jrbListAlgorithm.stream().findFirst().ifPresent(radioButton -> {
       radioButton.setSelected(true);
-      popupPanel.getTextField().setText(radioButton.getText());
+      algorithmSettingsPanel.getTextField().setText(radioButton.getText());
       listAlgorithm.stream()
           .filter(algorithm -> algorithm.getName().equals(radioButton.getText()))
           .findFirst()
           .ifPresent(alg -> alg.getParameters()
-              .forEach((key, val) -> popupPanel.getTable().getDefaultTableModel()
+              .forEach((key, val) -> algorithmSettingsPanel.getTable().getDefaultTableModel()
                   .addRow(new Object[]{key, val})));
     });
   }

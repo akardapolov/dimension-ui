@@ -109,8 +109,8 @@ public class TaskEditHandlerTest extends HandlerMock {
 
     createTaskTest(task);
 
-    buttonTaskPanelMock.getBtnCopy().doClick();
-    buttonTaskPanelMock.getBtnSave().doClick();
+    taskButtonPanelHandlerLazy.get().onCopy();
+    taskButtonPanelHandlerLazy.get().onSave();
 
     String taskNameCopy = taskName + "_copy";
     String taskDescriptionCopy = taskDescription + "_copy";
@@ -147,13 +147,13 @@ public class TaskEditHandlerTest extends HandlerMock {
 
     createTaskTest(task);
 
-    buttonTaskPanelMock.getBtnCopy().doClick();
+    taskButtonPanelHandlerLazy.get().onCopy();
 
     taskPanelLazy.get().getJTextFieldTask().setText(taskName);
 
     disposeWindows();
 
-    assertThrows(NotFoundException.class, buttonTaskPanelMock.getBtnSave()::doClick,
+    assertThrows(NotFoundException.class, taskButtonPanelHandlerLazy.get()::onSave,
                  String.format("Name %s already exists, please enter another one.", taskName));
   }
 

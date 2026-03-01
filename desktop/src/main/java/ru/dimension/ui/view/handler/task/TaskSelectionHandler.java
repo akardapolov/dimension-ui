@@ -17,6 +17,11 @@ import javax.swing.SwingUtilities;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import ru.dimension.tt.swing.TTTable;
+import ru.dimension.ui.bus.EventBus;
+import ru.dimension.ui.bus.event.UpdateQueryList;
+import ru.dimension.ui.component.broker.MessageBroker.Component;
+import ru.dimension.ui.helper.event.EventRouteRegistry;
+import ru.dimension.ui.helper.event.EventUtils;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.manager.TemplateManager;
 import ru.dimension.ui.model.info.ConnectionInfo;
@@ -49,6 +54,10 @@ public final class TaskSelectionHandler extends AbstractTableSelectionHandler<Ta
   private final JCheckBox checkboxConfig;
   private final JXTableCase connectionCase;
   private final JXTableCase queryCase;
+  private final EventBus eventBus;
+
+  @SuppressWarnings("FieldCanBeLocal")
+  private final EventRouteRegistry eventRegistry;
 
   @Inject
   public TaskSelectionHandler(@Named("taskConfigCase") JXTableCase taskCase,
@@ -60,7 +69,8 @@ public final class TaskSelectionHandler extends AbstractTableSelectionHandler<Ta
                               @Named("taskConfigPanel") TaskPanel taskPanel,
                               @Named("multiSelectQueryPanel") MultiSelectQueryPanel multiSelectPanel,
                               @Named("taskButtonPanel") ButtonPanel buttonPanel,
-                              @Named("checkboxConfig") JCheckBox checkboxConfig) {
+                              @Named("checkboxConfig") JCheckBox checkboxConfig,
+                              @Named("eventBus") EventBus eventBus) {
     super(taskCase);
     this.connectionCase = connectionCase;
     this.queryCase = queryCase;
@@ -71,6 +81,11 @@ public final class TaskSelectionHandler extends AbstractTableSelectionHandler<Ta
     this.multiSelectPanel = multiSelectPanel;
     this.buttonPanel = buttonPanel;
     this.checkboxConfig = checkboxConfig;
+    this.eventBus = eventBus;
+
+    this.eventRegistry = EventRouteRegistry.forComponent(Component.CONFIGURATION, EventUtils::getComponent)
+        .routeGlobal(UpdateQueryList.class, this::handleUpdateQueryList)
+        .register(eventBus);
 
     this.checkboxConfig.addItemListener(e -> {
       if (e.getStateChange() == ItemEvent.SELECTED) {
@@ -100,6 +115,12 @@ public final class TaskSelectionHandler extends AbstractTableSelectionHandler<Ta
 
     if (checkboxConfig.isSelected()) {
       applyHierarchyMode();
+    }
+  }
+
+  private void handleUpdateQueryList(UpdateQueryList event) {
+    if (Objects.equals(event.taskId(), context.getSelectedTaskId())) {
+      updateQueryMultiSelect(event.taskId());
     }
   }
 

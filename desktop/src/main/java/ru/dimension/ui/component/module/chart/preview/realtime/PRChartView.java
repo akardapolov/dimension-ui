@@ -14,8 +14,8 @@ import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.module.base.BaseUnitView;
 import ru.dimension.ui.component.panel.FunctionPanel;
 import ru.dimension.ui.component.panel.LegendPanel;
-import ru.dimension.ui.component.panel.popup.ActionPanel;
-import ru.dimension.ui.component.panel.popup.FilterPanel;
+import ru.dimension.ui.component.panel.popup.action.ActionPanel;
+import ru.dimension.ui.component.panel.popup.filter.FilterPanel;
 import ru.dimension.ui.component.panel.range.RealTimeRangePanel;
 
 @Log4j2

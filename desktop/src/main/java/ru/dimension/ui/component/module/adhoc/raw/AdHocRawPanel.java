@@ -6,6 +6,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.time.Instant;
@@ -31,6 +32,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JViewport;
 import javax.swing.RowFilter;
@@ -40,6 +42,8 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.CellEditorListener;
 import javax.swing.event.ChangeEvent;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellEditor;
@@ -55,12 +59,14 @@ import ru.dimension.db.model.profile.TProfile;
 import ru.dimension.db.model.profile.table.TType;
 import ru.dimension.db.service.mapping.Mapper;
 import ru.dimension.db.sql.BatchResultSet;
+import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.gantt.DrawingScale;
 import ru.dimension.ui.model.gantt.GanttColumn;
 import ru.dimension.ui.view.detail.GanttCommon;
+import ru.dimension.ui.view.detail.raw.RawDataTransposePanel;
 import ext.egantt.swing.GanttTable;
 
 import static ru.dimension.ui.laf.LafColorGroup.TABLE_BACKGROUND;
@@ -112,10 +118,15 @@ public class AdHocRawPanel extends JXTaskPane implements GanttFilterHeaderRender
 
   private final ColorStripViewportOverlay colorStripOverlay;
   private JPanel tableWithStripPanel;
+  private JPanel contentPanel;
 
   private GanttFilterHeaderRenderer headerRenderer;
   private GanttFilterPopup filterPopup;
   private int activePopupModelIndex = -1;
+
+  private final JCheckBox transposeCheckBox;
+  private final RawDataTransposePanel transposePanel;
+  private JSplitPane splitPane;
 
   public AdHocRawPanel(DStore dStore,
                        TProfile tProfile,
@@ -184,10 +195,26 @@ public class AdHocRawPanel extends JXTaskPane implements GanttFilterHeaderRender
     this.colorStripOverlay.setVisible(false);
     this.colorStripOverlay.setActive(false);
 
-    JPanel contentPanel = buildContentPanel();
-    add(contentPanel);
+    this.transposePanel = new RawDataTransposePanel();
+    this.transposeCheckBox = new JCheckBox("Transpose");
+    this.transposeCheckBox.setSelected(false);
+    this.transposeCheckBox.addActionListener(e -> toggleTranspose());
 
+    this.table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+      @Override
+      public void valueChanged(ListSelectionEvent e) {
+        if (!e.getValueIsAdjusting() && transposeCheckBox.isSelected()) {
+          fireTransposeUpdate();
+        }
+      }
+    });
+
+    this.contentPanel = buildContentPanel();
+  }
+
+  public Runnable initializeUI() throws InterruptedException {
     loadInitialData();
+    return () -> PGHelper.cellXYRemainder(this, contentPanel, 1, false);
   }
 
   private void applyHeaderRenderer() {
@@ -263,6 +290,7 @@ public class AdHocRawPanel extends JXTaskPane implements GanttFilterHeaderRender
 
     JPanel topPanel = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 4, 0));
     topPanel.add(rowCountLabel);
+    topPanel.add(transposeCheckBox);
     topPanel.add(fetchNextButton);
 
     tableScrollPane = new JScrollPane(table,
@@ -463,6 +491,13 @@ public class AdHocRawPanel extends JXTaskPane implements GanttFilterHeaderRender
 
     table.setDefaultRenderer(Object.class, new PivotTriangleCellRenderer());
     activateColorStrip();
+
+    if (transposePanel != null) {
+      transposePanel.setSeriesColorMap(ganttSeriesColorMap);
+      if (pivotCProfile != null) {
+        transposePanel.setHighlightColumnName(pivotCProfile.getColName());
+      }
+    }
   }
 
   private void clearCurrentPivot() {
@@ -470,6 +505,11 @@ public class AdHocRawPanel extends JXTaskPane implements GanttFilterHeaderRender
     ganttSeriesColorMap.clear();
     currentGanttTable = null;
     rowSorter.setRowFilter(null);
+
+    if (transposePanel != null) {
+      transposePanel.setSeriesColorMap(null);
+      transposePanel.setHighlightColumnName(null);
+    }
   }
 
   private void computeGanttFromTableModel() {
@@ -623,6 +663,68 @@ public class AdHocRawPanel extends JXTaskPane implements GanttFilterHeaderRender
     }
     updateRowCountDisplay();
     table.repaint();
+  }
+
+  private void toggleTranspose() {
+    if (transposeCheckBox.isSelected()) {
+      if (table.getRowCount() > 0 && table.getSelectedRow() == -1) {
+        JViewport viewport = tableScrollPane.getViewport();
+        Point viewPosition = viewport.getViewPosition();
+        int viewportHeight = viewport.getExtentSize().height;
+        Point centerPoint = new Point(viewPosition.x, viewPosition.y + viewportHeight / 2);
+        int middleRow = table.rowAtPoint(centerPoint);
+        if (middleRow < 0) {
+          middleRow = table.rowAtPoint(viewPosition);
+        }
+        if (middleRow < 0) {
+          middleRow = 0;
+        }
+        table.setRowSelectionInterval(middleRow, middleRow);
+      }
+
+      contentPanel.remove(tableWithStripPanel);
+
+      splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, tableWithStripPanel, transposePanel);
+      splitPane.setResizeWeight(0.7);
+      splitPane.setDividerSize(5);
+      splitPane.setOneTouchExpandable(true);
+
+      contentPanel.add(splitPane, BorderLayout.CENTER);
+
+      fireTransposeUpdate();
+    } else {
+      if (splitPane != null) {
+        contentPanel.remove(splitPane);
+        splitPane = null;
+      }
+
+      transposePanel.clear();
+      contentPanel.add(tableWithStripPanel, BorderLayout.CENTER);
+    }
+
+    contentPanel.revalidate();
+    contentPanel.repaint();
+  }
+
+  private void fireTransposeUpdate() {
+    int viewRow = table.getSelectedRow();
+    if (viewRow < 0) {
+      transposePanel.clear();
+      return;
+    }
+
+    int modelRow = table.convertRowIndexToModel(viewRow);
+    int colCount = tableModel.getColumnCount();
+
+    String[] columnNames = new String[colCount];
+    Object[] rowValues = new Object[colCount];
+
+    for (int col = 0; col < colCount; col++) {
+      columnNames[col] = tableModel.getColumnName(col);
+      rowValues[col] = tableModel.getValueAt(modelRow, col);
+    }
+
+    transposePanel.updateFromRow(columnNames, rowValues);
   }
 
   private class AdHocGanttHelper extends GanttCommon {

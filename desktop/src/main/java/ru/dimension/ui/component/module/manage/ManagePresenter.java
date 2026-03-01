@@ -5,7 +5,6 @@ import static ru.dimension.ui.model.sql.GatherDataMode.BY_CLIENT_JDBC;
 import static ru.dimension.ui.model.sql.GatherDataMode.BY_SERVER_JDBC;
 
 import jakarta.inject.Inject;
-import jakarta.inject.Named;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.Connection;
@@ -13,6 +12,7 @@ import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import javax.swing.JButton;
+import javax.swing.SwingUtilities;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.di.Assisted;
@@ -44,6 +44,8 @@ import ru.dimension.ui.state.SqlQueryState;
 
 @Log4j2
 public class ManagePresenter implements ActionListener, MessageAction {
+  private static final String NO_PROFILE_TOOLTIP = "Select a profile first";
+
   private final MessageBroker.Component component;
 
   private final ManageView view;
@@ -58,7 +60,9 @@ public class ManagePresenter implements ActionListener, MessageAction {
 
   private final ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(1);
 
+  // Variable 'key' is updated from the UI thread (MessageBroker)
   private ProfileTaskQueryKey key = new ProfileTaskQueryKey();
+  private boolean profileSelected = false;
 
   private final PreviewModuleFactory previewModuleFactory;
   private PreviewModule previewModule;
@@ -89,6 +93,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
     this.dStore = dStore;
 
     setupListeners();
+    disableActionButtons();
   }
 
   private void setupListeners() {
@@ -97,15 +102,54 @@ public class ManagePresenter implements ActionListener, MessageAction {
     view.getProfileActionPanel().getPreview().addActionListener(this);
   }
 
+  private void disableActionButtons() {
+    SwingUtilities.invokeLater(() -> {
+      JButton startBtn = view.getProfileActionPanel().getStart();
+      JButton stopBtn = view.getProfileActionPanel().getStop();
+      JButton previewBtn = view.getProfileActionPanel().getPreview();
+
+      startBtn.setEnabled(false);
+      stopBtn.setEnabled(false);
+      previewBtn.setEnabled(false);
+
+      startBtn.setToolTipText(NO_PROFILE_TOOLTIP);
+      stopBtn.setToolTipText(NO_PROFILE_TOOLTIP);
+      previewBtn.setToolTipText(NO_PROFILE_TOOLTIP);
+    });
+  }
+
+  private void enableActionButtons() {
+    SwingUtilities.invokeLater(() -> {
+      JButton startBtn = view.getProfileActionPanel().getStart();
+      JButton stopBtn = view.getProfileActionPanel().getStop();
+      JButton previewBtn = view.getProfileActionPanel().getPreview();
+
+      startBtn.setEnabled(true);
+      stopBtn.setEnabled(true);
+      previewBtn.setEnabled(true);
+
+      startBtn.setToolTipText(null);
+      stopBtn.setToolTipText(null);
+      previewBtn.setToolTipText(null);
+    });
+  }
+
   @Override
   public void actionPerformed(ActionEvent e) {
+    if (!profileSelected) {
+      log.warn("No profile selected, ignoring button action");
+      return;
+    }
+
     JButton button = (JButton) e.getSource();
     String actionName = button.getActionCommand();
+
+    ProfileTaskQueryKey capturedKey = this.key;
 
     executorService.submit(() -> {
       eventListener.fireProgressbarVisible(ProgressbarState.SHOW);
       try {
-        actionPerformed(actionName);
+        actionPerformed(actionName, capturedKey);
       } catch (Exception exception) {
         log.catching(exception);
 
@@ -126,7 +170,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
     log.info("Button {} has fired..", actionName);
   }
 
-  private void actionPerformed(String actionName) {
+  private void actionPerformed(String actionName, ProfileTaskQueryKey key) {
     if (ActionName.START.name().equals(actionName)) {
       profileManager.setProfileInfoStatusById(key.getProfileId(), RunStatus.RUNNING);
       eventListener.fireOnStartOnWorkspaceProfileView(key.getProfileId());
@@ -275,14 +319,16 @@ public class ManagePresenter implements ActionListener, MessageAction {
       profileManager.setProfileInfoStatusById(key.getProfileId(), RunStatus.NOT_RUNNING);
       eventListener.fireOnStopOnWorkspaceProfileView(key.getProfileId());
 
-      collector.stop(profileInfo);
-
-      profileInfo.getTaskInfoList()
-          .forEach(taskId -> profileManager.getQueryInfoList(key.getProfileId(), taskId)
-              .forEach(queryInfo -> {
-                ProfileTaskQueryKey profileTaskQueryKey = new ProfileTaskQueryKey(key.getProfileId(), taskId, queryInfo.getId());
-                taskExecutorPool.remove(profileTaskQueryKey);
-              }));
+      try {
+        collector.stop(profileInfo);
+      } finally {
+        profileInfo.getTaskInfoList()
+            .forEach(taskId -> profileManager.getQueryInfoList(key.getProfileId(), taskId)
+                .forEach(queryInfo -> {
+                  ProfileTaskQueryKey profileTaskQueryKey = new ProfileTaskQueryKey(key.getProfileId(), taskId, queryInfo.getId());
+                  taskExecutorPool.remove(profileTaskQueryKey);
+                }));
+      }
     } else if (ActionName.PREVIEW.name().equals(actionName)) {
       handlePreviewAction();
     }
@@ -304,7 +350,9 @@ public class ManagePresenter implements ActionListener, MessageAction {
 
   private void setProfileStatusJLabel() {
     ProfileInfo profileInfo = profileManager.getProfileInfoById(key.getProfileId());
-    view.getProfileActionPanel().setButtonState(profileInfo.getName(), profileInfo.getStatus());
+    if (profileInfo != null) {
+      view.getProfileActionPanel().setButtonState(profileInfo.getName(), profileInfo.getStatus());
+    }
   }
 
   @Override
@@ -314,9 +362,16 @@ public class ManagePresenter implements ActionListener, MessageAction {
     switch (message.action()) {
       case SET_PROFILE_TASK_QUERY_KEY -> {
         key = message.parameters().get("key");
+        profileSelected = true;
 
         ProfileInfo profileInfo = profileManager.getProfileInfoById(key.getProfileId());
-        view.getProfileActionPanel().setButtonState(profileInfo.getName(), profileInfo.getStatus());
+        if (profileInfo != null) {
+          SwingUtilities.invokeLater(() -> {
+            view.getProfileActionPanel().getPreview().setEnabled(true);
+            view.getProfileActionPanel().getPreview().setToolTipText(null);
+            view.getProfileActionPanel().setButtonState(profileInfo.getName(), profileInfo.getStatus());
+          });
+        }
       }
     }
   }

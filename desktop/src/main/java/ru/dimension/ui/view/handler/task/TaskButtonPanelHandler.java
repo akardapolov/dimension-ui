@@ -6,16 +6,19 @@ import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import javax.swing.JCheckBox;
 import javax.swing.JOptionPane;
 import org.jdesktop.swingx.JXTable;
 import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.bus.EventBus;
 import ru.dimension.ui.bus.event.ProfileAddEvent;
+import ru.dimension.ui.bus.event.UpdateQueryList;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.manager.TemplateManager;
 import ru.dimension.ui.model.config.Query;
+import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.TaskInfo;
@@ -27,6 +30,7 @@ import ru.dimension.ui.view.panel.config.task.MultiSelectQueryPanel;
 import ru.dimension.ui.view.panel.config.task.TaskPanel;
 import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.view.table.row.Rows.QueryTableRow;
+import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
 @Singleton
 public final class TaskButtonPanelHandler implements ButtonPanelBindings.CrudActions {
@@ -95,12 +99,41 @@ public final class TaskButtonPanelHandler implements ButtonPanelBindings.CrudAct
   @Override
   public void onCopy() {
     isNew = true;
-    taskPanel.getJTextFieldTask().setText(taskPanel.getJTextFieldTask().getText() + "_copy");
+    Integer selectedId = context.getSelectedTaskId();
+
+    if (selectedId == null) {
+      selectedId = profileManager.getTaskInfoList().stream()
+          .map(TaskInfo::getId).max(Comparator.naturalOrder()).orElse(null);
+    }
+
+    if (selectedId != null) {
+      TaskInfo currentTask = profileManager.getTaskInfoById(selectedId);
+      if (currentTask != null) {
+        taskPanel.getJTextFieldTask().setText(currentTask.getName() + "_copy");
+        String currentDesc = currentTask.getDescription();
+        if (currentDesc != null && !currentDesc.isEmpty()) {
+          taskPanel.getJTextFieldDescription().setText(currentDesc + "_copy");
+        } else {
+          taskPanel.getJTextFieldDescription().setText("");
+        }
+      } else {
+        appendCopySuffix();
+      }
+    } else {
+      appendCopySuffix();
+    }
+
+    setEditMode(true);
+  }
+
+  private void appendCopySuffix() {
+    String currentTask = taskPanel.getJTextFieldTask().getText();
+    taskPanel.getJTextFieldTask().setText((currentTask == null ? "" : currentTask) + "_copy");
+
     String currentDesc = taskPanel.getJTextFieldDescription().getText();
-    if (currentDesc != null) {
+    if (currentDesc != null && !currentDesc.isEmpty()) {
       taskPanel.getJTextFieldDescription().setText(currentDesc + "_copy");
     }
-    setEditMode(true);
   }
 
   @Override
@@ -113,16 +146,19 @@ public final class TaskButtonPanelHandler implements ButtonPanelBindings.CrudAct
     }
     profileManager.deleteTask(id, profileManager.getTaskInfoById(id).getName());
     eventBus.publish(new ProfileAddEvent());
+    selectFirstOrClear();
   }
 
   @Override
   public void onSave() {
-    String name = taskPanel.getJTextFieldTask().getText().trim();
-    if (name.isEmpty()) return;
+    String name = taskPanel.getJTextFieldTask().getText();
+    if (name == null || name.trim().isEmpty()) return;
+    name = name.trim();
 
     if (isNew) {
+      final String checkName = name;
       boolean nameExists = profileManager.getTaskInfoList().stream()
-          .anyMatch(t -> t.getName().equals(name));
+          .anyMatch(t -> t.getName().equals(checkName));
       if (nameExists) {
         throw new NotFoundException(
             String.format("Name %s already exists, please enter another one.", name));
@@ -133,7 +169,7 @@ public final class TaskButtonPanelHandler implements ButtonPanelBindings.CrudAct
     int id = isNew
         ? profileManager.getTaskInfoList().stream()
         .map(TaskInfo::getId).max(Comparator.naturalOrder()).orElse(0) + 1
-        : context.getSelectedTaskId();
+        : (context.getSelectedTaskId() != null ? context.getSelectedTaskId() : 1);
 
     info.setId(id);
     info.setName(name);
@@ -151,12 +187,61 @@ public final class TaskButtonPanelHandler implements ButtonPanelBindings.CrudAct
     context.setSelectedTaskId(info.getId());
 
     setEditMode(false);
+    isNew = false;
+
     eventBus.publish(new ProfileAddEvent());
+    eventBus.publish(new UpdateQueryList(info.getId()));
+
+    restoreTaskSelection(info.getId());
   }
 
   @Override
   public void onCancel() {
+    Integer currentId = context.getSelectedTaskId();
     setEditMode(false);
+    isNew = false;
+    if (currentId != null) {
+      restoreTaskSelection(currentId);
+    } else {
+      selectFirstOrClear();
+    }
+  }
+
+  private void restoreTaskSelection(int targetId) {
+    JXTable table = taskCase.getJxTable();
+    if (table == null) return;
+
+    TTTable<TaskRow, JXTable> tt = taskCase.getTypedTable();
+    if (tt != null && tt.model() != null) {
+      List<TaskRow> rows = tt.model().items();
+      for (int i = 0; i < rows.size(); i++) {
+        if (Objects.equals(rows.get(i).getId(), targetId)) {
+          table.setRowSelectionInterval(i, i);
+          return;
+        }
+      }
+    }
+    selectFirstOrClearInternal(table);
+  }
+
+  private void selectFirstOrClear() {
+    JXTable table = taskCase.getJxTable();
+    if (table == null) return;
+    selectFirstOrClearInternal(table);
+  }
+
+  private void selectFirstOrClearInternal(JXTable table) {
+    if (table.getRowCount() > 0) {
+      table.setRowSelectionInterval(0, 0);
+    } else {
+      table.clearSelection();
+      context.setSelectedTaskId(null);
+      taskPanel.getJTextFieldTask().setText("");
+      taskPanel.getJTextFieldDescription().setText("");
+      multiSelectPanel.getSelectedQueryCase().clearTable();
+      multiSelectPanel.getQueryListCase().clearTable();
+      ButtonPanelBindings.setViewMode(buttonPanel, false);
+    }
   }
 
   private void setEditMode(boolean edit) {
@@ -204,42 +289,82 @@ public final class TaskButtonPanelHandler implements ButtonPanelBindings.CrudAct
   }
 
   private int getPullTimeout() {
-    if (taskPanel.getRadioButtonPanel().getJRadioButton1().isSelected()) return 1;
-    if (taskPanel.getRadioButtonPanel().getJRadioButton3().isSelected()) return 3;
-    if (taskPanel.getRadioButtonPanel().getJRadioButton5().isSelected()) return 5;
-    if (taskPanel.getRadioButtonPanel().getJRadioButton10().isSelected()) return 10;
+    try {
+      if (taskPanel.getRadioButtonPanel().getJRadioButton1().isSelected()) return 1;
+      if (taskPanel.getRadioButtonPanel().getJRadioButton3().isSelected()) return 3;
+      if (taskPanel.getRadioButtonPanel().getJRadioButton5().isSelected()) return 5;
+      if (taskPanel.getRadioButtonPanel().getJRadioButton10().isSelected()) return 10;
+    } catch (Exception ignored) { }
     return 30;
   }
 
   private int getConnectionId() {
-    String name = taskPanel.getTaskConnectionComboBox().getSelectedRow().get(0).toString();
-    return profileManager.getConnectionInfoList().stream().filter(c -> c.getName().equals(name)).findFirst().orElseThrow().getId();
+    try {
+      List<?> selectedRow = taskPanel.getTaskConnectionComboBox().getSelectedRow();
+      if (selectedRow != null && !selectedRow.isEmpty()) {
+        String name = selectedRow.get(0).toString();
+        return profileManager.getConnectionInfoList().stream()
+            .filter(c -> c.getName().equals(name))
+            .findFirst()
+            .map(ConnectionInfo::getId)
+            .orElse(0);
+      }
+    } catch (Exception ignored) { }
+
+    return profileManager.getConnectionInfoList().stream()
+        .findFirst()
+        .map(ConnectionInfo::getId)
+        .orElse(0);
   }
 
   private List<Integer> processSelectedQueries() {
-    TTTable<QueryTableRow, JXTable> tt = multiSelectPanel.getSelectedQueryCase().getTypedTable();
     List<Integer> ids = new ArrayList<>();
-    for (QueryTableRow row : tt.model().items()) {
-      QueryInfo exist = profileManager.getQueryInfoList().stream().filter(q -> q.getName().equals(row.getName())).findFirst().orElse(null);
-      if (exist != null) ids.add(exist.getId());
-      else ids.add(copyQueryFromTemplate(row.getId()));
-    }
+    try {
+      TTTable<QueryTableRow, JXTable> tt = multiSelectPanel.getSelectedQueryCase().getTypedTable();
+      if (tt == null || tt.model() == null) return ids;
+
+      for (QueryTableRow row : tt.model().items()) {
+        QueryInfo exist = profileManager.getQueryInfoList().stream()
+            .filter(q -> q.getName().equals(row.getName()))
+            .findFirst()
+            .orElse(null);
+
+        if (exist != null) {
+          ids.add(exist.getId());
+        } else {
+          int templateId = copyQueryFromTemplate(row.getId());
+          if (templateId > 0) {
+            ids.add(templateId);
+          }
+        }
+      }
+    } catch (Exception ignored) { }
     return ids;
   }
 
   private int copyQueryFromTemplate(int templateQueryId) {
-    Query q = templateManager.getConfigList(Query.class).stream().filter(x -> x.getId() == templateQueryId).findFirst().orElseThrow();
+    Query q = templateManager.getConfigList(Query.class).stream()
+        .filter(x -> x.getId() == templateQueryId)
+        .findFirst()
+        .orElse(null);
+
+    if (q == null) return 0;
+
     QueryInfo qi = new QueryInfo().setName(q.getName()).setText(q.getText()).setDescription(q.getDescription())
         .setGatherDataMode(q.getGatherDataMode()).setMetricList(q.getMetricList());
     qi.setId(profileManager.getQueryInfoList().stream().map(QueryInfo::getId).max(Comparator.naturalOrder()).orElse(0) + 1);
     profileManager.addQuery(qi);
+
     TableInfo tableInfo = new TableInfo();
     tableInfo.setTableName(qi.getName());
     profileManager.addTable(tableInfo);
+
     return qi.getId();
   }
 
   private boolean isUsedInProfiles(int taskId) {
-    return profileManager.getProfileInfoList().stream().anyMatch(p -> p.getTaskInfoList().contains(taskId));
+    return profileManager.getProfileInfoList().stream()
+        .filter(p -> p.getTaskInfoList() != null)
+        .anyMatch(p -> p.getTaskInfoList().contains(taskId));
   }
 }

@@ -188,6 +188,20 @@ public class PreviewView extends JPanel {
     gbl.done();
   }
 
+  private void updatePickAllCheckboxState() {
+    if (pickAllCheckbox == null || pickColumnIndex < 0) return;
+
+    boolean allPicked = columnTable.model().getRowCount() > 0;
+    for (int i = 0; i < columnTable.model().getRowCount(); i++) {
+      ColumnRow row = columnTable.model().itemAt(i);
+      if (row != null && !row.isPick()) {
+        allPicked = false;
+        break;
+      }
+    }
+    pickAllCheckbox.setSelected(allPicked);
+  }
+
   private void handlePickAllAction(boolean selected) {
     if (pickColumnIndex < 0) return;
 
@@ -261,6 +275,7 @@ public class PreviewView extends JPanel {
       }
     } finally {
       ignoreCheckboxEvents = false;
+      updatePickAllCheckboxState();
     }
   }
 
@@ -282,6 +297,7 @@ public class PreviewView extends JPanel {
             checkboxChangeListener.onCheckboxChanged(item.getName(), item.isPick());
           }
         }
+        updatePickAllCheckboxState();
       }
     });
   }
@@ -320,6 +336,7 @@ public class PreviewView extends JPanel {
       cardContainer.repaint();
     } finally {
       ignoreCheckboxEvents = false;
+      updatePickAllCheckboxState();
     }
   }
 
@@ -343,9 +360,7 @@ public class PreviewView extends JPanel {
   public void updateColumnTables(TableInfo tableInfo) {
     columnTable.setItems(Collections.emptyList());
     populateColumnTable(tableInfo);
-    if (pickAllCheckbox != null) {
-      pickAllCheckbox.setSelected(false);
-    }
+    updatePickAllCheckboxState();
   }
 
   private TTTable<ColumnRow, JXTable> createCheckboxTable(TTRegistry registry) {

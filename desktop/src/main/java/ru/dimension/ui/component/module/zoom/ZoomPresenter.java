@@ -1,4 +1,4 @@
-package ru.dimension.ui.component.module.preview.zoom;
+package ru.dimension.ui.component.module.zoom;
 
 import java.util.concurrent.ConcurrentMap;
 import lombok.extern.log4j.Log4j2;

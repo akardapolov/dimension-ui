@@ -20,7 +20,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package ru.dimension.ui.component.module.analyze.timeseries.popup;
+package ru.dimension.ui.component.module.analyze.timeseries;
 
 import com.github.lgooddatepicker.zinternaltools.InternalUtilities;
 import java.awt.Color;
@@ -41,14 +41,15 @@ import javax.swing.SwingUtilities;
 import lombok.Getter;
 import lombok.Setter;
 import org.painlessgridbag.PainlessGridBag;
-import ru.dimension.ui.component.module.analyze.timeseries.popup.CustomPopup.CustomPopupCloseListener;
+import ru.dimension.ui.component.panel.popup.internal.CustomPopup;
+import ru.dimension.ui.component.panel.popup.internal.CustomPopup.CustomPopupCloseListener;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.model.table.JXTableCase;
 
 @Getter
 @Setter
-public class PopupPanel extends JPanel implements CustomPopupCloseListener {
+public class AlgorithmSettingsPanel extends JPanel implements CustomPopupCloseListener {
 
   private JXTableCase table;
   private JTextField textField;
@@ -58,7 +59,7 @@ public class PopupPanel extends JPanel implements CustomPopupCloseListener {
   private JPanel contentPanel;
   private Instant lastPopupCloseTime = Instant.now();
 
-  public PopupPanel() {
+  public AlgorithmSettingsPanel() {
     this.textField = new JTextField(10);
     this.textField.setEditable(false);
     this.textField.setBackground(Color.white);

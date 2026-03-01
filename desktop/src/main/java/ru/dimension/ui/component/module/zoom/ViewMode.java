@@ -1,4 +1,4 @@
-package ru.dimension.ui.component.module.preview.zoom;
+package ru.dimension.ui.component.module.zoom;
 
 public enum ViewMode {
   PLAIN("Plain"),

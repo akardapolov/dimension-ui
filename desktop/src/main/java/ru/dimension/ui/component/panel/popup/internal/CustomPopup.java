@@ -1,26 +1,4 @@
-/*
- * The MIT License
- *
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-package ru.dimension.ui.component.module.analyze.timeseries.popup;
+package ru.dimension.ui.component.panel.popup.internal;
 
 import com.github.lgooddatepicker.zinternaltools.InternalUtilities;
 import java.awt.BorderLayout;
@@ -74,7 +52,6 @@ public class CustomPopup extends Popup implements WindowFocusListener, Component
     mainPanel.setBorder(compoundBorder);
     displayWindow = new JWindow(topWindow);
 
-    // This is part of the bug fix for blank popup windows in linux.
     displayWindow.addWindowListener(new WindowAdapter() {
       @Override
       public void windowOpened(WindowEvent e) {
@@ -82,11 +59,9 @@ public class CustomPopup extends Popup implements WindowFocusListener, Component
       }
     });
 
-    // Add mouse listener to detect when mouse leaves the popup area
     displayWindow.addMouseListener(new MouseAdapter() {
       @Override
       public void mouseExited(MouseEvent e) {
-        // Check if the mouse is still within the popup area
         if (!isMouseInPopupArea()) {
           hide();
         }
@@ -167,9 +142,7 @@ public class CustomPopup extends Popup implements WindowFocusListener, Component
   }
 
   private void registerListeners() {
-    // Register this class as a focus listener with the display window.
     displayWindow.addWindowFocusListener(this);
-    // Register this class as a window movement listener with the top window.
     topWindow.addComponentListener(this);
   }
 
@@ -183,19 +156,30 @@ public class CustomPopup extends Popup implements WindowFocusListener, Component
     displayWindow.setVisible(true);
   }
 
+  public void setOpacity(float opacity) {
+    if (displayWindow != null) {
+      float clamped = Math.max(0.1f, Math.min(1.0f, opacity));
+      displayWindow.setOpacity(clamped);
+    }
+  }
+
+  public float getOpacity() {
+    if (displayWindow != null) {
+      return displayWindow.getOpacity();
+    }
+    return 1.0f;
+  }
+
   @Override
   public void windowGainedFocus(WindowEvent e) {
   }
 
   @Override
   public void windowLostFocus(WindowEvent e) {
-    // This section is part of the bug fix for blank popup windows in linux.
     if (!enableHideWhenFocusIsLost) {
       e.getWindow().requestFocus();
       return;
     }
-    // This fixes a linux-specific behavior where the focus can be "lost" by clicking a child
-    // component (inside the same panel!).
     if (InternalUtilities.isMouseWithinComponent(displayWindow)) {
       return;
     }

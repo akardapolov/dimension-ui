@@ -17,7 +17,7 @@ import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.panel.function.NormFunctionPanel;
 import ru.dimension.ui.component.panel.function.TimeRangeFunctionPanel;
-import ru.dimension.ui.component.panel.popup.ConfigPopupPanel;
+import ru.dimension.ui.component.panel.popup.base.ConfigPopupPanel;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.model.ProfileTaskQueryKey;

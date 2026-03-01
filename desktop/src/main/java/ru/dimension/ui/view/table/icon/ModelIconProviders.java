@@ -26,11 +26,13 @@ import ru.dimension.ui.view.table.row.Rows.PickableQueryRow;
 import ru.dimension.ui.view.table.row.Rows.ProfileRow;
 import ru.dimension.ui.view.table.row.Rows.QueryRow;
 import ru.dimension.ui.view.table.row.Rows.QueryTableRow;
+import ru.dimension.ui.view.table.row.Rows.TaskLinkRow;
 import ru.dimension.ui.view.table.row.Rows.TaskRow;
 import ru.dimension.ui.view.table.row.Rows.TemplateConnectionRow;
 import ru.dimension.ui.view.table.row.Rows.TemplateMetricRow;
 import ru.dimension.ui.view.table.row.Rows.TemplateQueryRow;
 import ru.dimension.ui.view.table.row.Rows.TemplateTaskRow;
+import ru.dimension.ui.view.table.row.Rows.TimestampColumnRow;
 import ru.dimension.ui.view.table.row.Rows.TimestampRow;
 
 public class ModelIconProviders {
@@ -103,6 +105,31 @@ public class ModelIconProviders {
         new VectorIcons.Query(QUERY_COLOR),
         row != null ? row.getName() : "Query"
     );
+  }
+
+  public static RowIconProvider<TaskLinkRow> forTaskLinkRow() {
+    return row -> new RowIconProvider.RowIcon(
+        new VectorIcons.Task(TASK_COLOR),
+        row != null ? row.getName() : "Task"
+    );
+  }
+
+  public static RowIconProvider<TimestampColumnRow> forTimestampColumnRow() {
+    return row -> {
+      if (row == null) return DEFAULT_ROW_ICON;
+      String name = row.getColName();
+
+      if (row.hasOrigin()) {
+        DTGroup group = extractDTGroup(row.getOrigin());
+        String typeInfo = getTooltipForDTGroup(group);
+        String tooltip = (name != null && !name.isBlank())
+            ? name + " (" + typeInfo + ")"
+            : typeInfo;
+        return new RowIconProvider.RowIcon(new DTGroupIcon(group), tooltip);
+      }
+
+      return new RowIconProvider.RowIcon(new TimestampIcon(), name);
+    };
   }
 
   public static RowIconProvider<ColumnRow> forColumnRow() {

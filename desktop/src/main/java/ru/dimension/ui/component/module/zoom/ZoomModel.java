@@ -1,9 +1,9 @@
-package ru.dimension.ui.component.module.preview.zoom;
+package ru.dimension.ui.component.module.zoom;
 
 import lombok.Data;
 import ru.dimension.db.core.DStore;
 import ru.dimension.ui.component.broker.MessageBroker;
-import ru.dimension.ui.component.module.preview.zoom.internal.ZoomDashboardDialog;
+import ru.dimension.ui.component.module.zoom.internal.ZoomDashboardDialog;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.state.SqlQueryState;
 

@@ -1,9 +1,10 @@
-package ru.dimension.ui.component.panel.popup;
+package ru.dimension.ui.component.panel.popup.action;
 
 import java.awt.Dimension;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import ru.dimension.ui.component.broker.MessageBroker;
+import ru.dimension.ui.component.panel.popup.base.ConfigPopupPanel;
 
 public class ActionPanel extends ConfigPopupPanel {
   private final MessageBroker.Component component;

@@ -1,4 +1,4 @@
-package ru.dimension.ui.component.module.preview.zoom.internal;
+package ru.dimension.ui.component.module.zoom.internal;
 
 import static ru.dimension.ui.laf.LafColorGroup.CONFIG_PANEL;
 import static ru.dimension.ui.laf.LafColorGroup.ZOOM_PANEL;
@@ -27,10 +27,9 @@ import org.jfree.chart.JFreeChart;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.chart.SCP;
 import ru.dimension.ui.component.module.chart.PRChartModule;
-import ru.dimension.ui.component.module.preview.zoom.RenderMode;
-import ru.dimension.ui.component.module.preview.zoom.ViewMode;
+import ru.dimension.ui.component.module.zoom.RenderMode;
+import ru.dimension.ui.component.module.zoom.ViewMode;
 import ru.dimension.ui.laf.LaF;
-import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.info.ProfileInfo;

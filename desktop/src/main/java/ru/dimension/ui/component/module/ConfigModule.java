@@ -15,6 +15,7 @@ public class ConfigModule implements MessageAction {
 
   @Getter
   private final ConfigView view;
+  @Getter
   private final ConfigPresenter presenter;
 
   @Inject

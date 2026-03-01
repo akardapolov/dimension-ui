@@ -1,4 +1,4 @@
-package ru.dimension.ui.component.module.preview.zoom;
+package ru.dimension.ui.component.module.zoom;
 
 import static ru.dimension.ui.laf.LafColorGroup.CONFIG_PANEL;
 
@@ -22,7 +22,7 @@ import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.module.chart.PRChartModule;
-import ru.dimension.ui.component.module.preview.zoom.internal.ZoomDashboardDialog;
+import ru.dimension.ui.component.module.zoom.internal.ZoomDashboardDialog;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 

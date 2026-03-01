@@ -253,7 +253,7 @@ public class Rows {
     @TTColumn(name = "HTTP Parse Type", order = 9, editable = false)
     private String httpParseType;
 
-    public ConnectionTemplateRow(ru.dimension.ui.model.config.Connection c) {
+    public ConnectionTemplateRow(Connection c) {
       this.id = c.getId();
       this.name = c.getName();
       this.userName = c.getUserName();
@@ -603,5 +603,63 @@ public class Rows {
     public boolean hasOrigin() {
       return origin != null;
     }
+  }
+
+  @NoArgsConstructor
+  public static class TaskLinkRow {
+    @TTColumn(name = "ID", order = 0, visible = false)
+    private int id;
+
+    @TTColumn(name = "Task Name", order = 1, editable = false, preferredWidth = 250)
+    private String name;
+
+    @TTColumn(name = "Connection", order = 2, editable = false, preferredWidth = 200)
+    private String connectionName;
+
+    public TaskLinkRow(int id, String name, String connectionName) {
+      this.id = id;
+      this.name = name;
+      this.connectionName = connectionName;
+    }
+
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getConnectionName() { return connectionName; }
+    public void setConnectionName(String connectionName) { this.connectionName = connectionName; }
+  }
+
+  @NoArgsConstructor
+  public static class TimestampColumnRow {
+    @TTColumn(name = "Column Name", order = 0, editable = false)
+    private String colName;
+
+    @TTColumn(name = "DB Type", order = 1, editable = false)
+    private String colDbTypeName;
+
+    @TTColumn(name = "Storage Type", order = 2, editable = false)
+    private String storageType;
+
+    private CProfile origin;
+
+    public TimestampColumnRow(CProfile cProfile) {
+      if (cProfile == null) {
+        throw new IllegalArgumentException("CProfile cannot be null");
+      }
+      this.colName = cProfile.getColName();
+      this.colDbTypeName = cProfile.getColDbTypeName();
+      this.storageType = cProfile.getCsType() != null ? cProfile.getCsType().getSType().name() : "";
+      this.origin = cProfile;
+    }
+
+    public String getColName() { return colName; }
+    public void setColName(String colName) { this.colName = colName; }
+    public String getColDbTypeName() { return colDbTypeName; }
+    public void setColDbTypeName(String colDbTypeName) { this.colDbTypeName = colDbTypeName; }
+    public String getStorageType() { return storageType; }
+    public void setStorageType(String storageType) { this.storageType = storageType; }
+    public CProfile getOrigin() { return origin; }
+    public boolean hasOrigin() { return origin != null; }
   }
 }

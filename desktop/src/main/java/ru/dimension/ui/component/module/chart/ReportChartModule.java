@@ -11,7 +11,7 @@ import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.module.chart.report.ReportChartModel;
 import ru.dimension.ui.component.module.chart.report.ReportChartPresenter;
 import ru.dimension.ui.component.module.chart.report.ReportChartView;
-import ru.dimension.ui.component.panel.popup.DescriptionPanel;
+import ru.dimension.ui.component.panel.popup.description.DescriptionPanel;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.model.ProfileTaskQueryKey;

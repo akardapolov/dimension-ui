@@ -9,11 +9,11 @@ import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.chart.HelperChart;
 import ru.dimension.ui.component.module.ModelModule;
+import ru.dimension.ui.component.module.ZoomModule;
 import ru.dimension.ui.component.module.factory.ZoomModuleFactory;
 import ru.dimension.ui.component.module.factory.ModelModuleFactory;
 import ru.dimension.ui.component.module.factory.PreviewChartsModuleFactory;
 import ru.dimension.ui.component.module.factory.PreviewConfigModuleFactory;
-import ru.dimension.ui.component.module.preview.ZoomModule;
 import ru.dimension.ui.component.module.preview.PreviewChartsModule;
 import ru.dimension.ui.component.module.preview.PreviewConfigModule;
 import ru.dimension.ui.helper.GUIHelper;
@@ -75,6 +75,12 @@ public class DashboardComponent implements HelperChart, ProfileStartStopListener
     zoomModule = zoomModuleFactory.create(component);
 
     zoomModule.getPresenter().setChartPanesRef(chartsModule.getModel().getChartPanes());
+
+    configureModule.getPresenter().setChartPanesRef(chartsModule.getModel().getChartPanes());
+    configureModule.getPresenter().setProfileManager(profileManager);
+    configureModule.getPresenter().setOnChartRemovedFromClear((key, cProfile) ->
+                                                                  modelModule.getPresenter().handleExternalChartRemoval(key, cProfile)
+    );
 
     javax.swing.JPanel configWithZoomPanel = new javax.swing.JPanel(new java.awt.BorderLayout());
     configWithZoomPanel.add(configureModule.getView(), java.awt.BorderLayout.CENTER);

@@ -77,7 +77,7 @@ public class MetadataQueryPanel extends JPanel {
     this.cancelMetadata.setMnemonic('C');
 
     this.compression = new JCheckBox("Compression");
-    this.compression.setToolTipText("Compression");
+    this.compression.setToolTipText("Enable data compression for this table");
 
     this.tableName = new JXTextField(bundleDefault.getString("mTableName"));
     this.tableName.setToolTipText(bundleDefault.getString("mTableName"));

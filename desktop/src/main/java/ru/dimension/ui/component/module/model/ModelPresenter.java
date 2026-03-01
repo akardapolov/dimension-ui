@@ -144,6 +144,69 @@ public class ModelPresenter {
                            .build());
   }
 
+  public void handleMetadataColumnsUpdate(int queryId, String queryName, List<CProfile> columns) {
+    log.info("Updating metadata columns for queryId={}, queryName={}, columnCount={}",
+             queryId, queryName, columns.size());
+
+    if (currentKey == null) {
+      log.debug("No current key set, skipping column view refresh");
+      return;
+    }
+
+    QueryInfo currentQueryInfo = getQueryInfo(
+        currentKey.getProfileId(), currentKey.getTaskId(), currentKey.getQueryId());
+
+    if (currentQueryInfo == null) {
+      log.debug("Current query info is null, skipping");
+      return;
+    }
+
+    if (currentQueryInfo.getId() != queryId && !currentQueryInfo.getName().equals(queryName)) {
+      log.debug("Metadata update is for a different query (id={}, name={}), current is (id={}, name={})",
+                queryId, queryName, currentQueryInfo.getId(), currentQueryInfo.getName());
+      return;
+    }
+
+    TableInfo tableInfo = model.getProfileManager().getTableInfoByTableName(queryName);
+    if (tableInfo == null) {
+      log.warn("TableInfo not found for queryName={}", queryName);
+      return;
+    }
+
+    var entry = model.getQueryKeyMap().getOrDefault(
+        currentKey,
+        new AbstractMap.SimpleEntry<>(new ArrayList<>(), new ArrayList<>())
+    );
+
+    List<CProfile> selectedColumns = entry.getValue();
+
+    view.setColumnItems(ModelRowMapper.mapColumns(tableInfo, selectedColumns));
+    view.selectFirstDetailsRows();
+
+    log.info("Column view refreshed for queryName={}", queryName);
+  }
+
+  public void handleQueryListUpdate(int taskId) {
+    view.getTaskTable().selectedItem()
+        .filter(task -> task.getId() == taskId)
+        .ifPresent(task -> handleTaskSelection(taskId));
+  }
+
+  public void handleExternalChartRemoval(ProfileTaskQueryKey key, CProfile cProfile) {
+    log.info("External chart removal: key={}, cProfile={}", key, cProfile.getColName());
+
+    var entry = model.getQueryKeyMap().get(key);
+    if (entry != null) {
+      entry.getValue().removeIf(c -> c.getColId() == cProfile.getColId());
+      entry.getKey().removeIf(m -> m.getYAxis() != null && m.getYAxis().getColId() == cProfile.getColId());
+    }
+
+    if (key.equals(currentKey)) {
+      view.uncheckColumn(cProfile);
+      view.uncheckMetric(cProfile);
+    }
+  }
+
   private void handleColumnToggle(ColumnRow row, boolean isAdded) {
     if (!validateInteraction() || !row.hasOrigin()) return;
 
