@@ -4,7 +4,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.awt.BorderLayout;
-import java.awt.GridLayout;
+import java.awt.Dimension;
 import java.util.ResourceBundle;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -100,17 +100,16 @@ public class MetadataQueryPanel extends JPanel {
     this.tableType.setBorder(finalBorder);
     this.tableIndex.setBorder(finalBorder);
 
-    JPanel btnPanel = new JPanel();
-    JPanel tablePanel = new JPanel();
-    JPanel tableTitlePanel = new JPanel();
-    JPanel tableDataPanel = new JPanel();
-    tableDataPanel.setLayout(new GridLayout(2, 5, 5, 0));
-    JPanel columnPanel = new JPanel();
-    PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(), false);
-    PainlessGridBag gblBtn = new PainlessGridBag(btnPanel, PGHelper.getPGConfig(0), false);
-    PainlessGridBag gblTable = new PainlessGridBag(tablePanel, PGHelper.getPGConfig(0), false);
-    PainlessGridBag gblCol = new PainlessGridBag(columnPanel, PGHelper.getPGConfig(0), false);
+    setLayout(new BorderLayout());
 
+    JPanel content = new JPanel();
+    PainlessGridBag gbl = new PainlessGridBag(content, PGHelper.getPGConfig(2), false);
+
+    gbl.row()
+        .cellXRemainder(new JXTitledSeparator("Table")).fillX();
+
+    JPanel btnPanel = new JPanel();
+    PainlessGridBag gblBtn = new PainlessGridBag(btnPanel, PGHelper.getPGConfig(0), false);
     gblBtn.row()
         .cell(loadMetadata)
         .cell(this.queryConnectionMetadataComboBox)
@@ -122,41 +121,36 @@ public class MetadataQueryPanel extends JPanel {
         .fillX();
     gblBtn.done();
 
-    tableTitlePanel.setLayout(new BorderLayout());
-    JXTitledSeparator tableTitle = new JXTitledSeparator("Table");
-    tableTitlePanel.add(tableTitle, BorderLayout.CENTER);
+    gbl.row()
+        .cellXRemainder(btnPanel).fillX();
 
-    tableDataPanel.add(new JLabel("Name"));
-    tableDataPanel.add(new JLabel("Type"));
-    tableDataPanel.add(new JLabel("Index"));
-    tableDataPanel.add(timestamp);
-    tableDataPanel.add(new JLabel(""));
+    JPanel tableDataPanel = new JPanel();
+    PainlessGridBag gblTableData = new PainlessGridBag(tableDataPanel, PGHelper.getPGConfig(2), false);
+    gblTableData.row()
+        .cell(new JLabel("Name"))
+        .cell(new JLabel("Type"))
+        .cell(new JLabel("Index"))
+        .cell(timestamp)
+        .cell(new JLabel(""));
+    gblTableData.row()
+        .cell(tableName).fillX()
+        .cell(tableType).fillX()
+        .cell(tableIndex).fillX()
+        .cell(timestampComboBox).fillX()
+        .cell(compression);
+    gblTableData.done();
 
-    tableDataPanel.add(tableName);
-    tableDataPanel.add(tableType);
-    tableDataPanel.add(tableIndex);
-    tableDataPanel.add(timestampComboBox);
-    tableDataPanel.add(compression);
+    gbl.row()
+        .cellXRemainder(tableDataPanel).fillX();
 
-    gblTable.row()
-        .cell(tableTitlePanel).fillX();
-    gblTable.row()
-        .cell(tableDataPanel).fillX();
+    gbl.row()
+        .cellXRemainder(new JXTitledSeparator("")).fillX();
 
-    gblTable.done();
-
-    gblCol.row()
-        .cell(new JXTitledSeparator("Column")).fillX();
-    gblCol.row()
+    gbl.row()
         .cellXYRemainder(configMetadataCase.getJScrollPane()).fillXY();
-    gblCol.done();
-
-    gbl.row()
-        .cell(btnPanel).fillX();
-    gbl.row()
-        .cell(tablePanel).fillX();
-    gbl.row()
-        .cellXYRemainder(columnPanel).fillXY();
     gbl.done();
+
+    add(content, BorderLayout.CENTER);
+    setMinimumSize(new Dimension(100, 50));
   }
 }

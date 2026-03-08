@@ -1,17 +1,19 @@
 package ru.dimension.ui.view.panel.config.query;
 
+import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.util.ResourceBundle;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.Border;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.jdesktop.swingx.JXTextField;
+import org.jdesktop.swingx.JXTitledSeparator;
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.ui.helper.GUIHelper;
@@ -74,34 +76,20 @@ public class MetricQueryPanel extends JPanel {
     this.groupFunction.setEnabled(false);
     this.chartType.setEnabled(false);
 
-    PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(), false);
+    setLayout(new BorderLayout());
+
+    JPanel content = new JPanel();
+    PainlessGridBag gbl = new PainlessGridBag(content, PGHelper.getPGConfig(2), false);
+
+    gbl.row()
+        .cellXRemainder(new JXTitledSeparator("Metric")).fillX();
     gbl.row()
         .cellXRemainder(metricQueryButtonPanel).fillX();
-
     gbl.row()
-        .cell(defaultCheckBox).cell(new JLabel()).fillX();
-
-    gbl.row()
-        .cell(new JLabel("Name")).cell(nameMetric).fillX();
-    gbl.row()
-        .cell(new JLabel(bundleDefault.getString("xAxis"))).cell(xTextFile).fillX();
-    gbl.row()
-        .cell(new JLabel("Y axis")).cell(yComboBox).fillX();
-    gbl.row()
-        .cell(new JLabel("Group")).cell(dimensionComboBox).fillX();
-
-    gbl.row()
-        .cell(new JLabel("Function"))
-        .cell(groupFunction).fillX();
-
-    gbl.row()
-        .cell(new JLabel("Chart"))
-        .cell(chartType).fillX();
-
-    gbl.row()
-        .cellXYRemainder(this.configMetricCase.getJScrollPane())
-        .fillXY();
-
+        .cellXYRemainder(this.configMetricCase.getJScrollPane()).fillXY();
     gbl.done();
+
+    add(content, BorderLayout.CENTER);
+    setMinimumSize(new Dimension(100, 50));
   }
 }

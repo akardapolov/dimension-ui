@@ -1,12 +1,18 @@
 package ru.dimension.ui.view.handler.query;
 
+import static ru.dimension.ui.model.sql.GatherDataMode.BY_CLIENT_JDBC;
+import static ru.dimension.ui.model.sql.GatherDataMode.BY_SERVER_JDBC;
+
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.ResourceBundle;
@@ -17,10 +23,11 @@ import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
-import javax.swing.JTabbedPane;
 import javax.swing.KeyStroke;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
+import ru.dimension.db.model.profile.table.IType;
+import ru.dimension.db.model.profile.table.TType;
 import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.bus.EventBus;
 import ru.dimension.ui.bus.event.QueryListChangedEvent;
@@ -28,13 +35,15 @@ import ru.dimension.ui.bus.event.UpdateQueryList;
 import ru.dimension.ui.exception.EmptyNameException;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.exception.NotSelectedRowException;
+import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.manager.ProfileManager;
+import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.TaskInfo;
-import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.sql.GatherDataMode;
 import ru.dimension.ui.model.table.JXTableCase;
+import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.RangeRealTime;
 import ru.dimension.ui.model.view.handler.LifeCycleStatus;
@@ -47,6 +56,7 @@ import ru.dimension.ui.view.panel.config.query.MetadataQueryPanel;
 import ru.dimension.ui.view.panel.config.query.QueryPanel;
 import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.view.table.row.Rows.QueryRow;
+import ru.dimension.ui.model.info.gui.ChartInfo;
 
 @Log4j2
 @Singleton
@@ -64,7 +74,6 @@ public final class QueryButtonPanelHandler implements ActionListener {
   private final ButtonPanel queryButtonPanel;
   private final ConfigTab configTab;
 
-  private final JTabbedPane mainQuery;
   private final JCheckBox checkboxConfig;
 
   private final MainQueryPanel mainQueryPanel;
@@ -89,7 +98,6 @@ public final class QueryButtonPanelHandler implements ActionListener {
                                  @Named("mainQueryPanel") MainQueryPanel mainQueryPanel,
                                  @Named("metadataQueryPanel") MetadataQueryPanel metadataQueryPanel,
                                  @Named("configTab") ConfigTab configTab,
-                                 @Named("mainQueryTab") JTabbedPane mainQuery,
                                  @Named("checkboxConfig") JCheckBox checkboxConfig,
                                  @Named("configSelectionContext") ConfigSelectionContext selectionContext) {
     this.profileManager = profileManager;
@@ -103,7 +111,6 @@ public final class QueryButtonPanelHandler implements ActionListener {
     this.mainQueryPanel = mainQueryPanel;
     this.metadataQueryPanel = metadataQueryPanel;
     this.configTab = configTab;
-    this.mainQuery = mainQuery;
     this.checkboxConfig = checkboxConfig;
     this.selectionContext = selectionContext;
 
@@ -141,100 +148,184 @@ public final class QueryButtonPanelHandler implements ActionListener {
   @Override
   public void actionPerformed(ActionEvent e) {
     if (e.getSource() == queryButtonPanel.getBtnNew()) {
-      status = LifeCycleStatus.NEW;
-      copySourceQueryId = null;
-      setPanelView(false);
-      newEmptyPanel();
-      clearProfileMetadataCase();
+      onNew();
       return;
     }
 
     if (e.getSource() == queryButtonPanel.getBtnCopy()) {
-      status = LifeCycleStatus.COPY;
-
-      Integer queryId = selectionContext.getSelectedQueryId();
-      if (queryId == null) {
-        throw new NotSelectedRowException("The query to copy is not selected. Please select and try again!");
-      }
-
-      copySourceQueryId = queryId;
-
-      setPanelView(false);
-
-      QueryInfo query = profileManager.getQueryInfoById(queryId);
-      if (query == null) {
-        throw new NotFoundException("Not found query: " + queryId);
-      }
-
-      mainQueryPanel.getQueryName().setText(query.getName() + "_copy");
-      mainQueryPanel.getQueryDescription().setText(query.getDescription() + "_copy");
-      mainQueryPanel.getQueryGatherDataComboBox().setSelectedItem(query.getGatherDataMode());
-      mainQueryPanel.getQuerySqlText().setText(query.getText());
+      onCopy();
       return;
     }
 
     if (e.getSource() == queryButtonPanel.getBtnDel()) {
-      Integer queryId = selectionContext.getSelectedQueryId();
-      if (queryId == null) {
-        JOptionPane.showMessageDialog(null, "Not selected query. Please select and try again!",
-                                      "General Error", JOptionPane.ERROR_MESSAGE);
-        return;
-      }
-
-      String queryName = getSelectedQueryNameById(queryId);
-
-      int input = JOptionPane.showConfirmDialog(new JDialog(),
-                                                "Do you want to delete configuration: " + queryName + "?");
-      if (!isNotUsedOnTask(queryId)) {
-        JOptionPane.showMessageDialog(null, "Cannot delete this query it is used in the task",
-                                      "General Error", JOptionPane.ERROR_MESSAGE);
-        return;
-      }
-
-      if (input == 0) {
-        QueryInfo query = profileManager.getQueryInfoById(queryId);
-        if (query == null) {
-          throw new NotFoundException("Not found query by id: " + queryId);
-        }
-
-        profileManager.deleteQuery(query.getId(), query.getName());
-        profileManager.deleteTable(query.getName());
-        profileManager.deleteChart(query.getId());
-
-        clearQueryCase();
-        refillQueryTable();
-
-        if (queryCase.getJxTable().getRowCount() > 0) {
-          queryCase.getJxTable().setRowSelectionInterval(0, 0);
-        }
-
-        eventBus.publish(new QueryListChangedEvent());
-      }
+      onDelete();
       return;
     }
 
     if (e.getSource() == queryButtonPanel.getBtnEdit()) {
-      Integer queryId = selectionContext.getSelectedQueryId();
-      if (queryId == null) {
-        throw new NotSelectedRowException("Not selected query. Please select and try again!");
-      }
-      status = LifeCycleStatus.EDIT;
-      copySourceQueryId = null;
-      setPanelView(false);
+      onEdit();
       return;
     }
 
     if (e.getSource() == queryButtonPanel.getBtnSave()) {
-      if (LifeCycleStatus.NEW.equals(status) || LifeCycleStatus.COPY.equals(status)) {
-        saveNew();
-      } else if (LifeCycleStatus.EDIT.equals(status)) {
-        saveEdit();
-      }
+      onSave();
       return;
     }
 
     if (e.getSource() == queryButtonPanel.getBtnCancel()) {
-      cancelEdit();
+      onCancel();
+    }
+  }
+
+  public void onNew() {
+    status = LifeCycleStatus.NEW;
+    copySourceQueryId = null;
+    setPanelView(false);
+    newEmptyPanel();
+    clearProfileMetadataCase();
+    setMetadataFieldsEditable(true);
+  }
+
+  public void onCopy() {
+    status = LifeCycleStatus.COPY;
+
+    Integer queryId = selectionContext.getSelectedQueryId();
+    if (queryId == null) {
+      throw new NotSelectedRowException("The query to copy is not selected. Please select and try again!");
+    }
+
+    copySourceQueryId = queryId;
+
+    setPanelView(false);
+
+    QueryInfo query = profileManager.getQueryInfoById(queryId);
+    if (query == null) {
+      throw new NotFoundException("Not found query: " + queryId);
+    }
+
+    mainQueryPanel.getQueryName().setText(query.getName() + "_copy");
+    mainQueryPanel.getQueryDescription().setText(query.getDescription() + "_copy");
+    mainQueryPanel.getQueryGatherDataComboBox().setSelectedItem(query.getGatherDataMode());
+    mainQueryPanel.getQuerySqlText().setText(query.getText());
+
+    setMetadataFieldsEditable(true);
+
+    TableInfo tableInfo = profileManager.getTableInfoByTableName(query.getName());
+    if (tableInfo != null) {
+      metadataQueryPanel.getTableName().setText(query.getName());
+      metadataQueryPanel.getTableName().setEditable(false);
+      metadataQueryPanel.getTableType().setSelectedItem(tableInfo.getTableType());
+      metadataQueryPanel.getTableIndex().setSelectedItem(tableInfo.getIndexType());
+      metadataQueryPanel.getCompression().setSelected(Boolean.TRUE.equals(tableInfo.getCompression()));
+    }
+  }
+
+  public void onDelete() {
+    Integer queryId = selectionContext.getSelectedQueryId();
+    if (queryId == null) {
+      JOptionPane.showMessageDialog(null, "Not selected query. Please select and try again!",
+                                    "General Error", JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+
+    String queryName = getSelectedQueryNameById(queryId);
+
+    int input = JOptionPane.showConfirmDialog(new JDialog(),
+                                              "Do you want to delete configuration: " + queryName + "?");
+    if (!isNotUsedOnTask(queryId)) {
+      JOptionPane.showMessageDialog(null, "Cannot delete this query it is used in the task",
+                                    "General Error", JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+
+    if (input == 0) {
+      QueryInfo query = profileManager.getQueryInfoById(queryId);
+      if (query == null) {
+        throw new NotFoundException("Not found query by id: " + queryId);
+      }
+
+      profileManager.deleteQuery(query.getId(), query.getName());
+      profileManager.deleteTable(query.getName());
+      profileManager.deleteChart(query.getId());
+
+      clearQueryCase();
+      refillQueryTable();
+
+      if (queryCase.getJxTable().getRowCount() > 0) {
+        queryCase.getJxTable().setRowSelectionInterval(0, 0);
+      }
+
+      eventBus.publish(new QueryListChangedEvent());
+    }
+  }
+
+  public void onEdit() {
+    Integer queryId = selectionContext.getSelectedQueryId();
+    if (queryId == null) {
+      throw new NotSelectedRowException("Not selected query. Please select and try again!");
+    }
+    status = LifeCycleStatus.EDIT;
+    copySourceQueryId = null;
+    setPanelView(false);
+    setMetadataFieldsEditable(true);
+    metadataQueryPanel.getConfigMetadataCase().getJxTable().setEditable(true);
+  }
+
+  public void onSave() {
+    if (isJdbcAndTextEmpty()) {
+      JOptionPane.showMessageDialog(null,
+                                    "Text field cannot be empty for JDBC queries. Please enter the SQL text.",
+                                    "Validation Error", JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+    if (LifeCycleStatus.NEW.equals(status) || LifeCycleStatus.COPY.equals(status)) {
+      saveNew();
+    } else if (LifeCycleStatus.EDIT.equals(status)) {
+      saveEdit();
+    }
+  }
+
+  public void onCancel() {
+    cancelEdit();
+  }
+
+  private boolean isJdbcAndTextEmpty() {
+    Object selectedGather = mainQueryPanel.getQueryGatherDataComboBox().getSelectedItem();
+    if (selectedGather == null) {
+      return false;
+    }
+    GatherDataMode mode;
+    if (selectedGather instanceof GatherDataMode) {
+      mode = (GatherDataMode) selectedGather;
+    } else {
+      try {
+        mode = GatherDataMode.valueOf(selectedGather.toString());
+      } catch (IllegalArgumentException e) {
+        return false;
+      }
+    }
+    if (BY_CLIENT_JDBC.equals(mode) || BY_SERVER_JDBC.equals(mode)) {
+      String text = mainQueryPanel.getQuerySqlText().getText();
+      return text == null || text.trim().isEmpty();
+    }
+    return false;
+  }
+
+  private void setMetadataFieldsEditable(boolean editable) {
+    if (LifeCycleStatus.NEW.equals(status) || LifeCycleStatus.COPY.equals(status)) {
+      metadataQueryPanel.getTableName().setEditable(false);
+      metadataQueryPanel.getTableType().setEnabled(editable);
+      metadataQueryPanel.getTableIndex().setEnabled(editable);
+      metadataQueryPanel.getTimestampComboBox().setEnabled(editable);
+      metadataQueryPanel.getCompression().setEnabled(editable);
+      metadataQueryPanel.getConfigMetadataCase().getJxTable().setEditable(false);
+    } else if (LifeCycleStatus.EDIT.equals(status)) {
+      metadataQueryPanel.getTableName().setEditable(false);
+      metadataQueryPanel.getTableType().setEnabled(editable);
+      metadataQueryPanel.getTableIndex().setEnabled(editable);
+      metadataQueryPanel.getTimestampComboBox().setEnabled(editable);
+      metadataQueryPanel.getCompression().setEnabled(editable);
+      metadataQueryPanel.getConfigMetadataCase().getJxTable().setEditable(editable);
     }
   }
 
@@ -258,12 +349,21 @@ public final class QueryButtonPanelHandler implements ActionListener {
     queryInfo.setName(mainQueryPanel.getQueryName().getText());
     queryInfo.setDescription(mainQueryPanel.getQueryDescription().getText());
 
-    String selectedEnumGatherData = Objects.requireNonNull(mainQueryPanel.getQueryGatherDataComboBox().getSelectedItem()).toString();
-    queryInfo.setGatherDataMode(GatherDataMode.valueOf(selectedEnumGatherData));
+    Object selectedGather = mainQueryPanel.getQueryGatherDataComboBox().getSelectedItem();
+    if (selectedGather instanceof GatherDataMode) {
+      queryInfo.setGatherDataMode((GatherDataMode) selectedGather);
+    } else if (selectedGather != null) {
+      queryInfo.setGatherDataMode(GatherDataMode.valueOf(selectedGather.toString()));
+    }
     queryInfo.setText(mainQueryPanel.getQuerySqlText().getText());
 
     TableInfo tableInfo = new TableInfo();
     tableInfo.setTableName(queryInfo.getName());
+    tableInfo.setTableType(metadataQueryPanel.getTableType().getSelectedItem() != null
+                               ? (TType) metadataQueryPanel.getTableType().getSelectedItem() : null);
+    tableInfo.setIndexType(metadataQueryPanel.getTableIndex().getSelectedItem() != null
+                               ? (IType) metadataQueryPanel.getTableIndex().getSelectedItem() : null);
+    tableInfo.setCompression(metadataQueryPanel.getCompression().isSelected());
 
     profileManager.addQuery(queryInfo);
     profileManager.addTable(tableInfo);
@@ -306,6 +406,7 @@ public final class QueryButtonPanelHandler implements ActionListener {
     }
 
     setPanelView(true);
+    resetMetadataFieldsToReadOnly();
     queryCase.getJxTable().setRowSelectionInterval(selection, selection);
 
     status = LifeCycleStatus.NONE;
@@ -337,14 +438,24 @@ public final class QueryButtonPanelHandler implements ActionListener {
     editQuery.setId(queryId);
     editQuery.setName(mainQueryPanel.getQueryName().getText());
     editQuery.setDescription(mainQueryPanel.getQueryDescription().getText());
-    String selectedEnumGatherData = Objects.requireNonNull(mainQueryPanel.getQueryGatherDataComboBox().getSelectedItem()).toString();
-    editQuery.setGatherDataMode(GatherDataMode.valueOf(selectedEnumGatherData));
+
+    Object selectedGather = mainQueryPanel.getQueryGatherDataComboBox().getSelectedItem();
+    if (selectedGather instanceof GatherDataMode) {
+      editQuery.setGatherDataMode((GatherDataMode) selectedGather);
+    } else if (selectedGather != null) {
+      editQuery.setGatherDataMode(GatherDataMode.valueOf(selectedGather.toString()));
+    }
     editQuery.setText(mainQueryPanel.getQuerySqlText().getText());
 
     clearProfileMetadataCase();
 
     TableInfo tableInfo = new TableInfo();
     tableInfo.setTableName(editQuery.getName());
+    tableInfo.setTableType(metadataQueryPanel.getTableType().getSelectedItem() != null
+                               ? (TType) metadataQueryPanel.getTableType().getSelectedItem() : null);
+    tableInfo.setIndexType(metadataQueryPanel.getTableIndex().getSelectedItem() != null
+                               ? (IType) metadataQueryPanel.getTableIndex().getSelectedItem() : null);
+    tableInfo.setCompression(metadataQueryPanel.getCompression().isSelected());
 
     if (!oldQuery.getName().equals(newQueryName)) {
       deleteQueryById(queryId);
@@ -352,13 +463,27 @@ public final class QueryButtonPanelHandler implements ActionListener {
       profileManager.addTable(tableInfo);
     } else {
       profileManager.updateQuery(editQuery);
+      TableInfo existingTable = profileManager.getTableInfoByTableName(editQuery.getName());
+      if (existingTable != null) {
+        existingTable.setTableType(tableInfo.getTableType());
+        existingTable.setIndexType(tableInfo.getIndexType());
+        existingTable.setCompression(tableInfo.getCompression());
+        profileManager.updateTable(existingTable);
+      }
     }
 
     clearQueryCase();
     refillQueryTable();
 
     setPanelView(true);
-    mainQueryPanel.getQueryGatherDataComboBox().setSelectedItem(GatherDataMode.valueOf(selectedEnumGatherData));
+    resetMetadataFieldsToReadOnly();
+
+    if (selectedGather instanceof GatherDataMode) {
+      mainQueryPanel.getQueryGatherDataComboBox().setSelectedItem(selectedGather);
+    } else if (selectedGather != null) {
+      mainQueryPanel.getQueryGatherDataComboBox().setSelectedItem(GatherDataMode.valueOf(selectedGather.toString()));
+    }
+
     if (selectedIndex >= 0 && queryCase.getJxTable().getRowCount() > 0) {
       queryCase.getJxTable().setRowSelectionInterval(selectedIndex, selectedIndex);
     }
@@ -374,6 +499,7 @@ public final class QueryButtonPanelHandler implements ActionListener {
       int selectedIndex = queryCase.getJxTable().getSelectedRow();
       queryCase.getJxTable().setRowSelectionInterval(0, 0);
       setPanelView(true);
+      resetMetadataFieldsToReadOnly();
       queryCase.getJxTable().setRowSelectionInterval(selectedIndex, selectedIndex);
 
       Integer queryId = selectionContext.getSelectedQueryId();
@@ -393,6 +519,7 @@ public final class QueryButtonPanelHandler implements ActionListener {
       mainQueryPanel.getQuerySqlText().setText(queryInfo.getText());
     } else {
       setPanelView(true);
+      resetMetadataFieldsToReadOnly();
       newEmptyPanel();
       clearProfileMetadataCase();
     }
@@ -401,12 +528,41 @@ public final class QueryButtonPanelHandler implements ActionListener {
     copySourceQueryId = null;
   }
 
+  private void resetMetadataFieldsToReadOnly() {
+    metadataQueryPanel.getTableName().setEditable(false);
+    metadataQueryPanel.getTableType().setEnabled(false);
+    metadataQueryPanel.getTableIndex().setEnabled(false);
+    metadataQueryPanel.getTimestampComboBox().setEnabled(false);
+    metadataQueryPanel.getCompression().setEnabled(false);
+    metadataQueryPanel.getConfigMetadataCase().getJxTable().setEditable(false);
+  }
+
   private void newEmptyPanel() {
     mainQueryPanel.getQueryName().setText("");
     mainQueryPanel.getQueryName().setPrompt(bundleDefault.getString("qName"));
     mainQueryPanel.getQueryDescription().setText("");
     mainQueryPanel.getQueryDescription().setPrompt(bundleDefault.getString("qDesc"));
     mainQueryPanel.getQuerySqlText().setText("");
+
+    if (mainQueryPanel.getQueryGatherDataComboBox().getItemCount() > 0) {
+      mainQueryPanel.getQueryGatherDataComboBox().setSelectedIndex(0);
+    }
+
+    metadataQueryPanel.getTableName().setText("");
+    metadataQueryPanel.getTableType().setSelectedItem(TType.TIME_SERIES);
+    metadataQueryPanel.getTableIndex().setSelectedItem(IType.LOCAL);
+    metadataQueryPanel.getCompression().setSelected(true);
+
+    List<List<?>> timestampList = new LinkedList<>();
+    timestampList.add(new ArrayList<>(Arrays.asList(" ", " ")));
+    metadataQueryPanel.getTimestampComboBox().setTableData(timestampList);
+
+    metadataQueryPanel.getQueryConnectionMetadataComboBox().setTableData(new LinkedList<>());
+
+    queryPanel.getMetricQueryPanel().getConfigMetricCase().getDefaultTableModel().getDataVector().removeAllElements();
+    queryPanel.getMetricQueryPanel().getConfigMetricCase().getDefaultTableModel().fireTableDataChanged();
+    queryPanel.getMetricQueryPanel().getNameMetric().setText("");
+    queryPanel.getMetricQueryPanel().getDefaultCheckBox().setSelected(false);
   }
 
   private void checkQueryNameIsBusy(int id, String newQueryName) {
@@ -463,10 +619,14 @@ public final class QueryButtonPanelHandler implements ActionListener {
     profileCase.getJxTable().setEnabled(isSelected);
     queryCase.getJxTable().setEnabled(isSelected);
 
-    mainQuery.setEnabledAt(1, isSelected);
-    mainQuery.setEnabledAt(2, isSelected);
+    metadataQueryPanel.getEditMetadata().setEnabled(false);
+    metadataQueryPanel.getLoadMetadata().setEnabled(false);
+    metadataQueryPanel.getSaveMetadata().setEnabled(false);
+    metadataQueryPanel.getCancelMetadata().setEnabled(false);
 
     checkboxConfig.setEnabled(isSelected);
+
+    GUIHelper.disableButton(queryPanel.getMetricQueryPanel().getMetricQueryButtonPanel(), !isSelected);
   }
 
   private boolean isNotUsedOnTask(int queryId) {

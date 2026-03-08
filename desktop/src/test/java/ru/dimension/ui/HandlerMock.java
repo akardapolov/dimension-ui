@@ -1,5 +1,7 @@
 package ru.dimension.ui;
 
+import static org.mockito.ArgumentMatchers.anyList;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.awt.Window;
 import java.io.File;
@@ -21,6 +23,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import ru.dimension.db.core.DStore;
 import ru.dimension.di.DimensionDI;
 import ru.dimension.di.ServiceLocator;
@@ -40,10 +44,12 @@ import ru.dimension.ui.manager.impl.ConfigurationManagerImpl;
 import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.config.Query;
 import ru.dimension.ui.model.config.Task;
+import ru.dimension.ui.model.sql.GatherDataMode;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.tab.ConnectionTypeTabPane;
 import ru.dimension.ui.security.EncryptDecrypt;
+import ru.dimension.ui.view.dialog.TaskLinkDialog;
 import ru.dimension.ui.view.handler.connection.ConnectionButtonPanelHandler;
 import ru.dimension.ui.view.handler.core.ConfigSelectionContext;
 import ru.dimension.ui.view.handler.profile.ProfileButtonPanelHandler;
@@ -86,7 +92,6 @@ public abstract class HandlerMock {
   protected Supplier<ConfigViewImpl> configViewLazy;
   protected Supplier<ConfigSelectionContext> configSelectionContextLazy;
 
-  // --- Mock UI Components ---
   protected final ButtonPanel buttonQueryPanelMock = new ButtonPanel();
   protected final ButtonPanel buttonProfilePanelMock = new ButtonPanel();
   protected final ButtonPanel buttonTaskPanelMock = new ButtonPanel();
@@ -104,13 +109,13 @@ public abstract class HandlerMock {
   protected final JXTableCase selectedTaskCase = GUIHelper.getTypedJXTableCase(Rows.TaskRow.class);
   protected final JXTableCase templateListTaskCase = GUIHelper.getTypedJXTableCase(Rows.TaskRow.class);
 
+  private static final String DEFAULT_SQL_TEXT = "SELECT 1";
+
   @BeforeAll
   public void setUp() {
-    // 1. Create a new DI builder for this test run
     DimensionDI.Builder builder = DimensionDI.builder()
         .scanPackages("ru.dimension.ui");
 
-    // 2. Apply all the standard production configuration modules
     CoreConfig.configure(builder);
     HandlersAndManagersConfig.configure(builder);
     RoutingSecurityStateConfig.configure(builder);
@@ -118,14 +123,10 @@ public abstract class HandlerMock {
     UIBaseConfig.configure(builder);
     UIComponentsConfig.configure(builder);
 
-    // 3. Apply our test-specific overrides. This will replace any production
-    //    bindings with our mocks (e.g., ButtonPanel, FilesHelper).
     UITestOverridesConfig.configure(builder, this, configurationDir);
 
-    // 4. Build the single, complete DI container for the test
     builder.buildAndInit();
 
-    // 5. Initialize lazy suppliers to fetch dependencies from the container
     queryButtonPanelHandlerLazy = () -> ServiceLocator.get(QueryButtonPanelHandler.class);
     queryPanelLazy = () -> ServiceLocator.get(QueryPanel.class, "queryConfigPanel");
     configurationManagerLazy = () -> (ConfigurationManagerImpl) ServiceLocator.get(ConfigurationManager.class, "configurationManager");
@@ -145,11 +146,42 @@ public abstract class HandlerMock {
     objectMapper = new ObjectMapper();
   }
 
+  protected void withTaskLinkDialogMocked(Runnable action) {
+    try (MockedStatic<TaskLinkDialog> mockedDialog = Mockito.mockStatic(TaskLinkDialog.class)) {
+      mockedDialog.when(() -> TaskLinkDialog.show(anyList(), anyList())).thenReturn(null);
+      action.run();
+    }
+  }
+
   protected void createQueryTest(Query query) {
     buttonQueryPanelMock.getBtnNew().doClick();
     queryPanelLazy.get().getMainQueryPanel().getQueryName().setText(query.getName());
     queryPanelLazy.get().getMainQueryPanel().getQueryDescription().setText(query.getDescription());
-    buttonQueryPanelMock.getBtnSave().doClick();
+
+    Object selectedGather = queryPanelLazy.get().getMainQueryPanel().getQueryGatherDataComboBox().getSelectedItem();
+    boolean isJdbcMode = false;
+    if (selectedGather instanceof GatherDataMode) {
+      GatherDataMode mode = (GatherDataMode) selectedGather;
+      isJdbcMode = GatherDataMode.BY_CLIENT_JDBC.equals(mode) || GatherDataMode.BY_SERVER_JDBC.equals(mode);
+    } else if (selectedGather != null) {
+      try {
+        GatherDataMode mode = GatherDataMode.valueOf(selectedGather.toString());
+        isJdbcMode = GatherDataMode.BY_CLIENT_JDBC.equals(mode) || GatherDataMode.BY_SERVER_JDBC.equals(mode);
+      } catch (IllegalArgumentException ignored) {
+      }
+    }
+
+    if (isJdbcMode) {
+      String sqlText = query.getText();
+      if (sqlText == null || sqlText.trim().isEmpty()) {
+        sqlText = DEFAULT_SQL_TEXT;
+      }
+      queryPanelLazy.get().getMainQueryPanel().getQuerySqlText().setText(sqlText);
+    } else if (query.getText() != null) {
+      queryPanelLazy.get().getMainQueryPanel().getQuerySqlText().setText(query.getText());
+    }
+
+    withTaskLinkDialogMocked(() -> buttonQueryPanelMock.getBtnSave().doClick());
   }
 
   protected void createConnectionTest(Connection connection) {
@@ -211,7 +243,6 @@ public abstract class HandlerMock {
     try {
       SwingUtilities.invokeAndWait(() -> {});
     } catch (Exception e) {
-      // ignore
     }
   }
 

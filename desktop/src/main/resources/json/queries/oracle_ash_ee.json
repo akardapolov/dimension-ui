@@ -1,7 +1,7 @@
 {
   "text": "SELECT * FROM v$active_session_history",
   "description": "Active session history, EE option",
-  "gatherDataMode": "BY_CLIENT_JDBC",
+  "gatherDataMode": "BY_SERVER_JDBC",
   "loadDataMode": "JDBC_REAL_TIME",
   "metricList": [
     {

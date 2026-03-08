@@ -22,6 +22,8 @@ import ru.dimension.db.exception.BeginEndWrongOrderException;
 import ru.dimension.db.exception.SqlColMetadataException;
 import ru.dimension.db.model.OrderBy;
 import ru.dimension.db.model.filter.CompositeFilter;
+import ru.dimension.db.model.output.BlockKeyTail;
+import ru.dimension.db.model.output.StackedColumn;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.chart.ChartConfig;
 import ru.dimension.ui.component.chart.ChartDataLoader;
@@ -125,6 +127,7 @@ public class ClientRealtimeSCP extends RealtimeSCP {
     }
 
     setCustomFilter();
+    fillSeriesFromHistoryIfNeeded(chartRange);
 
     chartDataLoader.setSeries(series);
     chartDataLoader.setTopMapSelected(topMapSelected);
@@ -155,25 +158,23 @@ public class ClientRealtimeSCP extends RealtimeSCP {
     disablePlotUpdates();
 
     ChartRange currRange = getBeginEndRange();
+    long clientBegin = chartDataLoader.getClientBegin();
 
     try {
-      chartDataLoader.loadDataFromBdbToDeque(dStore.getBlockKeyTailList(config.getQueryInfo().getName(),
-                                                                        chartDataLoader.getClientBegin(),
-                                                                        currRange.getEnd()));
+      List<BlockKeyTail> tails = dStore.getBlockKeyTailList(config.getQueryInfo().getName(),
+                                                            clientBegin,
+                                                            currRange.getEnd());
+      chartDataLoader.loadDataFromBdbToDeque(tails);
+      chartDataLoader.loadDataFromDequeToChart(clientBegin, currRange.getEnd());
+
+      if (!tails.isEmpty() || (currRange.getEnd() - clientBegin) > (chartDataLoader.getRange(config.getChartInfo(), true) * GAP)) {
+        chartDataLoader.setClientBegin(currRange.getEnd() + 1);
+      }
     } catch (BeginEndWrongOrderException | SqlColMetadataException e) {
       log.error("Data loading error: ", e);
       log.catching(e);
       throw new RuntimeException(e);
     }
-
-    try {
-      chartDataLoader.loadDataFromDequeToChart(chartDataLoader.getClientBegin(), currRange.getEnd());
-    } catch (BeginEndWrongOrderException | SqlColMetadataException e) {
-      log.catching(e);
-      throw new RuntimeException(e);
-    }
-
-    chartDataLoader.setClientBegin(currRange.getEnd() + 1);
 
     enablePlotUpdates();
   }
@@ -203,7 +204,6 @@ public class ClientRealtimeSCP extends RealtimeSCP {
     }
     seriesSelectable.setBlockRunAction(false);
 
-    // Initialize row sorter for search
     seriesSorter = new TableRowSorter<>(seriesSelectable.getJxTable().getModel());
     seriesSelectable.getJxTable().setRowSorter(seriesSorter);
   }
@@ -439,6 +439,38 @@ public class ClientRealtimeSCP extends RealtimeSCP {
       }
 
       dataHandler.setFilter(topMapSelected);
+    }
+  }
+
+  private void fillSeriesFromHistoryIfNeeded(ChartRange chartRange) {
+    if (!GroupFunction.COUNT.equals(config.getMetric().getGroupFunction())) {
+      return;
+    }
+
+    if (seriesType != SeriesType.COMMON) {
+      return;
+    }
+
+    if (!series.isEmpty()) {
+      return;
+    }
+
+    try {
+      long last = dStore.getLast(config.getQueryInfo().getName(), Long.MIN_VALUE, Long.MAX_VALUE);
+
+      if (last == 0 || last == Long.MIN_VALUE) {
+        return;
+      }
+
+      if (last >= chartRange.getBegin()) {
+        return;
+      }
+
+      List<StackedColumn> sColumnList = dataHandler.handleFunctionComplex(last - getRangeRealTime(config.getChartInfo()), last);
+      fillSeriesAnalyze(sColumnList);
+      series.forEach(this::loadSeriesColorInternal);
+    } catch (Exception e) {
+      log.error("Error filling series from history", e);
     }
   }
 

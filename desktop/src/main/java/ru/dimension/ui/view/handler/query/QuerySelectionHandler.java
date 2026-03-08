@@ -34,6 +34,7 @@ import ru.dimension.ui.prompt.Internationalization;
 import ru.dimension.ui.view.handler.CommonViewHandler;
 import ru.dimension.ui.view.handler.core.AbstractTableSelectionHandler;
 import ru.dimension.ui.view.handler.core.ConfigSelectionContext;
+import ru.dimension.ui.view.handler.core.RelatedHighlightService;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.query.MainQueryPanel;
 import ru.dimension.ui.view.panel.config.query.MetadataQueryPanel;
@@ -65,6 +66,7 @@ public final class QuerySelectionHandler extends AbstractTableSelectionHandler<Q
   private final JCheckBox checkboxConfig;
 
   private final ConfigSelectionContext selectionContext;
+  private final RelatedHighlightService highlightService;
 
   private boolean isSelected;
   private final ResourceBundle bundleDefault;
@@ -83,7 +85,8 @@ public final class QuerySelectionHandler extends AbstractTableSelectionHandler<Q
                                @Named("mainQueryPanel") MainQueryPanel mainQueryPanel,
                                @Named("metadataQueryPanel") MetadataQueryPanel metadataQueryPanel,
                                @Named("metricQueryPanel") MetricQueryPanel metricQueryPanel,
-                               @Named("configSelectionContext") ConfigSelectionContext selectionContext) {
+                               @Named("configSelectionContext") ConfigSelectionContext selectionContext,
+                               @Named("relatedHighlightService") RelatedHighlightService highlightService) {
     super(queryCase);
     this.profileManager = profileManager;
     this.queryCase = queryCase;
@@ -102,6 +105,7 @@ public final class QuerySelectionHandler extends AbstractTableSelectionHandler<Q
     this.queryButtonPanel = queryButtonPanel;
     this.checkboxConfig = checkboxConfig;
     this.selectionContext = selectionContext;
+    this.highlightService = highlightService;
 
     this.checkboxConfig.addItemListener(this);
     this.isSelected = false;
@@ -119,6 +123,9 @@ public final class QuerySelectionHandler extends AbstractTableSelectionHandler<Q
     if (queryId == null) {
       clearAll();
       applyCheckboxState();
+      if (!checkboxConfig.isSelected()) {
+        highlightService.highlightFromQuery(null);
+      }
       return;
     }
 
@@ -137,9 +144,15 @@ public final class QuerySelectionHandler extends AbstractTableSelectionHandler<Q
       throw new NotFoundException("Not found table: " + queryInfo.getName());
     }
 
+    metadataQueryPanel.getTableName().setText(queryInfo.getName());
+
     fillMetadataAndMetrics(queryId, queryInfo, tableInfo);
     applyCheckboxState();
     applyMetadataAvailability(queryInfo.getId());
+
+    if (!checkboxConfig.isSelected()) {
+      highlightService.highlightFromQuery(queryId);
+    }
   }
 
   private void clearAll() {
@@ -153,6 +166,16 @@ public final class QuerySelectionHandler extends AbstractTableSelectionHandler<Q
     mainQueryPanel.getQueryDescription().setText("");
     mainQueryPanel.getQueryDescription().setPrompt(bundleDefault.getString("qDesc"));
     mainQueryPanel.getQuerySqlText().setText("");
+
+    metadataQueryPanel.getTableName().setText("");
+    metadataQueryPanel.getTableType().setSelectedItem(TType.TIME_SERIES);
+    metadataQueryPanel.getTableIndex().setSelectedItem(IType.LOCAL);
+    metadataQueryPanel.getCompression().setSelected(true);
+
+    List<List<?>> timestampList = new LinkedList<>();
+    timestampList.add(new ArrayList<>(Arrays.asList(" ", " ")));
+    metadataQueryPanel.getTimestampComboBox().setTableData(timestampList);
+    metadataQueryPanel.getQueryConnectionMetadataComboBox().setTableData(new LinkedList<>());
 
     metadataQueryPanel.getEditMetadata().setEnabled(false);
     metadataQueryPanel.getSaveMetadata().setEnabled(false);
@@ -221,7 +244,6 @@ public final class QuerySelectionHandler extends AbstractTableSelectionHandler<Q
         }, () -> log.info("Not found query by query id: {}", queryId));
 
     metadataQueryPanel.getQueryConnectionMetadataComboBox().setTableData(connectionData);
-    metadataQueryPanel.getTableName().setText(tableInfo.getTableName());
 
     metadataQueryPanel.getTableType().setSelectedItem(tableInfo.getTableType() != null ? tableInfo.getTableType() : TType.TIME_SERIES);
     metadataQueryPanel.getTableIndex().setSelectedItem(tableInfo.getIndexType() != null ? tableInfo.getIndexType() : IType.LOCAL);
@@ -306,6 +328,7 @@ public final class QuerySelectionHandler extends AbstractTableSelectionHandler<Q
   public void itemStateChanged(ItemEvent e) {
     if (e.getStateChange() == ItemEvent.SELECTED) {
       isSelected = true;
+      highlightService.clearAllHighlights();
       GUIHelper.disableButton(queryButtonPanel, false);
       metadataQueryPanel.getEditMetadata().setEnabled(false);
       metadataQueryPanel.getLoadMetadata().setEnabled(false);
@@ -316,6 +339,7 @@ public final class QuerySelectionHandler extends AbstractTableSelectionHandler<Q
       metadataQueryPanel.getEditMetadata().setEnabled(true);
       metadataQueryPanel.getLoadMetadata().setEnabled(true);
       GUIHelper.disableButton(metricQueryPanel.getMetricQueryButtonPanel(), true);
+      highlightService.highlightFromQuery(selectionContext.getSelectedQueryId());
     }
   }
 }

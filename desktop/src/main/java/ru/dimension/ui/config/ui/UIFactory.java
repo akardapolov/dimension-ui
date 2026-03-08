@@ -4,14 +4,18 @@ import static ru.dimension.ui.model.view.TemplateAction.LOAD;
 import static ru.dimension.ui.model.view.TemplateAction.SAVE;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableColumn;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTextArea;
-import javax.swing.table.TableColumn;
 import ru.dimension.di.ServiceLocator;
 import ru.dimension.tt.api.TT;
 import ru.dimension.tt.api.TTRegistry;
@@ -23,8 +27,6 @@ import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.model.column.ConnectionColumnNames;
 import ru.dimension.ui.model.column.MetricsColumnNames;
-import ru.dimension.ui.model.column.QueryColumnNames;
-import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.view.custom.DetailedComboBox;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.profile.MultiSelectTaskPanel;
@@ -34,6 +36,7 @@ import ru.dimension.ui.view.panel.config.query.MetricQueryPanel;
 import ru.dimension.ui.view.panel.config.task.MultiSelectQueryPanel;
 import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.view.table.icon.ModelIconProviders;
+import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.view.table.row.Rows.ConnectionTemplateRow;
 import ru.dimension.ui.view.table.row.Rows.MetadataRow;
 import ru.dimension.ui.view.table.row.Rows.TemplateConnectionRow;
@@ -262,15 +265,54 @@ public final class UIFactory {
     table.setIntercellSpacing(new Dimension(1, 1));
     table.setEditable(true);
 
+    table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+    table.setHorizontalScrollEnabled(true);
+
+    DefaultTableCellRenderer truncatingRenderer = new DefaultTableCellRenderer() {
+      @Override
+      public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+        String tooltip = null;
+        if (value != null) {
+          String str = value.toString();
+          if (str.length() > 30) {
+            tooltip = str;
+            value = str.substring(0, 30) + "...";
+          }
+        }
+        Component c = super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
+        if (c instanceof JComponent) {
+          ((JComponent) c).setToolTipText(tooltip);
+        }
+        return c;
+      }
+    };
+
+    table.setDefaultRenderer(String.class, truncatingRenderer);
+    table.setDefaultRenderer(Object.class, truncatingRenderer);
+
     if (table.getColumnExt("Column ID") != null) {
       table.getColumnExt("Column ID").setVisible(false);
     }
-
     if (table.getColumnExt("Column ID SQL") != null) {
       table.getColumnExt("Column ID SQL").setVisible(false);
     }
 
-    return new JXTableCase(tt);
+    table.packAll();
+
+    for (int i = 0; i < table.getColumnCount(); i++) {
+      TableColumn col = table.getColumnModel().getColumn(i);
+      if (col.getPreferredWidth() > 250) {
+        col.setPreferredWidth(250);
+      }
+    }
+
+    JXTableCase jxTableCase = new JXTableCase(tt);
+    if (jxTableCase.getJScrollPane() != null) {
+      jxTableCase.getJScrollPane().setMinimumSize(new Dimension(50, 50));
+      jxTableCase.getJScrollPane().setPreferredSize(new Dimension(450, 250));
+    }
+
+    return jxTableCase;
   }
 
   public static JXTableCase createMetricsCase() {
@@ -284,12 +326,47 @@ public final class UIFactory {
         MetricsColumnNames.METRIC_FUNCTION.getColName(),
         MetricsColumnNames.CHART_TYPE.getColName()
     }, 2);
-    jxTableCase.getJxTable().getColumnExt(0).setVisible(false);
-    jxTableCase.getJxTable().setEditable(false);
 
-    TableColumn col = jxTableCase.getJxTable().getColumnModel().getColumn(1);
-    col.setMinWidth(30);
-    col.setMaxWidth(50);
+    JXTable table = jxTableCase.getJxTable();
+    table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+    table.setHorizontalScrollEnabled(true);
+    table.getColumnExt(0).setVisible(false);
+    table.setEditable(false);
+
+    DefaultTableCellRenderer truncatingRenderer = new DefaultTableCellRenderer() {
+      @Override
+      public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+        String tooltip = null;
+        if (value != null) {
+          String str = value.toString();
+          if (str.length() > 30) {
+            tooltip = str;
+            value = str.substring(0, 30) + "...";
+          }
+        }
+        Component c = super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
+        if (c instanceof JComponent) {
+          ((JComponent) c).setToolTipText(tooltip);
+        }
+        return c;
+      }
+    };
+
+    table.setDefaultRenderer(String.class, truncatingRenderer);
+    table.setDefaultRenderer(Object.class, truncatingRenderer);
+
+    table.packAll();
+
+    if (table.getColumnCount() > 1) {
+      TableColumn col = table.getColumnModel().getColumn(1);
+      col.setMinWidth(30);
+      col.setMaxWidth(80);
+    }
+
+    if (jxTableCase.getJScrollPane() != null) {
+      jxTableCase.getJScrollPane().setMinimumSize(new Dimension(50, 50));
+      jxTableCase.getJScrollPane().setPreferredSize(new Dimension(450, 250));
+    }
 
     return jxTableCase;
   }
@@ -306,16 +383,20 @@ public final class UIFactory {
 
     JXTable table = tt.table();
     configureStandardJXTable(table);
+    table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+    table.setHorizontalScrollEnabled(true);
     table.setEditable(false);
 
     if (table.getColumnExt(MetricsColumnNames.ID.getColName()) != null) {
       table.getColumnExt(MetricsColumnNames.ID.getColName()).setVisible(false);
     }
 
+    table.packAll();
+
     if (table.getColumnCount() > 1) {
       TableColumn col = table.getColumnModel().getColumn(1);
       col.setMinWidth(30);
-      col.setMaxWidth(50);
+      col.setMaxWidth(80);
     }
 
     return tt;

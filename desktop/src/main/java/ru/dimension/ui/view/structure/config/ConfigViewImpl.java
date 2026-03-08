@@ -4,18 +4,22 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
 import javax.swing.AbstractAction;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRootPane;
+import javax.swing.JSeparator;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
 import javax.swing.border.EtchedBorder;
 import lombok.extern.log4j.Log4j2;
@@ -84,6 +88,7 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
   private final MultiSelectQueryHandler multiSelectQueryHandler;
 
   private final JCheckBox checkboxConfig;
+  private final JButton btnPingAll;
 
   @Inject
   public ConfigViewImpl(@Named("profileSelectionHandler") ProfileSelectionHandler profileSelectionHandler,
@@ -140,10 +145,17 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
 
     this.checkboxConfig = checkboxConfig;
 
+    this.btnPingAll = new JButton("Ping All");
+    this.btnPingAll.setToolTipText("Recheck all connections (F5)");
+
     Border finalBorder = GUIHelper.getGrayBorder();
     this.profileCase.getJxTable().setBorder(finalBorder);
     this.taskCase.getJxTable().setBorder(finalBorder);
     this.connectionCase.getJxTable().setBorder(finalBorder);
+    this.connectionCase.getJxTable().setAutoResizeMode(JXTable.AUTO_RESIZE_ALL_COLUMNS);
+
+    SwingUtilities.invokeLater(() -> this.connectionCase.getJxTable().packAll());
+
     this.queryCase.getJxTable().setBorder(finalBorder);
 
     PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(), false);
@@ -161,9 +173,18 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
     JPanel panelSettings = new JPanel();
     panelSettings.setBorder(new EtchedBorder());
 
+    JPanel topControlsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+    topControlsPanel.add(checkboxConfig);
+
+    JSeparator vSeparator = new JSeparator(JSeparator.VERTICAL);
+    vSeparator.setPreferredSize(new Dimension(5, 20));
+
+    topControlsPanel.add(vSeparator);
+    topControlsPanel.add(btnPingAll);
+
     PainlessGridBag gbl = new PainlessGridBag(panelSettings, PGHelper.getPGConfig(), false);
 
-    gbl.row().cell(checkboxConfig).fillX()
+    gbl.row().cell(topControlsPanel).fillX()
         .cell(new JLabel()).fillX()
         .cell(new JLabel()).fillX()
         .cell(new JLabel()).fillX();
@@ -196,7 +217,6 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
 
     return panelSettings;
   }
-
 
   public void hideProfile() {
     this.setVisible(false);
@@ -242,6 +262,9 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
     hideIdColumnIfExists(connectionCase.getJxTable());
     hideIdColumnIfExists(queryCase.getJxTable());
 
+    this.btnPingAll.addActionListener(e -> configPresenter.recheckAllConnections());
+    setF5ToPingAll(configPresenter);
+
     addWindowListener(configPresenter);
   }
 
@@ -284,6 +307,22 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
         ConfigViewImpl.this.dispatchEvent(
             new WindowEvent(ConfigViewImpl.this, WindowEvent.WINDOW_CLOSING)
         );
+      }
+    });
+  }
+
+  private void setF5ToPingAll(ConfigPresenter configPresenter) {
+    final String actionKey = "CONFIG_DIALOG_PING_ALL_ON_F5";
+    JRootPane root = getRootPane();
+
+    root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+        .put(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), actionKey);
+
+    root.getActionMap().put(actionKey, new AbstractAction() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        log.info("F5 pressed: Triggering Ping All");
+        configPresenter.recheckAllConnections();
       }
     });
   }

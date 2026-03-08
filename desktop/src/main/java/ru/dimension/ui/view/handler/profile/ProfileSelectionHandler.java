@@ -22,6 +22,7 @@ import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.view.handler.core.AbstractTableSelectionHandler;
 import ru.dimension.ui.view.handler.core.ButtonPanelBindings;
 import ru.dimension.ui.view.handler.core.ConfigSelectionContext;
+import ru.dimension.ui.view.handler.core.RelatedHighlightService;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.profile.MultiSelectTaskPanel;
 import ru.dimension.ui.view.panel.config.profile.ProfilePanel;
@@ -40,6 +41,7 @@ public final class ProfileSelectionHandler extends AbstractTableSelectionHandler
   private final ButtonPanel buttonPanel;
   private final JCheckBox checkboxConfig;
   private final JXTableCase taskCase;
+  private final RelatedHighlightService highlightService;
 
   @Inject
   public ProfileSelectionHandler(@Named("profileConfigCase") JXTableCase profileCase,
@@ -50,7 +52,8 @@ public final class ProfileSelectionHandler extends AbstractTableSelectionHandler
                                  @Named("profileConfigPanel") ProfilePanel profilePanel,
                                  @Named("multiSelectPanel") MultiSelectTaskPanel multiSelectPanel,
                                  @Named("profileButtonPanel") ButtonPanel buttonPanel,
-                                 @Named("checkboxConfig") JCheckBox checkboxConfig) {
+                                 @Named("checkboxConfig") JCheckBox checkboxConfig,
+                                 @Named("relatedHighlightService") RelatedHighlightService highlightService) {
     super(profileCase);
     this.taskCase = taskCase;
     this.profileManager = profileManager;
@@ -60,14 +63,17 @@ public final class ProfileSelectionHandler extends AbstractTableSelectionHandler
     this.multiSelectPanel = multiSelectPanel;
     this.buttonPanel = buttonPanel;
     this.checkboxConfig = checkboxConfig;
+    this.highlightService = highlightService;
 
     bind();
 
     this.checkboxConfig.addItemListener(e -> {
       if (e.getStateChange() == ItemEvent.SELECTED) {
+        highlightService.clearAllHighlights();
         applyHierarchyMode();
       } else {
         applyFullMode();
+        highlightService.highlightFromProfile(context.getSelectedProfileId());
       }
     });
 
@@ -89,6 +95,8 @@ public final class ProfileSelectionHandler extends AbstractTableSelectionHandler
 
     if (checkboxConfig.isSelected()) {
       applyHierarchyMode();
+    } else {
+      highlightService.highlightFromProfile(id);
     }
   }
 

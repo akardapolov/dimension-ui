@@ -33,6 +33,8 @@ import org.apache.commons.dbcp2.BasicDataSource;
 import org.jdesktop.swingx.JXTable;
 import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.bus.EventBus;
+import ru.dimension.ui.bus.event.ConnectionAddEvent;
+import ru.dimension.ui.bus.event.ConnectionRemoveEvent;
 import ru.dimension.ui.bus.event.ProfileAddEvent;
 import ru.dimension.ui.bus.event.ProfileRemoveEvent;
 import ru.dimension.ui.bus.event.UpdateMetadataColumnsEvent;
@@ -92,6 +94,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
   private volatile boolean statusCheckInProgress = false;
 
   private volatile CompletableFuture<Void> currentCheckFuture = null;
+  private volatile boolean isUpdatingTableStatus = false;
 
   @Inject
   public ConfigPresenter(@Named("configView") ConfigView configView,
@@ -126,11 +129,40 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
     this.eventRegistry = EventRouteRegistry.forComponent(Component.CONFIGURATION, EventUtils::getComponent)
         .routeGlobal(ProfileAddEvent.class, this::fireProfileAdd)
         .routeGlobal(ProfileRemoveEvent.class, this::fireProfileRemove)
+        .routeGlobal(ConnectionAddEvent.class, this::fireConnectionAdd)
+        .routeGlobal(ConnectionRemoveEvent.class, this::fireConnectionRemove)
         .routeGlobal(UpdateMetadataColumnsEvent.class, this::fireUpdateMetadataColumns)
         .routeGlobal(UpdateQueryList.class, this::fireUpdateQueryList)
         .register(eventBus);
 
     checkProfileListState();
+
+    if (this.connectionCase.getJxTable() != null) {
+      javax.swing.table.TableModel model = this.connectionCase.getJxTable().getModel();
+      if (model != null) {
+        model.addTableModelListener(e -> {
+          if (!isUpdatingTableStatus) {
+            SwingUtilities.invokeLater(this::updateConnectionTableStatus);
+          }
+        });
+      }
+      this.connectionCase.getJxTable().addPropertyChangeListener("model", evt -> {
+        javax.swing.table.TableModel newModel = (javax.swing.table.TableModel) evt.getNewValue();
+        if (newModel != null) {
+          newModel.addTableModelListener(e -> {
+            if (!isUpdatingTableStatus) {
+              SwingUtilities.invokeLater(this::updateConnectionTableStatus);
+            }
+          });
+        }
+      });
+    }
+
+    if (this.checkboxConfig != null) {
+      this.checkboxConfig.addItemListener(e -> {
+        SwingUtilities.invokeLater(this::updateConnectionTableStatus);
+      });
+    }
   }
 
   @Override
@@ -557,15 +589,26 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
       return;
     }
 
+    boolean changed = false;
     for (int i = 0; i < tt.model().getRowCount(); i++) {
       ConnectionRow row = tt.model().itemAt(i);
       if (row != null) {
         ConnectionStatus newStatus = connectionStatusMap.getOrDefault(row.getId(), ConnectionStatus.NOT_CONNECTED);
-        row.setStatus(newStatus);
+        if (row.getStatus() != newStatus) {
+          row.setStatus(newStatus);
+          changed = true;
+        }
       }
     }
 
-    tt.model().fireTableDataChanged();
+    if (changed) {
+      isUpdatingTableStatus = true;
+      try {
+        tt.model().fireTableDataChanged();
+      } finally {
+        isUpdatingTableStatus = false;
+      }
+    }
   }
 
   public void fireProfileAdd(ProfileAddEvent event) {
@@ -586,6 +629,16 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
     checkProfileListState();
 
     resetConnectionStatusCheck();
+  }
+
+  public void fireConnectionAdd(ConnectionAddEvent event) {
+    log.info("Received ConnectionAddEvent for connectionId={}", event.connectionId());
+    recheckConnection(event.connectionId());
+  }
+
+  public void fireConnectionRemove(ConnectionRemoveEvent event) {
+    log.info("Received ConnectionRemoveEvent for connectionId={}", event.connectionId());
+    connectionStatusMap.remove(event.connectionId());
   }
 
   public void fireUpdateMetadataColumns(UpdateMetadataColumnsEvent event) {
@@ -655,15 +708,26 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
         .findFirst()
         .orElse(null);
 
+    if (connection == null) {
+      ConnectionInfo info = profileManager.getConnectionInfoById(connectionId);
+      if (info != null) {
+        connection = new ru.dimension.ui.model.config.Connection();
+        connection.setId(info.getId());
+        connection.setName(info.getName());
+        connection.setType(info.getType());
+      }
+    }
+
     if (connection != null) {
+      ru.dimension.ui.model.config.Connection finalConnection = connection;
       connectionStatusMap.put(connectionId, ConnectionStatus.CONNECTING);
       SwingUtilities.invokeLater(this::updateConnectionTableStatus);
 
       CompletableFuture.supplyAsync(() -> {
             try {
-              return checkConnectionStatus(connection);
+              return checkConnectionStatus(finalConnection);
             } catch (Exception e) {
-              log.error("Error rechecking connection {}: {}", connection.getName(), e.getMessage());
+              log.error("Error rechecking connection {}: {}", finalConnection.getName(), e.getMessage());
               return ConnectionStatus.NOT_CONNECTED;
             }
           }, executor)
@@ -674,7 +738,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
           })
           .thenAccept(status -> {
             connectionStatusMap.put(connectionId, status);
-            log.info("Recheck completed for connection {} with status: {}", connection.getName(), status);
+            log.info("Recheck completed for connection {} with status: {}", finalConnection.getName(), status);
           })
           .whenComplete((result, throwable) -> {
             SwingUtilities.invokeLater(this::updateConnectionTableStatus);

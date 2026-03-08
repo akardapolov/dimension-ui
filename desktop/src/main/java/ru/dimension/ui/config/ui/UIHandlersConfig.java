@@ -6,6 +6,7 @@ import ru.dimension.ui.view.handler.connection.ConnectionButtonPanelHandler;
 import ru.dimension.ui.view.handler.connection.ConnectionSelectionHandler;
 import ru.dimension.ui.view.handler.connection.ConnectionTemplateTableHandler;
 import ru.dimension.ui.view.handler.core.ConfigSelectionContext;
+import ru.dimension.ui.view.handler.core.RelatedHighlightService;
 import ru.dimension.ui.view.handler.profile.MultiSelectTaskHandler;
 import ru.dimension.ui.view.handler.profile.ProfileButtonPanelHandler;
 import ru.dimension.ui.view.handler.profile.ProfileSelectionHandler;
@@ -31,6 +32,7 @@ public final class UIHandlersConfig {
 
         .provideNamed(ConfigSelectionContext.class, "configSelectionContext", ServiceLocator.singleton(ConfigSelectionContext::new))
 
+        .bindNamed(RelatedHighlightService.class, "relatedHighlightService", RelatedHighlightService.class)
         .bindNamed(ProfileSelectionHandler.class, "profileSelectionHandler", ProfileSelectionHandler.class)
         .bindNamed(ProfileButtonPanelHandler.class, "profileButtonPanelHandler", ProfileButtonPanelHandler.class)
         .bindNamed(MultiSelectTaskHandler.class, "multiSelectTaskHandler", MultiSelectTaskHandler.class)

@@ -33,6 +33,7 @@ import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.view.handler.core.AbstractTableSelectionHandler;
 import ru.dimension.ui.view.handler.core.ButtonPanelBindings;
 import ru.dimension.ui.view.handler.core.ConfigSelectionContext;
+import ru.dimension.ui.view.handler.core.RelatedHighlightService;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.task.MultiSelectQueryPanel;
 import ru.dimension.ui.view.panel.config.task.TaskPanel;
@@ -55,6 +56,7 @@ public final class TaskSelectionHandler extends AbstractTableSelectionHandler<Ta
   private final JXTableCase connectionCase;
   private final JXTableCase queryCase;
   private final EventBus eventBus;
+  private final RelatedHighlightService highlightService;
 
   @SuppressWarnings("FieldCanBeLocal")
   private final EventRouteRegistry eventRegistry;
@@ -70,7 +72,8 @@ public final class TaskSelectionHandler extends AbstractTableSelectionHandler<Ta
                               @Named("multiSelectQueryPanel") MultiSelectQueryPanel multiSelectPanel,
                               @Named("taskButtonPanel") ButtonPanel buttonPanel,
                               @Named("checkboxConfig") JCheckBox checkboxConfig,
-                              @Named("eventBus") EventBus eventBus) {
+                              @Named("eventBus") EventBus eventBus,
+                              @Named("relatedHighlightService") RelatedHighlightService highlightService) {
     super(taskCase);
     this.connectionCase = connectionCase;
     this.queryCase = queryCase;
@@ -82,6 +85,7 @@ public final class TaskSelectionHandler extends AbstractTableSelectionHandler<Ta
     this.buttonPanel = buttonPanel;
     this.checkboxConfig = checkboxConfig;
     this.eventBus = eventBus;
+    this.highlightService = highlightService;
 
     this.eventRegistry = EventRouteRegistry.forComponent(Component.CONFIGURATION, EventUtils::getComponent)
         .routeGlobal(UpdateQueryList.class, this::handleUpdateQueryList)
@@ -89,9 +93,11 @@ public final class TaskSelectionHandler extends AbstractTableSelectionHandler<Ta
 
     this.checkboxConfig.addItemListener(e -> {
       if (e.getStateChange() == ItemEvent.SELECTED) {
+        highlightService.clearAllHighlights();
         applyHierarchyMode();
       } else {
         applyFullMode();
+        highlightService.highlightFromTask(context.getSelectedTaskId());
       }
     });
 
@@ -115,6 +121,8 @@ public final class TaskSelectionHandler extends AbstractTableSelectionHandler<Ta
 
     if (checkboxConfig.isSelected()) {
       applyHierarchyMode();
+    } else {
+      highlightService.highlightFromTask(id);
     }
   }
 

@@ -19,6 +19,7 @@ import ru.dimension.ui.prompt.Internationalization;
 import ru.dimension.ui.view.handler.core.AbstractTableSelectionHandler;
 import ru.dimension.ui.view.handler.core.ButtonPanelBindings;
 import ru.dimension.ui.view.handler.core.ConfigSelectionContext;
+import ru.dimension.ui.view.handler.core.RelatedHighlightService;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.connection.ConnectionPanel;
 import ru.dimension.ui.view.table.row.Rows.ConnectionRow;
@@ -34,6 +35,7 @@ public final class ConnectionSelectionHandler extends AbstractTableSelectionHand
   private final ButtonPanel connectionButtonPanel;
   private final JXTableCase connectionTemplateCase;
   private final JCheckBox checkboxConfig;
+  private final RelatedHighlightService highlightService;
 
   private final ResourceBundle bundleDefault;
 
@@ -44,7 +46,8 @@ public final class ConnectionSelectionHandler extends AbstractTableSelectionHand
                                     @Named("connectionConfigPanel") ConnectionPanel connectionPanel,
                                     @Named("connectionButtonPanel") ButtonPanel connectionButtonPanel,
                                     @Named("connectionTemplateCase") JXTableCase connectionTemplateCase,
-                                    @Named("checkboxConfig") JCheckBox checkboxConfig) {
+                                    @Named("checkboxConfig") JCheckBox checkboxConfig,
+                                    @Named("relatedHighlightService") RelatedHighlightService highlightService) {
     super(connectionCase);
     this.profileManager = profileManager;
     this.context = context;
@@ -52,11 +55,19 @@ public final class ConnectionSelectionHandler extends AbstractTableSelectionHand
     this.connectionButtonPanel = connectionButtonPanel;
     this.connectionTemplateCase = connectionTemplateCase;
     this.checkboxConfig = checkboxConfig;
+    this.highlightService = highlightService;
     this.bundleDefault = Internationalization.getInternationalizationBundle();
 
     bind();
 
-    this.checkboxConfig.addItemListener(e -> applyCheckboxState(e.getStateChange() == ItemEvent.SELECTED));
+    this.checkboxConfig.addItemListener(e -> {
+      if (e.getStateChange() == ItemEvent.SELECTED) {
+        highlightService.clearAllHighlights();
+      } else {
+        highlightService.highlightFromConnection(context.getSelectedConnectionId());
+      }
+      applyCheckboxState(e.getStateChange() == ItemEvent.SELECTED);
+    });
     applyCheckboxState(this.checkboxConfig.isSelected());
   }
 
@@ -70,6 +81,9 @@ public final class ConnectionSelectionHandler extends AbstractTableSelectionHand
       clearHttp();
       connectionPanel.getJButtonTemplate().setEnabled(false);
       ButtonPanelBindings.setViewMode(connectionButtonPanel, false);
+      if (!checkboxConfig.isSelected()) {
+        highlightService.highlightFromConnection(null);
+      }
       return;
     }
 
@@ -79,6 +93,9 @@ public final class ConnectionSelectionHandler extends AbstractTableSelectionHand
       clearHttp();
       connectionPanel.getJButtonTemplate().setEnabled(false);
       ButtonPanelBindings.setViewMode(connectionButtonPanel, false);
+      if (!checkboxConfig.isSelected()) {
+        highlightService.highlightFromConnection(null);
+      }
       return;
     }
 
@@ -96,6 +113,10 @@ public final class ConnectionSelectionHandler extends AbstractTableSelectionHand
 
     ButtonPanelBindings.setViewMode(connectionButtonPanel, true);
     applyCheckboxState(checkboxConfig.isSelected());
+
+    if (!checkboxConfig.isSelected()) {
+      highlightService.highlightFromConnection(id);
+    }
   }
 
   private void applyCheckboxState(boolean enabled) {

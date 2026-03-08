@@ -16,12 +16,12 @@ import java.util.concurrent.CompletableFuture;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
-import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.TableNameEmptyException;
+import ru.dimension.db.metadata.DTGroup;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.SProfile;
 import ru.dimension.db.model.profile.TProfile;
@@ -75,7 +75,6 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
   private final JCheckBox checkboxConfig;
   private final MetadataQueryPanel metadataQueryPanel;
   private final MetricQueryPanel metricQueryPanel;
-  private final JTabbedPane mainQuery;
   private final ConfigTab configTab;
 
   @Inject
@@ -89,7 +88,6 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
                               @Named("checkboxConfig") JCheckBox checkboxConfig,
                               @Named("metadataQueryPanel") MetadataQueryPanel metadataQueryPanel,
                               @Named("metricQueryPanel") MetricQueryPanel metricQueryPanel,
-                              @Named("mainQueryTab") JTabbedPane mainQuery,
                               @Named("configTab") ConfigTab configTab,
                               @Named("exporterParser") ExporterParser exporterParser,
                               @Named("httpResponseFetcher") HttpResponseFetcher httpResponseFetcher,
@@ -104,11 +102,8 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
     this.configMetadataCase = configMetadataCase;
     this.eventBus = eventBus;
 
-    metadataQueryPanel.getTableName().setEditable(false);
-
     this.metadataQueryPanel = metadataQueryPanel;
     this.metricQueryPanel = metricQueryPanel;
-    this.mainQuery = mainQuery;
     this.configTab = configTab;
 
     this.metadataQueryPanel.getLoadMetadata().addActionListener(this);
@@ -287,6 +282,12 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
       List<List<?>> timestampList = new LinkedList<>();
       timestampList.add(new ArrayList<>(Arrays.asList(" ", " ")));
 
+      if (tableInfo.getCProfiles() != null) {
+        tableInfo.getCProfiles().forEach(cProfile -> timestampListAll.add(
+            new ArrayList<>(Arrays.asList(cProfile.getColName(), cProfile.getCsType().getSType(), cProfile.getCsType().isTimeStamp()))
+        ));
+      }
+
       timestampListAll.stream().filter(f -> f.get(2).equals(true))
           .forEach(t -> timestampList.set(0, new ArrayList<>(Arrays.asList(t.get(0), t.get(1)))));
       timestampListAll.stream().filter(f -> f.get(2).equals(false))
@@ -341,7 +342,6 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
   }
 
   private void fillTableUI(TableInfo table) {
-    metadataQueryPanel.getTableName().setText(table.getTableName());
     metadataQueryPanel.getTableType().setSelectedItem(table.getTableType());
     metadataQueryPanel.getTableIndex().setSelectedItem(table.getIndexType());
     metadataQueryPanel.getCompression().setSelected(Boolean.TRUE.equals(table.getCompression()));
@@ -385,8 +385,6 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
       QueryInfo queryInfo = getQueryInfo(queryId);
       TableInfo tableInfo = getTableInfo(queryInfo);
 
-      metadataQueryPanel.getTableName().setText(tableInfo.getTableName());
-
       TProfile tProfile;
       try {
         tProfile = dStore.loadJdbcTableMetadata(connection, queryInfo.getText(), tableInfo.getSProfile());
@@ -424,8 +422,6 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
 
     QueryInfo queryInfo = getQueryInfo(queryId);
     TableInfo tableInfo = getTableInfo(queryInfo);
-
-    metadataQueryPanel.getTableName().setText(tableInfo.getTableName());
 
     TProfile tProfile;
     try {
@@ -528,7 +524,6 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
 
   private void updateMetadataUI(TableInfo tableInfo) {
     Runnable uiUpdate = () -> {
-      metadataQueryPanel.getTableName().setText(tableInfo.getTableName());
       metadataQueryPanel.getTableType().setSelectedItem(
           tableInfo.getTableType() != null ? tableInfo.getTableType() : TType.TIME_SERIES);
       metadataQueryPanel.getTableIndex().setSelectedItem(
@@ -546,16 +541,11 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
   private List<CProfile> findTimestampColumns(List<CProfile> columns) {
     List<CProfile> result = new ArrayList<>();
     for (CProfile col : columns) {
-      if (col.getColDbTypeName() != null && isTimestampType(col.getColDbTypeName())) {
+      if (col.getCsType().getDType().getGroup().equals(DTGroup.DATETIME)) {
         result.add(col);
       }
     }
     return result;
-  }
-
-  private boolean isTimestampType(String typeName) {
-    String upper = typeName.toUpperCase().trim();
-    return upper.contains("TIMESTAMP") || upper.contains("DATETIME");
   }
 
   private void publishMetadataUpdate(int queryId, String queryName, List<CProfile> columns) {
@@ -688,9 +678,6 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
     metadataQueryPanel.getTableType().setEnabled(!isSelected);
     metadataQueryPanel.getTableIndex().setEnabled(!isSelected);
     metadataQueryPanel.getCompression().setEnabled(!isSelected);
-
-    mainQuery.setEnabledAt(0, isSelected);
-    mainQuery.setEnabledAt(2, isSelected);
 
     configTab.setEnabledAt(1, isSelected);
     configTab.setEnabledAt(2, isSelected);

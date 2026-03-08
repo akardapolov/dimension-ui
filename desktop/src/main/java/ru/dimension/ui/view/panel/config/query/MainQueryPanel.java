@@ -1,5 +1,7 @@
 package ru.dimension.ui.view.panel.config.query;
 
+import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.util.ResourceBundle;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -13,6 +15,7 @@ import lombok.EqualsAndHashCode;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTextField;
+import org.jdesktop.swingx.JXTitledSeparator;
 import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
@@ -65,9 +68,12 @@ public class MainQueryPanel extends JPanel {
     this.queryDescription.setBorder(finalBorder);
     this.queryGatherDataComboBox.setBorder(finalBorder);
 
-    PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(), false);
+    setLayout(new BorderLayout());
+
+    JPanel content = new JPanel();
+    PainlessGridBag gbl = new PainlessGridBag(content, PGHelper.getPGConfig(2), false);
     gbl.row()
-        .cellXRemainder(this.queryButtonPanel).fillX();
+        .cellXRemainder(new JXTitledSeparator("Main")).fillX();
     gbl.row()
         .cell(labelQueryName).cell(queryName).fillX();
     gbl.row()
@@ -77,5 +83,8 @@ public class MainQueryPanel extends JPanel {
     gbl.row()
         .cell(labelQueryText).cell(new RTextScrollPane(querySqlText)).fillXY(1, 2);
     gbl.done();
+
+    add(content, BorderLayout.CENTER);
+    setMinimumSize(new Dimension(100, 100));
   }
 }

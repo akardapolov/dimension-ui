@@ -56,7 +56,7 @@ Key Features of **Dimension UI**:
 - **Flexible and rapid configuration of data collection profiles**: This feature is particularly useful when speed is critical, allowing users to quickly gather specialized statistical data for a more detailed evaluation of system or component characteristics.
 - **Local storage in the specialized **Dimension DB** database** (project repositories on [**GitFlic**](https://gitflic.ru/project/akardapolov/dimension-db) and [**GitHub**](https://github.com/akardapolov/dimension-db))—a block-columnar database with built-in data compression and deduplication.
 - **Advanced time-series data mining capabilities** using [Matrix Profile](https://www.cs.ucr.edu/~eamonn/MatrixProfile.html) and ARIMA.
-- **Time-series data visualization** from external databases via JDBC with automatic SQL query generation for data sources (No-code mode).
+- **Ad-hoc data visualization** from external databases via JDBC with automatic SQL query generation for data sources (No-code mode). Both time-series and regular table data supported.
 - **Dashboard system** for displaying metrics from multiple sources in a single interface. Quick access to metrics simplifies user workflows when reviewing large volumes of analytical data.
 - **Built-in reporting system** for generating PDF reports based on collected data for further analysis.
 
@@ -69,8 +69,8 @@ Key Features of **Dimension UI**:
 4. Solving the problems of complex monitoring of information security of systems with access to data sources via the JDBC and HTTP API (Prometheus, JSON);
 5. Using the application for training in courses related to data processing and analysis, which require quick setup of data collection from test systems, visualization with the ability to perform advanced data analysis to demonstrate certain concepts, for example, for training system administrators, database administrators, developers and analysts;
 6. Diagnostics of problems in the operation of complex systems providing APIs for access to monitoring data via JDBC and HTTP (Prometheus, JSON). For example, for detailed diagnostics of the operation of systems and their components in a heterogeneous environment, Java microservices working with a database;
-7. Visualization and multidimensional analysis of collected time series data in a local database in real time, historically, and predictive analytics for various types of applications via JDBC and HTTP (Prometheus, JSON);
-8. Visualization and multidimensional analysis of time series data for tables and views in external Postgres, Oracle, Microsoft SQL Server, ClickHouse databases via JDBC protocol without writing SQL (No-code mode);
+7. Multidimensional analysis and visualization of accumulated time-series data in a local database (real-time and historical), including predictive analytics for various application types via JDBC and HTTP (Prometheus, JSON);
+8. Direct JDBC connection to external databases (Postgres, Oracle, Microsoft SQL Server, ClickHouse) to explore time-series data in tables and views in No-code mode (with automated SQL generation).
 
 [Return to Contents](#Contents)
 
@@ -91,13 +91,14 @@ Table 1. Hardware requirements
 
 Table 2. Software requirements
 
-| Software     | Requirements             |
-|:-------------|:-------------------------|
-| Java         | Java version 25+         |
-| Maven        | Not lower than version 3 |
-| Git          | Latest current version   |
-| Dimension-DB | Latest current version   |
-| Dimension-DI | Latest current version   |
+| Software     | Requirements           | Link                                                        |
+|:-------------|:-----------------------|:------------------------------------------------------------|
+| Java         | Java version 25+       | [Java](https://www.oracle.com/java/)                        |
+| Maven        | Latest current version | [Maven](https://maven.apache.org/)                          |
+| Git          | Latest current version | [Git](https://git-scm.com/)                                 |
+| Dimension-DB | Latest current version | [Dimension-DB](https://github.com/akardapolov/dimension-db) |
+| Dimension-DI | Latest current version | [Dimension-DI](https://github.com/akardapolov/dimension-di) |
+| Dimension-TT | Latest current version | [Dimension-TT](https://github.com/akardapolov/dimension-tt) |
 
 ### Operating system requirements
 

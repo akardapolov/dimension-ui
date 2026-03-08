@@ -3,6 +3,7 @@ package ru.dimension.ui.view.handler.query;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.util.Collections;
@@ -15,8 +16,8 @@ import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
-import javax.swing.JTabbedPane;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.exception.EmptyNameException;
@@ -32,6 +33,7 @@ import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.table.JXTableCase;
+import ru.dimension.ui.view.dialog.MetricDetailDialog;
 import ru.dimension.ui.view.panel.config.query.MainQueryPanel;
 import ru.dimension.ui.view.panel.config.query.MetadataQueryPanel;
 import ru.dimension.ui.view.panel.config.query.MetricQueryPanel;
@@ -45,7 +47,6 @@ public final class QueryMetricButtonPanelHandler implements java.awt.event.Actio
   private final MetricQueryPanel metricQueryPanel;
   private final MainQueryPanel mainQueryPanel;
   private final MetadataQueryPanel metadataQueryPanel;
-  private final JTabbedPane mainQuery;
   private final ConfigTab configTab;
 
   private List<Metric> saveMetricList;
@@ -70,7 +71,6 @@ public final class QueryMetricButtonPanelHandler implements java.awt.event.Actio
                                        @Named("taskConfigCase") JXTableCase taskCase,
                                        @Named("connectionConfigCase") JXTableCase connectionCase,
                                        @Named("queryConfigCase") JXTableCase queryCase,
-                                       @Named("mainQueryTab") JTabbedPane mainQuery,
                                        @Named("configTab") ConfigTab configTab,
                                        @Named("checkboxConfig") JCheckBox checkboxConfig) {
     this.profileManager = profileManager;
@@ -81,7 +81,6 @@ public final class QueryMetricButtonPanelHandler implements java.awt.event.Actio
     this.taskCase = taskCase;
     this.connectionCase = connectionCase;
     this.queryCase = queryCase;
-    this.mainQuery = mainQuery;
     this.configTab = configTab;
     this.checkboxConfig = checkboxConfig;
 
@@ -89,8 +88,9 @@ public final class QueryMetricButtonPanelHandler implements java.awt.event.Actio
     this.metricQueryPanel.getMetricQueryButtonPanel().getBtnCopy().addActionListener(this);
     this.metricQueryPanel.getMetricQueryButtonPanel().getBtnDel().addActionListener(this);
     this.metricQueryPanel.getMetricQueryButtonPanel().getBtnEdit().addActionListener(this);
-    this.metricQueryPanel.getMetricQueryButtonPanel().getBtnSave().addActionListener(this);
-    this.metricQueryPanel.getMetricQueryButtonPanel().getBtnCancel().addActionListener(this);
+
+    this.metricQueryPanel.getMetricQueryButtonPanel().getBtnSave().setVisible(false);
+    this.metricQueryPanel.getMetricQueryButtonPanel().getBtnCancel().setVisible(false);
 
     this.metricQueryPanel.getMetricQueryButtonPanel().getBtnDel().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
         .put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "delete");
@@ -98,15 +98,6 @@ public final class QueryMetricButtonPanelHandler implements java.awt.event.Actio
       @Override
       public void actionPerformed(ActionEvent e) {
         metricQueryPanel.getMetricQueryButtonPanel().getBtnDel().doClick();
-      }
-    });
-
-    this.metricQueryPanel.getMetricQueryButtonPanel().getBtnCancel().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
-        .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "cancel");
-    this.metricQueryPanel.getMetricQueryButtonPanel().getBtnCancel().getActionMap().put("cancel", new AbstractAction() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        metricQueryPanel.getMetricQueryButtonPanel().getBtnCancel().doClick();
       }
     });
 
@@ -118,26 +109,30 @@ public final class QueryMetricButtonPanelHandler implements java.awt.event.Actio
     if (e.getSource() == metricQueryPanel.getMetricQueryButtonPanel().getBtnNew()) {
       mode = "new";
       if (queryCase.getJxTable().getSelectedRow() == -1) {
-        throw new NotSelectedRowException("The query is not selected. Please select and try again!");
+        JOptionPane.showMessageDialog(null, "The query is not selected. Please select and try again!",
+                                      "Warning", JOptionPane.WARNING_MESSAGE);
+        return;
       }
-      setPanelView(false);
-      newEmptyPanel();
+      showMetricDialog(null);
       return;
     }
 
     if (e.getSource() == metricQueryPanel.getMetricQueryButtonPanel().getBtnCopy()) {
       mode = "copy";
-      if (metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow() == -1) {
-        throw new NotSelectedRowException("The metric to copy is not selected. Please select and try again!");
+      if (metricQueryPanel.getConfigMetricCase().getJxTable().getRowCount() == 0
+          || metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow() == -1) {
+        JOptionPane.showMessageDialog(null, "The metric to copy is not selected. Please select and try again!",
+                                      "Warning", JOptionPane.WARNING_MESSAGE);
+        return;
       }
       String nameMetric = getSelectedMetricName();
-      setPanelView(false);
-      metricQueryPanel.getNameMetric().setText(nameMetric + "_copy");
+      showMetricDialog(nameMetric + "_copy");
       return;
     }
 
     if (e.getSource() == metricQueryPanel.getMetricQueryButtonPanel().getBtnDel()) {
-      if (metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow() == -1) {
+      if (metricQueryPanel.getConfigMetricCase().getJxTable().getRowCount() == 0
+          || metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow() == -1) {
         JOptionPane.showMessageDialog(null, "Not selected metrics. Please select and try again!",
                                       "General Error", JOptionPane.ERROR_MESSAGE);
         return;
@@ -155,37 +150,92 @@ public final class QueryMetricButtonPanelHandler implements java.awt.event.Actio
       profileManager.updateQuery(query);
 
       fillMetricCase(query);
-      if (metricQueryPanel.getConfigMetricCase().getJxTable().getRowCount() == 0) {
-        metricQueryPanel.getNameMetric().setText("");
-        metricQueryPanel.getNameMetric().setPrompt("Metric name...");
-      }
       return;
     }
 
     if (e.getSource() == metricQueryPanel.getMetricQueryButtonPanel().getBtnEdit()) {
-      if (metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow() == -1) {
-        throw new NotSelectedRowException("Not selected metric. Please select and try again!");
+      if (metricQueryPanel.getConfigMetricCase().getJxTable().getRowCount() == 0
+          || metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow() == -1) {
+        JOptionPane.showMessageDialog(null, "Not selected metric. Please select and try again!",
+                                      "Warning", JOptionPane.WARNING_MESSAGE);
+        return;
       }
       mode = "edit";
-      setPanelView(false);
-      this.nameSelectedMetric = metricQueryPanel.getNameMetric().getText();
-      return;
+      this.nameSelectedMetric = getSelectedMetricName();
+      showMetricDialog(nameSelectedMetric);
+    }
+  }
+
+  private void showMetricDialog(String prefillName) {
+    Window owner = SwingUtilities.getWindowAncestor(metricQueryPanel);
+
+    MetricDetailDialog dialog = new MetricDetailDialog(
+        owner,
+        metricQueryPanel.getNameMetric(),
+        metricQueryPanel.getDefaultCheckBox(),
+        metricQueryPanel.getXTextFile(),
+        metricQueryPanel.getYComboBox(),
+        metricQueryPanel.getDimensionComboBox(),
+        metricQueryPanel.getGroupFunction(),
+        metricQueryPanel.getChartType()
+    );
+
+    metricQueryPanel.getDefaultCheckBox().setEnabled(true);
+    metricQueryPanel.getNameMetric().setEditable(true);
+    metricQueryPanel.getXTextFile().setEditable(true);
+    metricQueryPanel.getYComboBox().setEnabled(true);
+    metricQueryPanel.getDimensionComboBox().setEnabled(true);
+    metricQueryPanel.getGroupFunction().setEnabled(true);
+    metricQueryPanel.getChartType().setEnabled(true);
+
+    if ("new".equals(mode)) {
+      newEmptyPanel();
+    } else if ("copy".equals(mode) && prefillName != null) {
+      metricQueryPanel.getNameMetric().setText(prefillName);
+    } else if ("edit".equals(mode) && prefillName != null) {
+      this.nameSelectedMetric = prefillName;
     }
 
-    if (e.getSource() == metricQueryPanel.getMetricQueryButtonPanel().getBtnSave()) {
-      if (mode.equals("new") || mode.equals("copy")) {
-        saveNewOrCopy();
-        return;
+    dialog.getBtnSave().addActionListener(ev -> {
+      try {
+        if ("new".equals(mode) || "copy".equals(mode)) {
+          saveNewOrCopy();
+        } else if ("edit".equals(mode)) {
+          saveEdit();
+        }
+        resetMetricFields();
+        dialog.dispose();
+      } catch (Exception ex) {
+        JOptionPane.showMessageDialog(dialog, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
       }
-      if (mode.equals("edit")) {
-        saveEdit();
-        return;
-      }
-    }
+    });
 
-    if (e.getSource() == metricQueryPanel.getMetricQueryButtonPanel().getBtnCancel()) {
+    dialog.getBtnCancel().addActionListener(ev -> {
       cancelEdit();
-    }
+      dialog.dispose();
+    });
+
+    dialog.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+        .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "closeDialog");
+    dialog.getRootPane().getActionMap().put("closeDialog", new AbstractAction() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        cancelEdit();
+        dialog.dispose();
+      }
+    });
+
+    dialog.setVisible(true);
+  }
+
+  private void resetMetricFields() {
+    metricQueryPanel.getDefaultCheckBox().setEnabled(false);
+    metricQueryPanel.getNameMetric().setEditable(false);
+    metricQueryPanel.getXTextFile().setEditable(false);
+    metricQueryPanel.getYComboBox().setEnabled(false);
+    metricQueryPanel.getDimensionComboBox().setEnabled(false);
+    metricQueryPanel.getGroupFunction().setEnabled(false);
+    metricQueryPanel.getChartType().setEnabled(false);
   }
 
   private void saveNewOrCopy() {
@@ -221,7 +271,6 @@ public final class QueryMetricButtonPanelHandler implements java.awt.event.Actio
 
     profileManager.updateQuery(saveQuery);
     fillMetricCase(saveQuery);
-    setPanelView(true);
   }
 
   private void saveEdit() {
@@ -257,7 +306,6 @@ public final class QueryMetricButtonPanelHandler implements java.awt.event.Actio
 
     profileManager.updateQuery(editQuery);
     fillMetricCase(editQuery);
-    setPanelView(true);
   }
 
   private Metric buildMetric(TableInfo selectedTable, int id, String name, QueryInfo query) {
@@ -328,25 +376,21 @@ public final class QueryMetricButtonPanelHandler implements java.awt.event.Actio
 
   private void cancelEdit() {
     int selectedIndex = metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow();
-    if (metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRowCount() > 0) {
-      metricQueryPanel.getConfigMetricCase().getJxTable().setRowSelectionInterval(0, 0);
-      setPanelView(true);
-      metricQueryPanel.getConfigMetricCase().getJxTable().setRowSelectionInterval(selectedIndex, selectedIndex);
-
+    if (metricQueryPanel.getConfigMetricCase().getJxTable().getRowCount() > 0 && selectedIndex >= 0) {
       String selectedMetricName = metricQueryPanel.getConfigMetricCase().getDefaultTableModel()
-          .getValueAt(metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow(), 1).toString();
+          .getValueAt(selectedIndex, 1).toString();
       boolean selectedMetricDefault = (Boolean) metricQueryPanel.getConfigMetricCase().getDefaultTableModel()
-          .getValueAt(metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow(), 2);
+          .getValueAt(selectedIndex, 2);
       String selectedMetricX = metricQueryPanel.getConfigMetricCase().getDefaultTableModel()
-          .getValueAt(metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow(), 3).toString();
+          .getValueAt(selectedIndex, 3).toString();
       String selectedMetricY = metricQueryPanel.getConfigMetricCase().getDefaultTableModel()
-          .getValueAt(metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow(), 4).toString();
+          .getValueAt(selectedIndex, 4).toString();
       String selectedMetricGroup = metricQueryPanel.getConfigMetricCase().getDefaultTableModel()
-          .getValueAt(metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow(), 5).toString();
+          .getValueAt(selectedIndex, 5).toString();
       String selectedGroupFunction = metricQueryPanel.getConfigMetricCase().getDefaultTableModel()
-          .getValueAt(metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow(), 6).toString();
+          .getValueAt(selectedIndex, 6).toString();
       String selectedMetricType = metricQueryPanel.getConfigMetricCase().getDefaultTableModel()
-          .getValueAt(metricQueryPanel.getConfigMetricCase().getJxTable().getSelectedRow(), 7).toString();
+          .getValueAt(selectedIndex, 7).toString();
 
       metricQueryPanel.getNameMetric().setText(selectedMetricName);
       metricQueryPanel.getDefaultCheckBox().setSelected(selectedMetricDefault);
@@ -356,44 +400,27 @@ public final class QueryMetricButtonPanelHandler implements java.awt.event.Actio
       metricQueryPanel.getGroupFunction().setSelectedItem(selectedGroupFunction);
       metricQueryPanel.getChartType().setSelectedItem(selectedMetricType);
     } else {
-      setPanelView(true);
       newEmptyPanel();
     }
+    resetMetricFields();
   }
 
   private void newEmptyPanel() {
     metricQueryPanel.getNameMetric().setText("");
     metricQueryPanel.getNameMetric().setPrompt("New metric...");
     metricQueryPanel.getDefaultCheckBox().setSelected(false);
-    metricQueryPanel.getYComboBox().setSelectedIndex(0);
-    metricQueryPanel.getDimensionComboBox().setSelectedIndex(0);
-    metricQueryPanel.getGroupFunction().setSelectedIndex(0);
-    metricQueryPanel.getChartType().setSelectedIndex(0);
-  }
-
-  private void setPanelView(Boolean isSelected) {
-    metricQueryPanel.getMetricQueryButtonPanel().setButtonView(isSelected);
-    metricQueryPanel.getDefaultCheckBox().setEnabled(!isSelected);
-    metricQueryPanel.getNameMetric().setEditable(!isSelected);
-    metricQueryPanel.getXTextFile().setEditable(!isSelected);
-    metricQueryPanel.getYComboBox().setEnabled(!isSelected);
-    metricQueryPanel.getDimensionComboBox().setEnabled(!isSelected);
-    metricQueryPanel.getGroupFunction().setEnabled(!isSelected);
-    metricQueryPanel.getChartType().setEnabled(!isSelected);
-
-    taskCase.getJxTable().setEnabled(isSelected);
-    connectionCase.getJxTable().setEnabled(isSelected);
-    profileCase.getJxTable().setEnabled(isSelected);
-    queryCase.getJxTable().setEnabled(isSelected);
-
-    mainQuery.setEnabledAt(0, isSelected);
-    mainQuery.setEnabledAt(1, isSelected);
-
-    configTab.setEnabledAt(1, isSelected);
-    configTab.setEnabledAt(2, isSelected);
-    configTab.setEnabledAt(0, isSelected);
-
-    checkboxConfig.setEnabled(isSelected);
+    if (metricQueryPanel.getYComboBox().getItemCount() > 0) {
+      metricQueryPanel.getYComboBox().setSelectedIndex(0);
+    }
+    if (metricQueryPanel.getDimensionComboBox().getItemCount() > 0) {
+      metricQueryPanel.getDimensionComboBox().setSelectedIndex(0);
+    }
+    if (metricQueryPanel.getGroupFunction().getItemCount() > 0) {
+      metricQueryPanel.getGroupFunction().setSelectedIndex(0);
+    }
+    if (metricQueryPanel.getChartType().getItemCount() > 0) {
+      metricQueryPanel.getChartType().setSelectedIndex(0);
+    }
   }
 
   public boolean isBusyName(String newName, int id, QueryInfo query) {
