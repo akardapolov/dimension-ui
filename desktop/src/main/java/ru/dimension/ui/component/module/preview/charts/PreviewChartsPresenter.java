@@ -87,6 +87,7 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
     chartModule.initializeUI().run();
 
     ChartDetailDialog dialog = new ChartDetailDialog(chartModule);
+    dialog.sizeRelativeTo(view);
     model.setChartDetailDialog(dialog);
 
     Destination destinationRealtime = getDestination(Panel.REALTIME, chartKey);

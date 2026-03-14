@@ -2,6 +2,7 @@ package ru.dimension.ui.component.block;
 
 import static ru.dimension.ui.laf.LafColorGroup.CHART_PANEL;
 
+import java.util.Collections;
 import java.util.List;
 import javax.swing.JButton;
 import javax.swing.border.EtchedBorder;
@@ -61,6 +62,40 @@ public class HistoryConfigBlock extends AbstractConfigBlock {
               .trailing(detailsButton)
               .build());
 
+    setBorder(new EtchedBorder());
+    LaF.setBackgroundConfigPanel(CHART_PANEL, this);
+  }
+
+  public HistoryConfigBlock(FunctionPanel functionPanel,
+                            HistoryRangePanel historyPanel,
+                            LegendPanel legendPanel) {
+    super(Spec.builder()
+              .leftItems(List.of(
+                  Item.builder().component(functionPanel).weightx(2.0 / 15).build(),
+                  Item.builder().component(historyPanel).weightx(2.0 / 15).build(),
+                  Item.builder().component(legendPanel).weightx(1.0 / 15).build()
+              ))
+              .rightItems(Collections.emptyList())
+              .trailing(null)
+              .build());
+    setBorder(new EtchedBorder());
+    LaF.setBackgroundConfigPanel(CHART_PANEL, this);
+  }
+
+  public HistoryConfigBlock(FunctionPanel functionPanel,
+                            HistoryRangePanel historyPanel,
+                            LegendPanel legendPanel,
+                            ActionPanel actionPanel,
+                            JButton detailsButton) {
+    super(Spec.builder()
+              .leftItems(List.of(
+                  Item.builder().component(functionPanel).weightx(2.0 / 15).build(),
+                  Item.builder().component(historyPanel).weightx(2.0 / 15).build(),
+                  Item.builder().component(legendPanel).weightx(1.0 / 15).build()
+              ))
+              .rightItems(List.of(actionPanel))
+              .trailing(detailsButton)
+              .build());
     setBorder(new EtchedBorder());
     LaF.setBackgroundConfigPanel(CHART_PANEL, this);
   }

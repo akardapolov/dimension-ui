@@ -4,10 +4,12 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.ui.component.module.chart.dialog.ChartDetailDialog;
 import ru.dimension.ui.component.module.preview.spi.IPreviewChart;
 import ru.dimension.ui.component.module.preview.spi.RunMode;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
@@ -30,6 +32,7 @@ public class PreviewModel {
   private final Metric metric;
 
   private final ConcurrentMap<CProfile, IPreviewChart> chartModules = new ConcurrentHashMap<>();
+  private final AtomicReference<ChartDetailDialog> chartDetailDialog = new AtomicReference<>();
 
   public PreviewModel(RunMode runMode,
                       ProfileTaskQueryKey key,
@@ -59,7 +62,6 @@ public class PreviewModel {
     this.metric = metric;
   }
 
-
   public void addChartModule(CProfile cProfile, IPreviewChart module) {
     chartModules.put(cProfile, module);
   }
@@ -76,5 +78,13 @@ public class PreviewModel {
 
   public void removeChartModule(CProfile cProfile) {
     chartModules.remove(cProfile);
+  }
+
+  public void setChartDetailDialog(ChartDetailDialog dialog) {
+    chartDetailDialog.set(dialog);
+  }
+
+  public ChartDetailDialog getChartDetailDialog() {
+    return chartDetailDialog.get();
   }
 }

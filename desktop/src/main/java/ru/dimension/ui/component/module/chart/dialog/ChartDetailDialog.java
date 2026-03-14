@@ -1,7 +1,9 @@
 package ru.dimension.ui.component.module.chart.dialog;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
@@ -15,6 +17,8 @@ import ru.dimension.ui.component.module.chart.ChartModule;
 
 public class ChartDetailDialog extends JDialog {
 
+  private static final int PADDING = 20;
+
   private final ChartModule chartModule;
 
   public ChartDetailDialog(ChartModule chartModule) {
@@ -27,12 +31,23 @@ public class ChartDetailDialog extends JDialog {
     setTitle("Chart Details");
     setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     setLayout(new BorderLayout());
-    setPreferredSize(new Dimension(1500, 900));
-    setMinimumSize(new Dimension(1500, 900));
     add(chartModule, BorderLayout.CENTER);
     pack();
     setLocationRelativeTo(null);
     setModal(true);
+  }
+
+  public void sizeRelativeTo(Component parent) {
+    if (parent == null || !parent.isShowing()) return;
+
+    Insets dialogInsets = getInsets();
+    int titleBarHeight = dialogInsets.top;
+
+    int width = parent.getWidth() - PADDING * 2;
+    int height = parent.getHeight() - titleBarHeight - PADDING;
+
+    setSize(new Dimension(Math.max(width, 400), Math.max(height, 300)));
+    setLocationRelativeTo(parent);
   }
 
   private void installEscToClose() {

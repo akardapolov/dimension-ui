@@ -8,10 +8,13 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Consumer;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.di.ServiceLocator;
 import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageBroker;
@@ -25,10 +28,14 @@ import ru.dimension.ui.component.chart.realtime.ServerRealtimeSCP;
 import ru.dimension.ui.component.model.ChartConfigState;
 import ru.dimension.ui.component.model.ChartLegendState;
 import ru.dimension.ui.component.module.base.BaseUnitPresenter;
+import ru.dimension.ui.component.module.chart.ChartModule;
+import ru.dimension.ui.component.module.chart.dialog.ChartDetailDialog;
 import ru.dimension.ui.component.panel.LegendPanel;
 import ru.dimension.ui.exception.SeriesExceedException;
 import ru.dimension.ui.helper.DateHelper;
+import ru.dimension.ui.helper.KeyHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
+import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.config.Metric;
@@ -45,6 +52,9 @@ public class PRChartPresenter extends BaseUnitPresenter<PRChartView> implements 
 
   @Getter
   private boolean isReadyRealTimeUpdate = false;
+
+  @Setter
+  private Consumer<ChartDetailDialog> detailDialogConsumer;
 
   public PRChartPresenter(MessageBroker.Component component,
                           PRChartModel model,
@@ -105,7 +115,7 @@ public class PRChartPresenter extends BaseUnitPresenter<PRChartView> implements 
             } else if (chart instanceof ServerRealtimeSCP serverRealtimeSCP) {
               serverRealtimeSCP.reinitializeChartInCustomMode();
             }
-            chart.initialize(); // Re-initialize after setting custom mode
+            chart.initialize();
           }
 
           handleLegendChange(UIState.INSTANCE.getShowLegend(model.getChartKey()));
@@ -164,7 +174,7 @@ public class PRChartPresenter extends BaseUnitPresenter<PRChartView> implements 
     view.getRealTimeLegendPanel().setStateChangeConsumer(
         show -> handleLegendChange(ChartLegendState.SHOW.equals(show))
     );
-    view.setDetailsButtonAction(e -> sendShowChartFullMessage());
+    view.setDetailsButtonAction(e -> handleDetailsButton());
   }
 
   private void initializeFilterPanel() {
@@ -211,6 +221,7 @@ public class PRChartPresenter extends BaseUnitPresenter<PRChartView> implements 
     config.setMetric(metricCopy);
     config.setChartInfo(chartInfoCopy);
     config.setQueryInfo(model.getQueryInfo());
+    config.setSelectionWheelEnabled(false);
 
     return config;
   }
@@ -246,7 +257,7 @@ public class PRChartPresenter extends BaseUnitPresenter<PRChartView> implements 
         .action(MessageBroker.Action.SHOW_CHART_FULL)
         .parameter("chartKey", model.getChartKey())
         .parameter("key", model.getKey())
-        .parameter("metric", metric) // Send the current metric with its function
+        .parameter("metric", metric)
         .parameter("queryInfo", model.getQueryInfo())
         .parameter("chartInfo", model.getChartInfo())
         .parameter("tableInfo", model.getTableInfo())
@@ -269,5 +280,79 @@ public class PRChartPresenter extends BaseUnitPresenter<PRChartView> implements 
     if (chart != null) {
       chart.restoreSelectionRegionAfterNextDraw();
     }
+  }
+
+  private void handleDetailsButton() {
+    if (component == MessageBroker.Component.DASHBOARD) {
+      sendShowChartFullMessage();
+    } else {
+      showChartFullDirect();
+    }
+  }
+
+  private void showChartFullDirect() {
+    ProfileManager profileManager = ServiceLocator.get(ProfileManager.class);
+    MessageBroker broker = MessageBroker.getInstance();
+
+    ChartModule chartModule = new ChartModule(
+        component,
+        model.getChartKey(),
+        model.getKey(),
+        metric,
+        model.getQueryInfo(),
+        model.getChartInfo(),
+        model.getTableInfo(),
+        model.getSqlQueryState(),
+        model.getDStore()
+    );
+
+    KeyHelper.TitleInfo titleInfo = KeyHelper.getTitle(
+        profileManager,
+        model.getKey(),
+        metric.getYAxis()
+    );
+    chartModule.setTitle(titleInfo.shortTitle());
+    chartModule.setToolTipText(titleInfo.fullTitle());
+
+    chartModule.initializeUI().run();
+
+    ChartDetailDialog dialog = new ChartDetailDialog(chartModule);
+
+    ChartKey chartKey = model.getChartKey();
+    Destination destinationRealtime = getDestination(Panel.REALTIME, chartKey);
+    Destination destinationHistory = getDestination(Panel.HISTORY, chartKey);
+    Destination destinationInsight = getDestination(Panel.INSIGHT, chartKey);
+    broker.addReceiver(destinationRealtime, chartModule.getPresenter());
+    broker.addReceiver(destinationHistory, chartModule.getPresenter());
+    broker.addReceiver(destinationInsight, chartModule.getPresenter());
+
+    if (detailDialogConsumer != null) {
+      detailDialogConsumer.accept(dialog);
+    }
+
+    dialog.addWindowListener(new java.awt.event.WindowAdapter() {
+      @Override
+      public void windowClosed(java.awt.event.WindowEvent e) {
+        broker.deleteReceiver(destinationRealtime, chartModule.getPresenter());
+        broker.deleteReceiver(destinationHistory, chartModule.getPresenter());
+        broker.deleteReceiver(destinationInsight, chartModule.getPresenter());
+
+        if (detailDialogConsumer != null) {
+          detailDialogConsumer.accept(null);
+        }
+      }
+    });
+
+    dialog.setVisible(true);
+  }
+
+  private Destination getDestination(Panel panel, ChartKey chartKey) {
+    return Destination.builder()
+        .component(component)
+        .module(MessageBroker.Module.CHART)
+        .panel(panel)
+        .block(Block.CHART)
+        .chartKey(chartKey)
+        .build();
   }
 }

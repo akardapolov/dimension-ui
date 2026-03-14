@@ -76,9 +76,10 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
     createColor(colorHelper);
   }
 
-  protected void createStackedChart(ColorHelper colorHelper ) {
+  protected void createStackedChart(ColorHelper colorHelper) {
     this.stackedChart = new StackedChart(getChartPanel(this.chartDataset), colorHelper);
     this.stackedChart.setLegendFontSize(config.getLegendFontSize());
+    this.stackedChart.setSelectionWheelEnabled(config.isSelectionWheelEnabled());
     this.stackedChart.initialize();
 
     LaF.setBackgroundAndTextColorForStackedChartPanel(LafColorGroup.CHART_PANEL, this.stackedChart);
@@ -139,7 +140,7 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
     this.add(stackedChart.getChartPanel(), BorderLayout.CENTER);
   }
 
-  protected void initializeDateAxis(long begin, long end ) {
+  protected void initializeDateAxis(long begin, long end) {
     this.stackedChart.setDateAxis(begin, end);
   }
 

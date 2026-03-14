@@ -2,6 +2,7 @@ package ru.dimension.ui.component.module.chart;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import lombok.Getter;
@@ -11,10 +12,12 @@ import ru.dimension.db.core.DStore;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.model.ChartConfigState;
 import ru.dimension.ui.component.model.ChartLegendState;
+import ru.dimension.ui.component.module.chart.dialog.ChartDetailDialog;
 import ru.dimension.ui.component.module.chart.preview.realtime.PRChartModel;
 import ru.dimension.ui.component.module.chart.preview.realtime.PRChartPresenter;
 import ru.dimension.ui.component.module.chart.preview.realtime.PRChartView;
 import ru.dimension.ui.component.module.preview.spi.IRealTimePreviewChart;
+import ru.dimension.ui.component.module.preview.spi.PreviewMode;
 import ru.dimension.ui.exception.SeriesExceedException;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
@@ -50,7 +53,7 @@ public class PRChartModule extends JXTaskPane implements IRealTimePreviewChart {
                        DStore dStore) {
 
     this.model = new PRChartModel(chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
-    this.view = new PRChartView(component);
+    this.view = new PRChartView(component, PreviewMode.PREVIEW);
     this.presenter = new PRChartPresenter(component, model, view, executor);
     this.presenter.initializePresenter();
     this.presenter.initializeCharts();
@@ -58,6 +61,10 @@ public class PRChartModule extends JXTaskPane implements IRealTimePreviewChart {
     ((JComponent) getContentPane()).setBorder(BorderFactory.createEmptyBorder());
 
     this.setAnimated(false);
+  }
+
+  public void setDetailDialogConsumer(Consumer<ChartDetailDialog> consumer) {
+    presenter.setDetailDialogConsumer(consumer);
   }
 
   public Runnable initializeUI() {

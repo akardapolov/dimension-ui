@@ -18,8 +18,6 @@ import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.model.ActionName;
 import ru.dimension.ui.model.RunStatus;
 import ru.dimension.ui.view.icon.PreviewIcon;
-import ru.dimension.ui.view.icon.StartIcon;
-import ru.dimension.ui.view.icon.StopIcon;
 
 @Log4j2
 @Data

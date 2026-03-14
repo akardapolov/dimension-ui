@@ -16,6 +16,7 @@ import ru.dimension.ui.component.module.chart.preview.adhoc.PAChartPresenter;
 import ru.dimension.ui.component.module.chart.preview.history.PHChartModel;
 import ru.dimension.ui.component.module.chart.preview.history.PHChartView;
 import ru.dimension.ui.component.module.preview.spi.IHistoryPreviewChart;
+import ru.dimension.ui.component.module.preview.spi.PreviewMode;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.model.AdHocKey;
@@ -51,7 +52,7 @@ public class PAChartModule extends JXTaskPane implements IHistoryPreviewChart {
     ChartKey dummyChartKey = new ChartKey(dummyPtk, metric.getYAxis());
 
     this.model = new PHChartModel(dummyChartKey, dummyPtk, metric, queryInfo, chartInfo, tableInfo, null, dStore);
-    this.view = new PHChartView(component);
+    this.view = new PHChartView(component, PreviewMode.ADHOC);
     this.presenter = new PAChartPresenter(component, model, view, executor, detailContext, key);
     this.presenter.initializePresenter();
     this.presenter.initializeCharts();

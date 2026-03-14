@@ -2,6 +2,7 @@ package ru.dimension.ui.component.module.chart;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import lombok.Getter;
@@ -11,11 +12,13 @@ import ru.dimension.db.core.DStore;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.model.ChartConfigState;
 import ru.dimension.ui.component.model.ChartLegendState;
+import ru.dimension.ui.component.module.chart.dialog.ChartDetailDialog;
 import ru.dimension.ui.component.module.chart.preview.DetailChartContext;
 import ru.dimension.ui.component.module.chart.preview.history.PHChartModel;
 import ru.dimension.ui.component.module.chart.preview.history.PHChartPresenter;
 import ru.dimension.ui.component.module.chart.preview.history.PHChartView;
 import ru.dimension.ui.component.module.preview.spi.IHistoryPreviewChart;
+import ru.dimension.ui.component.module.preview.spi.PreviewMode;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
@@ -50,13 +53,17 @@ public class PHChartModule extends JXTaskPane implements IHistoryPreviewChart {
                        DStore dStore,
                        DetailChartContext detailContext) {
     this.model = new PHChartModel(chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
-    this.view = new PHChartView(component);
+    this.view = new PHChartView(component, PreviewMode.DETAIL);
     this.presenter = new PHChartPresenter(component, model, view, executor, detailContext);
     this.presenter.initializePresenter();
     this.presenter.initializeCharts();
 
     ((JComponent) getContentPane()).setBorder(BorderFactory.createEmptyBorder());
     this.setAnimated(false);
+  }
+
+  public void setDetailDialogConsumer(Consumer<ChartDetailDialog> consumer) {
+    presenter.setDetailDialogConsumer(consumer);
   }
 
   public Runnable initializeUI() {

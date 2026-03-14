@@ -241,6 +241,7 @@ public class PAChartPresenter extends BaseUnitPresenter<PHChartView> implements 
     config.setMetric(metricCopy);
     config.setChartInfo(chartInfoCopy);
     config.setQueryInfo(model.getQueryInfo());
+    config.setSelectionWheelEnabled(false);
 
     return config;
   }

@@ -22,6 +22,7 @@ import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.SelectionWheelHandler;
 import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.PeriodAxis;
 import org.jfree.chart.axis.PeriodAxisLabelInfo;
@@ -79,6 +80,9 @@ public class StackedChart implements SelectionChangeListener<XYCursor>, DynamicC
   @Setter
   private int legendFontSize;
 
+  @Setter
+  private boolean selectionWheelEnabled = true;
+
   private final Map<String, Color> internalSeriesColor = new ConcurrentHashMap<>();
   private final Map<String, Color> externalSeriesColor = new ConcurrentHashMap<>();
   private AtomicInteger counter;
@@ -119,6 +123,7 @@ public class StackedChart implements SelectionChangeListener<XYCursor>, DynamicC
     this.dateAxis.setDateFormatOverride(new SimpleDateFormat("HH:mm"));
 
     this.selectionHandler = new RectangularHeightRegionSelectionHandler();
+    this.selectionHandler.setDataset(this.chartDataset);
     this.chartPanel.addMouseHandler(selectionHandler);
     this.chartPanel.addMouseHandler(new MouseClickSelectionHandler());
     this.chartPanel.removeMouseHandler(this.chartPanel.getZoomHandler());
@@ -130,6 +135,10 @@ public class StackedChart implements SelectionChangeListener<XYCursor>, DynamicC
                                                        new Dataset[]{this.chartDataset},
                                                        dExManager);
     this.chartPanel.setSelectionManager(this.selectionManager);
+
+    if (selectionWheelEnabled) {
+      new SelectionWheelHandler(this.chartPanel);
+    }
 
     this.setLegendTitle();
     this.jFreeChart.addSubtitle(this.legendTitle);
@@ -467,7 +476,7 @@ public class StackedChart implements SelectionChangeListener<XYCursor>, DynamicC
       }
       Rectangle2D dataArea = chartPanel.getScreenDataArea();
       if (dataArea == null) {
-        return; // no info yet
+        return;
       }
 
       ValueAxis domainAxis = xyPlot.getDomainAxis();

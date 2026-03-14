@@ -12,6 +12,7 @@ import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.block.RealTimeConfigBlock;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.module.base.BaseUnitView;
+import ru.dimension.ui.component.module.preview.spi.PreviewMode;
 import ru.dimension.ui.component.panel.FunctionPanel;
 import ru.dimension.ui.component.panel.LegendPanel;
 import ru.dimension.ui.component.panel.popup.action.ActionPanel;
@@ -31,13 +32,17 @@ public class PRChartView extends BaseUnitView {
   private final FilterPanel realTimeFilterPanel;
   private final ActionPanel realTimeActionPanel;
   private final JButton detailsButton;
+
+  private final PreviewMode previewMode;
+
   private final RealTimeConfigBlock realTimeConfigBlock;
 
   private final int configDividerLocation = 32;
 
-  public PRChartView(MessageBroker.Component component) {
+  public PRChartView(MessageBroker.Component component, PreviewMode previewMode) {
     super(LayoutMode.CONFIG_CHART_ONLY);
     this.component = component;
+    this.previewMode = previewMode;
 
     this.realTimeFunctionPanel = new FunctionPanel(getBoldLabel("Group: "));
     this.realTimeRangePanel = new RealTimeRangePanel(getBoldLabel("Range: "));
@@ -46,14 +51,21 @@ public class PRChartView extends BaseUnitView {
     this.realTimeActionPanel = new ActionPanel(component);
     this.detailsButton = new JButton("Details");
 
-    this.realTimeConfigBlock = new RealTimeConfigBlock(
-        realTimeFunctionPanel,
-        realTimeRangePanel,
-        realTimeLegendPanel,
-        realTimeFilterPanel,
-        realTimeActionPanel,
-        detailsButton
-    );
+    if (previewMode == PreviewMode.PREVIEW) {
+      this.realTimeConfigBlock = new RealTimeConfigBlock(
+          realTimeFunctionPanel,
+          realTimeRangePanel,
+          realTimeLegendPanel,
+          realTimeActionPanel,
+          detailsButton
+      );
+    } else {
+      this.realTimeConfigBlock = new RealTimeConfigBlock(
+          realTimeFunctionPanel,
+          realTimeRangePanel,
+          realTimeLegendPanel
+      );
+    }
 
     getConfigPanel().setLayout(new BorderLayout());
     getConfigPanel().add(realTimeConfigBlock, BorderLayout.CENTER);

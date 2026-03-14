@@ -10,6 +10,8 @@ import ru.dimension.ui.component.broker.MessageBroker.Component;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.model.ChartConfigState;
 import ru.dimension.ui.component.model.ChartLegendState;
+import ru.dimension.ui.component.module.chart.PHChartModule;
+import ru.dimension.ui.component.module.chart.PRChartModule;
 import ru.dimension.ui.component.module.preview.spi.IHistoryPreviewChart;
 import ru.dimension.ui.component.module.preview.spi.IPreviewChart;
 import ru.dimension.ui.component.module.preview.spi.IRealTimePreviewChart;
@@ -286,6 +288,18 @@ public class PreviewPresenter {
 
     IPreviewChart taskPane = chartFactory.create(component, chartKey, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
     taskPane.asTaskPane().setTitle(metric.getYAxis().getColName());
+
+    if (taskPane instanceof PRChartModule prModule) {
+      prModule.setDetailDialogConsumer(dialog -> {
+        dialog.sizeRelativeTo(view);
+        model.setChartDetailDialog(dialog);
+      });
+    } else if (taskPane instanceof PHChartModule phModule) {
+      phModule.setDetailDialogConsumer(dialog -> {
+        dialog.sizeRelativeTo(view);
+        model.setChartDetailDialog(dialog);
+      });
+    }
 
     view.setColumnSelected(metric.getYAxis().getColName(), false);
 

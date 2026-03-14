@@ -12,6 +12,7 @@ import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.block.HistoryConfigBlock;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.module.base.BaseUnitView;
+import ru.dimension.ui.component.module.preview.spi.PreviewMode;
 import ru.dimension.ui.component.panel.FunctionPanel;
 import ru.dimension.ui.component.panel.LegendPanel;
 import ru.dimension.ui.component.panel.function.NormFunctionPanel;
@@ -36,13 +37,16 @@ public class PHChartView extends BaseUnitView {
   private final ActionPanel historyActionPanel;
   private final JButton detailsButton;
 
+  private final PreviewMode previewMode;
+
   private final HistoryConfigBlock historyConfigBlock;
 
   private final int configDividerLocation = 32;
 
-  public PHChartView(MessageBroker.Component component) {
+  public PHChartView(MessageBroker.Component component, PreviewMode previewMode) {
     super(LayoutMode.CONFIG_CHART_ONLY);
     this.component = component;
+    this.previewMode = previewMode;
 
     this.historyTimeRangeFunctionPanel = new TimeRangeFunctionPanel();
     this.historyNormFunctionPanel = new NormFunctionPanel();
@@ -53,13 +57,21 @@ public class PHChartView extends BaseUnitView {
     this.historyActionPanel = new ActionPanel(component);
     this.detailsButton = new JButton("Details");
 
-    this.historyConfigBlock = new HistoryConfigBlock(
-        historyFunctionPanel,
-        historyRangePanel,
-        historyLegendPanel,
-        historyFilterPanel,
-        historyActionPanel
-    );
+    if (previewMode == PreviewMode.PREVIEW) {
+      this.historyConfigBlock = new HistoryConfigBlock(
+          historyFunctionPanel,
+          historyRangePanel,
+          historyLegendPanel,
+          historyActionPanel,
+          detailsButton
+      );
+    } else {
+      this.historyConfigBlock = new HistoryConfigBlock(
+          historyFunctionPanel,
+          historyRangePanel,
+          historyLegendPanel
+      );
+    }
 
     getConfigPanel().setLayout(new BorderLayout());
     getConfigPanel().add(historyConfigBlock, BorderLayout.CENTER);

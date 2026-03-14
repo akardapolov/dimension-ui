@@ -28,4 +28,6 @@ public class ChartConfig {
 
   private boolean realTime = true;
   private int maxPointsPerGraph = 300;
+
+  private boolean selectionWheelEnabled = true;
 }

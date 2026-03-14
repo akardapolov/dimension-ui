@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.di.Assisted;
+import ru.dimension.ui.component.module.chart.ChartModule;
+import ru.dimension.ui.component.module.chart.dialog.ChartDetailDialog;
 import ru.dimension.ui.component.module.chart.preview.DetailChartContext;
 import ru.dimension.ui.component.module.preview.PreviewModel;
 import ru.dimension.ui.component.module.preview.PreviewPresenter;
@@ -35,6 +37,7 @@ public class PreviewModule implements CollectStartStopListener {
   private final PreviewModel model;
   private final IPreviewContainer container;
   private final PreviewPresenter presenter;
+  private final PreviewView previewView;
 
   @Inject
   public PreviewModule(@Assisted PreviewMode mode,
@@ -48,7 +51,7 @@ public class PreviewModule implements CollectStartStopListener {
 
     this.model = new PreviewModel(RunMode.REALTIME, key, null, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
 
-    PreviewView previewView = new PreviewView(PreviewMode.PREVIEW, model);
+    this.previewView = new PreviewView(PreviewMode.PREVIEW, model);
 
     if (mode == PreviewMode.PREVIEW) {
       ProfileInfo profileInfo = profileManager.getProfileInfoById(key.getProfileId());
@@ -76,7 +79,7 @@ public class PreviewModule implements CollectStartStopListener {
                        DetailChartContext detailContext) {
     this.model = new PreviewModel(runMode, key, metric, queryInfo, chartInfo, tableInfo, sqlQueryState, dStore);
 
-    PreviewView previewView = new PreviewView(PreviewMode.DETAIL, model);
+    this.previewView = new PreviewView(PreviewMode.DETAIL, model);
 
     this.container = new PreviewPanelContainer(previewView);
 
@@ -94,7 +97,7 @@ public class PreviewModule implements CollectStartStopListener {
                        DetailChartContext detailContext) {
     this.model = new PreviewModel(runMode, key, metric, queryInfo, chartInfo, tableInfo, null, dStore);
 
-    PreviewView previewView = new PreviewView(PreviewMode.ADHOC, model);
+    this.previewView = new PreviewView(PreviewMode.ADHOC, model);
 
     this.container = new PreviewPanelContainer(previewView);
 
@@ -132,5 +135,18 @@ public class PreviewModule implements CollectStartStopListener {
         }
       }
     });
+
+    ChartDetailDialog dialog = model.getChartDetailDialog();
+    if (dialog != null && dialog.isVisible()) {
+      ChartModule dialogChartModule = dialog.getChartModule();
+      if (dialogChartModule.getPresenter().getModel().getKey().equals(profileTaskQueryKey)
+          && dialogChartModule.isReadyRealTimeUpdate()) {
+        try {
+          dialogChartModule.loadData();
+        } catch (Exception e) {
+          log.error("Error loading data in detail dialog", e);
+        }
+      }
+    }
   }
 }
