@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class MessageBroker {
   public enum Component { CONFIGURATION, WORKSPACE, PREVIEW, DASHBOARD, PLAYGROUND, DESIGN, ADHOC}
@@ -37,8 +39,10 @@ public class MessageBroker {
     CLEAR_SELECTION_FOR_TABLE_OR_VIEW
   }
 
-  private final Map<Destination, List<MessageAction>> receivers = new HashMap<>();
+  private final Map<Destination, List<MessageAction>> receivers = new ConcurrentHashMap<>();
+
   private static volatile MessageBroker instance;
+
 
   private MessageBroker() {
     for (Component dest : Component.values()) {
@@ -58,11 +62,17 @@ public class MessageBroker {
   }
 
   public void addReceiver(Destination destination, MessageAction receiver) {
-    receivers.computeIfAbsent(destination, k -> new ArrayList<>()).add(receiver);
+    receivers.computeIfAbsent(destination, k -> new CopyOnWriteArrayList<>()).add(receiver);
   }
 
   public void deleteReceiver(Destination destination, MessageAction receiver) {
-    receivers.computeIfAbsent(destination, k -> new ArrayList<>()).remove(receiver);
+    List<MessageAction> actions = receivers.get(destination);
+    if (actions != null) {
+      actions.remove(receiver);
+      if (actions.isEmpty()) {
+        receivers.remove(destination);
+      }
+    }
   }
 
   public void sendMessage(Message message) {

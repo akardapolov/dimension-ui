@@ -1,20 +1,15 @@
 package ru.dimension.ui.router.event;
 
 import ru.dimension.ui.model.ProfileTaskQueryKey;
-import ru.dimension.ui.router.listener.AdHocListener;
 import ru.dimension.ui.router.listener.CollectStartStopListener;
 import ru.dimension.ui.router.listener.ConfigListener;
-import ru.dimension.ui.router.listener.DashboardListener;
 import ru.dimension.ui.router.listener.ProfileStartStopListener;
 import ru.dimension.ui.router.listener.ProgressbarListener;
-import ru.dimension.ui.router.listener.ReportListener;
 import ru.dimension.ui.router.listener.TemplateListener;
 import ru.dimension.ui.router.listener.ToolbarListener;
-import ru.dimension.ui.router.listener.WorkspaceListener;
 
-public interface EventListener extends ToolbarListener, ConfigListener, TemplateListener, ReportListener,
-    DashboardListener, AdHocListener,
-    ProgressbarListener, WorkspaceListener, ProfileStartStopListener, CollectStartStopListener {
+public interface EventListener extends ToolbarListener, ConfigListener, TemplateListener,
+    ProgressbarListener, ProfileStartStopListener, CollectStartStopListener {
 
   void addProfileButtonStateListener(ToolbarListener toolbarListener);
 

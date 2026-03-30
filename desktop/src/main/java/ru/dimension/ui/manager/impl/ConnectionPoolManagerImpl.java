@@ -21,6 +21,7 @@ import jakarta.inject.Singleton;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.dbcp2.BasicDataSource;
 import ru.dimension.ui.exception.TimeoutConnectionException;
+import ru.dimension.ui.helper.ConnectionErrorHelper;
 import ru.dimension.ui.model.ProfileTaskKey;
 import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.security.EncryptDecrypt;
@@ -76,7 +77,7 @@ public class ConnectionPoolManagerImpl implements ConnectionPoolManager {
         dataSourceMap.put(connectionInfo.getId(), basicDataSource);
       }
     } catch (ClassNotFoundException | IllegalAccessException | InstantiationException | MalformedURLException e) {
-      log.error("Failed to create data source for connection ID: {}", connectionInfo.getId(), e);
+      ConnectionErrorHelper.logConnectionError(connectionInfo.getName(), new RuntimeException(e));
       throw new RuntimeException("Failed to create data source: " + e.getMessage(), e);
     }
 
@@ -107,7 +108,7 @@ public class ConnectionPoolManagerImpl implements ConnectionPoolManager {
 
       return connection;
     } catch (Exception e) {
-      log.error("Failed to get connection for: {}", connectionInfo.getName(), e);
+      ConnectionErrorHelper.logConnectionError(connectionInfo.getName(), e);
       return null;
     }
   }
@@ -135,7 +136,6 @@ public class ConnectionPoolManagerImpl implements ConnectionPoolManager {
   public void removeConnection(int connectionId) {
     log.info("Removing connection pool resources for connectionId: {}", connectionId);
 
-    // Close and remove connections from connectionMap
     List<Connection> connections = connectionMap.remove(connectionId);
     if (connections != null) {
       for (Connection conn : connections) {
@@ -144,7 +144,6 @@ public class ConnectionPoolManagerImpl implements ConnectionPoolManager {
       log.info("Closed {} connections from connectionMap for connectionId: {}", connections.size(), connectionId);
     }
 
-    // Close and remove connections from connectionForTaskMap
     Map<ProfileTaskKey, Connection> taskConnections = connectionForTaskMap.remove(connectionId);
     if (taskConnections != null) {
       for (Map.Entry<ProfileTaskKey, Connection> entry : taskConnections.entrySet()) {
@@ -153,7 +152,6 @@ public class ConnectionPoolManagerImpl implements ConnectionPoolManager {
       log.info("Closed {} task connections for connectionId: {}", taskConnections.size(), connectionId);
     }
 
-    // Close and remove BasicDataSource
     BasicDataSource dataSource = dataSourceMap.remove(connectionId);
     if (dataSource != null) {
       try {
@@ -192,7 +190,7 @@ public class ConnectionPoolManagerImpl implements ConnectionPoolManager {
       throw new TimeoutConnectionException(
           "Timeout " + timeoutSeconds + " sec. is exceed to get data from: " + connectionInfo);
     } catch (Exception e) {
-      log.error("Failed to get connection for connection ID: {}", connectionInfo.getId(), e);
+      ConnectionErrorHelper.logConnectionError(connectionInfo.getName(), e);
       dataSourceMap.remove(connectionInfo.getId());
       throw new RuntimeException("Failed to get connection: " + e.getMessage(), e);
     } finally {

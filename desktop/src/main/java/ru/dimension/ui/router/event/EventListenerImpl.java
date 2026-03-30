@@ -10,16 +10,12 @@ import ru.dimension.ui.model.view.ProgressbarState;
 import ru.dimension.ui.model.view.ReportState;
 import ru.dimension.ui.model.view.TemplateState;
 import ru.dimension.ui.model.view.ToolbarButtonState;
-import ru.dimension.ui.router.listener.AdHocListener;
 import ru.dimension.ui.router.listener.CollectStartStopListener;
 import ru.dimension.ui.router.listener.ConfigListener;
-import ru.dimension.ui.router.listener.DashboardListener;
 import ru.dimension.ui.router.listener.ProfileStartStopListener;
 import ru.dimension.ui.router.listener.ProgressbarListener;
-import ru.dimension.ui.router.listener.ReportListener;
 import ru.dimension.ui.router.listener.TemplateListener;
 import ru.dimension.ui.router.listener.ToolbarListener;
-import ru.dimension.ui.router.listener.WorkspaceListener;
 
 import java.util.List;
 import java.util.Map;
@@ -33,11 +29,7 @@ public class EventListenerImpl implements EventListener {
   private final List<ToolbarListener> profileButtonStateListenerList = new CopyOnWriteArrayList<>();
   private final List<ConfigListener> configListenerList = new CopyOnWriteArrayList<>();
   private final List<TemplateListener> templateListenerList = new CopyOnWriteArrayList<>();
-  private final List<ReportListener> reportListenerList = new CopyOnWriteArrayList<>();
-  private final List<DashboardListener> dashboardListenerList = new CopyOnWriteArrayList<>();
-  private final List<AdHocListener> adHocListenersList = new CopyOnWriteArrayList<>();
   private final List<ProgressbarListener> progressbarListenerList = new CopyOnWriteArrayList<>();
-  private final List<WorkspaceListener> workspaceListenerList = new CopyOnWriteArrayList<>();
   private final List<ProfileStartStopListener> profileStartStopListenerList = new CopyOnWriteArrayList<>();
 
   private final Map<ProfileTaskQueryKey, CollectStartStopListener> collectStartStopListenerMap =
@@ -61,11 +53,6 @@ public class EventListenerImpl implements EventListener {
   @Override
   public void fireToolbarButtonStateChange(ToolbarButtonState toolbarButtonState) {
     profileButtonStateListenerList.forEach(l -> l.fireToolbarButtonStateChange(toolbarButtonState));
-  }
-
-  @Override
-  public void fireOnSelectProfileOnNavigator(int profileId) {
-    workspaceListenerList.forEach(l -> l.fireOnSelectProfileOnNavigator(profileId));
   }
 
   @Override
@@ -187,16 +174,6 @@ public class EventListenerImpl implements EventListener {
   }
 
   @Override
-  public void fireShowReport(ReportState reportState) {
-    reportListenerList.forEach(l -> l.fireShowReport(reportState));
-  }
-
-  @Override
-  public void fireShowDashboard() {
-    dashboardListenerList.forEach(DashboardListener::fireShowDashboard);
-  }
-
-  @Override
   public boolean isProfileOnDashboardRunning(int profileId) {
     return collectStartStopDashboardListenerMap.entrySet()
         .stream()
@@ -205,10 +182,5 @@ public class EventListenerImpl implements EventListener {
         .map(entry -> entry.getValue() instanceof ChartsPresenter presenter
             && presenter.isRunning(profileId))
         .orElse(false);
-  }
-
-  @Override
-  public void fireShowAdHoc() {
-    adHocListenersList.forEach(AdHocListener::fireShowAdHoc);
   }
 }

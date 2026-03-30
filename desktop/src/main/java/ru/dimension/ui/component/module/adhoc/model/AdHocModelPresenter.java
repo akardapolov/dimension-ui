@@ -41,6 +41,7 @@ import ru.dimension.ui.component.chart.HelperChart;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.module.db.DatabaseMetadata;
 import ru.dimension.ui.component.module.db.MetadataFactory;
+import ru.dimension.ui.helper.ConnectionErrorHelper;
 import ru.dimension.ui.helper.DialogHelper;
 import ru.dimension.ui.helper.KeyHelper;
 import ru.dimension.ui.model.AdHocKey;
@@ -189,7 +190,7 @@ public class AdHocModelPresenter implements HelperChart {
         }
       }
     } catch (Exception e) {
-      log.error("Failed to check connection {}: {}", connectionId, e.getMessage());
+      ConnectionErrorHelper.logConnectionError("connectionId=" + connectionId, e);
       updateConnectionStatusOnComplete(connectionId, ConnectionStatus.NOT_CONNECTED, onComplete);
     }
   }
@@ -976,14 +977,14 @@ public class AdHocModelPresenter implements HelperChart {
       }
 
     } catch (SQLException e) {
-      log.error("SQL error loading table {}: {}", tableName, e.getMessage());
-      view.getStatusLabel().setText("SQL error: " + e.getMessage());
+      ConnectionErrorHelper.logConnectionError(tableName, e);
+      view.getStatusLabel().setText("SQL error: " + ConnectionErrorHelper.extractRootCause(e));
       view.clearColumnTable();
       view.clearTimestampTable();
       hasTimestampColumns = false;
       view.setColumnTableEnabled(true);
     } catch (Exception e) {
-      log.error("Error loading table {}: {}", tableName, e.getMessage());
+      ConnectionErrorHelper.logConnectionError(tableName, e);
       handleTableViewError(e);
     }
   }
@@ -1019,12 +1020,12 @@ public class AdHocModelPresenter implements HelperChart {
   }
 
   private void handleTableViewError(Exception e) {
-    view.getStatusLabel().setText("Error: " + e.getMessage());
+    view.getStatusLabel().setText("Error: " + ConnectionErrorHelper.extractRootCause(e));
     view.clearColumnTable();
     view.clearTimestampTable();
     hasTimestampColumns = false;
     view.setColumnTableEnabled(true);
-    log.error("Error loading table metadata", e);
+    log.debug("Full error loading table metadata", e);
   }
 
   public SProfile getSProfile(String tableName, TType tType, DBType dbType) {
@@ -1094,9 +1095,9 @@ public class AdHocModelPresenter implements HelperChart {
         DatabaseMetaData metaData = connection.getMetaData();
         processSchema(connectionInfo, metaData);
       } catch (Exception e) {
+        ConnectionErrorHelper.logConnectionError(connectionName, e);
         DialogHelper.showErrorDialog(null,
                                      "Error on loading tables for connection: " + connectionName, "Connection error", e);
-        log.error("Error reloading tables", e);
       } finally {
         running.set(false);
         connectionName = "";
@@ -1123,8 +1124,8 @@ public class AdHocModelPresenter implements HelperChart {
       getSchemasCatalogs(connectionInfo, metaData).forEach(view.getSchemaCatalogCBox()::addItem);
       processSchema(connectionInfo, metaData);
     } catch (SQLException e) {
+      ConnectionErrorHelper.logConnectionError(connectionName, e);
       DialogHelper.showErrorDialog(null, "Error on loading connection: " + connectionName, "Connection error", e);
-      log.error("Error loading metadata", e);
     }
   }
 
@@ -1158,7 +1159,7 @@ public class AdHocModelPresenter implements HelperChart {
       }
 
     } catch (SQLException e) {
-      log.error("Error processing schema", e);
+      ConnectionErrorHelper.logConnectionError(selectedSchemaCatalog, e);
       DialogHelper.showErrorDialog(null,
                                    "Error loading metadata for: " + selectedSchemaCatalog,
                                    "Database Error", e);

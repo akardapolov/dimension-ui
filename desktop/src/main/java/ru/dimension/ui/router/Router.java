@@ -7,6 +7,4 @@ public interface Router {
   void runTemplateDialog();
 
   void runReportDialog();
-
-  void fireOnSelectProfileOnNavigator(int profileId);
 }

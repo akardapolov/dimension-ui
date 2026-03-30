@@ -7,7 +7,6 @@ import jakarta.inject.Singleton;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.model.view.ConfigState;
 import ru.dimension.ui.model.view.ProgressbarState;
-import ru.dimension.ui.model.view.ReportState;
 import ru.dimension.ui.model.view.TemplateState;
 import ru.dimension.ui.model.view.ToolbarButtonState;
 import ru.dimension.ui.router.event.EventListener;
@@ -68,16 +67,11 @@ public class RouterImpl implements Router {
       eventListener.fireProgressbarVisible(ProgressbarState.SHOW);
 
       try {
-        eventListener.fireShowReport(ReportState.SHOW);
+        // Report dialog logic
       } finally {
         eventListener.fireProgressbarVisible(ProgressbarState.HIDE);
       }
       eventListener.fireToolbarButtonStateChange(ToolbarButtonState.ENABLE);
     });
-  }
-
-  @Override
-  public void fireOnSelectProfileOnNavigator(int profileId) {
-    eventListener.fireOnSelectProfileOnNavigator(profileId);
   }
 }

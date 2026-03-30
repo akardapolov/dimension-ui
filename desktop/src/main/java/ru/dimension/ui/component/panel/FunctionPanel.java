@@ -30,6 +30,7 @@ public class FunctionPanel extends JPanel {
   private final JRadioButton avg;
   private final ButtonGroup buttonGroup;
   private final ConfigPopupPanel configPopupPanel;
+  private FunctionPreviewPanel previewPanel;
 
   private MessageBroker.Component component;
   private ProfileTaskQueryKey key;
@@ -40,11 +41,18 @@ public class FunctionPanel extends JPanel {
 
   public FunctionPanel(JLabel label, TimeRangeFunctionPanel timeRangeFunctionPanel) {
     this(label);
+    this.previewPanel = new FunctionPreviewPanel();
+    bindTimeRangePreview(timeRangeFunctionPanel);
     this.configPopupPanel.updateContent(() -> createPopupContent(timeRangeFunctionPanel));
   }
 
-  public FunctionPanel(JLabel label, TimeRangeFunctionPanel timeRangeFunctionPanel, NormFunctionPanel normFunctionPanel) {
+  public FunctionPanel(JLabel label,
+                       TimeRangeFunctionPanel timeRangeFunctionPanel,
+                       NormFunctionPanel normFunctionPanel) {
     this(label);
+    this.previewPanel = new FunctionPreviewPanel();
+    bindTimeRangePreview(timeRangeFunctionPanel);
+    bindNormPreview(normFunctionPanel);
     this.configPopupPanel.updateContent(() -> createPopupContent(timeRangeFunctionPanel, normFunctionPanel));
   }
 
@@ -58,6 +66,9 @@ public class FunctionPanel extends JPanel {
     this.component = component;
     this.key = key;
     this.cProfile = cProfile;
+    this.previewPanel = new FunctionPreviewPanel();
+    bindTimeRangePreview(timeRangeFunctionPanel);
+    bindNormPreview(normFunctionPanel);
     this.configPopupPanel.updateContent(() -> createPopupContent(timeRangeFunctionPanel, normFunctionPanel));
   }
 
@@ -101,16 +112,48 @@ public class FunctionPanel extends JPanel {
         sendGroupFunctionMessage(GroupFunction.COUNT);
       }
     });
+
     sum.addActionListener(e -> {
       if (runAction != null) runAction.accept("functionChanged", GroupFunction.SUM);
       if (component != null) {
         sendGroupFunctionMessage(GroupFunction.SUM);
       }
     });
+
     avg.addActionListener(e -> {
       if (runAction != null) runAction.accept("functionChanged", GroupFunction.AVG);
       if (component != null) {
         sendGroupFunctionMessage(GroupFunction.AVG);
+      }
+    });
+  }
+
+  private void bindTimeRangePreview(TimeRangeFunctionPanel panel) {
+    panel.setHoverAction((function, text) -> {
+      if (previewPanel == null) {
+        return;
+      }
+
+      if (function == null) {
+        previewPanel.clearPreview();
+      } else {
+        previewPanel.setToolTipText(text);
+        previewPanel.showTimeRangePreview(panel.getSelectedFunction(), function);
+      }
+    });
+  }
+
+  private void bindNormPreview(NormFunctionPanel panel) {
+    panel.setHoverAction((function, text) -> {
+      if (previewPanel == null) {
+        return;
+      }
+
+      if (function == null) {
+        previewPanel.clearPreview();
+      } else {
+        previewPanel.setToolTipText(text);
+        previewPanel.showNormPreview(panel.getSelectedFunction(), function);
       }
     });
   }
@@ -146,8 +189,12 @@ public class FunctionPanel extends JPanel {
     JXTitledSeparator history = new JXTitledSeparator("Time range");
 
     gbl.row()
+        .cellXRemainder(previewPanel).fillX();
+
+    gbl.row()
         .cellX(history, 2).fillX(2)
         .cellXRemainder(new JXTitledSeparator("")).fillX();
+
     gbl.row()
         .cellX(timeRangeFunctionPanel, 2).fillX(2)
         .cellX(new JLabel(), 10).fillX(10);
@@ -157,7 +204,8 @@ public class FunctionPanel extends JPanel {
     return panel;
   }
 
-  private JPanel createPopupContent(TimeRangeFunctionPanel timeRangeFunctionPanel, NormFunctionPanel normFunctionPanel) {
+  private JPanel createPopupContent(TimeRangeFunctionPanel timeRangeFunctionPanel,
+                                    NormFunctionPanel normFunctionPanel) {
     JPanel panel = new JPanel();
 
     LaF.setBackgroundConfigPanel(CHART_PANEL, panel);
@@ -168,8 +216,12 @@ public class FunctionPanel extends JPanel {
     JXTitledSeparator normFunctionSeparator = new JXTitledSeparator("Normalization");
 
     gbl.row()
+        .cellXRemainder(previewPanel).fillX();
+
+    gbl.row()
         .cellX(timeRangeSeparator, 2).fillX(2)
         .cellXRemainder(new JXTitledSeparator("")).fillX();
+
     gbl.row()
         .cellX(timeRangeFunctionPanel, 2).fillX(2)
         .cellX(new JLabel(), 10).fillX(10);
@@ -177,6 +229,7 @@ public class FunctionPanel extends JPanel {
     gbl.row()
         .cellX(normFunctionSeparator, 2).fillX(2)
         .cellXRemainder(new JXTitledSeparator("")).fillX();
+
     gbl.row()
         .cellX(normFunctionPanel, 2).fillX(2)
         .cellX(new JLabel(), 10).fillX(10);
