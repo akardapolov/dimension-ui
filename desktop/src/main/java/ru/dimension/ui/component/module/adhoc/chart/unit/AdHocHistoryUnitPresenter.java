@@ -165,6 +165,9 @@ public class AdHocHistoryUnitPresenter implements UnitPresenter, HelperChart {
   }
 
   private void updateChartInternal(Map<String, Color> seriesColorMap, Map<CProfile, LinkedHashSet<String>> topMapSelected) {
+    ChartRange range = getChartRangeAdHoc(model.getChartInfo());
+    log.info("Update Chart Range: Begin={}, End={}", range.getBegin(), range.getEnd());
+
     SwingTaskRunner.runWithProgress(
         view.getChartPanel(),
         executor,

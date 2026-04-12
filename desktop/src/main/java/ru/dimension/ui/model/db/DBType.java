@@ -8,6 +8,7 @@ public enum DBType {
   MYSQL("mysql", "SELECT now()"),
   DUCKDB("duckdb", "SELECT now()"),
   FIREBIRD("firebird", "SELECT CURRENT_TIMESTAMP FROM RDB$DATABASE"),
+  SQLITE("sqlite", "SELECT date('now')"),
   HTTP("https?://", ""),
   UNKNOWN("", "");
 

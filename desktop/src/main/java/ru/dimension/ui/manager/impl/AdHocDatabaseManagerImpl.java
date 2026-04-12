@@ -60,6 +60,8 @@ public class AdHocDatabaseManagerImpl implements AdHocDatabaseManager {
           dStoreMap.putIfAbsent(connectionInfo.getId(), getDBase(dBaseConfig, BType.DUCKDB, connectionInfo).getDStore());
       case FIREBIRD ->
           dStoreMap.putIfAbsent(connectionInfo.getId(), getDBase(dBaseConfig, BType.FIREBIRD, connectionInfo).getDStore());
+      case SQLITE ->
+          dStoreMap.putIfAbsent(connectionInfo.getId(), getDBase(dBaseConfig, BType.SQLITE, connectionInfo).getDStore());
       default -> throw new RuntimeException("Not supported database: " + connectionInfo.getDbType());
     }
   }
@@ -90,7 +92,6 @@ public class AdHocDatabaseManagerImpl implements AdHocDatabaseManager {
       }
     }
 
-    // Optionally clean up the config directory
     filesHelper.deleteExternalDirectory(String.valueOf(connectionId));
 
     log.info("Successfully removed database resources for connectionId: {}", connectionId);

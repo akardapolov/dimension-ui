@@ -657,6 +657,7 @@ public class AdHocModelPresenter implements HelperChart {
         model.setColumnSelected(currentConnectionId, tableName, columnId, true);
         updateTableCheckboxState(activeTable, tableName, true);
       } catch (Exception e) {
+        log.catching(e);
         log.error("Error adding chart for table {} column {}: {}", tableName, columnId, e.getMessage());
         view.setColumnPickValue(row, false);
         String message = e.getMessage() != null ? e.getMessage() : "Failed to add chart";
@@ -1045,6 +1046,7 @@ public class AdHocModelPresenter implements HelperChart {
         case MYSQL -> BType.MYSQL;
         case DUCKDB -> BType.DUCKDB;
         case FIREBIRD -> BType.FIREBIRD;
+        case SQLITE -> BType.SQLITE;
         default -> {
           log.warn("Unknown DB type: {}, using BERKLEYDB as default", dbType);
           yield BType.BERKLEYDB;

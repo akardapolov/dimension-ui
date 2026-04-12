@@ -249,7 +249,7 @@ public final class TaskSelectionHandler extends AbstractTableSelectionHandler<Ta
   private boolean hasSelectedConnection() {
     try {
       List<?> row = taskPanel.getTaskConnectionComboBox().getSelectedRow();
-      return row != null && !row.isEmpty() && row.get(0) != null;
+      return row != null && !row.isEmpty() && row.getFirst() != null;
     } catch (Exception e) {
       return false;
     }

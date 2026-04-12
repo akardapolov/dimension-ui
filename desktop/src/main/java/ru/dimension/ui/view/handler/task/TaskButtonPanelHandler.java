@@ -302,7 +302,7 @@ public final class TaskButtonPanelHandler implements ButtonPanelBindings.CrudAct
     try {
       List<?> selectedRow = taskPanel.getTaskConnectionComboBox().getSelectedRow();
       if (selectedRow != null && !selectedRow.isEmpty()) {
-        String name = selectedRow.get(0).toString();
+        String name = selectedRow.getFirst().toString();
         return profileManager.getConnectionInfoList().stream()
             .filter(c -> c.getName().equals(name))
             .findFirst()

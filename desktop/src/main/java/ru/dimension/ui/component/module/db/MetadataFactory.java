@@ -12,6 +12,7 @@ public class MetadataFactory {
       case CLICKHOUSE -> new ClickHouseMetadata();
       case DUCKDB -> new DuckDBMetadata();
       case FIREBIRD -> new FirebirdMetadata();
+      case SQLITE -> new SQLiteMetadata();
       default -> throw new IllegalArgumentException("Unsupported DB type: " + dbType);
     };
   }

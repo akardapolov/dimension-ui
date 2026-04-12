@@ -86,10 +86,10 @@ public class HttpCollectTest extends AbstractDirectTest implements HttpLoader {
     List<List<Object>> expectedData = new ArrayList<>();
     fillData(expectedData, parser.textToMetricKeyValue(response));
 
-    expectedData.get(0).set(0, sqlQueryState.getLastTimestamp(profileTaskQueryKey));
+    expectedData.getFirst().set(0, sqlQueryState.getLastTimestamp(profileTaskQueryKey));
 
     for (int i = 0; i < expectedData.size(); i++) {
-      assertEquals(objectToString(expectedData.get(i).get(0)), objectToString(actualData.get(0).get(i)));
+      assertEquals(objectToString(expectedData.get(i).getFirst()), objectToString(actualData.getFirst().get(i)));
     }
   }
 

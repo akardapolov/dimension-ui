@@ -52,25 +52,44 @@
 ### General Information
 
 Key Features of **Dimension UI**:
-- **Real-time data collection and analysis**: Data is collected in real time, enabling users to monitor metrics online, analyze responses to various types of impacts, review historical data, and perform comparative analysis with other indicators.
-- **Flexible and rapid configuration of data collection profiles**: This feature is particularly useful when speed is critical, allowing users to quickly gather specialized statistical data for a more detailed evaluation of system or component characteristics.
-- **Local storage in the specialized **Dimension DB** database** (project repositories on [**GitFlic**](https://gitflic.ru/project/akardapolov/dimension-db) and [**GitHub**](https://github.com/akardapolov/dimension-db))—a block-columnar database with built-in data compression and deduplication.
-- **Advanced time-series data mining capabilities** using [Matrix Profile](https://www.cs.ucr.edu/~eamonn/MatrixProfile.html) and ARIMA.
-- **Ad-hoc data visualization** from external databases via JDBC with automatic SQL query generation for data sources (No-code mode). Both time-series and regular table data supported.
-- **Dashboard system** for displaying metrics from multiple sources in a single interface. Quick access to metrics simplifies user workflows when reviewing large volumes of analytical data.
-- **Built-in reporting system** for generating PDF reports based on collected data for further analysis.
+
+| № | Feature                                  | Description                                                                                                                                                                                                                |
+|---|------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1 | **Real-time Data Collection & Analysis** | Data is collected in real time, enabling users to monitor metrics online, analyze responses to various impacts, review historical data, and perform comparative analysis with other indicators                             |
+| 2 | **Flexible Data Collection Profiles**    | Rapid configuration of data collection profiles — particularly useful when speed is critical, allowing users to quickly gather specialized statistical data for detailed evaluation of system or component characteristics |
+| 3 | **Local Storage in Dimension-DB**        | Block-columnar database with built-in data compression and deduplication. Project repositories on [GitHub](https://github.com/akardapolov/dimension-db)                                                                    |
+| 4 | **Advanced Time-Series Data Mining**     | Built-in support for [Matrix Profile](https://www.cs.ucr.edu/~eamonn/MatrixProfile.html) and ARIMA algorithms for advanced time-series analysis and predictive analytics                                                   |
+| 5 | **No-code DB Exploration**               | Ad-hoc data visualization from external databases via JDBC with automatic SQL query generation. Both time-series and regular table data supported                                                                          |
+| 6 | **Dashboard System**                     | Displaying metrics from multiple sources in a single interface. Quick access to metrics simplifies workflows when reviewing large volumes of analytical data                                                               |
+| 7 | **Built-in Reporting System**            | Generating PDF reports based on collected data for further analysis                                                                                                                                                        |
 
 [Return to Contents](#Contents)
 
 ### Application Areas
-1. Monitoring information systems, hardware and software systems, and databases in real time;
-2. Evaluation of hardware and software systems during load and stress testing, preparation of reports based on testing results;
-3. Monitoring the parameters of the Internet of Things (IoT) devices;
-4. Solving the problems of complex monitoring of information security of systems with access to data sources via the JDBC and HTTP API (Prometheus, JSON);
-5. Using the application for training in courses related to data processing and analysis, which require quick setup of data collection from test systems, visualization with the ability to perform advanced data analysis to demonstrate certain concepts, for example, for training system administrators, database administrators, developers and analysts;
-6. Diagnostics of problems in the operation of complex systems providing APIs for access to monitoring data via JDBC and HTTP (Prometheus, JSON). For example, for detailed diagnostics of the operation of systems and their components in a heterogeneous environment, Java microservices working with a database;
-7. Multidimensional analysis and visualization of accumulated time-series data in a local database (real-time and historical), including predictive analytics for various application types via JDBC and HTTP (Prometheus, JSON);
-8. Direct JDBC connection to external databases (Postgres, Oracle, Microsoft SQL Server, ClickHouse) to explore time-series data in tables and views in No-code mode (with automated SQL generation).
+
+| № | Application Area              | Description                                                                                                                                                                                    |
+|---|-------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1 | **Real-time Monitoring**      | Monitoring information systems, hardware/software systems, and databases in real time                                                                                                          |
+| 2 | **Load & Stress Testing**     | Evaluation of hardware and software systems during load and stress testing, preparation of reports based on testing results                                                                    |
+| 3 | **IoT Monitoring**            | Monitoring the parameters of the Internet of Things (IoT) devices                                                                                                                              |
+| 4 | **Information Security**      | Complex monitoring of information security of systems with access to data sources via JDBC and HTTP API (Prometheus, JSON)                                                                     |
+| 5 | **Education & Training**      | Training in courses related to data processing and analysis: quick setup of data collection, visualization and advanced data analysis for system administrators, DBAs, developers and analysts |
+| 6 | **Diagnostics**               | Diagnostics of problems in complex systems providing APIs via JDBC and HTTP (Prometheus, JSON), including heterogeneous environments and Java microservices                                    |
+| 7 | **Multidimensional Analysis** | Analysis and visualization of time-series data (real-time and historical), including predictive analytics via JDBC and HTTP (Prometheus, JSON)                                                 |
+| 8 | **No-code DB Exploration**    | Direct JDBC connection to external databases to explore time-series data in tables and views with automated SQL generation                                                                     |
+
+## Supported Databases for Direct JDBC Connection (No-code Mode)
+
+| No. | Database             | Type       |
+|-----|----------------------|------------|
+| 1   | PostgreSQL           | relational |
+| 2   | Oracle               | relational |
+| 3   | Microsoft SQL Server | relational |
+| 4   | MySQL                | relational |
+| 5   | ClickHouse           | analytical |
+| 6   | Firebird             | relational |
+| 7   | SQLite               | relational |
+| 8   | DuckDB               | analytical |
 
 [Return to Contents](#Contents)
 

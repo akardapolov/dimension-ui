@@ -135,8 +135,8 @@ public class TimestampColumnChooser extends JDialog {
     }
 
     if (timestampColumns.size() == 1) {
-      log.info("Auto-selected single timestamp column: {}", timestampColumns.get(0).getColName());
-      return new TimestampResult(timestampColumns.get(0), true);
+      log.info("Auto-selected single timestamp column: {}", timestampColumns.getFirst().getColName());
+      return new TimestampResult(timestampColumns.getFirst(), true);
     }
 
     final TimestampResult[] result = {null};

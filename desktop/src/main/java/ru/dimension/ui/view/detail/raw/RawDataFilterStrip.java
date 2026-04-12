@@ -221,7 +221,7 @@ public class RawDataFilterStrip extends JPanel {
       }
 
       if (visible.isEmpty() && !sorted.isEmpty()) {
-        visible.add(sorted.get(0));
+        visible.add(sorted.getFirst());
         for (int i = 1; i < sorted.size(); i++) {
           overflowButtons.add(sorted.get(i));
         }

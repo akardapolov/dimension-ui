@@ -262,12 +262,12 @@ public final class QuerySelectionHandler extends AbstractTableSelectionHandler<Q
     }
 
     timestampListAll.stream().filter(f -> f.get(2).equals(true))
-        .forEach(t -> timestampList.set(0, new ArrayList<>(Arrays.asList(t.get(0), t.get(1)))));
+        .forEach(t -> timestampList.set(0, new ArrayList<>(Arrays.asList(t.getFirst(), t.get(1)))));
     timestampListAll.stream().filter(f -> f.get(2).equals(false))
-        .forEach(t -> timestampList.add(new ArrayList<>(Arrays.asList(t.get(0), t.get(1)))));
+        .forEach(t -> timestampList.add(new ArrayList<>(Arrays.asList(t.getFirst(), t.get(1)))));
 
     metadataQueryPanel.getTimestampComboBox().setTableData(timestampList);
-    metricQueryPanel.getXTextFile().setText((String) timestampList.get(0).get(0));
+    metricQueryPanel.getXTextFile().setText((String) timestampList.getFirst().getFirst());
 
     metricQueryPanel.getConfigMetricCase().getDefaultTableModel().getDataVector().removeAllElements();
     metricQueryPanel.getConfigMetricCase().getDefaultTableModel().fireTableDataChanged();

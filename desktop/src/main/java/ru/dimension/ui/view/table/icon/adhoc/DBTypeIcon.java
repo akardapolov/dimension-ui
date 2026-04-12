@@ -27,6 +27,7 @@ public class DBTypeIcon implements Icon {
   private static final Color MYSQL_COLOR = new Color(0x00758F);
   private static final Color DUCKDB_COLOR = new Color(0xFFC107);
   private static final Color FIREBIRD_COLOR = new Color(0xF4511E);
+  private static final Color SQLITE_COLOR = new Color(0x003B57);
   private static final Color HTTP_COLOR = new Color(0x4CAF50);
   private static final Color UNKNOWN_COLOR = Color.GRAY;
 
@@ -47,6 +48,7 @@ public class DBTypeIcon implements Icon {
       case MYSQL -> MYSQL_COLOR;
       case DUCKDB -> DUCKDB_COLOR;
       case FIREBIRD -> FIREBIRD_COLOR;
+      case SQLITE -> SQLITE_COLOR;
       case HTTP -> HTTP_COLOR;
       case UNKNOWN -> UNKNOWN_COLOR;
     };
@@ -76,6 +78,7 @@ public class DBTypeIcon implements Icon {
       case MYSQL -> drawMySQL(g2, x, y);
       case DUCKDB -> drawDuckDB(g2, x, y);
       case FIREBIRD -> drawFirebird(g2, x, y);
+      case SQLITE -> drawSQLite(g2, x, y);
       case HTTP -> drawHTTP(g2, x, y);
       case UNKNOWN -> drawUnknown(g2, x, y);
     }
@@ -90,35 +93,27 @@ public class DBTypeIcon implements Icon {
 
   private void drawPostgres(Graphics2D g2, int x, int y) {
     g2.setStroke(new BasicStroke(1.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-
     Path2D elephant = new Path2D.Double();
     elephant.moveTo(x + 3, y + 11);
     elephant.curveTo(x + 1, y + 8, x + 2, y + 4, x + 5, y + 2);
     elephant.curveTo(x + 8, y + 1, x + 11, y + 2, x + 12, y + 5);
     elephant.curveTo(x + 13, y + 8, x + 12, y + 11, x + 10, y + 12);
     g2.draw(elephant);
-
     Path2D trunk = new Path2D.Double();
     trunk.moveTo(x + 3, y + 11);
     trunk.curveTo(x + 2, y + 13, x + 4, y + 13, x + 5, y + 11);
     g2.draw(trunk);
-
     g2.fillOval(x + 8, y + 5, 2, 2);
-
     g2.draw(new Arc2D.Double(x + 9, y + 2, 3, 4, 270, 180, Arc2D.OPEN));
   }
 
   private void drawMSSQL(Graphics2D g2, int x, int y) {
     g2.setStroke(new BasicStroke(1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-
     g2.draw(new Ellipse2D.Double(x + 2, y + 1, SIZE - 4, 4));
-
     g2.draw(new Line2D.Double(x + 2, y + 3, x + 2, y + 10));
     g2.draw(new Line2D.Double(x + SIZE - 2, y + 3, x + SIZE - 2, y + 10));
-
     g2.setStroke(new BasicStroke(0.8f));
     g2.draw(new Arc2D.Double(x + 2, y + 5, SIZE - 4, 3, 180, 180, Arc2D.OPEN));
-
     g2.setStroke(new BasicStroke(1.3f));
     g2.draw(new Arc2D.Double(x + 2, y + 8, SIZE - 4, 4, 180, 180, Arc2D.OPEN));
   }
@@ -128,7 +123,6 @@ public class DBTypeIcon implements Icon {
     g2.fillRect(x + 4, y + 6, 2, 7);
     g2.fillRect(x + 7, y + 3, 2, 10);
     g2.fillRect(x + 10, y + 1, 2, 12);
-
     g2.setStroke(new BasicStroke(1.0f));
     g2.setColor(new Color(0xFFAA00));
     g2.draw(new Line2D.Double(x + 2, y + 8, x + 11, y + 2));
@@ -136,32 +130,26 @@ public class DBTypeIcon implements Icon {
 
   private void drawMySQL(Graphics2D g2, int x, int y) {
     g2.setStroke(new BasicStroke(1.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-
     Path2D dolphin = new Path2D.Double();
     dolphin.moveTo(x + 2, y + 9);
     dolphin.curveTo(x + 3, y + 5, x + 7, y + 2, x + 11, y + 4);
     dolphin.curveTo(x + 13, y + 6, x + 12, y + 9, x + 10, y + 10);
     g2.draw(dolphin);
-
     Path2D tail = new Path2D.Double();
     tail.moveTo(x + 2, y + 9);
     tail.curveTo(x + 1, y + 7, x + 1, y + 11, x + 3, y + 11);
     g2.draw(tail);
-
     Path2D fin = new Path2D.Double();
     fin.moveTo(x + 7, y + 4);
     fin.lineTo(x + 8, y + 1);
     fin.lineTo(x + 9, y + 4);
     g2.draw(fin);
-
     g2.fillOval(x + 9, y + 5, 1, 1);
   }
 
   private void drawDuckDB(Graphics2D g2, int x, int y) {
     g2.setStroke(new BasicStroke(1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-
     g2.draw(new Ellipse2D.Double(x + 4, y + 2, 8, 8));
-
     g2.setColor(new Color(0xFF9800));
     Path2D beak = new Path2D.Double();
     beak.moveTo(x + 1, y + 6);
@@ -169,18 +157,14 @@ public class DBTypeIcon implements Icon {
     beak.lineTo(x + 4, y + 8);
     beak.closePath();
     g2.fill(beak);
-
     g2.setColor(color);
-
     g2.fillOval(x + 8, y + 4, 2, 2);
-
     g2.setStroke(new BasicStroke(1.0f));
     g2.draw(new Arc2D.Double(x + 5, y + 9, 7, 4, 180, 180, Arc2D.OPEN));
   }
 
   private void drawFirebird(Graphics2D g2, int x, int y) {
     g2.setStroke(new BasicStroke(1.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-
     Path2D flame = new Path2D.Double();
     flame.moveTo(x + 7, y + 1);
     flame.curveTo(x + 10, y + 2, x + 12, y + 5, x + 11, y + 8);
@@ -191,7 +175,6 @@ public class DBTypeIcon implements Icon {
     flame.curveTo(x + 2, y + 5, x + 4, y + 2, x + 7, y + 1);
     flame.closePath();
     g2.fill(flame);
-
     g2.setColor(new Color(0xFFCC80));
     Path2D innerFlame = new Path2D.Double();
     innerFlame.moveTo(x + 7, y + 4);
@@ -200,15 +183,18 @@ public class DBTypeIcon implements Icon {
     g2.fill(innerFlame);
   }
 
+  private void drawSQLite(Graphics2D g2, int x, int y) {
+    g2.setStroke(new BasicStroke(1.5f));
+    g2.drawOval(x + 2, y + 2, SIZE - 4, SIZE - 4);
+    g2.setFont(ICON_FONT);
+    g2.drawString("S", x + 4, y + 10);
+  }
+
   private void drawHTTP(Graphics2D g2, int x, int y) {
     g2.setStroke(new BasicStroke(1.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-
     g2.draw(new Ellipse2D.Double(x + 1, y + 1, SIZE - 2, SIZE - 2));
-
     g2.draw(new Ellipse2D.Double(x + 4, y + 1, SIZE - 8, SIZE - 2));
-
     g2.draw(new Line2D.Double(x + 1, y + 7, x + SIZE - 1, y + 7));
-
     g2.setStroke(new BasicStroke(0.8f));
     g2.draw(new Arc2D.Double(x + 1, y + 2, SIZE - 2, 5, 180, 180, Arc2D.OPEN));
     g2.draw(new Arc2D.Double(x + 1, y + 7, SIZE - 2, 5, 0, 180, Arc2D.OPEN));
@@ -216,12 +202,10 @@ public class DBTypeIcon implements Icon {
 
   private void drawUnknown(Graphics2D g2, int x, int y) {
     g2.setStroke(new BasicStroke(1.2f));
-
     g2.draw(new Ellipse2D.Double(x + 3, y + 1, SIZE - 6, 3));
     g2.draw(new Line2D.Double(x + 3, y + 2.5, x + 3, y + 10));
     g2.draw(new Line2D.Double(x + SIZE - 3, y + 2.5, x + SIZE - 3, y + 10));
     g2.draw(new Arc2D.Double(x + 3, y + 8.5, SIZE - 6, 3, 180, 180, Arc2D.OPEN));
-
     g2.setFont(ICON_FONT);
     g2.drawString("?", x + 5, y + 10);
   }

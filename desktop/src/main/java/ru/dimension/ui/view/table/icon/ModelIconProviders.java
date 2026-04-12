@@ -325,6 +325,7 @@ public class ModelIconProviders {
     if (s.contains("mysql")) return DBType.MYSQL;
     if (s.contains("duckdb")) return DBType.DUCKDB;
     if (s.contains("firebird")) return DBType.FIREBIRD;
+    if (s.contains("sqlite")) return DBType.SQLITE;
 
     return DBType.UNKNOWN;
   }
@@ -353,6 +354,7 @@ public class ModelIconProviders {
       case MYSQL -> "MySQL";
       case DUCKDB -> "DuckDB";
       case FIREBIRD -> "Firebird";
+      case SQLITE -> "SQLite";
       case HTTP -> "HTTP/REST API";
       case UNKNOWN -> "Unknown Database";
     };
