@@ -13,7 +13,7 @@ import ru.dimension.ui.manager.ConnectionPoolManager;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.config.Connection;
 import ru.dimension.ui.model.type.ConnectionStatus;
-import ru.dimension.ui.router.event.EventListener;
+import ru.dimension.ui.router.event.EventDispatcher;
 
 @Data
 @Log4j2
@@ -21,7 +21,7 @@ public class AdHocModelModel {
   private final ProfileManager profileManager;
   private final ConfigurationManager configurationManager;
   private final Map<Integer, Connection> connectionMap;
-  private final EventListener eventListener;
+  private final EventDispatcher eventDispatcher;
   private final ConnectionPoolManager connectionPoolManager;
   private final AdHocDatabaseManager adHocDatabaseManager;
 
@@ -31,12 +31,12 @@ public class AdHocModelModel {
 
   public AdHocModelModel(ProfileManager profileManager,
                          ConfigurationManager configurationManager,
-                         EventListener eventListener,
+                         EventDispatcher eventDispatcher,
                          ConnectionPoolManager connectionPoolManager,
                          AdHocDatabaseManager adHocDatabaseManager) {
     this.profileManager = profileManager;
     this.configurationManager = configurationManager;
-    this.eventListener = eventListener;
+    this.eventDispatcher = eventDispatcher;
     this.connectionPoolManager = connectionPoolManager;
     this.adHocDatabaseManager = adHocDatabaseManager;
     this.connectionMap = new HashMap<>();

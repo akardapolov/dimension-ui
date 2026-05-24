@@ -13,7 +13,7 @@ import ru.dimension.ui.view.structure.ToolbarView;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.view.ToolbarAction;
 import ru.dimension.ui.model.view.ToolbarButtonState;
-import ru.dimension.ui.router.event.EventListener;
+import ru.dimension.ui.router.event.EventDispatcher;
 
 @Log4j2
 @Singleton
@@ -21,23 +21,23 @@ public class ToolbarPresenter implements ActionListener, ToolbarListener {
 
   private final ToolbarView toolbarView;
   private final NavigatorState navigatorState;
-  private final EventListener eventListener;
+  private final EventDispatcher eventDispatcher;
   private final ProfileManager profileManager;
   private final Router router;
 
   @Inject
   public ToolbarPresenter(@Named("toolbarView") ToolbarView toolbarView,
                           @Named("navigatorState") NavigatorState navigatorState,
-                          @Named("eventListener") EventListener eventListener,
+                          @Named("eventListener") EventDispatcher eventDispatcher,
                           @Named("profileManager") ProfileManager profileManager,
                           @Named("router") Router router) {
     this.toolbarView = toolbarView;
     this.navigatorState = navigatorState;
-    this.eventListener = eventListener;
+    this.eventDispatcher = eventDispatcher;
     this.profileManager = profileManager;
     this.router = router;
 
-    this.eventListener.addProfileButtonStateListener(this);
+    this.eventDispatcher.addProfileButtonStateListener(this);
   }
 
   @Override

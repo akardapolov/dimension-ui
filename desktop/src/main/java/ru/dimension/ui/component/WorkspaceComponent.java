@@ -23,7 +23,7 @@ import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.info.ProfileInfo;
-import ru.dimension.ui.router.event.EventListener;
+import ru.dimension.ui.router.event.EventDispatcher;
 import ru.dimension.ui.router.listener.ProfileStartStopListener;
 
 @Log4j2
@@ -36,7 +36,7 @@ public class WorkspaceComponent implements HelperChart, ProfileStartStopListener
   private JSplitPane manageConfigChartsSplitPane;
   private JSplitPane manageConfigSplitPane;
 
-  private final EventListener eventListener;
+  private final EventDispatcher eventDispatcher;
   private final ProfileManager profileManager;
 
   private final ManageModuleFactory manageModuleFactory;
@@ -58,14 +58,14 @@ public class WorkspaceComponent implements HelperChart, ProfileStartStopListener
                             ManageModuleFactory manageModuleFactory,
                             ConfigModuleFactory configModuleFactory,
                             ChartsModuleFactory chartsModuleFactory,
-                            EventListener eventListener,
+                            EventDispatcher eventDispatcher,
                             ProfileManager profileManager) {
     this.modelModuleFactory = modelModuleFactory;
     this.manageModuleFactory = manageModuleFactory;
     this.configModuleFactory = configModuleFactory;
     this.chartsModuleFactory = chartsModuleFactory;
 
-    this.eventListener = eventListener;
+    this.eventDispatcher = eventDispatcher;
     this.profileManager = profileManager;
 
     initializeComponents();
@@ -154,12 +154,12 @@ public class WorkspaceComponent implements HelperChart, ProfileStartStopListener
   @Override
   public void fireOnStartOnWorkspaceProfileView(int profileId) {
     handleProfileAction(profileId, (key) ->
-        eventListener.addCollectStartStopWorkspaceListener(key, chartsModule.getPresenter()));
+        eventDispatcher.addCollectStartStopWorkspaceListener(key, chartsModule.getPresenter()));
   }
 
   @Override
   public void fireOnStopOnWorkspaceProfileView(int profileId) {
-    handleProfileAction(profileId, eventListener::clearListenerWorkspaceByKey);
+    handleProfileAction(profileId, eventDispatcher::clearListenerWorkspaceByKey);
   }
 
   private void handleProfileAction(int profileId, Consumer<ProfileTaskQueryKey> action) {

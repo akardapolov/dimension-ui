@@ -29,11 +29,7 @@ import org.apache.hc.core5.http.Method;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTextArea;
-import ru.dimension.tt.api.TT;
-import ru.dimension.tt.api.TTRegistry;
 import ru.dimension.tt.swing.TTTable;
-import ru.dimension.tt.swing.TableUi;
-import ru.dimension.tt.swingx.JXTableTables;
 import ru.dimension.ui.exception.EmptyNameException;
 import ru.dimension.ui.exception.EntityExistException;
 import ru.dimension.ui.exception.NotFoundException;
@@ -60,7 +56,7 @@ import ru.dimension.ui.manager.TemplateManager;
 import ru.dimension.ui.model.parse.ParseType;
 import ru.dimension.ui.model.view.TemplateAction;
 import ru.dimension.ui.model.view.TemplateState;
-import ru.dimension.ui.router.event.EventListener;
+import ru.dimension.ui.router.event.EventDispatcher;
 import ru.dimension.ui.view.panel.template.TemplateConnPanel;
 import ru.dimension.ui.view.panel.template.TemplateEditPanel;
 import ru.dimension.ui.view.panel.template.TemplateHTTPConnPanel;
@@ -75,7 +71,7 @@ public class TemplatePresenter extends WindowAdapter
     implements TemplateListener, ListSelectionListener, ActionListener, FocusListener, CellEditorListener, KeyListener {
 
   private final TemplateView templateView;
-  private final EventListener eventListener;
+  private final EventDispatcher eventDispatcher;
   private final EventBus eventBus;
   private final ProfileManager profileManager;
   private final ConfigurationManager configurationManager;
@@ -104,7 +100,7 @@ public class TemplatePresenter extends WindowAdapter
 
   @Inject
   public TemplatePresenter(@Named("templateView") TemplateView templateView,
-                           @Named("eventListener") EventListener eventListener,
+                           @Named("eventListener") EventDispatcher eventDispatcher,
                            @Named("eventBus") EventBus eventBus,
                            @Named("profileManager") ProfileManager profileManager,
                            @Named("configurationManager") ConfigurationManager configurationManager,
@@ -124,7 +120,7 @@ public class TemplatePresenter extends WindowAdapter
                            @Named("templateQueryDescription") JXTextArea queryDescription,
                            @Named("templateQueryText") RSyntaxTextArea queryText) {
     this.templateView = templateView;
-    this.eventListener = eventListener;
+    this.eventDispatcher = eventDispatcher;
     this.eventBus = eventBus;
     this.profileManager = profileManager;
     this.configurationManager = configurationManager;
@@ -156,7 +152,7 @@ public class TemplatePresenter extends WindowAdapter
     this.queryDescription = queryDescription;
     this.queryText = queryText;
 
-    this.eventListener.addTemplateStateListener(this);
+    this.eventDispatcher.addTemplateStateListener(this);
 
     this.templateEditPanel.getProfileName().addFocusListener(this);
     this.templateEditPanel.getTaskName().addFocusListener(this);

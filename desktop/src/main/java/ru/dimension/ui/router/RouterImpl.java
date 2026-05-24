@@ -9,21 +9,21 @@ import ru.dimension.ui.model.view.ConfigState;
 import ru.dimension.ui.model.view.ProgressbarState;
 import ru.dimension.ui.model.view.TemplateState;
 import ru.dimension.ui.model.view.ToolbarButtonState;
-import ru.dimension.ui.router.event.EventListener;
+import ru.dimension.ui.router.event.EventDispatcher;
 
 @Log4j2
 @Singleton
 public class RouterImpl implements Router {
 
   private final ScheduledExecutorService executorService;
-  private final EventListener eventListener;
+  private final EventDispatcher eventDispatcher;
 
   @Inject
   public RouterImpl(@Named("executorService") ScheduledExecutorService executorService,
-                    @Named("eventListener") EventListener eventListener) {
+                    @Named("eventListener") EventDispatcher eventDispatcher) {
 
     this.executorService = executorService;
-    this.eventListener = eventListener;
+    this.eventDispatcher = eventDispatcher;
   }
 
   @Override
@@ -31,47 +31,47 @@ public class RouterImpl implements Router {
     log.info("Run configuration dialog..");
 
     executorService.submit(() -> {
-      eventListener.fireToolbarButtonStateChange(ToolbarButtonState.DISABLE);
-      eventListener.fireProgressbarVisible(ProgressbarState.SHOW);
+      eventDispatcher.fireToolbarButtonStateChange(ToolbarButtonState.DISABLE);
+      eventDispatcher.fireProgressbarVisible(ProgressbarState.SHOW);
 
       try {
-        eventListener.fireShowConfig(ConfigState.SHOW);
+        eventDispatcher.fireShowConfig(ConfigState.SHOW);
       } finally {
-        eventListener.fireProgressbarVisible(ProgressbarState.HIDE);
+        eventDispatcher.fireProgressbarVisible(ProgressbarState.HIDE);
       }
 
-      eventListener.fireToolbarButtonStateChange(ToolbarButtonState.ENABLE);
+      eventDispatcher.fireToolbarButtonStateChange(ToolbarButtonState.ENABLE);
     });
   }
 
   @Override
   public void runTemplateDialog() {
     log.info("Run template dialog..");
-    eventListener.fireToolbarButtonStateChange(ToolbarButtonState.DISABLE);
-    eventListener.fireProgressbarVisible(ProgressbarState.SHOW);
+    eventDispatcher.fireToolbarButtonStateChange(ToolbarButtonState.DISABLE);
+    eventDispatcher.fireProgressbarVisible(ProgressbarState.SHOW);
 
     try {
-      eventListener.fireShowTemplate(TemplateState.SHOW);
+      eventDispatcher.fireShowTemplate(TemplateState.SHOW);
     } finally {
-      eventListener.fireProgressbarVisible(ProgressbarState.HIDE);
+      eventDispatcher.fireProgressbarVisible(ProgressbarState.HIDE);
     }
 
-    eventListener.fireToolbarButtonStateChange(ToolbarButtonState.ENABLE);
+    eventDispatcher.fireToolbarButtonStateChange(ToolbarButtonState.ENABLE);
   }
 
   @Override
   public void runReportDialog() {
     log.info("Run report dialog..");
     executorService.submit(() -> {
-      eventListener.fireToolbarButtonStateChange(ToolbarButtonState.DISABLE);
-      eventListener.fireProgressbarVisible(ProgressbarState.SHOW);
+      eventDispatcher.fireToolbarButtonStateChange(ToolbarButtonState.DISABLE);
+      eventDispatcher.fireProgressbarVisible(ProgressbarState.SHOW);
 
       try {
         // Report dialog logic
       } finally {
-        eventListener.fireProgressbarVisible(ProgressbarState.HIDE);
+        eventDispatcher.fireProgressbarVisible(ProgressbarState.HIDE);
       }
-      eventListener.fireToolbarButtonStateChange(ToolbarButtonState.ENABLE);
+      eventDispatcher.fireToolbarButtonStateChange(ToolbarButtonState.ENABLE);
     });
   }
 }

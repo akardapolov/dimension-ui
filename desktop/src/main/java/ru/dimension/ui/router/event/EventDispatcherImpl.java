@@ -7,7 +7,6 @@ import ru.dimension.ui.component.module.charts.ChartsPresenter;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.view.ConfigState;
 import ru.dimension.ui.model.view.ProgressbarState;
-import ru.dimension.ui.model.view.ReportState;
 import ru.dimension.ui.model.view.TemplateState;
 import ru.dimension.ui.model.view.ToolbarButtonState;
 import ru.dimension.ui.router.listener.CollectStartStopListener;
@@ -24,7 +23,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 @Log4j2
 @Singleton
-public class EventListenerImpl implements EventListener {
+public class EventDispatcherImpl implements EventDispatcher {
 
   private final List<ToolbarListener> profileButtonStateListenerList = new CopyOnWriteArrayList<>();
   private final List<ConfigListener> configListenerList = new CopyOnWriteArrayList<>();
@@ -42,7 +41,7 @@ public class EventListenerImpl implements EventListener {
       new ConcurrentHashMap<>();
 
   @Inject
-  public EventListenerImpl() {
+  public EventDispatcherImpl() {
   }
 
   @Override

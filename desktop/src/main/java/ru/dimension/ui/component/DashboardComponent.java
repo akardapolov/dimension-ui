@@ -20,7 +20,7 @@ import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.info.ProfileInfo;
-import ru.dimension.ui.router.event.EventListener;
+import ru.dimension.ui.router.event.EventDispatcher;
 import ru.dimension.ui.router.listener.ProfileStartStopListener;
 
 @Log4j2
@@ -31,7 +31,7 @@ public class DashboardComponent implements HelperChart, ProfileStartStopListener
   private JSplitPane mainSplitPane;
 
   private final ProfileManager profileManager;
-  private final EventListener eventListener;
+  private final EventDispatcher eventDispatcher;
 
   private final ModelModuleFactory modelModuleFactory;
   private final PreviewConfigModuleFactory previewConfigModuleFactory;
@@ -51,13 +51,13 @@ public class DashboardComponent implements HelperChart, ProfileStartStopListener
                             PreviewChartsModuleFactory previewChartsModuleFactory,
                             ZoomModuleFactory zoomModuleFactory,
                             ProfileManager profileManager,
-                            EventListener eventListener) {
+                            EventDispatcher eventDispatcher) {
     this.modelModuleFactory = modelModuleFactory;
     this.previewConfigModuleFactory = previewConfigModuleFactory;
     this.previewChartsModuleFactory = previewChartsModuleFactory;
     this.zoomModuleFactory = zoomModuleFactory;
     this.profileManager = profileManager;
-    this.eventListener = eventListener;
+    this.eventDispatcher = eventDispatcher;
 
     initializeComponents();
   }
@@ -96,16 +96,16 @@ public class DashboardComponent implements HelperChart, ProfileStartStopListener
   @Override
   public void fireOnStartOnWorkspaceProfileView(int profileId) {
     handleProfileAction(profileId, (key) -> {
-      eventListener.addCollectStartStopDashboardListener(key, chartsModule.getPresenter());
-      eventListener.addCollectStartStopZoomListener(key, zoomModule.getPresenter());
+      eventDispatcher.addCollectStartStopDashboardListener(key, chartsModule.getPresenter());
+      eventDispatcher.addCollectStartStopZoomListener(key, zoomModule.getPresenter());
     });
   }
 
   @Override
   public void fireOnStopOnWorkspaceProfileView(int profileId) {
     handleProfileAction(profileId, (key) -> {
-      eventListener.clearListenerDashboardByKey(key);
-      eventListener.clearListenerZoomByKey(key);
+      eventDispatcher.clearListenerDashboardByKey(key);
+      eventDispatcher.clearListenerZoomByKey(key);
     });
   }
 

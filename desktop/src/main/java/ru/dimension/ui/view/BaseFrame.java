@@ -33,7 +33,7 @@ import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.manager.ReportManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.info.TaskInfo;
-import ru.dimension.ui.router.event.EventListener;
+import ru.dimension.ui.router.event.EventDispatcher;
 import ru.dimension.ui.state.SqlQueryState;
 import ru.dimension.ui.view.structure.ConfigView;
 import ru.dimension.ui.view.structure.ProgressbarView;
@@ -59,7 +59,7 @@ public class BaseFrame extends JFrame {
   private final TemplateView templateView;
   private final ProgressbarView progressbarView;
 
-  private final EventListener eventListener;
+  private final EventDispatcher eventDispatcher;
   private final ProfileManager profileManager;
   private final TaskExecutorPool taskExecutorPool;
   private final ConfigurationManager configurationManager;
@@ -90,7 +90,7 @@ public class BaseFrame extends JFrame {
                    @Named("progressbarPresenter") ProgressbarPresenter progressbarPresenter,
                    @Named("profileManager") ProfileManager profileManager,
                    @Named("sqlQueryState") SqlQueryState sqlQueryState,
-                   @Named("eventListener") EventListener eventListener,
+                   @Named("eventListener") EventDispatcher eventDispatcher,
                    @Named("configurationManager") ConfigurationManager configurationManager,
                    @Named("connectionPoolManager") ConnectionPoolManager connectionPoolManager,
                    @Named("httpResponseFetcher") HttpResponseFetcher httpResponseFetcher,
@@ -118,7 +118,7 @@ public class BaseFrame extends JFrame {
     this.profileManager = profileManager;
 
     this.sqlQueryState = sqlQueryState;
-    this.eventListener = eventListener;
+    this.eventDispatcher = eventDispatcher;
     this.configurationManager = configurationManager;
     this.connectionPoolManager = connectionPoolManager;
     this.adHocDatabaseManager = adHocDatabaseManager;
@@ -179,13 +179,13 @@ public class BaseFrame extends JFrame {
 
   private WorkspaceComponent createWorkspaceComponent() {
     WorkspaceComponent workspace = ServiceLocator.get(WorkspaceComponent.class);
-    eventListener.addProfileStartStopListener(workspace);
+    eventDispatcher.addProfileStartStopListener(workspace);
     return workspace;
   }
 
   private DashboardComponent createDashboardComponent() {
     DashboardComponent dashboard = ServiceLocator.get(DashboardComponent.class);
-    eventListener.addProfileStartStopListener(dashboard);
+    eventDispatcher.addProfileStartStopListener(dashboard);
     return dashboard;
   }
 

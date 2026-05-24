@@ -10,8 +10,13 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
+import ru.dimension.db.exception.BeginEndWrongOrderException;
+import ru.dimension.db.exception.SqlColMetadataException;
 import ru.dimension.db.exception.TableNameEmptyException;
+import ru.dimension.db.model.GranularityFunction;
 import ru.dimension.db.model.GroupFunction;
+import ru.dimension.db.model.PercentileFunction;
+import ru.dimension.db.model.filter.CompositeFilter;
 import ru.dimension.db.model.output.StackedColumn;
 import ru.dimension.db.model.profile.TProfile;
 import ru.dimension.ui.component.chart.FunctionDataHandler;
@@ -19,6 +24,7 @@ import ru.dimension.ui.component.chart.StackedChart;
 import ru.dimension.ui.exception.SeriesExceedException;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.config.Metric;
+import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 
 @Log4j2
@@ -40,7 +46,6 @@ public abstract class FunctionHandler implements FunctionDataHandler {
     this.metric = metric;
     this.queryInfo = queryInfo;
     this.dStore = dStore;
-
     initTProfile(queryInfo);
   }
 
@@ -53,19 +58,66 @@ public abstract class FunctionHandler implements FunctionDataHandler {
     }
   }
 
+  protected List<StackedColumn> getStackedWithPercentile(GroupFunction groupFunction,
+                                                         CompositeFilter compositeFilter,
+                                                         long begin,
+                                                         long end)
+      throws SqlColMetadataException, BeginEndWrongOrderException {
+
+    ru.dimension.ui.model.function.PercentileFunction uiPf = metric.getPercentileFunction();
+
+    if (uiPf == null
+        || uiPf == ru.dimension.ui.model.function.PercentileFunction.NONE) {
+      return dStore.getStacked(queryInfo.getName(), metric.getYAxis(),
+                               groupFunction, compositeFilter, begin, end);
+    }
+
+    PercentileFunction dbPf = mapPercentile(uiPf);
+    GranularityFunction dbGf = mapGranularity(metric.getTimeRangeFunction());
+
+    return dStore.getStacked(queryInfo.getName(), metric.getYAxis(),
+                             groupFunction, dbPf, dbGf,
+                             compositeFilter, begin, end);
+  }
+
+  protected Map<String, Double> getActiveDoubleMap(StackedColumn column,
+                                                   GroupFunction groupFunction) {
+    if (column.getKeyPercentile() != null && !column.getKeyPercentile().isEmpty()) {
+      return column.getKeyPercentile();
+    }
+    return switch (groupFunction) {
+      case AVG -> column.getKeyAvg() != null ? column.getKeyAvg() : Collections.emptyMap();
+      case SUM -> column.getKeySum() != null ? column.getKeySum() : Collections.emptyMap();
+      default  -> Collections.emptyMap();
+    };
+  }
+
   protected void fillSeries(List<StackedColumn> sColumnList,
                             Set<String> series) {
-    Set<String> newSeries = sColumnList.stream()
-        .map(StackedColumn::getKeyCount)
-        .flatMap(map -> map.keySet().stream())
-        .filter(Objects::nonNull)
-        .collect(Collectors.toSet());
+    boolean hasPercentile = sColumnList.stream()
+        .anyMatch(c -> c.getKeyPercentile() != null
+            && !c.getKeyPercentile().isEmpty());
 
-    series.addAll(newSeries);
+    if (hasPercentile) {
+      sColumnList.stream()
+          .map(StackedColumn::getKeyPercentile)
+          .filter(Objects::nonNull)
+          .flatMap(m -> m.keySet().stream())
+          .filter(Objects::nonNull)
+          .forEach(series::add);
+    } else {
+      Set<String> newSeries = sColumnList.stream()
+          .map(StackedColumn::getKeyCount)
+          .flatMap(map -> map.keySet().stream())
+          .filter(Objects::nonNull)
+          .collect(Collectors.toSet());
+      series.addAll(newSeries);
+    }
 
     if (series.size() > THRESHOLD_SERIES) {
-      throw new SeriesExceedException("Column data series exceeds " + THRESHOLD_SERIES + ". " +
-                                          "Not supported to show stacked data.");
+      throw new SeriesExceedException(
+          "Column data series exceeds " + THRESHOLD_SERIES
+          + ". Not supported to show stacked data.");
     }
   }
 
@@ -77,8 +129,8 @@ public abstract class FunctionHandler implements FunctionDataHandler {
                                 StackedChart stackedChart,
                                 GroupFunction groupFunction) {
     try {
-      List<StackedColumn> stackedColumns
-          = dStore.getStacked(queryInfo.getName(), metric.getYAxis(), groupFunction, null, begin, end);
+      List<StackedColumn> stackedColumns =
+          getStackedWithPercentile(groupFunction, null, begin, end);
 
       long x;
       double y = getY(groupFunction, stackedColumns);
@@ -101,20 +153,13 @@ public abstract class FunctionHandler implements FunctionDataHandler {
     double y = 0;
 
     Optional<StackedColumn> stackedColumn = stackedColumns.stream().findAny();
-
     if (stackedColumn.isPresent()) {
-      Map<String, Double> keyValues = Collections.emptyMap();
-
-      if (GroupFunction.AVG.equals(groupFunction)) {
-        keyValues = stackedColumn.get().getKeyAvg();
-      } else if (GroupFunction.SUM.equals(groupFunction)) {
-        keyValues = stackedColumn.get().getKeySum();
-      }
+      Map<String, Double> keyValues =
+          getActiveDoubleMap(stackedColumn.get(), groupFunction);
 
       if (!keyValues.isEmpty()) {
         String colName = metric.getYAxis().getColName();
-        Optional<Double> value = keyValues.entrySet()
-            .stream()
+        Optional<Double> value = keyValues.entrySet().stream()
             .filter(f -> f.getKey().equalsIgnoreCase(colName))
             .map(Map.Entry::getValue)
             .findAny();
@@ -126,5 +171,27 @@ public abstract class FunctionHandler implements FunctionDataHandler {
     }
 
     return y;
+  }
+
+  private PercentileFunction mapPercentile(
+      ru.dimension.ui.model.function.PercentileFunction uiPf) {
+    return switch (uiPf) {
+      case P50  -> PercentileFunction.P50;
+      case P90  -> PercentileFunction.P90;
+      case P95  -> PercentileFunction.P95;
+      case P99  -> PercentileFunction.P99;
+      default   -> PercentileFunction.NONE;
+    };
+  }
+
+  private GranularityFunction mapGranularity(TimeRangeFunction trf) {
+    if (trf == null) return GranularityFunction.AUTO;
+    return switch (trf) {
+      case MINUTE -> GranularityFunction.MINUTE;
+      case HOUR   -> GranularityFunction.HOUR;
+      case DAY    -> GranularityFunction.DAY;
+      case MONTH  -> GranularityFunction.MONTH;
+      default     -> GranularityFunction.AUTO;
+    };
   }
 }

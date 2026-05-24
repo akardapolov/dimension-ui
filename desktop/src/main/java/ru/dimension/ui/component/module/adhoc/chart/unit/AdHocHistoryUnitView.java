@@ -11,6 +11,7 @@ import ru.dimension.ui.component.module.base.BaseUnitView;
 import ru.dimension.ui.component.panel.FunctionPanel;
 import ru.dimension.ui.component.panel.LegendPanel;
 import ru.dimension.ui.component.panel.function.NormFunctionPanel;
+import ru.dimension.ui.component.panel.function.PercentileFunctionPanel;
 import ru.dimension.ui.component.panel.function.TimeRangeFunctionPanel;
 import ru.dimension.ui.component.panel.popup.action.ActionPanel;
 import ru.dimension.ui.component.panel.popup.filter.FilterPanel;
@@ -26,6 +27,7 @@ public class AdHocHistoryUnitView extends BaseUnitView {
   private final FunctionPanel historyFunctionPanel;
   private final TimeRangeFunctionPanel historyTimeRangeFunctionPanel;
   private final NormFunctionPanel historyNormFunctionPanel;
+  private final PercentileFunctionPanel historyPercentileFunctionPanel;
   private final HistoryRangePanel historyRangePanel;
   private final LegendPanel historyLegendPanel;
   private final FilterPanel historyFilterPanel;
@@ -38,9 +40,11 @@ public class AdHocHistoryUnitView extends BaseUnitView {
 
     this.historyTimeRangeFunctionPanel = new TimeRangeFunctionPanel();
     this.historyNormFunctionPanel = new NormFunctionPanel();
+    this.historyPercentileFunctionPanel = new PercentileFunctionPanel();
     this.historyFunctionPanel = new FunctionPanel(getBoldLabel("Group: "),
                                                   historyTimeRangeFunctionPanel,
-                                                  historyNormFunctionPanel);
+                                                  historyNormFunctionPanel,
+                                                  historyPercentileFunctionPanel);
     this.historyRangePanel = new HistoryRangePanel(getBoldLabel("Range: "));
     this.historyLegendPanel = new LegendPanel(getBoldLabel("Legend: "));
     this.historyFilterPanel = new FilterPanel(MessageBroker.Component.ADHOC);

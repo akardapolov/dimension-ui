@@ -39,7 +39,7 @@ import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.TaskInfo;
 import ru.dimension.ui.model.view.ProgressbarState;
-import ru.dimension.ui.router.event.EventListener;
+import ru.dimension.ui.router.event.EventDispatcher;
 import ru.dimension.ui.state.SqlQueryState;
 
 @Log4j2
@@ -49,7 +49,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
   private final MessageBroker.Component component;
 
   private final ManageView view;
-  private final EventListener eventListener;
+  private final EventDispatcher eventDispatcher;
   private final ProfileManager profileManager;
   private final TaskExecutorPool taskExecutorPool;
   private final ConnectionPoolManager connectionPoolManager;
@@ -71,7 +71,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
   public ManagePresenter(@Assisted MessageBroker.Component component,
                          @Assisted ManageView view,
                          PreviewModuleFactory previewModuleFactory,
-                         EventListener eventListener,
+                         EventDispatcher eventDispatcher,
                          ProfileManager profileManager,
                          TaskExecutorPool taskExecutorPool,
                          ConnectionPoolManager connectionPoolManager,
@@ -83,7 +83,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
     this.view = view;
     this.previewModuleFactory = previewModuleFactory;
 
-    this.eventListener = eventListener;
+    this.eventDispatcher = eventDispatcher;
     this.profileManager = profileManager;
     this.taskExecutorPool = taskExecutorPool;
     this.connectionPoolManager = connectionPoolManager;
@@ -147,7 +147,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
     ProfileTaskQueryKey capturedKey = this.key;
 
     executorService.submit(() -> {
-      eventListener.fireProgressbarVisible(ProgressbarState.SHOW);
+      eventDispatcher.fireProgressbarVisible(ProgressbarState.SHOW);
       try {
         actionPerformed(actionName, capturedKey);
       } catch (Exception exception) {
@@ -163,7 +163,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
 
         throw new RuntimeException(exception);
       } finally {
-        eventListener.fireProgressbarVisible(ProgressbarState.HIDE);
+        eventDispatcher.fireProgressbarVisible(ProgressbarState.HIDE);
       }
     });
 
@@ -173,7 +173,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
   private void actionPerformed(String actionName, ProfileTaskQueryKey key) {
     if (ActionName.START.name().equals(actionName)) {
       profileManager.setProfileInfoStatusById(key.getProfileId(), RunStatus.RUNNING);
-      eventListener.fireOnStartOnWorkspaceProfileView(key.getProfileId());
+      eventDispatcher.fireOnStartOnWorkspaceProfileView(key.getProfileId());
 
       profileManager.getProfileInfoById(key.getProfileId())
           .getTaskInfoList()
@@ -223,7 +223,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
               } catch (Exception e) {
                 profileManager.setProfileInfoStatusById(key.getProfileId(), RunStatus.NOT_RUNNING);
                 sqlQueryState.clear(profileTaskQueryKey);
-                eventListener.fireOnStopOnWorkspaceProfileView(key.getProfileId());
+                eventDispatcher.fireOnStopOnWorkspaceProfileView(key.getProfileId());
                 throw new RuntimeException(e);
               }
             });
@@ -257,14 +257,14 @@ public class ManagePresenter implements ActionListener, MessageAction {
                   .ifPresentOrElse(csTypeEntry -> log.info("Found timestamp field: {}", csTypeEntry.getKey()),
                                    () -> {
                                      profileManager.setProfileInfoStatusById(key.getProfileId(), RunStatus.NOT_RUNNING);
-                                     eventListener.fireOnStopOnWorkspaceProfileView(key.getProfileId());
+                                     eventDispatcher.fireOnStopOnWorkspaceProfileView(key.getProfileId());
                                      throw new NotFoundException(
                                          "Not found timestamp field for query: " + queryInfo.getName());
                                    });
 
               if (tableInfo.getSProfile().getCsTypeMap().isEmpty()) {
                 profileManager.setProfileInfoStatusById(key.getProfileId(), RunStatus.NOT_RUNNING);
-                eventListener.fireOnStopOnWorkspaceProfileView(key.getProfileId());
+                eventDispatcher.fireOnStopOnWorkspaceProfileView(key.getProfileId());
 
                 throw new NotFoundException("Metadata for query: " + queryInfo.getName() + " not found..");
               }
@@ -299,7 +299,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
                   new TaskExecutor(profileInfo, taskInfo, queryInfo, tableInfo, connectionInfo,
                                    connectionPoolManager,
                                    sqlQueryState,
-                                   eventListener,
+                                   eventDispatcher,
                                    httpResponseFetcher,
                                    dStore);
 
@@ -311,13 +311,13 @@ public class ManagePresenter implements ActionListener, MessageAction {
     } else if (ActionName.STOP.name().equals(actionName)) {
       ProfileInfo profileInfo = profileManager.getProfileInfoById(key.getProfileId());
 
-      if (eventListener.isProfileOnDashboardRunning(key.getProfileId())) {
+      if (eventDispatcher.isProfileOnDashboardRunning(key.getProfileId())) {
         String message = String.format("Charts running on the Dashboard tab for the %s", profileInfo.getName());
         DialogHelper.showMessageDialog(null, message, "Information");
       }
 
       profileManager.setProfileInfoStatusById(key.getProfileId(), RunStatus.NOT_RUNNING);
-      eventListener.fireOnStopOnWorkspaceProfileView(key.getProfileId());
+      eventDispatcher.fireOnStopOnWorkspaceProfileView(key.getProfileId());
 
       try {
         collector.stop(profileInfo);
@@ -340,9 +340,9 @@ public class ManagePresenter implements ActionListener, MessageAction {
     if (previewModule != null && previewModule.getModel().getKey().equals(key)) {
       log.info("Already running preview model by key: {}", key);
     } else {
-      eventListener.clearListenerPreviewByClass(PreviewModule.class);
+      eventDispatcher.clearListenerPreviewByClass(PreviewModule.class);
       previewModule = previewModuleFactory.create(PreviewMode.PREVIEW, key);
-      eventListener.addCollectStartStopPreviewListener(key, previewModule);
+      eventDispatcher.addCollectStartStopPreviewListener(key, previewModule);
     }
 
     previewModule.show();

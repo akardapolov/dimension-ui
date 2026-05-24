@@ -33,18 +33,13 @@ public class CountHandler extends FunctionHandler {
                       QueryInfo queryInfo,
                       DStore dStore) {
     super(profileTaskQueryKey, metric, queryInfo, dStore);
-
     this.metric = metric;
   }
 
   @Override
-  public void fillSeriesData(long begin,
-                             long end,
-                             Set<String> series) {
-    List<StackedColumn> sColumnList;
+  public void fillSeriesData(long begin, long end, Set<String> series) {
     try {
-      sColumnList = handleFunctionComplex(begin, end);
-
+      List<StackedColumn> sColumnList = handleFunctionComplex(begin, end);
       fillSeries(sColumnList, series);
     } catch (SqlColMetadataException | BeginEndWrongOrderException e) {
       log.error(e);
@@ -65,44 +60,65 @@ public class CountHandler extends FunctionHandler {
                              double yK,
                              Set<String> series,
                              StackedChart stackedChart) {
-
     try {
       List<StackedColumn> sColumnList = handleFunctionComplex(begin, end);
 
-      long x;
-
-      if (isClientRealTime) {
-        x = sColumnList.isEmpty() ? finalX : sColumnList.getFirst().getKey();
-      } else {
-        x = finalX;
-      }
+      long x = isClientRealTime
+          ? (sColumnList.isEmpty() ? finalX : sColumnList.getFirst().getKey())
+          : finalX;
 
       fillSeries(sColumnList, series);
 
-      Map<String, IntSummaryStatistics> batchData = sColumnList.stream()
-          .toList()
-          .stream()
-          .map(StackedColumn::getKeyCount)
-          .flatMap(sc -> sc.entrySet().stream())
-          .collect(Collectors.groupingBy(entry -> Objects.requireNonNullElse(entry.getKey(), ""),
-                                         Collectors.summarizingInt(Map.Entry::getValue)));
-      series.forEach(seriesName -> {
-        Optional<IntSummaryStatistics> batch = Optional.ofNullable(batchData.get(seriesName));
-        stackedChart.loadSeriesColorInternal(profileTaskQueryKey.getColorProfileName(), seriesName);
+      boolean hasPercentile = sColumnList.stream()
+          .anyMatch(c -> c.getKeyPercentile() != null
+              && !c.getKeyPercentile().isEmpty());
 
-        try {
-          if (batch.isPresent()) {
-            double y =
-                sColumnList.size() == 0 ? 0D : ((double) batch.map(IntSummaryStatistics::getSum).orElse(0L) / (yK));
+      if (hasPercentile) {
+        Map<String, Double> percentileData = sColumnList.stream()
+            .map(StackedColumn::getKeyPercentile)
+            .filter(Objects::nonNull)
+            .flatMap(m -> m.entrySet().stream())
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue,
+                Double::sum));
+
+        series.forEach(seriesName -> {
+          stackedChart.loadSeriesColorInternal(
+              profileTaskQueryKey.getColorProfileName(), seriesName);
+          double y = percentileData.getOrDefault(seriesName, 0.0) / yK;
+          try {
             stackedChart.addSeriesValue(x, y, seriesName);
-          } else {
-            stackedChart.addSeriesValue(x, 0D, seriesName);
+          } catch (Exception ex) {
+            log.info(ex);
           }
+        });
 
-        } catch (Exception exception) {
-          log.info(exception);
-        }
-      });
+      } else {
+        Map<String, IntSummaryStatistics> batchData = sColumnList.stream()
+            .map(StackedColumn::getKeyCount)
+            .flatMap(sc -> sc.entrySet().stream())
+            .collect(Collectors.groupingBy(
+                entry -> Objects.requireNonNullElse(entry.getKey(), ""),
+                Collectors.summarizingInt(Map.Entry::getValue)));
+
+        series.forEach(seriesName -> {
+          Optional<IntSummaryStatistics> batch =
+              Optional.ofNullable(batchData.get(seriesName));
+          stackedChart.loadSeriesColorInternal(
+              profileTaskQueryKey.getColorProfileName(), seriesName);
+          try {
+            double y = batch.isPresent()
+                ? (sColumnList.isEmpty()
+                    ? 0D
+                    : (double) batch.get().getSum() / yK)
+                : 0D;
+            stackedChart.addSeriesValue(x, y, seriesName);
+          } catch (Exception ex) {
+            log.info(ex);
+          }
+        });
+      }
 
     } catch (SqlColMetadataException | BeginEndWrongOrderException e) {
       throw new RuntimeException(e);
@@ -119,37 +135,60 @@ public class CountHandler extends FunctionHandler {
     try {
       CompositeFilter compositeFilter = FilterHelper.toCompositeFilter(topMapSelected);
 
-      List<StackedColumn> sColumnList = dStore.getStacked(queryInfo.getName(),
-                                                          metric.getYAxis(),
-                                                          GroupFunction.COUNT,
-                                                          compositeFilter,
-                                                          begin,
-                                                          end);
+      List<StackedColumn> sColumnList =
+          getStackedWithPercentile(GroupFunction.COUNT, compositeFilter, begin, end);
 
-      Map<String, IntSummaryStatistics> batchData = sColumnList.stream()
-          .toList()
-          .stream()
-          .map(StackedColumn::getKeyCount)
-          .flatMap(sc -> sc.entrySet().stream())
-          .collect(Collectors.groupingBy(entry -> Objects.requireNonNullElse(entry.getKey(), ""),
-                                         Collectors.summarizingInt(Map.Entry::getValue)));
-      series.forEach(seriesName -> {
-        Optional<IntSummaryStatistics> batch = Optional.ofNullable(batchData.get(seriesName));
-        stackedChart.loadSeriesColorInternal(profileTaskQueryKey.getColorProfileName(), seriesName);
+      boolean hasPercentile = sColumnList.stream()
+          .anyMatch(c -> c.getKeyPercentile() != null
+              && !c.getKeyPercentile().isEmpty());
 
-        try {
-          if (batch.isPresent()) {
-            double y =
-                sColumnList.size() == 0 ? 0D : ((double) batch.map(IntSummaryStatistics::getSum).orElse(0L) / (yK));
-            stackedChart.addSeriesValue(begin, y, seriesName);
-          } else {
-            stackedChart.addSeriesValue(begin, 0D, seriesName);
+      if (hasPercentile) {
+        Map<String, Double> percentileData = sColumnList.stream()
+            .map(StackedColumn::getKeyPercentile)
+            .filter(Objects::nonNull)
+            .flatMap(m -> m.entrySet().stream())
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue,
+                Double::sum));
+
+        series.forEach(seriesName -> {
+          stackedChart.loadSeriesColorInternal(
+              profileTaskQueryKey.getColorProfileName(), seriesName);
+          try {
+            stackedChart.addSeriesValue(begin,
+                                        percentileData.getOrDefault(seriesName, 0.0) / yK,
+                                        seriesName);
+          } catch (Exception ex) {
+            log.info(ex);
           }
+        });
 
-        } catch (Exception exception) {
-          log.info(exception);
-        }
-      });
+      } else {
+        Map<String, IntSummaryStatistics> batchData = sColumnList.stream()
+            .map(StackedColumn::getKeyCount)
+            .flatMap(sc -> sc.entrySet().stream())
+            .collect(Collectors.groupingBy(
+                entry -> Objects.requireNonNullElse(entry.getKey(), ""),
+                Collectors.summarizingInt(Map.Entry::getValue)));
+
+        series.forEach(seriesName -> {
+          Optional<IntSummaryStatistics> batch =
+              Optional.ofNullable(batchData.get(seriesName));
+          stackedChart.loadSeriesColorInternal(
+              profileTaskQueryKey.getColorProfileName(), seriesName);
+          try {
+            double y = batch.isPresent()
+                ? (sColumnList.isEmpty()
+                    ? 0D
+                    : (double) batch.get().getSum() / yK)
+                : 0D;
+            stackedChart.addSeriesValue(begin, y, seriesName);
+          } catch (Exception ex) {
+            log.info(ex);
+          }
+        });
+      }
 
     } catch (SqlColMetadataException | BeginEndWrongOrderException e) {
       throw new RuntimeException(e);
@@ -157,21 +196,13 @@ public class CountHandler extends FunctionHandler {
   }
 
   @Override
-  public List<StackedColumn> handleFunctionComplex(long begin,
-                                                   long end)
+  public List<StackedColumn> handleFunctionComplex(long begin, long end)
       throws BeginEndWrongOrderException, SqlColMetadataException {
 
-    if (topMapSelected == null) {
-      return dStore.getStacked(queryInfo.getName(), metric.getYAxis(), GroupFunction.COUNT, null, begin, end);
-    } else {
-      CompositeFilter compositeFilter = FilterHelper.toCompositeFilter(topMapSelected);
+    CompositeFilter compositeFilter = topMapSelected != null
+        ? FilterHelper.toCompositeFilter(topMapSelected)
+        : null;
 
-      return dStore.getStacked(queryInfo.getName(),
-                               metric.getYAxis(),
-                               GroupFunction.COUNT,
-                               compositeFilter,
-                               begin,
-                               end);
-    }
+    return getStackedWithPercentile(GroupFunction.COUNT, compositeFilter, begin, end);
   }
 }

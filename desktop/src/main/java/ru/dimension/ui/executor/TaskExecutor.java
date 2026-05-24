@@ -22,7 +22,7 @@ import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.TaskInfo;
 import ru.dimension.ui.model.sql.GatherDataMode;
-import ru.dimension.ui.router.event.EventListener;
+import ru.dimension.ui.router.event.EventDispatcher;
 import ru.dimension.ui.state.SqlQueryState;
 
 @Log4j2
@@ -34,7 +34,7 @@ public class TaskExecutor {
 
   private final int pullTimeout;
 
-  private final EventListener eventListener;
+  private final EventDispatcher eventDispatcher;
 
   private Connection connection = null;
   private final AbstractCollect loader;
@@ -50,14 +50,14 @@ public class TaskExecutor {
                       ConnectionInfo connectionInfo,
                       ConnectionPoolManager connectionPoolManager,
                       SqlQueryState sqlQueryState,
-                      EventListener eventListener,
+                      EventDispatcher eventDispatcher,
                       HttpResponseFetcher httpResponseFetcher,
                       DStore dStore) {
     this.profileInfo = profileInfo;
     this.taskInfo = taskInfo;
     this.queryInfo = queryInfo;
 
-    this.eventListener = eventListener;
+    this.eventDispatcher = eventDispatcher;
 
     this.pullTimeout = taskInfo.getPullTimeout();
 
@@ -143,9 +143,9 @@ public class TaskExecutor {
 
     ProfileTaskQueryKey profileTaskQueryKey = new ProfileTaskQueryKey(profileInfo.getId(), taskInfo.getId(), queryInfo.getId());
 
-    eventListener.fireOnStartCollect(profileTaskQueryKey);
+    eventDispatcher.fireOnStartCollect(profileTaskQueryKey);
     loader.collect();
-    eventListener.fireOnStopCollect(profileTaskQueryKey);
+    eventDispatcher.fireOnStopCollect(profileTaskQueryKey);
 
     Instant after = Instant.now();
 

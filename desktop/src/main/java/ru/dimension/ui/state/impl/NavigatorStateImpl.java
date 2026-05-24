@@ -17,23 +17,7 @@ public class NavigatorStateImpl implements NavigatorState {
   }
 
   @Override
-  public void setSelectionIndex(int selectionIndex) {
-    this.selectionIndex = selectionIndex;
-  }
-
-  @Override
-  public int getSelectionIndex() {
-    return selectionIndex;
-  }
-
-  @Override
-  public void setSelectedProfile(int profileId) {
-    this.profileId = profileId;
-  }
-
-  @Override
   public int getSelectedProfile() {
     return profileId;
   }
-
 }

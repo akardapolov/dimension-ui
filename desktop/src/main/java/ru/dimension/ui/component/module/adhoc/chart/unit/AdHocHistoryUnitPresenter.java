@@ -37,6 +37,7 @@ import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.function.NormFunction;
+import ru.dimension.ui.model.function.PercentileFunction;
 import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.RangeHistory;
@@ -105,6 +106,8 @@ public class AdHocHistoryUnitPresenter implements UnitPresenter, HelperChart {
     view.getHistoryTimeRangeFunctionPanel().setRunAction(this::handleTimeRangeFunctionChange);
     view.getHistoryRangePanel().setRunAction(this::handleHistoryRangeChange);
     view.getHistoryNormFunctionPanel().setRunAction(this::handleNormFunctionChange);
+    view.getHistoryPercentileFunctionPanel()
+        .setRunAction(this::handlePercentileFunctionChange);
     view.getHistoryLegendPanel().setStateChangeConsumer(show -> handleLegendChangeAll(ChartLegendState.SHOW.equals(show)));
     view.getHistoryRangePanel().getButtonApplyRange().addActionListener(e -> applyCustomRange());
   }
@@ -162,6 +165,14 @@ public class AdHocHistoryUnitPresenter implements UnitPresenter, HelperChart {
       metric.setNormFunction(normFunction);
     }
     view.getHistoryNormFunctionPanel().setSelected(metric.getNormFunction());
+
+    PercentileFunction percentileFunction =
+        adHocStateManager.getPercentileFunction(adHocKey);
+    if (percentileFunction != null) {
+      metric.setPercentileFunction(percentileFunction);
+    }
+    view.getHistoryPercentileFunctionPanel()
+        .setSelected(metric.getPercentileFunction());
   }
 
   private void updateChartInternal(Map<String, Color> seriesColorMap, Map<CProfile, LinkedHashSet<String>> topMapSelected) {
@@ -269,6 +280,12 @@ public class AdHocHistoryUnitPresenter implements UnitPresenter, HelperChart {
       metricCopy.setNormFunction(normFunction);
     }
 
+    PercentileFunction percentileFunction =
+        adHocStateManager.getPercentileFunction(key);
+    if (percentileFunction != null) {
+      metricCopy.setPercentileFunction(percentileFunction);
+    }
+
     RangeHistory rangeHistory = adHocStateManager.getHistoryRange(key, globalKey);
     chartInfoCopy.setRangeHistory(Objects.requireNonNullElse(rangeHistory, RangeHistory.DAY));
 
@@ -345,6 +362,13 @@ public class AdHocHistoryUnitPresenter implements UnitPresenter, HelperChart {
   public void handleNormFunctionChange(String action, NormFunction function) {
     adHocStateManager.putNormFunction(model.getAdHocKey(), function);
     metric.setNormFunction(function);
+    updateChart();
+  }
+
+  private void handlePercentileFunctionChange(String action,
+                                              PercentileFunction function) {
+    adHocStateManager.putPercentileFunction(model.getAdHocKey(), function);
+    metric.setPercentileFunction(function);
     updateChart();
   }
 

@@ -29,6 +29,7 @@ import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.function.NormFunction;
+import ru.dimension.ui.model.function.PercentileFunction;
 import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
@@ -365,6 +366,7 @@ public final class QueryMetricButtonPanelHandler implements java.awt.event.Actio
                                GroupFunction.valueOf(selectedYAxisFunction),
                                TimeRangeFunction.AUTO,
                                NormFunction.SECOND,
+                               PercentileFunction.NONE,
                                ChartType.valueOf(selectedChartType),
                                Collections.emptyList());
 

@@ -21,7 +21,7 @@ import ru.dimension.ui.manager.ConfigurationManager;
 import ru.dimension.ui.manager.ConnectionPoolManager;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.type.ConnectionStatus;
-import ru.dimension.ui.router.event.EventListener;
+import ru.dimension.ui.router.event.EventDispatcher;
 
 public class AdHocModelModule implements MessageAction {
 
@@ -38,12 +38,12 @@ public class AdHocModelModule implements MessageAction {
   @Inject
   public AdHocModelModule(ProfileManager profileManager,
                           ConfigurationManager configurationManager,
-                          EventListener eventListener,
+                          EventDispatcher eventDispatcher,
                           ConnectionPoolManager connectionPoolManager,
                           AdHocDatabaseManager adHocDatabaseManager,
                           EventBus eventBus) {
 
-    this.model = new AdHocModelModel(profileManager, configurationManager, eventListener, connectionPoolManager, adHocDatabaseManager);
+    this.model = new AdHocModelModel(profileManager, configurationManager, eventDispatcher, connectionPoolManager, adHocDatabaseManager);
     this.view = new AdHocModelView();
     this.presenter = new AdHocModelPresenter(model, view);
     this.eventBus = eventBus;

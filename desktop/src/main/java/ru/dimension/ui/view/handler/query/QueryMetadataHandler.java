@@ -376,10 +376,27 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
   }
 
   private void loadMetadataJdbc(ConnectionInfo connectionInfo) {
+    Connection connection;
     try {
       connectionPoolManager.createDataSource(connectionInfo);
-      Connection connection = connectionPoolManager.getConnection(connectionInfo);
+      connection = connectionPoolManager.getConnection(connectionInfo);
+    } catch (Exception e) {
+      log.error("Failed to create datasource or get connection for '{}': {}",
+                connectionInfo.getName(), e.getMessage());
+      throw new RuntimeException(
+          "Cannot connect to database '" + connectionInfo.getName() + "'.\n"
+              + "Please check connection settings and credentials.\n\n"
+              + "Details: " + getRootCauseMessage(e), e);
+    }
 
+    if (connection == null) {
+      log.error("Connection is null for '{}'", connectionInfo.getName());
+      throw new RuntimeException(
+          "Cannot connect to database '" + connectionInfo.getName() + "'.\n"
+              + "Please check connection settings and credentials.");
+    }
+
+    try {
       int queryId = getSelectedQueryId();
 
       QueryInfo queryInfo = getQueryInfo(queryId);
@@ -389,7 +406,11 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
       try {
         tProfile = dStore.loadJdbcTableMetadata(connection, queryInfo.getText(), tableInfo.getSProfile());
       } catch (Exception e) {
-        throw new RuntimeException(e);
+        log.error("Failed to load JDBC table metadata for query '{}': {}",
+                  queryInfo.getName(), e.getMessage());
+        throw new RuntimeException(
+            "Failed to load metadata for query '" + queryInfo.getName() + "'.\n\n"
+                + "Details: " + getRootCauseMessage(e), e);
       }
 
       List<Metric> metricList = new ArrayList<>();
@@ -412,9 +433,25 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
       fillConfigMetadata(tableInfo, configMetadataCase);
 
       publishMetadataUpdate(queryInfo.getId(), queryInfo.getName(), tableInfo.getCProfiles());
-    } catch (SQLException e) {
-      throw new RuntimeException(e);
+    } catch (RuntimeException e) {
+      throw e;
+    } finally {
+      try {
+        if (!connection.isClosed()) {
+          connection.close();
+        }
+      } catch (SQLException e) {
+        log.warn("Failed to close connection after metadata load: {}", e.getMessage());
+      }
     }
+  }
+
+  private static String getRootCauseMessage(Throwable t) {
+    Throwable cause = t;
+    while (cause.getCause() != null) {
+      cause = cause.getCause();
+    }
+    return cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName();
   }
 
   private void loadMetadataHttp(ConnectionInfo connectionInfo) {

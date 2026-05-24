@@ -31,9 +31,7 @@ public class SumHandler extends FunctionHandler {
   }
 
   @Override
-  public void fillSeriesData(long begin,
-                             long end,
-                             Set<String> series) {
+  public void fillSeriesData(long begin, long end, Set<String> series) {
     series.add(metric.getYAxis().getColName());
   }
 
@@ -50,8 +48,8 @@ public class SumHandler extends FunctionHandler {
                              double yK,
                              Set<String> series,
                              StackedChart stackedChart) {
-
-    super.handleFunction(begin, end, isClientRealTime, finalX, yK, stackedChart, GroupFunction.SUM);
+    super.handleFunction(begin, end, isClientRealTime, finalX, yK,
+                         stackedChart, GroupFunction.SUM);
   }
 
   @Override
@@ -61,17 +59,14 @@ public class SumHandler extends FunctionHandler {
                              Set<String> series,
                              Map<CProfile, LinkedHashSet<String>> topMapSelected,
                              StackedChart stackedChart) {
-    GroupFunction groupFunction = GroupFunction.SUM;
     try {
       CompositeFilter compositeFilter = FilterHelper.toCompositeFilter(topMapSelected);
 
-      List<StackedColumn> stackedColumns
-          = dStore.getStacked(queryInfo.getName(), metric.getYAxis(), groupFunction, compositeFilter, begin, end);
+      List<StackedColumn> stackedColumns =
+          getStackedWithPercentile(GroupFunction.SUM, compositeFilter, begin, end);
 
-      long x;
-      double y = getY(groupFunction, stackedColumns);
-
-      x = stackedColumns.isEmpty() ? begin : stackedColumns.getLast().getTail();
+      double y = getY(GroupFunction.SUM, stackedColumns);
+      long x = stackedColumns.isEmpty() ? begin : stackedColumns.getLast().getTail();
 
       stackedChart.addSeriesValue(x, y / yK, metric.getYAxis().getColName());
 
@@ -81,21 +76,13 @@ public class SumHandler extends FunctionHandler {
   }
 
   @Override
-  public List<StackedColumn> handleFunctionComplex(long begin,
-                                                   long end)
+  public List<StackedColumn> handleFunctionComplex(long begin, long end)
       throws BeginEndWrongOrderException, SqlColMetadataException {
 
-    if (topMapSelected == null) {
-      return dStore.getStacked(queryInfo.getName(), metric.getYAxis(), GroupFunction.SUM, null, begin, end);
-    } else {
-      CompositeFilter compositeFilter = FilterHelper.toCompositeFilter(topMapSelected);
+    CompositeFilter compositeFilter = topMapSelected != null
+        ? FilterHelper.toCompositeFilter(topMapSelected)
+        : null;
 
-      return dStore.getStacked(queryInfo.getName(),
-                               metric.getYAxis(),
-                               GroupFunction.SUM,
-                               compositeFilter,
-                               begin,
-                               end);
-    }
+    return getStackedWithPercentile(GroupFunction.SUM, compositeFilter, begin, end);
   }
 }

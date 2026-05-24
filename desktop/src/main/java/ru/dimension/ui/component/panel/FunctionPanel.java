@@ -16,15 +16,18 @@ import ru.dimension.ui.component.broker.Destination;
 import ru.dimension.ui.component.broker.Message;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.panel.function.NormFunctionPanel;
+import ru.dimension.ui.component.panel.function.PercentileFunctionPanel;
 import ru.dimension.ui.component.panel.function.TimeRangeFunctionPanel;
 import ru.dimension.ui.component.panel.popup.base.ConfigPopupPanel;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.function.GroupFunction;
+import ru.dimension.ui.model.function.PercentileFunction;
 
 @Data
 public class FunctionPanel extends JPanel {
+
   private final JRadioButton count;
   private final JRadioButton sum;
   private final JRadioButton avg;
@@ -39,11 +42,13 @@ public class FunctionPanel extends JPanel {
   private BiConsumer<String, GroupFunction> runAction;
   private BiConsumer<String, GroupFunction> externalRunAction;
 
-  public FunctionPanel(JLabel label, TimeRangeFunctionPanel timeRangeFunctionPanel) {
+  public FunctionPanel(JLabel label,
+                       TimeRangeFunctionPanel timeRangeFunctionPanel) {
     this(label);
     this.previewPanel = new FunctionPreviewPanel();
     bindTimeRangePreview(timeRangeFunctionPanel);
-    this.configPopupPanel.updateContent(() -> createPopupContent(timeRangeFunctionPanel));
+    this.configPopupPanel.updateContent(
+        () -> createPopupContent(timeRangeFunctionPanel));
   }
 
   public FunctionPanel(JLabel label,
@@ -53,7 +58,23 @@ public class FunctionPanel extends JPanel {
     this.previewPanel = new FunctionPreviewPanel();
     bindTimeRangePreview(timeRangeFunctionPanel);
     bindNormPreview(normFunctionPanel);
-    this.configPopupPanel.updateContent(() -> createPopupContent(timeRangeFunctionPanel, normFunctionPanel));
+    this.configPopupPanel.updateContent(
+        () -> createPopupContent(timeRangeFunctionPanel, normFunctionPanel));
+  }
+
+  public FunctionPanel(JLabel label,
+                       TimeRangeFunctionPanel timeRangeFunctionPanel,
+                       NormFunctionPanel normFunctionPanel,
+                       PercentileFunctionPanel percentileFunctionPanel) {
+    this(label);
+    this.previewPanel = new FunctionPreviewPanel();
+    bindTimeRangePreview(timeRangeFunctionPanel);
+    bindNormPreview(normFunctionPanel);
+    bindPercentilePreview(percentileFunctionPanel);
+    this.configPopupPanel.updateContent(
+        () -> createPopupContent(timeRangeFunctionPanel,
+                                 normFunctionPanel,
+                                 percentileFunctionPanel));
   }
 
   public FunctionPanel(JLabel label,
@@ -69,13 +90,35 @@ public class FunctionPanel extends JPanel {
     this.previewPanel = new FunctionPreviewPanel();
     bindTimeRangePreview(timeRangeFunctionPanel);
     bindNormPreview(normFunctionPanel);
-    this.configPopupPanel.updateContent(() -> createPopupContent(timeRangeFunctionPanel, normFunctionPanel));
+    this.configPopupPanel.updateContent(
+        () -> createPopupContent(timeRangeFunctionPanel, normFunctionPanel));
+  }
+
+  public FunctionPanel(JLabel label,
+                       MessageBroker.Component component,
+                       ProfileTaskQueryKey key,
+                       CProfile cProfile,
+                       TimeRangeFunctionPanel timeRangeFunctionPanel,
+                       NormFunctionPanel normFunctionPanel,
+                       PercentileFunctionPanel percentileFunctionPanel) {
+    this(label);
+    this.component = component;
+    this.key = key;
+    this.cProfile = cProfile;
+    this.previewPanel = new FunctionPreviewPanel();
+    bindTimeRangePreview(timeRangeFunctionPanel);
+    bindNormPreview(normFunctionPanel);
+    bindPercentilePreview(percentileFunctionPanel);
+    this.configPopupPanel.updateContent(
+        () -> createPopupContent(timeRangeFunctionPanel,
+                                 normFunctionPanel,
+                                 percentileFunctionPanel));
   }
 
   public FunctionPanel(JLabel label) {
     this.count = new JRadioButton(GroupFunction.COUNT.name(), true);
-    this.sum = new JRadioButton(GroupFunction.SUM.name(), false);
-    this.avg = new JRadioButton(GroupFunction.AVG.name(), false);
+    this.sum   = new JRadioButton(GroupFunction.SUM.name(),   false);
+    this.avg   = new JRadioButton(GroupFunction.AVG.name(),   false);
     this.configPopupPanel = new ConfigPopupPanel(this::createPopupContent);
 
     this.buttonGroup = new ButtonGroup();
@@ -91,7 +134,6 @@ public class FunctionPanel extends JPanel {
       gbl.row()
           .cell(label).cell(count).cell(sum).cell(avg).cell(configPopupPanel)
           .cellXRemainder(new JLabel()).fillX();
-
       PGHelper.setConstrainsInsets(gbl, label, 0, 10);
     } else {
       gbl.row()
@@ -99,44 +141,32 @@ public class FunctionPanel extends JPanel {
           .cellXRemainder(new JLabel()).fillX();
     }
 
-    PGHelper.setConstrainsInsets(gbl, count, 0);
-    PGHelper.setConstrainsInsets(gbl, sum, 0);
-    PGHelper.setConstrainsInsets(gbl, avg, 0);
+    PGHelper.setConstrainsInsets(gbl, count,          0);
+    PGHelper.setConstrainsInsets(gbl, sum,            0);
+    PGHelper.setConstrainsInsets(gbl, avg,            0);
     PGHelper.setConstrainsInsets(gbl, configPopupPanel, 0);
 
     gbl.done();
 
     count.addActionListener(e -> {
-      if (runAction != null) runAction.accept("functionChanged", GroupFunction.COUNT);
-      if (component != null) {
-        sendGroupFunctionMessage(GroupFunction.COUNT);
-      }
+      if (runAction  != null) runAction.accept("functionChanged", GroupFunction.COUNT);
+      if (component  != null) sendGroupFunctionMessage(GroupFunction.COUNT);
     });
-
     sum.addActionListener(e -> {
-      if (runAction != null) runAction.accept("functionChanged", GroupFunction.SUM);
-      if (component != null) {
-        sendGroupFunctionMessage(GroupFunction.SUM);
-      }
+      if (runAction  != null) runAction.accept("functionChanged", GroupFunction.SUM);
+      if (component  != null) sendGroupFunctionMessage(GroupFunction.SUM);
     });
-
     avg.addActionListener(e -> {
-      if (runAction != null) runAction.accept("functionChanged", GroupFunction.AVG);
-      if (component != null) {
-        sendGroupFunctionMessage(GroupFunction.AVG);
-      }
+      if (runAction  != null) runAction.accept("functionChanged", GroupFunction.AVG);
+      if (component  != null) sendGroupFunctionMessage(GroupFunction.AVG);
     });
   }
 
   private void bindTimeRangePreview(TimeRangeFunctionPanel panel) {
     panel.setHoverAction((function, text) -> {
-      if (previewPanel == null) {
-        return;
-      }
-
-      if (function == null) {
-        previewPanel.clearPreview();
-      } else {
+      if (previewPanel == null) return;
+      if (function == null) previewPanel.clearPreview();
+      else {
         previewPanel.setToolTipText(text);
         previewPanel.showTimeRangePreview(panel.getSelectedFunction(), function);
       }
@@ -145,17 +175,121 @@ public class FunctionPanel extends JPanel {
 
   private void bindNormPreview(NormFunctionPanel panel) {
     panel.setHoverAction((function, text) -> {
-      if (previewPanel == null) {
-        return;
-      }
-
-      if (function == null) {
-        previewPanel.clearPreview();
-      } else {
+      if (previewPanel == null) return;
+      if (function == null) previewPanel.clearPreview();
+      else {
         previewPanel.setToolTipText(text);
         previewPanel.showNormPreview(panel.getSelectedFunction(), function);
       }
     });
+  }
+
+  private void bindPercentilePreview(PercentileFunctionPanel panel) {
+    panel.setHoverAction((function, text) -> {
+      if (previewPanel == null) return;
+      if (function == null) {
+        previewPanel.clearPreview();
+      } else {
+        previewPanel.setToolTipText(text);
+        previewPanel.showPercentilePreview(panel.getSelectedFunction(), function);
+      }
+    });
+  }
+
+  private JPanel createPopupContent() {
+    JPanel panel = new JPanel();
+    panel.add(new JLabel("Module is under development"));
+    panel.setPreferredSize(new Dimension(200, 200));
+    return panel;
+  }
+
+  private JPanel createPopupContent(TimeRangeFunctionPanel timeRangeFunctionPanel) {
+    JPanel panel = new JPanel();
+    LaF.setBackgroundConfigPanel(CHART_PANEL, panel);
+    PainlessGridBag gbl = new PainlessGridBag(panel, PGHelper.getPGConfig(5), false);
+
+    gbl.row().cellXRemainder(previewPanel).fillX();
+    gbl.row()
+        .cellX(new JXTitledSeparator("Time range"), 2).fillX(2)
+        .cellXRemainder(new JXTitledSeparator("")).fillX();
+    gbl.row()
+        .cellX(timeRangeFunctionPanel, 2).fillX(2)
+        .cellX(new JLabel(), 10).fillX(10);
+
+    gbl.done();
+    return panel;
+  }
+
+  private JPanel createPopupContent(TimeRangeFunctionPanel timeRangeFunctionPanel,
+                                    NormFunctionPanel normFunctionPanel) {
+    JPanel panel = new JPanel();
+    LaF.setBackgroundConfigPanel(CHART_PANEL, panel);
+    PainlessGridBag gbl = new PainlessGridBag(panel, PGHelper.getPGConfig(5), false);
+
+    gbl.row().cellXRemainder(previewPanel).fillX();
+    gbl.row()
+        .cellX(new JXTitledSeparator("Time range"), 2).fillX(2)
+        .cellXRemainder(new JXTitledSeparator("")).fillX();
+    gbl.row()
+        .cellX(timeRangeFunctionPanel, 2).fillX(2)
+        .cellX(new JLabel(), 10).fillX(10);
+    gbl.row()
+        .cellX(new JXTitledSeparator("Normalization"), 2).fillX(2)
+        .cellXRemainder(new JXTitledSeparator("")).fillX();
+    gbl.row()
+        .cellX(normFunctionPanel, 2).fillX(2)
+        .cellX(new JLabel(), 10).fillX(10);
+
+    gbl.done();
+    return panel;
+  }
+
+  private JPanel createPopupContent(TimeRangeFunctionPanel timeRangeFunctionPanel,
+                                    NormFunctionPanel normFunctionPanel,
+                                    PercentileFunctionPanel percentileFunctionPanel) {
+    JPanel panel = new JPanel();
+    LaF.setBackgroundConfigPanel(CHART_PANEL, panel);
+    PainlessGridBag gbl = new PainlessGridBag(panel, PGHelper.getPGConfig(5), false);
+
+    gbl.row().cellXRemainder(previewPanel).fillX();
+
+    gbl.row()
+        .cellX(new JXTitledSeparator("Time range"), 2).fillX(2)
+        .cellXRemainder(new JXTitledSeparator("")).fillX();
+    gbl.row()
+        .cellX(timeRangeFunctionPanel, 2).fillX(2)
+        .cellX(new JLabel(), 10).fillX(10);
+
+    gbl.row()
+        .cellX(new JXTitledSeparator("Normalization"), 2).fillX(2)
+        .cellXRemainder(new JXTitledSeparator("")).fillX();
+    gbl.row()
+        .cellX(normFunctionPanel, 2).fillX(2)
+        .cellX(new JLabel(), 10).fillX(10);
+
+    gbl.row()
+        .cellX(new JXTitledSeparator("Percentile"), 2).fillX(2)
+        .cellXRemainder(new JXTitledSeparator("")).fillX();
+    gbl.row()
+        .cellX(percentileFunctionPanel, 2).fillX(2)
+        .cellX(new JLabel(), 10).fillX(10);
+
+    gbl.done();
+    return panel;
+  }
+
+  public void setSelected(GroupFunction function) {
+    switch (function) {
+      case COUNT -> count.setSelected(true);
+      case SUM   -> sum.setSelected(true);
+      case AVG   -> avg.setSelected(true);
+    }
+  }
+
+  public void setEnabled(boolean bCount, boolean bSum, boolean bAverage) {
+    count.setEnabled(bCount);
+    sum.setEnabled(bSum);
+    avg.setEnabled(bAverage);
   }
 
   private void sendGroupFunctionMessage(GroupFunction function) {
@@ -170,86 +304,5 @@ public class FunctionPanel extends JPanel {
                              .parameter("groupFunction", function)
                              .build());
     }
-  }
-
-  private JPanel createPopupContent() {
-    JPanel panel = new JPanel();
-    panel.add(new JLabel("Module is under development"));
-    panel.setPreferredSize(new Dimension(200, 200));
-    return panel;
-  }
-
-  private JPanel createPopupContent(TimeRangeFunctionPanel timeRangeFunctionPanel) {
-    JPanel panel = new JPanel();
-
-    LaF.setBackgroundConfigPanel(CHART_PANEL, panel);
-
-    PainlessGridBag gbl = new PainlessGridBag(panel, PGHelper.getPGConfig(5), false);
-
-    JXTitledSeparator history = new JXTitledSeparator("Time range");
-
-    gbl.row()
-        .cellXRemainder(previewPanel).fillX();
-
-    gbl.row()
-        .cellX(history, 2).fillX(2)
-        .cellXRemainder(new JXTitledSeparator("")).fillX();
-
-    gbl.row()
-        .cellX(timeRangeFunctionPanel, 2).fillX(2)
-        .cellX(new JLabel(), 10).fillX(10);
-
-    gbl.done();
-
-    return panel;
-  }
-
-  private JPanel createPopupContent(TimeRangeFunctionPanel timeRangeFunctionPanel,
-                                    NormFunctionPanel normFunctionPanel) {
-    JPanel panel = new JPanel();
-
-    LaF.setBackgroundConfigPanel(CHART_PANEL, panel);
-
-    PainlessGridBag gbl = new PainlessGridBag(panel, PGHelper.getPGConfig(5), false);
-
-    JXTitledSeparator timeRangeSeparator = new JXTitledSeparator("Time range");
-    JXTitledSeparator normFunctionSeparator = new JXTitledSeparator("Normalization");
-
-    gbl.row()
-        .cellXRemainder(previewPanel).fillX();
-
-    gbl.row()
-        .cellX(timeRangeSeparator, 2).fillX(2)
-        .cellXRemainder(new JXTitledSeparator("")).fillX();
-
-    gbl.row()
-        .cellX(timeRangeFunctionPanel, 2).fillX(2)
-        .cellX(new JLabel(), 10).fillX(10);
-
-    gbl.row()
-        .cellX(normFunctionSeparator, 2).fillX(2)
-        .cellXRemainder(new JXTitledSeparator("")).fillX();
-
-    gbl.row()
-        .cellX(normFunctionPanel, 2).fillX(2)
-        .cellX(new JLabel(), 10).fillX(10);
-
-    gbl.done();
-
-    return panel;
-  }
-
-  public void setSelected(GroupFunction function) {
-    switch (function) {
-      case COUNT -> count.setSelected(true);
-      case SUM -> sum.setSelected(true);
-      case AVG -> avg.setSelected(true);
-    }
-  }
-
-  public void setEnabled(boolean bCount, boolean bSum, boolean bAverage) {
-    count.setEnabled(bCount);
-    sum.setEnabled(bSum);
-    avg.setEnabled(bAverage);
   }
 }

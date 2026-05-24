@@ -12,6 +12,7 @@ import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.db.TimestampType;
 import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.function.NormFunction;
+import ru.dimension.ui.model.function.PercentileFunction;
 import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.info.TableInfo;
 
@@ -25,13 +26,14 @@ public class Metric {
   private String name;
   private Boolean isDefault;
 
-  private CProfile xAxis; // x-axis
-  private CProfile yAxis; // y-axis
-  private CProfile group; // group
-  private GroupFunction groupFunction; //NONE, SUM, COUNT, AVG
-  private TimeRangeFunction timeRangeFunction = TimeRangeFunction.AUTO; // AUTO, MINUTE, HOUR, DAY, MONTH
-  private NormFunction normFunction = NormFunction.SECOND; // NONE, SECOND, MINUTE, HOUR, DAY
-  private ChartType chartType; // linear, stacked
+  private CProfile xAxis;
+  private CProfile yAxis;
+  private CProfile group;
+  private GroupFunction groupFunction;
+  private TimeRangeFunction timeRangeFunction = TimeRangeFunction.AUTO;
+  private NormFunction normFunction = NormFunction.SECOND;
+  private PercentileFunction percentileFunction = PercentileFunction.NONE;
+  private ChartType chartType;
 
   private List<CProfile> columnGanttList;
 
@@ -59,9 +61,6 @@ public class Metric {
         this.groupFunction = GroupFunction.AVG;
         this.chartType = ChartType.LINEAR;
       }
-
-      this.timeRangeFunction = TimeRangeFunction.AUTO;
-      this.normFunction = NormFunction.SECOND;
     }
   }
 
@@ -78,8 +77,6 @@ public class Metric {
     this.group = cProfile;
 
     this.groupFunction = groupFunction;
-    this.timeRangeFunction = TimeRangeFunction.AUTO;
-    this.normFunction = NormFunction.SECOND;
     this.chartType = chartType;
   }
 
@@ -96,6 +93,8 @@ public class Metric {
     copy.setGroupFunction(this.groupFunction);
     copy.setTimeRangeFunction(this.timeRangeFunction);
     copy.setNormFunction(this.normFunction);
+    copy.setPercentileFunction(
+        this.percentileFunction != null ? this.percentileFunction : PercentileFunction.NONE);
     copy.setChartType(this.chartType);
 
     if (this.columnGanttList != null) {
@@ -103,6 +102,11 @@ public class Metric {
     }
 
     return copy;
+  }
+
+  public boolean hasPercentile() {
+    return this.percentileFunction != null
+        && this.percentileFunction != PercentileFunction.NONE;
   }
 
   public GroupFunction getSafeGroupFunction() {

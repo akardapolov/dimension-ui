@@ -5,7 +5,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.model.view.ProgressbarState;
-import ru.dimension.ui.router.event.EventListener;
+import ru.dimension.ui.router.event.EventDispatcher;
 import ru.dimension.ui.router.listener.ProgressbarListener;
 import ru.dimension.ui.view.structure.ProgressbarView;
 
@@ -14,15 +14,15 @@ import ru.dimension.ui.view.structure.ProgressbarView;
 public class ProgressbarPresenter implements ProgressbarListener {
 
   private final ProgressbarView progressbarView;
-  private final EventListener eventListener;
+  private final EventDispatcher eventDispatcher;
 
   @Inject
   public ProgressbarPresenter(@Named("progressbarView") ProgressbarView progressbarView,
-                              @Named("eventListener") EventListener eventListener) {
+                              @Named("eventListener") EventDispatcher eventDispatcher) {
     this.progressbarView = progressbarView;
-    this.eventListener = eventListener;
+    this.eventDispatcher = eventDispatcher;
 
-    this.eventListener.addProgressbarListener(this);
+    this.eventDispatcher.addProgressbarListener(this);
   }
 
   @Override

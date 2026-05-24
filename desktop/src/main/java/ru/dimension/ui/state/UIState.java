@@ -9,6 +9,7 @@ import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.function.NormFunction;
+import ru.dimension.ui.model.function.PercentileFunction;
 import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.view.RangeHistory;
 import ru.dimension.ui.model.view.RangeRealTime;
@@ -32,6 +33,7 @@ public enum UIState {
 
   private static final String TIME_RANGE_FUNCTION = "TIME_RANGE_FUNCTION";
   private static final String NORM_FUNCTION = "NORM_FUNCTION";
+  private static final String PERCENTILE_FUNCTION = "PERCENTILE_FUNCTION";
 
   private static final String CHART_CARD_STATE = "CHART_CARD_STATE";
   private static final String CHART_CARD_STATE_ALL = "CHART_CARD_STATE_ALL";
@@ -324,6 +326,24 @@ public enum UIState {
   public NormFunction getNormFunction(AdHocKey key) {
     ParameterStore store = adHocStateMap.get(key);
     return store != null ? store.get(NORM_FUNCTION, NormFunction.class) : null;
+  }
+
+  public void putPercentileFunction(ChartKey key, PercentileFunction function) {
+    getOrCreateParameterStore(key).put(PERCENTILE_FUNCTION, function);
+  }
+
+  public PercentileFunction getPercentileFunction(ChartKey key) {
+    ParameterStore store = stateMap.get(key);
+    return store != null ? store.get(PERCENTILE_FUNCTION, PercentileFunction.class) : null;
+  }
+
+  public void putPercentileFunction(AdHocKey key, PercentileFunction function) {
+    getOrCreateParameterStore(key).put(PERCENTILE_FUNCTION, function);
+  }
+
+  public PercentileFunction getPercentileFunction(AdHocKey key) {
+    ParameterStore store = adHocStateMap.get(key);
+    return store != null ? store.get(PERCENTILE_FUNCTION, PercentileFunction.class) : null;
   }
 
   public void putChartCardState(ChartKey key,

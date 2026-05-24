@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import jakarta.inject.Inject;
 import javax.swing.JPanel;
@@ -153,6 +154,20 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
   }
 
   protected void fillSeriesAnalyze(List<StackedColumn> sColumnList) {
+    boolean hasPercentile = sColumnList.stream()
+        .anyMatch(c -> c.getKeyPercentile() != null
+            && !c.getKeyPercentile().isEmpty());
+
+    if (hasPercentile) {
+      sColumnList.stream()
+          .map(StackedColumn::getKeyPercentile)
+          .filter(Objects::nonNull)
+          .map(Map::keySet)
+          .flatMap(Collection::stream)
+          .forEach(series::add);
+      return;
+    }
+
     if (GroupFunction.COUNT.equals(config.getMetric().getGroupFunction())) {
       sColumnList.stream()
           .map(StackedColumn::getKeyCount)

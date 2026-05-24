@@ -8,7 +8,7 @@ import ru.dimension.ui.router.listener.ProgressbarListener;
 import ru.dimension.ui.router.listener.TemplateListener;
 import ru.dimension.ui.router.listener.ToolbarListener;
 
-public interface EventListener extends ToolbarListener, ConfigListener, TemplateListener,
+public interface EventDispatcher extends ToolbarListener, ConfigListener, TemplateListener,
     ProgressbarListener, ProfileStartStopListener, CollectStartStopListener {
 
   void addProfileButtonStateListener(ToolbarListener toolbarListener);

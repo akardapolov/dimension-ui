@@ -30,6 +30,7 @@ import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.function.NormFunction;
+import ru.dimension.ui.model.function.PercentileFunction;
 import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.info.gui.ChartInfo;
 import ru.dimension.ui.model.view.RangeHistory;
@@ -76,6 +77,8 @@ public class HistoryUnitPresenter extends BaseUnitPresenter<HistoryUnitView> imp
     view.getHistoryRangePanel().setRunAction(this::handleHistoryRangeChange);
     view.getHistoryTimeRangeFunctionPanel().setRunAction(this::handleTimeRangeFunctionChange);
     view.getHistoryNormFunctionPanel().setRunAction(this::handleNormFunctionChange);
+    view.getHistoryPercentileFunctionPanel()
+        .setRunAction(this::handlePercentileFunctionChange);
 
     view.getHistoryLegendPanel()
         .setStateChangeConsumer(showLegend -> handleLegendChange(ChartLegendState.SHOW.equals(showLegend)));
@@ -132,6 +135,14 @@ public class HistoryUnitPresenter extends BaseUnitPresenter<HistoryUnitView> imp
       metric.setNormFunction(normFunction);
     }
     view.getHistoryNormFunctionPanel().setSelected(metric.getNormFunction());
+
+    PercentileFunction percentileFunction =
+        UIState.INSTANCE.getPercentileFunction(chartKey);
+    if (percentileFunction != null) {
+      metric.setPercentileFunction(percentileFunction);
+    }
+    view.getHistoryPercentileFunctionPanel()
+        .setSelected(metric.getPercentileFunction());
   }
 
   @Override
@@ -275,6 +286,12 @@ public class HistoryUnitPresenter extends BaseUnitPresenter<HistoryUnitView> imp
       metricCopy.setNormFunction(normFunction);
     }
 
+    PercentileFunction percentileFunction =
+        UIState.INSTANCE.getPercentileFunction(chartKey);
+    if (percentileFunction != null) {
+      metricCopy.setPercentileFunction(percentileFunction);
+    }
+
     config.setChartKey(chartKey);
     config.setTitle("");
     config.setXAxisLabel(model.getMetric().getYAxis().getColName());
@@ -311,6 +328,13 @@ public class HistoryUnitPresenter extends BaseUnitPresenter<HistoryUnitView> imp
   private void handleNormFunctionChange(String action, NormFunction function) {
     UIState.INSTANCE.putNormFunction(model.getChartKey(), function);
     metric.setNormFunction(function);
+    updateChart();
+  }
+
+  private void handlePercentileFunctionChange(String action,
+                                              PercentileFunction function) {
+    UIState.INSTANCE.putPercentileFunction(model.getChartKey(), function);
+    metric.setPercentileFunction(function);
     updateChart();
   }
 

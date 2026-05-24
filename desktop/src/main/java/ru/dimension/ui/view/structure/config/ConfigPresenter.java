@@ -53,7 +53,7 @@ import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.type.ConnectionStatus;
 import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.ConfigState;
-import ru.dimension.ui.router.event.EventListener;
+import ru.dimension.ui.router.event.EventDispatcher;
 import ru.dimension.ui.router.listener.ConfigListener;
 import ru.dimension.ui.state.NavigatorState;
 import ru.dimension.ui.view.structure.ConfigView;
@@ -72,7 +72,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
 
   private final ConfigView configView;
   private final NavigatorState navigatorState;
-  private final EventListener eventListener;
+  private final EventDispatcher eventDispatcher;
   private final ConfigurationManager configurationManager;
   private final ProfileManager profileManager;
   private final ConnectionPoolManager connectionPoolManager;
@@ -99,7 +99,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
   @Inject
   public ConfigPresenter(@Named("configView") ConfigView configView,
                          @Named("navigatorState") NavigatorState navigatorState,
-                         @Named("eventListener") EventListener eventListener,
+                         @Named("eventListener") EventDispatcher eventDispatcher,
                          @Named("eventBus") EventBus eventBus,
                          @Named("configurationManager") ConfigurationManager configurationManager,
                          @Named("profileManager") ProfileManager profileManager,
@@ -111,7 +111,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
                          @Named("checkboxConfig") JCheckBox checkboxConfig) {
     this.configView = configView;
     this.navigatorState = navigatorState;
-    this.eventListener = eventListener;
+    this.eventDispatcher = eventDispatcher;
     this.configurationManager = configurationManager;
     this.profileManager = profileManager;
     this.connectionPoolManager = connectionPoolManager;
@@ -124,7 +124,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
 
     this.connectionCheckExecutor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 
-    this.eventListener.addConfigStateListener(this);
+    this.eventDispatcher.addConfigStateListener(this);
 
     this.eventRegistry = EventRouteRegistry.forComponent(Component.CONFIGURATION, EventUtils::getComponent)
         .routeGlobal(ProfileAddEvent.class, this::fireProfileAdd)

@@ -5,6 +5,7 @@ import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.function.NormFunction;
+import ru.dimension.ui.model.function.PercentileFunction;
 import ru.dimension.ui.model.function.TimeRangeFunction;
 import ru.dimension.ui.model.view.RangeHistory;
 
@@ -90,5 +91,13 @@ public class AdHocStateManager {
 
   public ChartRange getHistoryCustomRange(AdHocKey adHocKey) {
     return UIState.INSTANCE.getHistoryCustomRange(adHocKey);
+  }
+
+  public PercentileFunction getPercentileFunction(AdHocKey adHocKey) {
+    return UIState.INSTANCE.getPercentileFunction(adHocKey);
+  }
+
+  public void putPercentileFunction(AdHocKey adHocKey, PercentileFunction function) {
+    UIState.INSTANCE.putPercentileFunction(adHocKey, function);
   }
 }

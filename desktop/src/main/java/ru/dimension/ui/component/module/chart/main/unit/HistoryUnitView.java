@@ -13,6 +13,7 @@ import ru.dimension.ui.component.module.base.BaseUnitView;
 import ru.dimension.ui.component.panel.FunctionPanel;
 import ru.dimension.ui.component.panel.LegendPanel;
 import ru.dimension.ui.component.panel.function.NormFunctionPanel;
+import ru.dimension.ui.component.panel.function.PercentileFunctionPanel;
 import ru.dimension.ui.component.panel.function.TimeRangeFunctionPanel;
 import ru.dimension.ui.component.panel.popup.action.ActionPanel;
 import ru.dimension.ui.component.panel.popup.filter.FilterPanel;
@@ -22,45 +23,45 @@ import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 public class HistoryUnitView extends BaseUnitView {
 
   private int configDividerLocation = 32;
-  private int chartDividerLocation = 250;
+  private int chartDividerLocation  = 250;
 
   private final MessageBroker.Component component;
 
-  @Getter
-  private final FunctionPanel historyFunctionPanel;
-  @Getter
-  private final TimeRangeFunctionPanel historyTimeRangeFunctionPanel;
-  @Getter
-  private final NormFunctionPanel historyNormFunctionPanel;
-  @Getter
-  private final HistoryRangePanel historyRangePanel;
-  @Getter
-  private final LegendPanel historyLegendPanel;
-  @Getter
-  private final FilterPanel historyFilterPanel;
-  @Getter
-  private final ActionPanel historyActionPanel;
-
-  @Getter
-  private final HistoryConfigBlock historyConfigBlock;
+  @Getter private final FunctionPanel          historyFunctionPanel;
+  @Getter private final TimeRangeFunctionPanel historyTimeRangeFunctionPanel;
+  @Getter private final NormFunctionPanel      historyNormFunctionPanel;
+  @Getter private final PercentileFunctionPanel historyPercentileFunctionPanel;
+  @Getter private final HistoryRangePanel      historyRangePanel;
+  @Getter private final LegendPanel            historyLegendPanel;
+  @Getter private final FilterPanel            historyFilterPanel;
+  @Getter private final ActionPanel            historyActionPanel;
+  @Getter private final HistoryConfigBlock     historyConfigBlock;
 
   public HistoryUnitView(MessageBroker.Component component) {
     super(LayoutMode.CONFIG_CHART_DETAIL);
     this.component = component;
 
-    this.historyTimeRangeFunctionPanel = new TimeRangeFunctionPanel();
-    this.historyNormFunctionPanel = new NormFunctionPanel();
-    this.historyFunctionPanel = new FunctionPanel(getBoldLabel("Group: "), historyTimeRangeFunctionPanel, historyNormFunctionPanel);
-    this.historyRangePanel = new HistoryRangePanel(getBoldLabel("Range: "));
+    this.historyTimeRangeFunctionPanel  = new TimeRangeFunctionPanel();
+    this.historyNormFunctionPanel       = new NormFunctionPanel();
+    this.historyPercentileFunctionPanel = new PercentileFunctionPanel();
+
+    this.historyFunctionPanel = new FunctionPanel(
+        getBoldLabel("Group: "),
+        historyTimeRangeFunctionPanel,
+        historyNormFunctionPanel,
+        historyPercentileFunctionPanel);
+
+    this.historyRangePanel  = new HistoryRangePanel(getBoldLabel("Range: "));
     this.historyLegendPanel = new LegendPanel(getBoldLabel("Legend: "));
     this.historyFilterPanel = new FilterPanel(component);
     this.historyActionPanel = new ActionPanel(component);
 
-    this.historyConfigBlock = new HistoryConfigBlock(historyFunctionPanel,
-                                                     historyRangePanel,
-                                                     historyLegendPanel,
-                                                     historyFilterPanel,
-                                                     historyActionPanel);
+    this.historyConfigBlock = new HistoryConfigBlock(
+        historyFunctionPanel,
+        historyRangePanel,
+        historyLegendPanel,
+        historyFilterPanel,
+        historyActionPanel);
 
     getConfigPanel().setLayout(new BorderLayout());
     getConfigPanel().add(historyConfigBlock, BorderLayout.CENTER);
