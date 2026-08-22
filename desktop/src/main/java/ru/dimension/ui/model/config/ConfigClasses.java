@@ -7,6 +7,7 @@ public enum ConfigClasses {
   Query(Query.class),
   Table(Table.class),
   ColorProfile(ColorProfile.class),
+  UISettings(UISettings.class),
   Unknown(null);
 
   private final Class<?> targetClass;

@@ -62,6 +62,7 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
       case SHOW_HIDE_CONFIG_ALL -> showHideConfigState(message);
       case EXPAND_COLLAPSE_ALL -> expandCollapseAll(message);
       case SHOW_CHART_FULL -> handleShowChartFull(message);
+      case COLOR_SCHEME_CHANGED -> handleColorSchemeChanged(message);
     }
   }
 
@@ -259,5 +260,40 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
   private void logChartAction(Action action,
                               CProfile cProfile) {
     log.info("Message action: {} for {}", action, cProfile);
+  }
+
+  private void handleColorSchemeChanged(Message message) {
+    if (model == null || model.getChartPanes() == null) {
+      return;
+    }
+
+    ProfileTaskQueryKey changedKey = message.parameters().get("key");
+    if (changedKey == null) {
+      return;
+    }
+
+    model.getChartPanes().forEach((key, chartMap) -> {
+      if (key.equals(changedKey)) {
+        chartMap.values().forEach(chartModule -> {
+          try {
+            chartModule.refreshSeriesColors();
+          } catch (Exception e) {
+            log.error("Error refreshing series colors for chart: {}", chartModule.getTitle(), e);
+          }
+        });
+      }
+    });
+
+    ChartDetailDialog dialog = model.getChartDetailDialog();
+    if (dialog != null && dialog.isVisible()) {
+      ChartModule dialogChartModule = dialog.getChartModule();
+      if (dialogChartModule.getPresenter().getModel().getKey().equals(changedKey)) {
+        try {
+          dialogChartModule.refreshSeriesColors();
+        } catch (Exception e) {
+          log.error("Error refreshing series colors in dialog", e);
+        }
+      }
+    }
   }
 }

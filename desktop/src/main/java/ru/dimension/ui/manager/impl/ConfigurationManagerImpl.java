@@ -13,6 +13,7 @@ import ru.dimension.ui.model.config.Profile;
 import ru.dimension.ui.model.config.Query;
 import ru.dimension.ui.model.config.Table;
 import ru.dimension.ui.model.config.Task;
+import ru.dimension.ui.model.config.UISettings;
 import ru.dimension.ui.security.EncryptDecrypt;
 
 @Log4j2
@@ -33,6 +34,7 @@ public class ConfigurationManagerImpl implements ConfigurationManager {
       saveEmptyConfigToFileIfNotExist(Profile.class);
       saveEmptyConfigToFileIfNotExist(Table.class);
       saveEmptyConfigToFileIfNotExist(ColorProfile.class);
+      saveEmptyConfigToFileIfNotExist(UISettings.class);
     } catch (IOException e) {
       log.catching(e);
       throw new RuntimeException(e);

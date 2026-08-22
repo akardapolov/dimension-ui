@@ -45,6 +45,7 @@ public class FilesHelper {
   public static String QUERIES_DIR_NAME = "queries";
   public static String TABLES_DIR_NAME = "tables";
   public static String COLORS_DIR_NAME = "colors";
+  public static String UI_SETTINGS_DIR_NAME = "ui_settings";
 
   public static String CONFIG_JSON_DIR_NAME = "json";
   public static String CONFIG_FTL_DIR_NAME = "ftl";

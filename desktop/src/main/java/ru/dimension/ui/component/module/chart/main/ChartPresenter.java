@@ -44,6 +44,7 @@ public class ChartPresenter implements MessageAction {
   private final RealtimeUnitPresenter realtimeUnit;
   private final HistoryUnitPresenter historyUnit;
   private final InsightUnitPresenter insightUnit;
+
   public ChartPresenter(MessageBroker.Component component,
                         ChartModel model,
                         ModuleView moduleView,
@@ -62,7 +63,10 @@ public class ChartPresenter implements MessageAction {
     this.insightUnit = new InsightUnitPresenter(component, model, this.insightUnitView, executor);
 
     this.realtimeUnit.initializePresenter();
+    this.historyUnit.initializePresenter();
+    this.insightUnit.initializePresenter();
   }
+
 
   public void initializeCharts() {
     realtimeUnit.initializeCharts();
@@ -121,6 +125,12 @@ public class ChartPresenter implements MessageAction {
 
   public boolean isReadyRealTimeUpdate() {
     return realtimeUnit.isReadyUpdate();
+  }
+
+  public void refreshSeriesColors() {
+    realtimeUnit.refreshSeriesColors();
+    historyUnit.refreshSeriesColors();
+    insightUnit.refreshSeriesColors();
   }
 
   @Override

@@ -7,6 +7,7 @@ import java.awt.Color;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -16,6 +17,7 @@ import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.db.model.profile.cstype.CType;
+import ru.dimension.di.ServiceLocator;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.chart.ChartConfig;
 import ru.dimension.ui.component.chart.HelperChart;
@@ -29,12 +31,14 @@ import ru.dimension.ui.component.module.api.UnitPresenter;
 import ru.dimension.ui.component.panel.range.HistoryRangePanel;
 import ru.dimension.ui.helper.KeyHelper;
 import ru.dimension.ui.helper.SwingTaskRunner;
+import ru.dimension.ui.manager.ConfigurationManager;
 import ru.dimension.ui.model.AdHocChartKey;
 import ru.dimension.ui.model.AdHocKey;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.chart.ChartRange;
 import ru.dimension.ui.model.chart.ChartType;
 import ru.dimension.ui.model.config.Metric;
+import ru.dimension.ui.model.config.UISettings;
 import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.function.NormFunction;
 import ru.dimension.ui.model.function.PercentileFunction;
@@ -395,11 +399,32 @@ public class AdHocHistoryUnitPresenter implements UnitPresenter, HelperChart {
 
   private void updateLegendVisibility(boolean visibility) {
     if (chart != null) {
+      chart.snapshotSelectionRegion();
+
       view.getHistoryLegendPanel().setSelected(visibility);
+
+      applyChartUISettings();
+
       if (chart.getjFreeChart().getLegend() != null) {
         chart.getjFreeChart().getLegend().setVisible(visibility);
       }
-      chart.repaint();
+      chart.setLegendTitleVisible(visibility);
+
+      chart.clearSelectionRegion();
+
+      chart.restoreSelectionRegionAfterNextDraw();
+    }
+  }
+
+  private void applyChartUISettings() {
+    try {
+      ConfigurationManager configurationManager = ServiceLocator.get(ConfigurationManager.class);
+      List<UISettings> settingsList = configurationManager.getConfigList(UISettings.class);
+      if (!settingsList.isEmpty()) {
+        chart.setChartUISettings(settingsList.getFirst().getChartSettings());
+      }
+    } catch (Exception e) {
+      log.warn("Could not load UI settings for ad-hoc chart legend", e);
     }
   }
 

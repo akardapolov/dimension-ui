@@ -65,8 +65,7 @@ public class InsightUnitPresenter extends BaseUnitPresenter<InsightUnitView> imp
       if (initialized) {
         return;
       }
-      log.info("Lazy initializing INSIGHT tab...");
-      initializePresenter();
+      log.info("Lazy initializing INSIGHT tab data...");
       initializeCharts();
       initialized = true;
     }
@@ -215,6 +214,9 @@ public class InsightUnitPresenter extends BaseUnitPresenter<InsightUnitView> imp
 
             boolean isCustom = chart.getSeriesType() == SeriesType.CUSTOM;
             view.getInsightFilterPanel().setEnabled(!isCustom);
+
+            view.getInsightConfigChartDetail().revalidate();
+            view.getInsightConfigChartDetail().repaint();
           };
         },
         e -> log.error("Error creating/updating insight chart", e),

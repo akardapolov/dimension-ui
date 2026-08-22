@@ -7,6 +7,7 @@ import java.awt.Font;
 import java.awt.event.ActionListener;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.SwingUtilities;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.component.block.RealTimeConfigBlock;
@@ -37,8 +38,6 @@ public class PRChartView extends BaseUnitView {
 
   private final RealTimeConfigBlock realTimeConfigBlock;
 
-  private final int configDividerLocation = 32;
-
   public PRChartView(MessageBroker.Component component, PreviewMode previewMode) {
     super(LayoutMode.CONFIG_CHART_ONLY);
     this.component = component;
@@ -50,6 +49,7 @@ public class PRChartView extends BaseUnitView {
     this.realTimeFilterPanel = new FilterPanel(component);
     this.realTimeActionPanel = new ActionPanel(component);
     this.detailsButton = new JButton("Details");
+    syncButtonSize(realTimeActionPanel.getButton(), detailsButton);
 
     if (previewMode == PreviewMode.PREVIEW) {
       this.realTimeConfigBlock = new RealTimeConfigBlock(
@@ -70,10 +70,12 @@ public class PRChartView extends BaseUnitView {
     getConfigPanel().setLayout(new BorderLayout());
     getConfigPanel().add(realTimeConfigBlock, BorderLayout.CENTER);
 
-    getConfigChartSplitPane().setDividerLocation(configDividerLocation);
-
     getConfigChartSplitPane().setPreferredSize(dimension);
-    getConfigChartSplitPane().setMaximumSize(dimension);
+
+    SwingUtilities.invokeLater(() -> {
+      int h = realTimeConfigBlock.getPreferredSize().height;
+      getConfigChartSplitPane().setDividerLocation(h);
+    });
   }
 
   private JLabel getBoldLabel(String text) {
@@ -90,7 +92,8 @@ public class PRChartView extends BaseUnitView {
   public void setChartConfigState(boolean visible) {
     if (visible) {
       getConfigChartSplitPane().getTopComponent().setVisible(true);
-      getConfigChartSplitPane().setDividerLocation(configDividerLocation);
+      int h = realTimeConfigBlock.getPreferredSize().height;
+      getConfigChartSplitPane().setDividerLocation(h);
     } else {
       getConfigChartSplitPane().getTopComponent().setVisible(false);
       getConfigChartSplitPane().setDividerLocation(0); // Move divider to top
@@ -101,5 +104,16 @@ public class PRChartView extends BaseUnitView {
 
   public void setDetailsButtonAction(ActionListener listener) {
     detailsButton.addActionListener(listener);
+  }
+
+  private void syncButtonSize(JButton actionButton, JButton detailsButton) {
+    Dimension actionSize = actionButton.getPreferredSize();
+    Dimension detailsSize = detailsButton.getPreferredSize();
+    Dimension sameSize = new Dimension(
+        Math.max(actionSize.width, detailsSize.width),
+        Math.max(actionSize.height, detailsSize.height)
+    );
+    actionButton.setPreferredSize(sameSize);
+    detailsButton.setPreferredSize(sameSize);
   }
 }

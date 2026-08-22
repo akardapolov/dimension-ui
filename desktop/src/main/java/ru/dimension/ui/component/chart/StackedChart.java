@@ -38,6 +38,7 @@ import org.jfree.chart.panel.selectionhandler.MouseClickSelectionHandler;
 import org.jfree.chart.panel.selectionhandler.RectangularHeightRegionSelectionHandler;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.item.IRSUtilities;
+import org.jfree.chart.renderer.xy.SmoothedStackedXYAreaRenderer;
 import org.jfree.chart.renderer.xy.StackedXYAreaRenderer3;
 import org.jfree.chart.title.LegendTitle;
 import org.jfree.chart.title.TextTitle;
@@ -60,6 +61,7 @@ import org.jfree.data.time.Month;
 import org.jfree.data.time.Year;
 import ru.dimension.ui.helper.ColorHelper;
 import ru.dimension.ui.laf.LaF;
+import ru.dimension.ui.model.config.ChartUISettings;
 import ru.dimension.ui.model.data.CategoryTableXYDatasetRealTime;
 
 @Log4j2
@@ -196,6 +198,37 @@ public class StackedChart implements SelectionChangeListener<XYCursor>, DynamicC
     this.stackedXYAreaRenderer3.clearSeriesStrokes(true);
 
     counter = new AtomicInteger(0);
+  }
+
+  public void refreshSeriesColors(String colorProfileName) {
+    if (this.internalSeriesColor.isEmpty()) {
+      return;
+    }
+
+    this.stackedXYAreaRenderer3.clearSeriesPaints(true);
+    this.stackedXYAreaRenderer3.clearSeriesStrokes(true);
+
+    AtomicInteger newCounter = new AtomicInteger(0);
+    Map<String, Color> refreshedColors = new ConcurrentHashMap<>();
+
+    this.internalSeriesColor.keySet().forEach(seriesName -> {
+      Color color;
+      if (this.externalSeriesColor.containsKey(seriesName)) {
+        color = this.externalSeriesColor.get(seriesName);
+      } else {
+        color = this.colorHelper.getColor(colorProfileName, seriesName);
+      }
+
+      int cnt = newCounter.getAndIncrement();
+      this.stackedXYAreaRenderer3.setSeriesPaint(cnt, color);
+      refreshedColors.put(seriesName, color);
+    });
+
+    this.internalSeriesColor.clear();
+    this.internalSeriesColor.putAll(refreshedColors);
+    this.counter = newCounter;
+
+    this.chartPanel.repaint();
   }
 
   @Override
@@ -403,7 +436,7 @@ public class StackedChart implements SelectionChangeListener<XYCursor>, DynamicC
         ("{0} ({1}, {2})",
          new SimpleDateFormat("HH:mm"),
          new DecimalFormat("0.0"));
-    this.stackedXYAreaRenderer3 = new StackedXYAreaRenderer3(standardXYToolTipGenerator, null);
+    this.stackedXYAreaRenderer3 = new SmoothedStackedXYAreaRenderer(standardXYToolTipGenerator, null);
     this.stackedXYAreaRenderer3.setRoundXCoordinates(true);
 
     this.xyPlot.setDomainPannable(true);
@@ -413,6 +446,12 @@ public class StackedChart implements SelectionChangeListener<XYCursor>, DynamicC
     datasetExtension.addChangeListener(this.xyPlot);
 
     IRSUtilities.setSelectedItemFillPaint(this.getStackedXYAreaRenderer3(), datasetExtension, Color.black);
+  }
+
+  public void setSmoothingPrecision(int precision) {
+    if (this.stackedXYAreaRenderer3 instanceof SmoothedStackedXYAreaRenderer smooth) {
+      smooth.setPrecision(precision);
+    }
   }
 
   public void clearSelectionRegion() {
@@ -524,10 +563,65 @@ public class StackedChart implements SelectionChangeListener<XYCursor>, DynamicC
   }
 
   public void setLegendTitleVisible(boolean visible) {
+    setLegendTitleVisible(visible, null);
+  }
+
+  public void setLegendTitleVisible(boolean visible, ChartUISettings settings) {
+    boolean hideCustomLegend = settings != null && settings.isHideCustomLegend();
+    boolean hideBuiltInLegend = settings != null && settings.isHideBuiltInLegend();
+    boolean hideYAxis = settings != null && settings.isHideYAxis();
+    boolean hideXAxis = settings != null && settings.isHideXAxis();
+    boolean hidePlotInsets = settings != null && settings.isHidePlotInsets();
+    boolean hideChartPadding = settings != null && settings.isHideChartPadding();
+
     if (legendTitle != null) {
-      legendTitle.setVisible(visible);
-      jFreeChart.fireChartChanged();
+      legendTitle.setVisible(visible || !hideCustomLegend);
     }
+
+    if (jFreeChart.getLegend() != null) {
+      jFreeChart.getLegend().setVisible(visible || !hideBuiltInLegend);
+    }
+
+    ValueAxis rangeAxis = this.xyPlot.getRangeAxis();
+    if (rangeAxis != null) {
+      rangeAxis.setVisible(visible || !hideYAxis);
+    }
+
+    ValueAxis domainAxis = this.xyPlot.getDomainAxis();
+    if (domainAxis != null) {
+      domainAxis.setVisible(visible || !hideXAxis);
+    }
+
+    if (visible) {
+      this.xyPlot.setInsets(new RectangleInsets(4, 8, 4, 4));
+      this.jFreeChart.setPadding(new RectangleInsets(4, 4, 4, 4));
+    } else {
+      if (hidePlotInsets) {
+        this.xyPlot.setInsets(new RectangleInsets(0, 0, 0, 0));
+      } else {
+        this.xyPlot.setInsets(new RectangleInsets(4, 8, 4, 4));
+      }
+      if (hideChartPadding) {
+        this.jFreeChart.setPadding(new RectangleInsets(0, 0, 0, 0));
+      } else {
+        this.jFreeChart.setPadding(new RectangleInsets(4, 4, 4, 4));
+      }
+    }
+
+    this.jFreeChart.fireChartChanged();
+  }
+
+  public void setRangeAxisVisible(boolean visible) {
+    ValueAxis rangeAxis = this.xyPlot.getRangeAxis();
+    if (rangeAxis != null) {
+      rangeAxis.setVisible(visible);
+
+      if (!visible) {
+        this.xyPlot.setAxisOffset(new RectangleInsets(0, 0, 0, 0));
+      }
+    }
+
+    this.jFreeChart.fireChartChanged();
   }
 
   @Override

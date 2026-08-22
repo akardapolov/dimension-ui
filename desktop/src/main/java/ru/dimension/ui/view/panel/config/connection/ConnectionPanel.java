@@ -3,7 +3,6 @@ package ru.dimension.ui.view.panel.config.connection;
 import static ru.dimension.ui.model.view.tab.ConnectionTypeTabPane.HTTP;
 import static ru.dimension.ui.model.view.tab.ConnectionTypeTabPane.JDBC;
 
-import java.awt.Dimension;
 import java.util.ResourceBundle;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -117,44 +116,36 @@ public class ConnectionPanel extends JPanel {
     PainlessGridBag gblJDBC = new PainlessGridBag(jdbcPanel, PGHelper.getPGConfig(), false);
 
     gblJDBC.row()
-        .cell(labelConnectionName).cell(jTextFieldConnectionName).fillX();
+        .cell(labelConnectionName).cell(jTextFieldConnectionName).fillX()
+        .cell(new JLabel("          ")).cell(labelConnectionUserName).cell(jTextFieldConnectionUserName).fillX()
+        .cell(new JLabel("          ")).cell(labelConnectionJar).cell(jarPanel).fillX();
     gblJDBC.row()
-        .cell(labelConnectionURL).cell(jTextFieldConnectionURL).fillX();
-    gblJDBC.row()
-        .cell(labelConnectionUserName).cell(jTextFieldConnectionUserName).fillX();
-    gblJDBC.row()
-        .cell(labelConnectionPassword).cell(jTextFieldConnectionPassword).fillX();
-    gblJDBC.row()
-        .cell(labelConnectionJar).cellXRemainder(jarPanel).fillX();
-    gblJDBC.row()
-        .cell(labelConnectionDriver).cell(jTextFieldConnectionDriver).fillX();
+        .cell(labelConnectionURL).cell(jTextFieldConnectionURL).fillX()
+        .cell(new JLabel("          ")).cell(labelConnectionPassword).cell(jTextFieldConnectionPassword).fillX()
+        .cell(new JLabel("          ")).cell(labelConnectionDriver).cell(jTextFieldConnectionDriver).fillX();
     gblJDBC.row().cellXYRemainder(new JLabel()).fillXY();
 
     gblJDBC.done();
 
     JPanel loadPanel = new TextFieldWithButtonPanel(btnLoadHttp, jTextFieldHttpURL);
 
-    jTextFieldHttpName.setPreferredSize(new Dimension(100, loadPanel.getHeight()));
+    JPanel parsePanel = new JPanel();
+    PainlessGridBag gblParse = new PainlessGridBag(parsePanel, PGHelper.getPGConfig(0), false);
+    gblParse.row()
+        .cell(parseRadioButtonPanel.getParsePrometheus())
+        .cell(parseRadioButtonPanel.getParseJson())
+        .fillX();
+    gblParse.done();
 
     JPanel httpPanel = new JPanel();
     PainlessGridBag gblHTTP = new PainlessGridBag(httpPanel, PGHelper.getPGConfig(), false);
     gblHTTP.row()
-        .cell(new JLabel("Name")).cellXRemainder(jTextFieldHttpName).fillX();
+        .cell(new JLabel("Name")).cell(jTextFieldHttpName).fillX()
+        .cell(new JLabel("Method")).cell(methodRadioButtonPanel.getGetMethod()).fillX();
     gblHTTP.row()
-        .cell(new JLabel("URL")).cellXRemainder(loadPanel).fillX();
-    gblHTTP.row()
-        .cell(new JLabel("Method"))
-        .cell(methodRadioButtonPanel.getGetMethod())
-        .cellXRemainder(new JLabel())
-        .fillX();
-    gblHTTP.row()
-        .cell(new JLabel("Parse"))
-        .cell(parseRadioButtonPanel.getParsePrometheus())
-        .cell(parseRadioButtonPanel.getParseJson())
-        .cellXRemainder(new JLabel())
-        .fillX();
-    gblHTTP.row()
-        .cell(new JLabel()).cellXYRemainder(new JLabel()).fillXY();
+        .cell(new JLabel("URL")).cell(loadPanel).fillX()
+        .cell(new JLabel("Parse")).cell(parsePanel).fillX();
+    gblHTTP.row().cellXYRemainder(new JLabel()).fillXY();
 
     gblHTTP.done();
 

@@ -58,6 +58,7 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
       case REMOVE_CHART -> handleRemoveChart(message);
       case CHART_LEGEND_STATE_ALL -> chartLegendStateAll(message);
       case EXPAND_COLLAPSE_ALL -> expandCollapseAll(message);
+      case COLOR_SCHEME_CHANGED -> handleColorSchemeChanged(message);
     }
   }
 
@@ -114,6 +115,29 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
     } finally {
       model.setProgrammaticChange(false);
     }
+  }
+
+  private void handleColorSchemeChanged(Message message) {
+    if (model == null || model.getChartPanes() == null) {
+      return;
+    }
+
+    ProfileTaskQueryKey changedKey = message.parameters().get("key");
+    if (changedKey == null) {
+      return;
+    }
+
+    model.getChartPanes().forEach((key, chartMap) -> {
+      if (key.equals(changedKey)) {
+        chartMap.values().forEach(chartModule -> {
+          try {
+            chartModule.refreshSeriesColors();
+          } catch (Exception e) {
+            log.error("Error refreshing series colors for chart: {}", chartModule.getTitle(), e);
+          }
+        });
+      }
+    });
   }
 
   private void handleAddChart(Message message) {

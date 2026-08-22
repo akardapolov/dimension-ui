@@ -37,6 +37,7 @@ public class MetadataQueryPanel extends JPanel {
 
   private final JButton editMetadata;
   private final JButton saveMetadata;
+  private final JButton colorsButton;
   private final DetailedComboBox timestampComboBox;
   private final JLabel timestamp;
   private final JButton cancelMetadata;
@@ -75,6 +76,15 @@ public class MetadataQueryPanel extends JPanel {
     this.cancelMetadata = new JButton("Cancel");
     this.cancelMetadata.setEnabled(false);
     this.cancelMetadata.setMnemonic('C');
+    this.colorsButton = new JButton("Colors...");
+    this.colorsButton.setToolTipText("Edit series colors for the selected query");
+
+    int buttonHeight = 28;
+    setButtonHeight(loadMetadata, buttonHeight);
+    setButtonHeight(editMetadata, buttonHeight);
+    setButtonHeight(saveMetadata, buttonHeight);
+    setButtonHeight(cancelMetadata, buttonHeight);
+    setButtonHeight(colorsButton, buttonHeight);
 
     this.compression = new JCheckBox("Compression");
     this.compression.setToolTipText("Enable data compression for this table");
@@ -105,9 +115,6 @@ public class MetadataQueryPanel extends JPanel {
     JPanel content = new JPanel();
     PainlessGridBag gbl = new PainlessGridBag(content, PGHelper.getPGConfig(2), false);
 
-    gbl.row()
-        .cellXRemainder(new JXTitledSeparator("Table")).fillX();
-
     JPanel btnPanel = new JPanel();
     PainlessGridBag gblBtn = new PainlessGridBag(btnPanel, PGHelper.getPGConfig(0), false);
     gblBtn.row()
@@ -117,6 +124,7 @@ public class MetadataQueryPanel extends JPanel {
         .cell(editMetadata)
         .cell(saveMetadata)
         .cell(cancelMetadata)
+        .cell(colorsButton)
         .cell(new JLabel())
         .fillX();
     gblBtn.done();
@@ -153,4 +161,17 @@ public class MetadataQueryPanel extends JPanel {
     add(content, BorderLayout.CENTER);
     setMinimumSize(new Dimension(100, 50));
   }
+
+  public JButton getColorsButton() {
+    return colorsButton;
+  }
+
+  private static void setButtonHeight(JButton button, int height) {
+    java.awt.Dimension preferred = button.getPreferredSize();
+    if (preferred == null) {
+      preferred = new java.awt.Dimension(80, height);
+    }
+    button.setPreferredSize(new java.awt.Dimension(preferred.width, height));
+  }
+
 }

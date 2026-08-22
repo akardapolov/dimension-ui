@@ -32,104 +32,178 @@ import javax.swing.border.LineBorder;
 public class CustomPopup extends Popup implements WindowFocusListener, ComponentListener {
 
   private Window topWindow;
-  private JWindow displayWindow;
+
+  private JWindow controlWindow;
+  private JWindow contentWindow;
+
   private CustomPopupCloseListener optionalCustomPopupCloseListener;
   private boolean enableHideWhenFocusIsLost = false;
 
+  private Component controlComponent;
+  private Component contentsComponent;
+
+  private float contentOpacity = 1.0f;
+
   public CustomPopup(Component contentsComponent,
+                     Window topWindow,
+                     CustomPopupCloseListener optionalCustomPopupCloseListener) {
+    this(contentsComponent, null, topWindow, optionalCustomPopupCloseListener);
+  }
+
+  public CustomPopup(Component contentsComponent,
+                     Component controlComponent,
                      Window topWindow,
                      CustomPopupCloseListener optionalCustomPopupCloseListener) {
     super();
     this.topWindow = topWindow;
     this.optionalCustomPopupCloseListener = optionalCustomPopupCloseListener;
-    JPanel mainPanel = new JPanel();
-    mainPanel.setLayout(new BorderLayout());
-    mainPanel.add(contentsComponent, BorderLayout.CENTER);
+    this.contentsComponent = contentsComponent;
+    this.controlComponent = controlComponent;
 
+    buildContentWindow(topWindow, contentsComponent);
+
+    if (controlComponent != null) {
+      buildControlWindow(topWindow, controlComponent);
+    }
+
+    registerListeners();
+  }
+
+  private void buildContentWindow(Window topWindow, Component contentsComponent) {
+    contentWindow = new JWindow(topWindow);
+
+    JPanel mainPanel = new JPanel(new BorderLayout());
     Border outsideBorder = new LineBorder(new Color(99, 130, 191));
     Border insideBorder = BorderFactory.createMatteBorder(1, 0, 0, 0, Color.white);
-    Border compoundBorder = BorderFactory.createCompoundBorder(outsideBorder, insideBorder);
-    mainPanel.setBorder(compoundBorder);
-    displayWindow = new JWindow(topWindow);
+    mainPanel.setBorder(BorderFactory.createCompoundBorder(outsideBorder, insideBorder));
+    mainPanel.add(contentsComponent, BorderLayout.CENTER);
 
-    displayWindow.addWindowListener(new WindowAdapter() {
+    contentWindow.getContentPane().add(mainPanel);
+    contentWindow.setFocusable(true);
+    contentWindow.setAlwaysOnTop(true);
+    contentWindow.pack();
+    contentWindow.validate();
+
+    String cancelName = "cancel";
+    InputMap inputMap = mainPanel.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+    inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), cancelName);
+    ActionMap actionMap = mainPanel.getActionMap();
+    actionMap.put(cancelName, new AbstractAction() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        hide();
+      }
+    });
+
+    contentWindow.addWindowListener(new WindowAdapter() {
       @Override
       public void windowOpened(WindowEvent e) {
         enableHideWhenFocusIsLost = true;
       }
     });
 
-    displayWindow.addMouseListener(new MouseAdapter() {
+    contentWindow.addMouseListener(new MouseAdapter() {
       @Override
       public void mouseExited(MouseEvent e) {
-        if (!isMouseInPopupArea()) {
+        if (!isMouseInAnyWindow()) {
           hide();
         }
       }
     });
-
-    displayWindow.getContentPane().add(mainPanel);
-    displayWindow.setFocusable(true);
-
-    displayWindow.setAlwaysOnTop(true);
-
-    displayWindow.pack();
-    displayWindow.validate();
-    String cancelName = "cancel";
-    InputMap inputMap = mainPanel.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-    inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), cancelName);
-    ActionMap actionMap = mainPanel.getActionMap();
-    actionMap.put(cancelName,
-                  new AbstractAction() {
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-                      hide();
-                    }
-                  });
-    registerListeners();
   }
 
-  private boolean isMouseInPopupArea() {
-    if (displayWindow == null) return false;
+  private void buildControlWindow(Window topWindow, Component controlComponent) {
+    controlWindow = new JWindow(topWindow);
 
-    Point mousePos = displayWindow.getMousePosition();
+    JPanel controlPanel = new JPanel(new BorderLayout());
+    Border outsideBorder = new LineBorder(new Color(99, 130, 191));
+    controlPanel.setBorder(outsideBorder);
+    controlPanel.add(controlComponent, BorderLayout.CENTER);
+
+    controlWindow.getContentPane().add(controlPanel);
+    controlWindow.setFocusable(true);
+    controlWindow.setAlwaysOnTop(true);
+    controlWindow.pack();
+    controlWindow.validate();
+
+    controlWindow.addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseExited(MouseEvent e) {
+        if (!isMouseInAnyWindow()) {
+          hide();
+        }
+      }
+    });
+  }
+
+  private boolean isMouseInAnyWindow() {
+    return isMouseInWindow(contentWindow) || isMouseInWindow(controlWindow);
+  }
+
+  private boolean isMouseInWindow(JWindow window) {
+    if (window == null) return false;
+    Point mousePos = window.getMousePosition();
     if (mousePos == null) return false;
-
-    return displayWindow.getBounds().contains(
-        displayWindow.getLocationOnScreen().x + mousePos.x,
-        displayWindow.getLocationOnScreen().y + mousePos.y
+    Rectangle bounds = window.getBounds();
+    return bounds.contains(
+        window.getLocationOnScreen().x + mousePos.x,
+        window.getLocationOnScreen().y + mousePos.y
     );
   }
 
-  @Override
-  public void componentHidden(ComponentEvent e) {
-    hide();
-  }
-
-  @Override
-  public void componentMoved(ComponentEvent e) {
-    hide();
-  }
-
-  @Override
-  public void componentResized(ComponentEvent e) {
-    hide();
-  }
-
-  @Override
-  public void componentShown(ComponentEvent e) {
+  public void setLocation(int x, int y) {
+    if (controlWindow != null) {
+      int controlHeight = controlWindow.getHeight();
+      controlWindow.setLocation(x, y);
+      contentWindow.setLocation(x, y + controlHeight);
+    } else {
+      contentWindow.setLocation(x, y);
+    }
   }
 
   public Rectangle getBounds() {
-    return displayWindow.getBounds();
+    if (controlWindow != null) {
+      Rectangle cb = contentWindow.getBounds();
+      Rectangle ctrlB = controlWindow.getBounds();
+      return new Rectangle(
+          ctrlB.x,
+          ctrlB.y,
+          Math.max(cb.width, ctrlB.width),
+          ctrlB.height + cb.height
+      );
+    }
+    return contentWindow.getBounds();
+  }
+
+  public void setOpacity(float opacity) {
+    this.contentOpacity = Math.max(0.1f, Math.min(1.0f, opacity));
+    if (contentWindow != null) {
+      contentWindow.setOpacity(this.contentOpacity);
+    }
+  }
+
+  public float getOpacity() {
+    return contentOpacity;
+  }
+
+  @Override
+  public void show() {
+    if (controlWindow != null) {
+      controlWindow.setVisible(true);
+    }
+    contentWindow.setVisible(true);
   }
 
   @Override
   public void hide() {
-    if (displayWindow != null) {
-      displayWindow.setVisible(false);
-      displayWindow.removeWindowFocusListener(this);
-      displayWindow = null;
+    if (contentWindow != null) {
+      contentWindow.removeWindowFocusListener(this);
+      contentWindow.setVisible(false);
+      contentWindow = null;
+    }
+    if (controlWindow != null) {
+      controlWindow.setVisible(false);
+      controlWindow = null;
     }
     if (topWindow != null) {
       topWindow.removeComponentListener(this);
@@ -142,32 +216,8 @@ public class CustomPopup extends Popup implements WindowFocusListener, Component
   }
 
   private void registerListeners() {
-    displayWindow.addWindowFocusListener(this);
+    contentWindow.addWindowFocusListener(this);
     topWindow.addComponentListener(this);
-  }
-
-  public void setLocation(int popupX,
-                          int popupY) {
-    displayWindow.setLocation(popupX, popupY);
-  }
-
-  @Override
-  public void show() {
-    displayWindow.setVisible(true);
-  }
-
-  public void setOpacity(float opacity) {
-    if (displayWindow != null) {
-      float clamped = Math.max(0.1f, Math.min(1.0f, opacity));
-      displayWindow.setOpacity(clamped);
-    }
-  }
-
-  public float getOpacity() {
-    if (displayWindow != null) {
-      return displayWindow.getOpacity();
-    }
-    return 1.0f;
   }
 
   @Override
@@ -180,25 +230,39 @@ public class CustomPopup extends Popup implements WindowFocusListener, Component
       e.getWindow().requestFocus();
       return;
     }
-    if (InternalUtilities.isMouseWithinComponent(displayWindow)) {
+    if (controlWindow != null && InternalUtilities.isMouseWithinComponent(controlWindow)) {
+      return;
+    }
+    if (InternalUtilities.isMouseWithinComponent(contentWindow)) {
       return;
     }
     hide();
   }
 
+  @Override
+  public void componentHidden(ComponentEvent e) { hide(); }
+
+  @Override
+  public void componentMoved(ComponentEvent e) { hide(); }
+
+  @Override
+  public void componentResized(ComponentEvent e) { hide(); }
+
+  @Override
+  public void componentShown(ComponentEvent e) {}
+
   public void setMinimumSize(Dimension minimumSize) {
-    displayWindow.setMinimumSize(minimumSize);
+    contentWindow.setMinimumSize(minimumSize);
   }
 
   public Point getLocationOnScreen() {
-    if (displayWindow != null) {
-      return displayWindow.getLocationOnScreen();
+    if (contentWindow != null) {
+      return contentWindow.getLocationOnScreen();
     }
     return null;
   }
 
-  public static interface CustomPopupCloseListener {
-
-    public void zEventCustomPopupWasClosed(CustomPopup popup);
+  public interface CustomPopupCloseListener {
+    void zEventCustomPopupWasClosed(CustomPopup popup);
   }
 }

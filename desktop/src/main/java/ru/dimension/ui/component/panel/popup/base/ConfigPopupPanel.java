@@ -29,6 +29,8 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
   private final JButton button;
   private Supplier<JPanel> contentSupplier;
 
+  private Supplier<JPanel> controlSupplier;
+
   private final String buttonTextClosed;
   private final String buttonTextOpen;
 
@@ -47,7 +49,13 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
     this(contentSupplier, " << ", " >> ");
   }
 
-  public ConfigPopupPanel(Supplier<JPanel> contentSupplier, String buttonTextClosed, String buttonTextOpen) {
+  public JButton getButton() {
+    return button;
+  }
+
+  public ConfigPopupPanel(Supplier<JPanel> contentSupplier,
+                          String buttonTextClosed,
+                          String buttonTextOpen) {
     this.contentSupplier = contentSupplier;
     this.buttonTextClosed = buttonTextClosed;
     this.buttonTextOpen = buttonTextOpen;
@@ -69,6 +77,10 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
 
   public void updateContent(Supplier<JPanel> newSupplier) {
     this.contentSupplier = newSupplier;
+  }
+
+  public void updateControlPanel(Supplier<JPanel> controlSupplier) {
+    this.controlSupplier = controlSupplier;
   }
 
   public void setPopupOpacity(float opacity) {
@@ -94,13 +106,11 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
       closePopup();
       return;
     }
-
     if (!isEnabled()) {
       return;
     }
 
     contentPanel = contentSupplier.get();
-
     contentPanel.addMouseListener(new MouseAdapter() {
       @Override
       public void mouseExited(MouseEvent e) {
@@ -110,9 +120,15 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
       }
     });
 
-    popup = new CustomPopup(contentPanel,
-                            SwingUtilities.getWindowAncestor(this),
-                            this);
+    JPanel controlPanel = (controlSupplier != null) ? controlSupplier.get() : null;
+
+    Window owner = SwingUtilities.getWindowAncestor(this);
+
+    if (controlPanel != null) {
+      popup = new CustomPopup(contentPanel, controlPanel, owner, this);
+    } else {
+      popup = new CustomPopup(contentPanel, owner, this);
+    }
 
     popup.setOpacity(popupOpacity);
 
@@ -126,7 +142,6 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
 
   private boolean isMouseInPopupArea() {
     if (popup == null || contentPanel == null) return false;
-
     Rectangle popupBounds = popup.getBounds();
     popupBounds.setLocation(popup.getLocationOnScreen());
     return popupBounds.contains(MouseInfo.getPointerInfo().getLocation());
@@ -152,7 +167,8 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
     Rectangle popupRectangle = new Rectangle(defaultX, defaultY, popupWidth, popupHeight);
 
     if (popupRectangle.getMaxY() > (workingArea.getMaxY() + bottomOverlapAllowed)) {
-      popupRectangle.y = verticalFlipReference.getLocationOnScreen().y - popupHeight - verticalFlipDistance;
+      popupRectangle.y = verticalFlipReference.getLocationOnScreen().y
+          - popupHeight - verticalFlipDistance;
     }
     if (popupRectangle.getMaxX() > workingArea.getMaxX()) {
       popupRectangle.x -= (popupRectangle.getMaxX() - workingArea.getMaxX());
@@ -170,7 +186,7 @@ public class ConfigPopupPanel extends JPanel implements CustomPopupCloseListener
   }
 
   public boolean isPopupOpen() {
-    return (popup != null);
+    return popup != null;
   }
 
   public void closePopup() {

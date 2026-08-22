@@ -83,13 +83,11 @@ public class TaskPanel extends JPanel {
     gbl.row()
         .cellXRemainder(taskButtonPanel).fillX();
     gbl.row()
-        .cell(labelNameTask).cell(jTextFieldTask).fillX();
+        .cell(labelNameTask).cell(jTextFieldTask).fillX()
+        .cell(new JLabel("          ")).cell(pullTimeoutJLabel).cell(radioButtonPanel).fillX();
     gbl.row()
-        .cell(labelDescription).cell(jTextFieldDescription).fillX();
-    gbl.row()
-        .cell(pullTimeoutJLabel).cell(radioButtonPanel).fillX();
-    gbl.row()
-        .cell(labelNameConnection).cell(taskConnectionComboBox).fillX();
+        .cell(labelDescription).cell(jTextFieldDescription).fillX()
+        .cell(new JLabel("          ")).cell(labelNameConnection).cell(taskConnectionComboBox).fillX();
     gbl.row()
         .cell(labelSql).cellXYRemainder(multiSelectQueryPanel).fillXY();
 

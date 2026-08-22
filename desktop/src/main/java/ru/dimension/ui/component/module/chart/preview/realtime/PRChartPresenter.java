@@ -137,6 +137,15 @@ public class PRChartPresenter extends BaseUnitPresenter<PRChartView> implements 
             addChartToPanel(chart);
             isReadyRealTimeUpdate = true;
             view.getRealTimeFilterPanel().setEnabled(false);
+
+            view.getRealTimeConfigBlock().revalidate();
+            view.getRealTimeConfigBlock().repaint();
+
+            view.getConfigPanel().revalidate();
+            view.getConfigPanel().repaint();
+
+            view.getConfigChartSplitPane().revalidate();
+            view.getConfigChartSplitPane().repaint();
           };
         },
         e -> {

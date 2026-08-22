@@ -2,6 +2,7 @@ package ru.dimension.ui.component.module.chart;
 
 import java.util.List;
 import javax.swing.JTabbedPane;
+import javax.swing.SwingUtilities;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
@@ -80,8 +81,16 @@ public class ChartModule extends AbstractTabbedModule<ChartModel> {
 
       if (selectedIndex == Panel.HISTORY.ordinal()) {
         presenter.initHistoryUnitIfNeeded();
+        SwingUtilities.invokeLater(() -> {
+          historyUnitView.getRootComponent().revalidate();
+          historyUnitView.getRootComponent().repaint();
+        });
       } else if (selectedIndex == Panel.INSIGHT.ordinal()) {
         presenter.initInsightUnitIfNeeded();
+        SwingUtilities.invokeLater(() -> {
+          insightUnitView.getRootComponent().revalidate();
+          insightUnitView.getRootComponent().repaint();
+        });
       }
     });
 
@@ -122,5 +131,9 @@ public class ChartModule extends AbstractTabbedModule<ChartModel> {
 
   public boolean isReadyRealTimeUpdate() {
     return presenter.isReadyRealTimeUpdate();
+  }
+
+  public void refreshSeriesColors() {
+    presenter.refreshSeriesColors();
   }
 }

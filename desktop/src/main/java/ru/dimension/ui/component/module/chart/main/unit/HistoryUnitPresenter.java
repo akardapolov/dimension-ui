@@ -65,8 +65,7 @@ public class HistoryUnitPresenter extends BaseUnitPresenter<HistoryUnitView> imp
       if (initialized) {
         return;
       }
-      log.info("Lazy initializing HISTORY tab...");
-      initializePresenter();
+      log.info("Lazy initializing HISTORY tab data...");
       initializeCharts();
       initialized = true;
     }
@@ -224,6 +223,9 @@ public class HistoryUnitPresenter extends BaseUnitPresenter<HistoryUnitView> imp
 
             boolean isCustom = chart.getSeriesType() == SeriesType.CUSTOM;
             view.getHistoryFilterPanel().setEnabled(!isCustom);
+
+            view.getHistoryConfigChartDetail().revalidate();
+            view.getHistoryConfigChartDetail().repaint();
           };
         },
         e -> log.error("Error creating/updating history chart", e),

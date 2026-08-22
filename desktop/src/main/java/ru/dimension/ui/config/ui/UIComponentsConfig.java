@@ -31,6 +31,7 @@ import ru.dimension.ui.view.panel.config.query.MetricQueryPanel;
 import ru.dimension.ui.view.panel.config.query.QueryPanel;
 import ru.dimension.ui.view.panel.config.task.MultiSelectQueryPanel;
 import ru.dimension.ui.view.panel.config.task.TaskPanel;
+import ru.dimension.ui.view.panel.config.ui.UISettingsPanel;
 import ru.dimension.ui.view.panel.template.TemplateConnPanel;
 import ru.dimension.ui.view.panel.template.TemplateEditPanel;
 import ru.dimension.ui.view.panel.template.TemplateHTTPConnPanel;
@@ -57,6 +58,7 @@ public final class UIComponentsConfig {
         .bindNamed(TaskPanel.class,             "taskConfigPanel",       TaskPanel.class)
         .bindNamed(ConnectionPanel.class,       "connectionConfigPanel", ConnectionPanel.class)
         .bindNamed(QueryPanel.class,            "queryConfigPanel",      QueryPanel.class)
+        .bindNamed(UISettingsPanel.class,       "uiSettingsPanel",       UISettingsPanel.class)
         .bindNamed(TemplateConnPanel.class,     "templateConnPanel",     TemplateConnPanel.class)
         .bindNamed(TemplateHTTPConnPanel.class, "templateHTTPConnPanel", TemplateHTTPConnPanel.class)
         .bindNamed(TemplateEditPanel.class,     "templateEditPanel",     TemplateEditPanel.class)

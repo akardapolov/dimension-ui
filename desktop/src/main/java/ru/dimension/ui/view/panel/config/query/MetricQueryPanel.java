@@ -82,8 +82,6 @@ public class MetricQueryPanel extends JPanel {
     PainlessGridBag gbl = new PainlessGridBag(content, PGHelper.getPGConfig(2), false);
 
     gbl.row()
-        .cellXRemainder(new JXTitledSeparator("Metric")).fillX();
-    gbl.row()
         .cellXRemainder(metricQueryButtonPanel).fillX();
     gbl.row()
         .cellXYRemainder(this.configMetricCase.getJScrollPane()).fillXY();

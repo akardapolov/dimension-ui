@@ -183,6 +183,7 @@ public class GsonHelper {
       case Query -> FilesHelper.QUERIES_DIR_NAME;
       case Table -> FilesHelper.TABLES_DIR_NAME;
       case ColorProfile -> FilesHelper.COLORS_DIR_NAME;
+      case UISettings -> FilesHelper.UI_SETTINGS_DIR_NAME;
       default -> throw new UnknownConfigClassException("");
     };
   }

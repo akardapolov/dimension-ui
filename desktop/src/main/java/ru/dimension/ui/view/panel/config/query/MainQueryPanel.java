@@ -73,8 +73,6 @@ public class MainQueryPanel extends JPanel {
     JPanel content = new JPanel();
     PainlessGridBag gbl = new PainlessGridBag(content, PGHelper.getPGConfig(2), false);
     gbl.row()
-        .cellXRemainder(new JXTitledSeparator("Main")).fillX();
-    gbl.row()
         .cell(labelQueryName).cell(queryName).fillX();
     gbl.row()
         .cell(labelQueryDescription).cell(queryDescription).fillX();

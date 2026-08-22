@@ -56,6 +56,7 @@ public class PHChartView extends BaseUnitView {
     this.historyFilterPanel = new FilterPanel(component);
     this.historyActionPanel = new ActionPanel(component);
     this.detailsButton = new JButton("Details");
+    syncButtonSize(historyActionPanel.getButton(), detailsButton);
 
     if (previewMode == PreviewMode.PREVIEW) {
       this.historyConfigBlock = new HistoryConfigBlock(
@@ -106,5 +107,16 @@ public class PHChartView extends BaseUnitView {
 
   public void setDetailsButtonAction(ActionListener listener) {
     detailsButton.addActionListener(listener);
+  }
+
+  private void syncButtonSize(JButton actionButton, JButton detailsButton) {
+    Dimension actionSize = actionButton.getPreferredSize();
+    Dimension detailsSize = detailsButton.getPreferredSize();
+    Dimension sameSize = new Dimension(
+        Math.max(actionSize.width, detailsSize.width),
+        Math.max(actionSize.height, detailsSize.height)
+    );
+    actionButton.setPreferredSize(sameSize);
+    detailsButton.setPreferredSize(sameSize);
   }
 }

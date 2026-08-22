@@ -5,11 +5,13 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import javax.swing.JSplitPane;
 import javax.swing.JPanel;
+import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.painlessgridbag.PainlessGridBag;
+import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 
@@ -23,6 +25,7 @@ public class QueryPanel extends JPanel {
   private final MetadataQueryPanel metadataQueryPanel;
   private final MetricQueryPanel metricQueryPanel;
   private final JSplitPane mainSplitPane;
+  private final JTabbedPane rightTabbedPane;
 
   @Inject
   public QueryPanel(@Named("queryButtonPanel") ButtonPanel queryButtonPanel,
@@ -36,13 +39,13 @@ public class QueryPanel extends JPanel {
 
     setLayout(new BorderLayout());
 
-    JSplitPane rightSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, metadataQueryPanel, metricQueryPanel);
-    rightSplit.setResizeWeight(0.6);
-    rightSplit.setDividerSize(3);
-    rightSplit.setContinuousLayout(true);
-    rightSplit.setMinimumSize(new Dimension(100, 100));
+    rightTabbedPane = new JTabbedPane();
+    rightTabbedPane.addTab("Table", metadataQueryPanel);
+    rightTabbedPane.addTab("Metric", metricQueryPanel);
+    rightTabbedPane.setMinimumSize(new Dimension(100, 100));
+    rightTabbedPane.setBorder(GUIHelper.getGrayBorder());
 
-    mainSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, mainQueryPanel, rightSplit);
+    mainSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, mainQueryPanel, rightTabbedPane);
     mainSplitPane.setResizeWeight(0.5);
     mainSplitPane.setDividerSize(3);
     mainSplitPane.setContinuousLayout(true);

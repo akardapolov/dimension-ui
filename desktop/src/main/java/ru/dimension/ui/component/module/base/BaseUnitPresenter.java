@@ -4,12 +4,14 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import javax.swing.JPanel;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.model.profile.CProfile;
+import ru.dimension.di.ServiceLocator;
 import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.chart.SCP;
 import ru.dimension.ui.component.chart.holder.DetailAndAnalyzeHolder;
@@ -20,7 +22,9 @@ import ru.dimension.ui.component.module.chart.main.ChartModel;
 import ru.dimension.ui.component.panel.LegendPanel;
 import ru.dimension.ui.helper.FilterHelper;
 import ru.dimension.ui.helper.LogHelper;
+import ru.dimension.ui.manager.ConfigurationManager;
 import ru.dimension.ui.model.config.Metric;
+import ru.dimension.ui.model.config.UISettings;
 import ru.dimension.ui.model.view.SeriesType;
 import ru.dimension.ui.state.UIState;
 import ru.dimension.ui.view.detail.DetailDashboardPanel;
@@ -63,6 +67,12 @@ public abstract class BaseUnitPresenter<V extends UnitView> implements UnitPrese
 
   protected abstract MessageBroker.Panel getPanelType();
 
+  public void refreshSeriesColors() {
+    if (chart != null) {
+      chart.refreshSeriesColors();
+    }
+  }
+
   @Override
   public void handleLegendChangeAll(Boolean showLegend) {
     boolean visibility = showLegend != null && showLegend;
@@ -84,6 +94,8 @@ public abstract class BaseUnitPresenter<V extends UnitView> implements UnitPrese
 
       getLegendPanel().setSelected(visibility);
 
+      applyChartUISettings();
+
       if (chart.getjFreeChart().getLegend() != null) {
         chart.getjFreeChart().getLegend().setVisible(visibility);
       }
@@ -92,6 +104,18 @@ public abstract class BaseUnitPresenter<V extends UnitView> implements UnitPrese
       chart.clearSelectionRegion();
 
       chart.restoreSelectionRegionAfterNextDraw();
+    }
+  }
+
+  private void applyChartUISettings() {
+    try {
+      ConfigurationManager configurationManager = ServiceLocator.get(ConfigurationManager.class);
+      List<UISettings> settingsList = configurationManager.getConfigList(UISettings.class);
+      if (!settingsList.isEmpty()) {
+        chart.setChartUISettings(settingsList.get(0).getChartSettings());
+      }
+    } catch (Exception e) {
+      log.warn("Could not load UI settings for chart legend", e);
     }
   }
 

@@ -42,33 +42,34 @@ public abstract class AbstractConfigBlock extends JPanel {
     }
 
     GridBagConstraints gbc = new GridBagConstraints();
-    gbc.fill = GridBagConstraints.HORIZONTAL;
+    gbc.fill = GridBagConstraints.VERTICAL;
     gbc.anchor = GridBagConstraints.WEST;
     gbc.insets = new Insets(2, 4, 2, 4);
+    gbc.weightx = 0;
+    gbc.weighty = 0;
 
     int gridx = 0;
 
     if (spec.leftItems != null) {
       for (Item item : spec.leftItems) {
         gbc.gridx = gridx++;
-        gbc.weightx = item.weightx;
         add(item.component, gbc);
       }
     }
 
     gbc.gridx = gridx++;
-    gbc.weightx = 0;
     add(extraRightContainer, gbc);
 
     if (spec.trailing != null) {
       gbc.gridx = gridx++;
-      gbc.weightx = 0;
       add(spec.trailing, gbc);
     }
 
     gbc.gridx = gridx;
     gbc.weightx = 1.0;
     gbc.fill = GridBagConstraints.BOTH;
-    add(new JLabel(), gbc);
+    add(new JPanel() {{
+      setOpaque(false);
+    }}, gbc);
   }
 }

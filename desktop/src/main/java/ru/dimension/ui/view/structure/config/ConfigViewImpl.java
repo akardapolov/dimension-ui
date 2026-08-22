@@ -3,6 +3,7 @@ package ru.dimension.ui.view.structure.config;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Toolkit;
@@ -10,6 +11,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
 import javax.swing.AbstractAction;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
@@ -18,6 +20,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRootPane;
 import javax.swing.JSeparator;
+import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
@@ -52,6 +56,7 @@ import ru.dimension.ui.view.panel.config.connection.ConnectionPanel;
 import ru.dimension.ui.view.panel.config.profile.ProfilePanel;
 import ru.dimension.ui.view.panel.config.query.QueryPanel;
 import ru.dimension.ui.view.panel.config.task.TaskPanel;
+import ru.dimension.ui.view.panel.config.ui.UISettingsPanel;
 import ru.dimension.ui.view.structure.ConfigView;
 import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.view.table.row.Rows.ProfileRow;
@@ -78,6 +83,7 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
   private final TaskPanel taskPanel;
   private final ConnectionPanel connectionPanel;
   private final QueryPanel queryPanel;
+  private final UISettingsPanel uiSettingsPanel;
 
   private final ProfileButtonPanelHandler profileButtonPanelHandler;
   private final TaskButtonPanelHandler taskButtonPanelHandler;
@@ -106,6 +112,7 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
                         @Named("taskConfigPanel") TaskPanel taskPanel,
                         @Named("connectionConfigPanel") ConnectionPanel connectionPanel,
                         @Named("queryConfigPanel") QueryPanel queryPanel,
+                        @Named("uiSettingsPanel") UISettingsPanel uiSettingsPanel,
                         @Named("profileButtonPanelHandler") ProfileButtonPanelHandler profileButtonPanelHandler,
                         @Named("taskButtonPanelHandler") TaskButtonPanelHandler taskButtonPanelHandler,
                         @Named("connectionButtonPanelHandler") ConnectionButtonPanelHandler connectionButtonPanelHandler,
@@ -126,6 +133,7 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
     this.taskPanel = taskPanel;
     this.connectionPanel = connectionPanel;
     this.queryPanel = queryPanel;
+    this.uiSettingsPanel = uiSettingsPanel;
 
     this.profileSelectionHandler = profileSelectionHandler;
     this.taskSelectionHandler = taskSelectionHandler;
@@ -189,6 +197,53 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
         .cell(new JLabel()).fillX()
         .cell(new JLabel()).fillX();
 
+    JTabbedPane topLevelTabbedPane = new JTabbedPane();
+    topLevelTabbedPane.addTab("Model", buildModelPanel());
+    topLevelTabbedPane.addTab("UI", uiSettingsPanel);
+
+    gbl.row()
+        .cellXRemainder(topLevelTabbedPane).fillXY();
+
+    gbl.done();
+
+    return panelSettings;
+  }
+
+  private JPanel buildModelPanel() {
+    JPanel modelPanel = new JPanel(new BorderLayout());
+    modelPanel.setBorder(new EtchedBorder());
+
+    JPanel topTablesPanel = buildTopTablesPanel();
+
+    JPanel configTabWrapper = new JPanel(new BorderLayout());
+    configTabWrapper.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+    configTabWrapper.add(configTab, BorderLayout.CENTER);
+
+    JSplitPane splitPane = GUIHelper.getJSplitPane(JSplitPane.VERTICAL_SPLIT, 10, 200);
+    splitPane.setResizeWeight(0.35);
+    splitPane.setContinuousLayout(true);
+    splitPane.setTopComponent(topTablesPanel);
+    splitPane.setBottomComponent(configTabWrapper);
+
+    configTab.addTab("Profile", profilePanel);
+    configTab.setMnemonicAt(0, KeyEvent.VK_P);
+    configTab.addTab("Task", taskPanel);
+    configTab.setMnemonicAt(1, KeyEvent.VK_T);
+    configTab.addTab("Connection", connectionPanel);
+    configTab.setMnemonicAt(2, KeyEvent.VK_O);
+    configTab.addTab("Query", queryPanel);
+    configTab.setMnemonicAt(3, KeyEvent.VK_Q);
+
+    modelPanel.add(splitPane, BorderLayout.CENTER);
+
+    return modelPanel;
+  }
+
+  private JPanel buildTopTablesPanel() {
+    JPanel topTablesPanel = new JPanel();
+
+    PainlessGridBag gbl = new PainlessGridBag(topTablesPanel, PGHelper.getPGConfig(), false);
+
     gbl.row()
         .cell(new JXTitledSeparator("Profile")).fillX()
         .cell(new JXTitledSeparator("Task")).fillX()
@@ -201,21 +256,9 @@ public class ConfigViewImpl extends JDialog implements ConfigView {
         .cellX(connectionCase.getJScrollPane(), 1).fillXY()
         .cellX(queryCase.getJScrollPane(), 1).fillXY();
 
-    configTab.addTab("Profile", profilePanel);
-    configTab.setMnemonicAt(0, KeyEvent.VK_P);
-    configTab.addTab("Task", taskPanel);
-    configTab.setMnemonicAt(1, KeyEvent.VK_T);
-    configTab.addTab("Connection", connectionPanel);
-    configTab.setMnemonicAt(2, KeyEvent.VK_O);
-    configTab.addTab("Query", queryPanel);
-    configTab.setMnemonicAt(3, KeyEvent.VK_Q);
-
-    gbl.row()
-        .cellXRemainder(configTab).fillXY();
-
     gbl.done();
 
-    return panelSettings;
+    return topTablesPanel;
   }
 
   public void hideProfile() {

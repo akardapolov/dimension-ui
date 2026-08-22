@@ -41,6 +41,7 @@ import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.TaskInfo;
+import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.sql.GatherDataMode;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.type.ConnectionType;
@@ -49,6 +50,7 @@ import ru.dimension.ui.model.view.RangeRealTime;
 import ru.dimension.ui.model.view.handler.LifeCycleStatus;
 import ru.dimension.ui.prompt.Internationalization;
 import ru.dimension.ui.view.dialog.TaskLinkDialog;
+import ru.dimension.ui.view.dialog.QueryColorDialog;
 import ru.dimension.ui.view.handler.core.ConfigSelectionContext;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.query.MainQueryPanel;
@@ -122,6 +124,8 @@ public final class QueryButtonPanelHandler implements ActionListener {
     this.queryButtonPanel.getBtnEdit().addActionListener(this);
     this.queryButtonPanel.getBtnSave().addActionListener(this);
     this.queryButtonPanel.getBtnCancel().addActionListener(this);
+
+    this.metadataQueryPanel.getColorsButton().addActionListener(e -> onColors());
 
     this.queryButtonPanel.getBtnDel().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
         .put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "delete");
@@ -269,6 +273,51 @@ public final class QueryButtonPanelHandler implements ActionListener {
     setPanelView(false);
     setMetadataFieldsEditable(true);
     metadataQueryPanel.getConfigMetadataCase().getJxTable().setEditable(true);
+  }
+
+  public void onColors() {
+    Integer queryId = selectionContext.getSelectedQueryId();
+    if (queryId == null) {
+      JOptionPane.showMessageDialog(queryPanel,
+          "Please select a query first.",
+          "No query selected",
+          JOptionPane.WARNING_MESSAGE);
+      return;
+    }
+
+    Integer profileId = selectionContext.getSelectedProfileId();
+    if (profileId == null) {
+      JOptionPane.showMessageDialog(queryPanel,
+          "Please select a profile first.",
+          "No profile selected",
+          JOptionPane.WARNING_MESSAGE);
+      return;
+    }
+
+    TaskInfo taskInfo = profileManager.getTaskInfoList().stream()
+        .filter(t -> t.getQueryInfoList().stream().anyMatch(qId -> qId == queryId))
+        .findAny()
+        .orElse(null);
+
+    if (taskInfo == null) {
+      JOptionPane.showMessageDialog(queryPanel,
+          "Selected query is not assigned to any task.",
+          "No task found",
+          JOptionPane.WARNING_MESSAGE);
+      return;
+    }
+
+    QueryInfo queryInfo = profileManager.getQueryInfoById(queryId);
+    if (queryInfo == null) {
+      JOptionPane.showMessageDialog(queryPanel,
+          "Selected query not found.",
+          "Not found",
+          JOptionPane.WARNING_MESSAGE);
+      return;
+    }
+
+    ProfileTaskQueryKey key = new ProfileTaskQueryKey(profileId, taskInfo.getId(), queryId);
+    QueryColorDialog.show(queryPanel, key, queryInfo);
   }
 
   public void onSave() {

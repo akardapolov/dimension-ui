@@ -3,6 +3,7 @@ package ru.dimension.ui.helper;
 import java.awt.Color;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -212,5 +213,60 @@ public class ColorHelper {
 
   public ColorProfile getDefaultProfile() {
     return defaultProfile;
+  }
+
+  public void setColor(String colorProfileName, String seriesName, Color color) {
+    ColorProfile profile = colorProfiles.get(colorProfileName);
+    if (profile == null) {
+      Object lock = profileLocks.computeIfAbsent(colorProfileName, k -> new Object());
+      synchronized (lock) {
+        profile = colorProfiles.get(colorProfileName);
+        if (profile == null) {
+          profile = loadOrCreateProfile(colorProfileName);
+          colorProfiles.put(colorProfileName, profile);
+        }
+      }
+    }
+    saveColorToProfile(profile, seriesName, color, colorProfileName);
+  }
+
+  public void resetColorToDefault(String colorProfileName, String seriesName) {
+    ColorProfile profile = colorProfiles.get(colorProfileName);
+    if (profile == null) {
+      Object lock = profileLocks.computeIfAbsent(colorProfileName, k -> new Object());
+      synchronized (lock) {
+        profile = colorProfiles.get(colorProfileName);
+        if (profile == null) {
+          profile = loadOrCreateProfile(colorProfileName);
+          colorProfiles.put(colorProfileName, profile);
+        }
+      }
+    }
+
+    synchronized (profile) {
+      if (profile.getColors() != null) {
+        profile.getColors().remove(seriesName);
+      }
+    }
+    dirtyProfiles.put(colorProfileName, true);
+  }
+
+  public List<String> getAllSeriesNames(String colorProfileName) {
+    ColorProfile profile = colorProfiles.get(colorProfileName);
+    if (profile == null) {
+      Object lock = profileLocks.computeIfAbsent(colorProfileName, k -> new Object());
+      synchronized (lock) {
+        profile = colorProfiles.get(colorProfileName);
+        if (profile == null) {
+          profile = loadOrCreateProfile(colorProfileName);
+          colorProfiles.put(colorProfileName, profile);
+        }
+      }
+    }
+
+    if (profile.getColors() == null) {
+      return List.of();
+    }
+    return List.copyOf(profile.getColors().keySet());
   }
 }

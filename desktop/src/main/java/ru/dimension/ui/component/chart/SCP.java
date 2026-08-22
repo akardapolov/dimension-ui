@@ -28,6 +28,7 @@ import ru.dimension.ui.helper.ColorHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
+import ru.dimension.ui.model.config.ChartUISettings;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.data.CategoryTableXYDatasetRealTime;
 import ru.dimension.ui.model.function.GroupFunction;
@@ -45,6 +46,8 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
 
   protected StackedChart stackedChart;
   private JFreeChart jFreeChart;
+
+  private ChartUISettings chartUISettings;
 
   protected Set<String> series;
 
@@ -134,6 +137,10 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
 
   public void loadSeriesColorInternal(String seriesName) {
     this.stackedChart.loadSeriesColorInternal(profileTaskQueryKey.getColorProfileName(), seriesName);
+  }
+
+  public void refreshSeriesColors() {
+    this.stackedChart.refreshSeriesColors(profileTaskQueryKey.getColorProfileName());
   }
 
   protected void initializeGUI() {
@@ -228,9 +235,19 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
     }
   }
 
+  public void setChartUISettings(ChartUISettings chartUISettings) {
+    this.chartUISettings = chartUISettings;
+  }
+
   public void setLegendTitleVisible(boolean visible) {
     if (this.stackedChart != null) {
-      this.stackedChart.setLegendTitleVisible(visible);
+      this.stackedChart.setLegendTitleVisible(visible, chartUISettings);
+    }
+  }
+
+  public void setRangeAxisVisible(boolean visible) {
+    if (this.stackedChart != null) {
+      this.stackedChart.setRangeAxisVisible(visible);
     }
   }
 

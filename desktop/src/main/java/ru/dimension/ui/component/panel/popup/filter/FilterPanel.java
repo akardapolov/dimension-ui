@@ -7,7 +7,6 @@ import java.awt.FlowLayout;
 import java.awt.Insets;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -15,10 +14,9 @@ import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JSlider;
 import javax.swing.JSplitPane;
+import javax.swing.JToggleButton;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.RowFilter;
@@ -30,7 +28,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.log4j.Log4j2;
 import org.jdesktop.swingx.JXTable;
-import org.painlessgridbag.PainlessGridBag;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.tt.api.TT;
@@ -42,7 +39,6 @@ import ru.dimension.ui.component.broker.MessageBroker;
 import ru.dimension.ui.component.broker.MessageBroker.Panel;
 import ru.dimension.ui.component.panel.popup.base.ConfigPopupPanel;
 import ru.dimension.ui.helper.DateHelper;
-import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.model.config.Metric;
 import ru.dimension.ui.model.date.DateLocale;
 import ru.dimension.ui.model.info.TableInfo;
@@ -78,7 +74,7 @@ public class FilterPanel extends ConfigPopupPanel {
   private CProfile selectedColumn;
   private RealtimeStateProvider realtimeStateProvider;
 
-  private JSlider opacitySlider;
+  private JToggleButton showHideButton;
   private JButton closeButton;
   private JButton clearButton;
 
@@ -99,13 +95,58 @@ public class FilterPanel extends ConfigPopupPanel {
 
     this.columnsTable = createColumnTable(registry);
 
-    this.opacitySlider = createOpacitySlider();
+    this.showHideButton = createShowHideButton();
     this.closeButton = createCloseButton();
     this.clearButton = createClearButton();
 
     initializeListeners();
 
-    updateContent(this::createPopupContent);
+    updateContent(this::createContentPanel);
+    updateControlPanel(this::createControlPanel);
+  }
+
+  private JPanel createControlPanel() {
+    JPanel topBar = new JPanel(new BorderLayout());
+
+    JPanel leftTopBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 2));
+    leftTopBar.add(showHideButton);
+
+    JPanel rightTopBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 2));
+    rightTopBar.add(clearButton);
+    rightTopBar.add(closeButton);
+
+    topBar.add(leftTopBar, BorderLayout.WEST);
+    topBar.add(rightTopBar, BorderLayout.EAST);
+
+    return topBar;
+  }
+
+  private JPanel createContentPanel() {
+    JPanel panel = new JPanel(new BorderLayout());
+    panel.setPreferredSize(new Dimension(500, 270));
+    panel.setBorder(new EtchedBorder());
+
+    JPanel leftPanel = new JPanel(new BorderLayout());
+    leftPanel.add(columnsSearch, BorderLayout.NORTH);
+    leftPanel.add(columnsTable.scrollPane(), BorderLayout.CENTER);
+
+    JPanel rightPanel = new JPanel(new BorderLayout());
+    rightPanel.add(filterSearch, BorderLayout.NORTH);
+    rightPanel.add(filtersPanel, BorderLayout.CENTER);
+
+    JSplitPane splitPane = new JSplitPane(
+        JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
+    splitPane.setDividerLocation(200);
+    splitPane.setResizeWeight(0.5);
+    splitPane.setOneTouchExpandable(true);
+    splitPane.setContinuousLayout(true);
+
+    leftPanel.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
+    rightPanel.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
+
+    panel.add(splitPane, BorderLayout.CENTER);
+
+    return panel;
   }
 
   private JButton createCloseButton() {
@@ -127,28 +168,26 @@ public class FilterPanel extends ConfigPopupPanel {
     return btn;
   }
 
-  private JSlider createOpacitySlider() {
-    JSlider slider = new JSlider(JSlider.HORIZONTAL, 10, 100, 100);
-    slider.setPreferredSize(new Dimension(150, 40));
-    slider.setMajorTickSpacing(30);
-    slider.setMinorTickSpacing(10);
-    slider.setPaintTicks(true);
-    slider.setSnapToTicks(false);
+  private JToggleButton createShowHideButton() {
+    JToggleButton btn = new JToggleButton();
+    btn.setSelected(true);
+    updateShowHideButtonState(btn);
+    btn.setMargin(new Insets(0, 8, 0, 8));
+    btn.setFocusable(false);
+    btn.addItemListener(e -> updateShowHideButtonState(btn));
+    return btn;
+  }
 
-    Hashtable<Integer, JLabel> labels = new Hashtable<>();
-    labels.put(10, new JLabel("10%"));
-    labels.put(40, new JLabel("40%"));
-    labels.put(70, new JLabel("70%"));
-    labels.put(100, new JLabel("100%"));
-    slider.setLabelTable(labels);
-
-    slider.addChangeListener(e -> {
-      float opacity = slider.getValue() / 100.0f;
-      setPopupOpacity(opacity);
-      slider.setToolTipText("Opacity: " + slider.getValue() + "%");
-    });
-
-    return slider;
+  private void updateShowHideButtonState(JToggleButton btn) {
+    if (btn.isSelected()) {
+      btn.setText("Show");
+      setPopupOpacity(1.0f);
+      btn.setToolTipText("Panel is fully visible");
+    } else {
+      btn.setText("Hide");
+      setPopupOpacity(0.1f);
+      btn.setToolTipText("Panel is hidden");
+    }
   }
 
   private TTTable<ColumnRow, JXTable> createColumnTable(TTRegistry registry) {
@@ -166,14 +205,12 @@ public class FilterPanel extends ConfigPopupPanel {
     table.setShowHorizontalLines(true);
     table.setGridColor(java.awt.Color.GRAY);
     table.setIntercellSpacing(new java.awt.Dimension(1, 1));
-
     table.setEditable(false);
     table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
     if (table.getColumnExt("ID") != null) {
       table.getColumnExt("ID").setVisible(false);
     }
-
     if (table.getColumnExt("Pick") != null) {
       table.getColumnExt("Pick").setVisible(false);
     } else if (table.getColumnExt("pick") != null) {
@@ -186,70 +223,17 @@ public class FilterPanel extends ConfigPopupPanel {
     return tt;
   }
 
-  private JPanel createPopupContent() {
-    JPanel panel = new JPanel(new BorderLayout());
-    panel.setPreferredSize(new Dimension(500, 300));
-    panel.setBorder(new EtchedBorder());
-
-    JPanel topBar = new JPanel(new BorderLayout());
-
-    JPanel leftTopBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 2));
-    leftTopBar.add(new JLabel("Opacity:"));
-    leftTopBar.add(opacitySlider);
-
-    JPanel rightTopBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 2));
-    rightTopBar.add(clearButton);
-    rightTopBar.add(closeButton);
-
-    topBar.add(leftTopBar, BorderLayout.WEST);
-    topBar.add(rightTopBar, BorderLayout.EAST);
-
-    JPanel leftPanel = new JPanel(new BorderLayout());
-    leftPanel.add(columnsSearch, BorderLayout.NORTH);
-    leftPanel.add(columnsTable.scrollPane(), BorderLayout.CENTER);
-
-    JPanel rightPanel = new JPanel(new BorderLayout());
-    rightPanel.add(filterSearch, BorderLayout.NORTH);
-    rightPanel.add(filtersPanel, BorderLayout.CENTER);
-
-    JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
-    splitPane.setDividerLocation(200);
-    splitPane.setResizeWeight(0.5);
-    splitPane.setOneTouchExpandable(true);
-    splitPane.setContinuousLayout(true);
-
-    leftPanel.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
-    rightPanel.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
-
-    PainlessGridBag gblTable = new PainlessGridBag(panel, PGHelper.getPGConfig(1), false);
-
-    gblTable.row()
-        .cellXRemainder(topBar).fillX();
-    gblTable.row()
-        .cellXYRemainder(splitPane).fillXY();
-
-    gblTable.done();
-
-    return panel;
-  }
-
   private void initializeListeners() {
     columnsSearch.getDocument().addDocumentListener(new DocumentListener() {
-      @Override
-      public void insertUpdate(DocumentEvent e) { filterColumns(); }
-      @Override
-      public void removeUpdate(DocumentEvent e) { filterColumns(); }
-      @Override
-      public void changedUpdate(DocumentEvent e) { filterColumns(); }
+      @Override public void insertUpdate(DocumentEvent e) { filterColumns(); }
+      @Override public void removeUpdate(DocumentEvent e) { filterColumns(); }
+      @Override public void changedUpdate(DocumentEvent e) { filterColumns(); }
     });
 
     filterSearch.getDocument().addDocumentListener(new DocumentListener() {
-      @Override
-      public void insertUpdate(DocumentEvent e) { filterFilters(); }
-      @Override
-      public void removeUpdate(DocumentEvent e) { filterFilters(); }
-      @Override
-      public void changedUpdate(DocumentEvent e) { filterFilters(); }
+      @Override public void insertUpdate(DocumentEvent e) { filterFilters(); }
+      @Override public void removeUpdate(DocumentEvent e) { filterFilters(); }
+      @Override public void changedUpdate(DocumentEvent e) { filterFilters(); }
     });
 
     columnsTable.table().getSelectionModel().addListSelectionListener(e -> {
@@ -258,7 +242,6 @@ public class FilterPanel extends ConfigPopupPanel {
         if (viewRow >= 0) {
           int modelRow = columnsTable.table().convertRowIndexToModel(viewRow);
           ColumnRow rowItem = columnsTable.model().itemAt(modelRow);
-
           handleColumnSelection(rowItem);
         } else {
           clearFilters();
@@ -269,12 +252,10 @@ public class FilterPanel extends ConfigPopupPanel {
 
   private void handleColumnSelection(ColumnRow rowItem) {
     if (rowItem == null) return;
-
     this.selectedColumn = allColumns.stream()
         .filter(p -> p.getColName().equals(rowItem.getName()))
         .findFirst()
         .orElse(null);
-
     if (this.selectedColumn != null) {
       filterSearch.setText("");
       loadFiltersForColumn(this.selectedColumn);
@@ -283,10 +264,8 @@ public class FilterPanel extends ConfigPopupPanel {
 
   public void initializeChartPanel(ChartKey chartKey, TableInfo tableInfo, Panel panelType) {
     this.tableInfo = tableInfo;
-
     this.filtersPanel.setChartKey(chartKey);
     this.filtersPanel.setPanelType(panelType);
-
     loadColumns();
   }
 
@@ -305,12 +284,11 @@ public class FilterPanel extends ConfigPopupPanel {
 
   private void updateComponents() {
     boolean panelEnabled = super.isEnabled();
-
     columnsSearch.setEnabled(panelEnabled);
     columnsTable.table().setEnabled(panelEnabled);
     filterSearch.setEnabled(panelEnabled);
     filtersPanel.setEnabled(panelEnabled);
-    opacitySlider.setEnabled(panelEnabled);
+    showHideButton.setEnabled(panelEnabled);
     closeButton.setEnabled(panelEnabled);
     clearButton.setEnabled(panelEnabled && hasActiveFilters());
   }
@@ -323,7 +301,6 @@ public class FilterPanel extends ConfigPopupPanel {
   public void clearFilterPanel() {
     columnsTable.table().clearSelection();
     filtersPanel.clear();
-
     columnsSearch.setText("");
     filterSearch.setText("");
   }
@@ -341,22 +318,18 @@ public class FilterPanel extends ConfigPopupPanel {
 
   private void loadColumns() {
     if (tableInfo == null) return;
-
     allColumns = tableInfo.getCProfiles().stream()
         .filter(profile -> !profile.getCsType().isTimeStamp())
         .collect(Collectors.toList());
-
     List<ColumnRow> rows = allColumns.stream()
         .map(cProfile -> new ColumnRow(cProfile, false))
         .collect(Collectors.toList());
-
     columnsTable.setItems(rows);
   }
 
   private void filterColumns() {
     String searchText = columnsSearch.getText();
     if (columnsTable == null || columnSorter == null) return;
-
     if (searchText == null || searchText.isEmpty()) {
       columnSorter.setRowFilter(null);
     } else {
@@ -395,7 +368,6 @@ public class FilterPanel extends ConfigPopupPanel {
     filtersPanel.setEnd(currentEnd);
     filtersPanel.setSeriesType(seriesType);
     filtersPanel.setSeriesColorMap(currentSeriesColorMap);
-
     filtersPanel.loadData(column, currentSeriesColorMap);
   }
 
