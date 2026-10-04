@@ -1,0 +1,10 @@
+{
+  "description": "JMX local JVM monitoring of this application",
+  "pullTimeout": 1,
+  "connectionId": 1009,
+  "queryList": [
+    1009
+  ],
+  "id": 1009,
+  "name": "JMX local task"
+}

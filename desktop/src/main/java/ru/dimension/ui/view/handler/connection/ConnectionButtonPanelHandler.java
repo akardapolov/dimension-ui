@@ -36,10 +36,12 @@ import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.exception.NotSelectedRowException;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.manager.ProfileManager;
+import ru.dimension.ui.model.db.DBType;
 import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.parse.ParseType;
+import ru.dimension.ui.model.sql.GatherDataMode;
 import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.handler.LifeCycleStatus;
@@ -163,6 +165,8 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
       openedTab = ConnectionTypeTabPane.JDBC;
     } else if (connectionPanel.getConnTypeTab().getSelectedIndex() == 1) {
       openedTab = ConnectionTypeTabPane.HTTP;
+    } else if (connectionPanel.getConnTypeTab().getSelectedIndex() == 2) {
+      openedTab = ConnectionTypeTabPane.JMX;
     }
   }
 
@@ -189,10 +193,12 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
 
     clearForm(ConnectionTypeTabPane.JDBC);
     clearForm(ConnectionTypeTabPane.HTTP);
+    clearForm(ConnectionTypeTabPane.JMX);
 
     setEditModeForTab(openedTab, true);
     connectionPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.JDBC, true);
     connectionPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.HTTP, true);
+    connectionPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.JMX, true);
 
     isPasswordChanged = true;
   }
@@ -211,7 +217,7 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
     }
 
     ConnectionType type = connection.getType() != null ? connection.getType() : ConnectionType.JDBC;
-    ConnectionTypeTabPane needTab = ConnectionType.HTTP.equals(type) ? ConnectionTypeTabPane.HTTP : ConnectionTypeTabPane.JDBC;
+    ConnectionTypeTabPane needTab = toTabPane(type);
 
     if (!needTab.getName().equals(openedTab.getName())) {
       int input = JOptionPane.showOptionDialog(null,
@@ -236,10 +242,25 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
       connectionPanel.getJTextFieldConnectionJar().setText(connection.getJar());
       connectionPanel.getJTextFieldConnectionDriver().setText(connection.getDriver());
       isPasswordChanged = true;
+    } else if (needTab.equals(ConnectionTypeTabPane.JMX)) {
+      connectionPanel.getJTextFieldJmxName().setText(connection.getName() + "_copy");
+      connectionPanel.getJTextFieldJmxURL().setText(connection.getUrl());
+      connectionPanel.getJTextFieldJmxUserName().setText(connection.getUserName());
+      connectionPanel.getJTextFieldJmxPassword().setText("");
     } else {
       connectionPanel.getJTextFieldHttpName().setText(connection.getName() + "_copy");
       connectionPanel.getJTextFieldHttpURL().setText(connection.getUrl());
     }
+  }
+
+  private ConnectionTypeTabPane toTabPane(ConnectionType type) {
+    if (ConnectionType.HTTP.equals(type)) {
+      return ConnectionTypeTabPane.HTTP;
+    }
+    if (ConnectionType.JMX.equals(type)) {
+      return ConnectionTypeTabPane.JMX;
+    }
+    return ConnectionTypeTabPane.JDBC;
   }
 
   private void onDelete() {
@@ -270,8 +291,8 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
     profileManager.deleteConnection(connection.getId(), connection.getName());
     eventBus.publish(new ConnectionRemoveEvent(id));
 
-    if (ConnectionType.HTTP.equals(connection.getType())) {
-      deleteHttpRelatedQuery(connection.getName());
+    if (ConnectionType.HTTP.equals(connection.getType()) || ConnectionType.JMX.equals(connection.getType())) {
+      deleteConnectionQuery(connection.getName());
     }
 
     refillConnectionTableAndSelectFirst();
@@ -293,7 +314,7 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
     }
 
     ConnectionType type = oldFileConnection.getType() != null ? oldFileConnection.getType() : ConnectionType.JDBC;
-    ConnectionTypeTabPane needTab = ConnectionType.HTTP.equals(type) ? ConnectionTypeTabPane.HTTP : ConnectionTypeTabPane.JDBC;
+    ConnectionTypeTabPane needTab = toTabPane(type);
 
     if (!needTab.getName().equals(openedTab.getName())) {
       int input = JOptionPane.showOptionDialog(null,
@@ -334,6 +355,8 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
 
     String name = openedTab.equals(ConnectionTypeTabPane.JDBC)
         ? connectionPanel.getJTextFieldConnectionName().getText()
+        : openedTab.equals(ConnectionTypeTabPane.JMX)
+        ? connectionPanel.getJTextFieldJmxName().getText()
         : connectionPanel.getJTextFieldHttpName().getText();
 
     checkConnectionNameIsBusy(newId, name);
@@ -350,6 +373,26 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
       saveConnection.setDriver(connectionPanel.getJTextFieldConnectionDriver().getText());
       saveConnection.setPassword(encryptDecrypt.encrypt(
           String.valueOf(connectionPanel.getJTextFieldConnectionPassword().getPassword())));
+    } else if (openedTab.equals(ConnectionTypeTabPane.JMX)) {
+      saveConnection.setName(connectionPanel.getJTextFieldJmxName().getText());
+      saveConnection.setUrl(connectionPanel.getJTextFieldJmxURL().getText().trim());
+      saveConnection.setUserName(connectionPanel.getJTextFieldJmxUserName().getText());
+      saveConnection.setPassword(encryptDecrypt.encrypt(
+          String.valueOf(connectionPanel.getJTextFieldJmxPassword().getPassword())));
+      saveConnection.setDbType(DBType.JMX);
+
+      QueryInfo qi = new QueryInfo();
+      qi.setId(nextQueryId());
+      qi.setName(saveConnection.getName());
+      qi.setGatherDataMode(GatherDataMode.BY_CLIENT_JMX);
+      qi.setDbType(DBType.JMX);
+
+      TableInfo tableInfo = new TableInfo();
+      tableInfo.setTableName(qi.getName());
+
+      profileManager.addTable(tableInfo);
+      profileManager.addQuery(qi);
+      updateQueryCaseScrollToBottom();
     } else {
       saveConnection.setName(connectionPanel.getJTextFieldHttpName().getText());
       saveConnection.setUrl(connectionPanel.getJTextFieldHttpURL().getText());
@@ -392,6 +435,8 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
 
     String name = openedTab.equals(ConnectionTypeTabPane.JDBC)
         ? connectionPanel.getJTextFieldConnectionName().getText()
+        : openedTab.equals(ConnectionTypeTabPane.JMX)
+        ? connectionPanel.getJTextFieldJmxName().getText()
         : connectionPanel.getJTextFieldHttpName().getText();
 
     checkConnectionNameIsBusy(id, name);
@@ -419,6 +464,13 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
         edit.setPassword(old.getPassword());
       }
       isPasswordChanged = false;
+    } else if (openedTab.equals(ConnectionTypeTabPane.JMX)) {
+      edit.setName(connectionPanel.getJTextFieldJmxName().getText());
+      edit.setUrl(connectionPanel.getJTextFieldJmxURL().getText().trim());
+      edit.setUserName(connectionPanel.getJTextFieldJmxUserName().getText());
+      edit.setPassword(encryptDecrypt.encrypt(
+          String.valueOf(connectionPanel.getJTextFieldJmxPassword().getPassword())));
+      edit.setDbType(DBType.JMX);
     } else {
       edit.setName(connectionPanel.getJTextFieldHttpName().getText());
       edit.setUrl(connectionPanel.getJTextFieldHttpURL().getText());
@@ -437,8 +489,8 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
       profileManager.addConnection(edit);
       eventBus.publish(new ConnectionAddEvent(edit.getId(), edit.getName(), edit.getType()));
 
-      if (openedTab.equals(ConnectionTypeTabPane.HTTP)) {
-        updateHttpRelatedQuery(old.getName(), edit.getName());
+      if (openedTab.equals(ConnectionTypeTabPane.HTTP) || openedTab.equals(ConnectionTypeTabPane.JMX)) {
+        updateConnectionQuery(old.getName(), edit.getName());
       }
     } else {
       profileManager.updateConnection(edit);
@@ -477,7 +529,7 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
     }
 
     ConnectionType type = info.getType() != null ? info.getType() : ConnectionType.JDBC;
-    ConnectionTypeTabPane tab = ConnectionType.HTTP.equals(type) ? ConnectionTypeTabPane.HTTP : ConnectionTypeTabPane.JDBC;
+    ConnectionTypeTabPane tab = toTabPane(type);
     openedTab = tab;
 
     fillForm(info, tab);
@@ -493,6 +545,12 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
       connectionPanel.getJTextFieldConnectionJar().setText(info.getJar());
       connectionPanel.getJTextFieldConnectionDriver().setText(info.getDriver());
       connectionPanel.setSelectedTabFull(ConnectionTypeTabPane.JDBC);
+    } else if (tab.equals(ConnectionTypeTabPane.JMX)) {
+      connectionPanel.getJTextFieldJmxName().setText(info.getName());
+      connectionPanel.getJTextFieldJmxURL().setText(info.getUrl());
+      connectionPanel.getJTextFieldJmxUserName().setText(info.getUserName());
+      connectionPanel.getJTextFieldJmxPassword().setText(info.getPassword());
+      connectionPanel.setSelectedTabFull(ConnectionTypeTabPane.JMX);
     } else {
       connectionPanel.getJTextFieldHttpName().setText(info.getName());
       connectionPanel.getJTextFieldHttpURL().setText(info.getUrl());
@@ -509,6 +567,9 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
   private boolean hasNameForOpenedTab() {
     if (openedTab.equals(ConnectionTypeTabPane.JDBC)) {
       return !connectionPanel.getJTextFieldConnectionName().getText().trim().isEmpty();
+    }
+    if (openedTab.equals(ConnectionTypeTabPane.JMX)) {
+      return !connectionPanel.getJTextFieldJmxName().getText().trim().isEmpty();
     }
     return !connectionPanel.getJTextFieldHttpName().getText().trim().isEmpty();
   }
@@ -593,6 +654,7 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
     if (tab.equals(ConnectionTypeTabPane.JDBC)) {
       connectionPanel.getConnTypeTab().setSelectedTab(ConnectionTypeTabPane.JDBC);
       connectionPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.HTTP, !edit);
+      connectionPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.JMX, !edit);
 
       connectionPanel.getJTextFieldConnectionName().setEditable(edit);
       connectionPanel.getJTextFieldConnectionUserName().setEditable(edit);
@@ -605,9 +667,24 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
       connectionPanel.getBtnLoadHttp().setEnabled(false);
       connectionPanel.getMethodRadioButtonPanel().setButtonNotView();
       connectionPanel.getParseRadioButtonPanel().setButtonNotView();
+    } else if (tab.equals(ConnectionTypeTabPane.JMX)) {
+      connectionPanel.getConnTypeTab().setSelectedTab(ConnectionTypeTabPane.JMX);
+      connectionPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.JDBC, !edit);
+      connectionPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.HTTP, !edit);
+
+      connectionPanel.getJTextFieldJmxName().setEditable(edit);
+      connectionPanel.getJTextFieldJmxURL().setEditable(edit);
+      connectionPanel.getJTextFieldJmxUserName().setEditable(edit);
+      connectionPanel.getJTextFieldJmxPassword().setEditable(edit);
+
+      connectionPanel.getBtnLoadHttp().setEnabled(false);
+      connectionPanel.getJarButton().setEnabled(false);
+      connectionPanel.getMethodRadioButtonPanel().setButtonNotView();
+      connectionPanel.getParseRadioButtonPanel().setButtonNotView();
     } else {
       connectionPanel.getConnTypeTab().setSelectedTab(ConnectionTypeTabPane.HTTP);
       connectionPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.JDBC, !edit);
+      connectionPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.JMX, !edit);
 
       connectionPanel.getJTextFieldHttpName().setEditable(edit);
       connectionPanel.getJTextFieldHttpURL().setEditable(edit);
@@ -638,6 +715,13 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
       connectionPanel.getJTextFieldConnectionDriver().setPrompt(bundleDefault.getString("cDriver"));
       connectionPanel.getJTextFieldConnectionJar().setText("");
       connectionPanel.getJTextFieldConnectionJar().setPrompt(bundleDefault.getString("cJar"));
+    } else if (tab.equals(ConnectionTypeTabPane.JMX)) {
+      connectionPanel.getJTextFieldJmxName().setText("");
+      connectionPanel.getJTextFieldJmxName().setPrompt(bundleDefault.getString("cName"));
+      connectionPanel.getJTextFieldJmxURL().setText("");
+      connectionPanel.getJTextFieldJmxUserName().setText("");
+      connectionPanel.getJTextFieldJmxUserName().setPrompt(bundleDefault.getString("cUserName"));
+      connectionPanel.getJTextFieldJmxPassword().setText("");
     } else {
       connectionPanel.getJTextFieldHttpName().setText("");
       connectionPanel.getJTextFieldHttpName().setPrompt(bundleDefault.getString("cName"));
@@ -670,7 +754,7 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
     }
   }
 
-  private void deleteHttpRelatedQuery(String connectionName) {
+  private void deleteConnectionQuery(String connectionName) {
     QueryInfo qi = profileManager.getQueryInfoList().stream()
         .filter(q -> Objects.equals(q.getName(), connectionName))
         .findFirst()
@@ -683,7 +767,7 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
     updateQueryCaseScrollToBottom();
   }
 
-  private void updateHttpRelatedQuery(String oldName, String newName) {
+  private void updateConnectionQuery(String oldName, String newName) {
     QueryInfo qi = profileManager.getQueryInfoList().stream()
         .filter(q -> Objects.equals(q.getName(), oldName))
         .findFirst()
@@ -693,12 +777,14 @@ public final class ConnectionButtonPanelHandler implements ChangeListener {
     }
 
     int id = qi.getId();
+    GatherDataMode gatherDataMode = qi.getGatherDataMode();
     profileManager.deleteQuery(id, oldName);
     profileManager.deleteTable(oldName);
 
     QueryInfo newQi = new QueryInfo();
     newQi.setId(id);
     newQi.setName(newName);
+    newQi.setGatherDataMode(gatherDataMode);
 
     TableInfo tableInfo = new TableInfo();
     tableInfo.setTableName(newName);

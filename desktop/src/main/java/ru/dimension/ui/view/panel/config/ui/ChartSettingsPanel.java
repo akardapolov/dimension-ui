@@ -19,8 +19,10 @@ import java.awt.geom.RoundRectangle2D;
 import java.util.Arrays;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.border.EtchedBorder;
 import org.jdesktop.swingx.JXTaskPane;
@@ -34,11 +36,20 @@ import ru.dimension.ui.laf.LaF;
 
 public class ChartSettingsPanel extends JPanel {
 
+  private static final int LEGEND_WIDTH_NARROW = 100;
+  private static final int LEGEND_WIDTH_MEDIUM = 150;
+  private static final int LEGEND_WIDTH_WIDE   = 200;
+
   private final JCheckBox chkHideBuiltInLegend;
   private final JCheckBox chkHideYAxis;
   private final JCheckBox chkHideXAxis;
   private final JCheckBox chkHidePlotInsets;
   private final JCheckBox chkHideChartPadding;
+  private final JCheckBox chkFixedLegendSize;
+
+  private final JRadioButton rbLegendWidthNarrow;
+  private final JRadioButton rbLegendWidthMedium;
+  private final JRadioButton rbLegendWidthWide;
 
   private final ChartPreviewPanel previewPanel;
 
@@ -51,6 +62,12 @@ public class ChartSettingsPanel extends JPanel {
     chkHideXAxis         = new JCheckBox("X-axis");
     chkHidePlotInsets    = new JCheckBox("Plot insets");
     chkHideChartPadding  = new JCheckBox("Chart padding");
+    chkFixedLegendSize   = new JCheckBox("Fixed legend size");
+
+    rbLegendWidthNarrow  = new JRadioButton(LEGEND_WIDTH_NARROW + " px");
+    rbLegendWidthMedium  = new JRadioButton(LEGEND_WIDTH_MEDIUM + " px");
+    rbLegendWidthWide    = new JRadioButton(LEGEND_WIDTH_WIDE + " px");
+    rbLegendWidthMedium.setSelected(true);
 
     previewPanel = new ChartPreviewPanel(this);
 
@@ -71,7 +88,28 @@ public class ChartSettingsPanel extends JPanel {
     zonesPane.setCollapsed(false);
     zonesPane.add(buildZonesContent());
 
+    JXTaskPane legendPane = new JXTaskPane();
+    legendPane.setTitle("Legend");
+    legendPane.setCollapsed(false);
+    chkFixedLegendSize.setAlignmentX(LEFT_ALIGNMENT);
+    legendPane.add(chkFixedLegendSize);
+
+    ButtonGroup legendWidthGroup = new ButtonGroup();
+    legendWidthGroup.add(rbLegendWidthNarrow);
+    legendWidthGroup.add(rbLegendWidthMedium);
+    legendWidthGroup.add(rbLegendWidthWide);
+
+    JPanel legendWidthPanel = new JPanel();
+    legendWidthPanel.setLayout(new BoxLayout(legendWidthPanel, BoxLayout.X_AXIS));
+    legendWidthPanel.setOpaque(false);
+    legendWidthPanel.setAlignmentX(LEFT_ALIGNMENT);
+    legendWidthPanel.add(rbLegendWidthNarrow);
+    legendWidthPanel.add(rbLegendWidthMedium);
+    legendWidthPanel.add(rbLegendWidthWide);
+    legendPane.add(legendWidthPanel);
+
     container.add(zonesPane);
+    container.add(legendPane);
 
     PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(), false);
     gbl.row().cellXYRemainder(scrollPane).fillXY();
@@ -83,6 +121,16 @@ public class ChartSettingsPanel extends JPanel {
     chkHideXAxis        .addActionListener(repaint);
     chkHidePlotInsets   .addActionListener(repaint);
     chkHideChartPadding .addActionListener(repaint);
+
+    chkFixedLegendSize.addActionListener(e -> updateLegendWidthEnabled());
+    updateLegendWidthEnabled();
+  }
+
+  private void updateLegendWidthEnabled() {
+    boolean enabled = chkFixedLegendSize.isSelected();
+    rbLegendWidthNarrow.setEnabled(enabled);
+    rbLegendWidthMedium.setEnabled(enabled);
+    rbLegendWidthWide.setEnabled(enabled);
   }
 
   private JPanel buildZonesContent() {
@@ -124,6 +172,16 @@ public class ChartSettingsPanel extends JPanel {
   public boolean isHideXAxis()         { return chkHideXAxis.isSelected(); }
   public boolean isHidePlotInsets()    { return chkHidePlotInsets.isSelected(); }
   public boolean isHideChartPadding()  { return chkHideChartPadding.isSelected(); }
+  public boolean isLegendFixedSize()   { return chkFixedLegendSize.isSelected(); }
+  public int getLegendFixedWidth() {
+    if (rbLegendWidthWide.isSelected()) {
+      return LEGEND_WIDTH_WIDE;
+    }
+    if (rbLegendWidthNarrow.isSelected()) {
+      return LEGEND_WIDTH_NARROW;
+    }
+    return LEGEND_WIDTH_MEDIUM;
+  }
 
   public void setHideCustomLegend(boolean v)  {}
   public void setHideBuiltInLegend(boolean v) { chkHideBuiltInLegend.setSelected(v); previewPanel.repaint(); }
@@ -131,6 +189,17 @@ public class ChartSettingsPanel extends JPanel {
   public void setHideXAxis(boolean v)         { chkHideXAxis.setSelected(v);         previewPanel.repaint(); }
   public void setHidePlotInsets(boolean v)    { chkHidePlotInsets.setSelected(v);    previewPanel.repaint(); }
   public void setHideChartPadding(boolean v)  { chkHideChartPadding.setSelected(v);  previewPanel.repaint(); }
+  public void setLegendFixedSize(boolean v)   { chkFixedLegendSize.setSelected(v); updateLegendWidthEnabled(); }
+  public void setLegendFixedWidth(int width) {
+    if (width <= LEGEND_WIDTH_NARROW) {
+      rbLegendWidthNarrow.setSelected(true);
+    } else if (width >= LEGEND_WIDTH_WIDE) {
+      rbLegendWidthWide.setSelected(true);
+    } else {
+      rbLegendWidthMedium.setSelected(true);
+    }
+    updateLegendWidthEnabled();
+  }
 
   public void addChangeListener(ActionListener listener) {
     chkHideBuiltInLegend.addActionListener(listener);
@@ -138,6 +207,10 @@ public class ChartSettingsPanel extends JPanel {
     chkHideXAxis        .addActionListener(listener);
     chkHidePlotInsets   .addActionListener(listener);
     chkHideChartPadding .addActionListener(listener);
+    chkFixedLegendSize  .addActionListener(listener);
+    rbLegendWidthNarrow .addActionListener(listener);
+    rbLegendWidthMedium .addActionListener(listener);
+    rbLegendWidthWide   .addActionListener(listener);
   }
 
   private static final class ChartPreviewPanel extends JPanel {

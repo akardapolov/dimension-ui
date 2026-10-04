@@ -79,6 +79,7 @@ public final class ConnectionSelectionHandler extends AbstractTableSelectionHand
     if (id == null) {
       clearJdbc();
       clearHttp();
+      clearJmx();
       connectionPanel.getJButtonTemplate().setEnabled(false);
       ButtonPanelBindings.setViewMode(connectionButtonPanel, false);
       if (!checkboxConfig.isSelected()) {
@@ -91,6 +92,7 @@ public final class ConnectionSelectionHandler extends AbstractTableSelectionHand
     if (info == null) {
       clearJdbc();
       clearHttp();
+      clearJmx();
       connectionPanel.getJButtonTemplate().setEnabled(false);
       ButtonPanelBindings.setViewMode(connectionButtonPanel, false);
       if (!checkboxConfig.isSelected()) {
@@ -104,10 +106,17 @@ public final class ConnectionSelectionHandler extends AbstractTableSelectionHand
     if (ConnectionType.HTTP.equals(type)) {
       fillHttp(info);
       clearJdbc();
+      clearJmx();
       connectionPanel.setSelectedTabFull(ConnectionTypeTabPane.HTTP);
+    } else if (ConnectionType.JMX.equals(type)) {
+      fillJmx(info);
+      clearJdbc();
+      clearHttp();
+      connectionPanel.setSelectedTabFull(ConnectionTypeTabPane.JMX);
     } else {
       fillJdbc(info);
       clearHttp();
+      clearJmx();
       connectionPanel.setSelectedTabFull(ConnectionTypeTabPane.JDBC);
     }
 
@@ -147,6 +156,13 @@ public final class ConnectionSelectionHandler extends AbstractTableSelectionHand
     }
   }
 
+  private void fillJmx(ConnectionInfo info) {
+    connectionPanel.getJTextFieldJmxName().setText(info.getName());
+    connectionPanel.getJTextFieldJmxURL().setText(info.getUrl());
+    connectionPanel.getJTextFieldJmxUserName().setText(info.getUserName());
+    connectionPanel.getJTextFieldJmxPassword().setText(info.getPassword());
+  }
+
   private void clearJdbc() {
     connectionPanel.getJTextFieldConnectionName().setEditable(false);
     connectionPanel.getJTextFieldConnectionUserName().setEditable(false);
@@ -182,5 +198,20 @@ public final class ConnectionSelectionHandler extends AbstractTableSelectionHand
     connectionPanel.getBtnLoadHttp().setEnabled(false);
     connectionPanel.getMethodRadioButtonPanel().setButtonNotView();
     connectionPanel.getParseRadioButtonPanel().setButtonNotView();
+  }
+
+  private void clearJmx() {
+    connectionPanel.getJTextFieldJmxName().setEditable(false);
+    connectionPanel.getJTextFieldJmxURL().setEditable(false);
+    connectionPanel.getJTextFieldJmxUserName().setEditable(false);
+    connectionPanel.getJTextFieldJmxPassword().setEditable(false);
+
+    connectionPanel.getJTextFieldJmxName().setText("");
+    connectionPanel.getJTextFieldJmxURL().setText("");
+    connectionPanel.getJTextFieldJmxUserName().setText("");
+    connectionPanel.getJTextFieldJmxPassword().setText("");
+
+    connectionPanel.getJTextFieldJmxName().setPrompt(bundleDefault.getString("cName"));
+    connectionPanel.getJTextFieldJmxUserName().setPrompt(bundleDefault.getString("cUserName"));
   }
 }

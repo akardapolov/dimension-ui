@@ -17,6 +17,8 @@ public class Resource_ru extends ListResourceBundle {
           {"cPass", "Пароль"},
           {"cJar", "Путь к jar файлу"},
           {"cDriver", "Драйвер"},
+          {"cJmxURL", "JMX host:port или service:jmx url, пусто — локальная JVM"},
+          {"cJmxHint", "Пустой URL — мониторинг JVM этого приложения (локальный режим). Учётные данные удалённого подключения передаются без шифрования (без SSL)"},
           {"qName", "Имя запроса"},
           {"qDesc", "Описание запроса"},
           {"qSqlText", "Текст SQl"},

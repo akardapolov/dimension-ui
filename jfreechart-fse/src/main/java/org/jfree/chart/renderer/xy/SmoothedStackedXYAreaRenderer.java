@@ -25,54 +25,14 @@ import org.jfree.chart.urls.XYURLGenerator;
 import org.jfree.data.xy.TableXYDataset;
 import org.jfree.data.xy.XYDataset;
 
-/**
- * A stacked-area renderer whose top/bottom band boundaries are smoothed
- * using <b>monotone cubic Hermite interpolation</b> (Fritsch-Carlson
- * method), performed entirely in Java2D (screen) space at paint time.
- *
- * <p>Why not a natural cubic spline? A natural cubic spline (see
- * {@link XYSplineRenderer}) can <em>overshoot</em> between data points -
- * for noisy/spiky real-time data this produces visible artifacts in a
- * stacked-area fill:
- * <ul>
- *   <li>Self-intersecting loops within a single band (the interpolated
- *       curve dips past a neighbouring point), which under the
- *       non-zero winding rule can punch a thin "hole" through the fill;</li>
- *   <li>Because top/bottom boundaries between adjacent stacked series
- *       share the same control points but were historically computed
- *       independently (once forward, once via a reversed point list),
- *       floating point rounding in the tridiagonal solve produced tiny,
- *       sub-pixel mismatches, visible as hairline seams between colours.</li>
- * </ul>
- * Monotone cubic interpolation never exceeds the local min/max of its
- * two neighbouring points (no overshoot, so no self-intersections), and
- * each interpolated value depends only on local neighbours (no global
- * linear system), so it is both branch- and order-independent. To
- * guarantee bit-identical boundaries between stacked series, the curve
- * for a set of control points is computed exactly once (forward); when
- * the same geometry needs to be traced in the opposite direction (e.g.
- * the bottom edge of a fill, traced right-to-left), the already
- * computed point list is simply reversed - never recomputed.
- *
- * @since custom (jfreechart-fse fork)
- */
 public class SmoothedStackedXYAreaRenderer extends StackedXYAreaRenderer3 {
 
     private static final long serialVersionUID = 2L;
 
-    /** Tolerance (Java2D units) used to detect/skip duplicate x points. */
     private static final double DUPLICATE_X_EPS = 1.0e-6;
 
-    /** Number of interpolated segments inserted between two data points. */
     private int precision;
 
-    /**
-     * When {@code true}, each filled run is additionally outlined with a
-     * thin stroke using the same paint as the fill. This is a standard,
-     * cheap mitigation for the hairline anti-aliasing seams that Java2D
-     * can leave between two abutting filled shapes even when their edges
-     * share numerically identical coordinates.
-     */
     private boolean hideSeams;
 
     public SmoothedStackedXYAreaRenderer() {
@@ -116,13 +76,6 @@ public class SmoothedStackedXYAreaRenderer extends StackedXYAreaRenderer3 {
         fireChangeEvent();
     }
 
-    /**
-     * State that accumulates the Java2D points (and resolved paints) for
-     * the series currently being drawn. Cleared at the start of each
-     * series pass so it works correctly with zoomed/panned views where
-     * only a sub-range of items is visited (see
-     * {@code processVisibleItemsOnly}).
-     */
     public static class SmoothState extends XYItemRendererState {
 
         final List<Point2D> topPoints = new ArrayList<Point2D>();
@@ -177,7 +130,6 @@ public class SmoothedStackedXYAreaRenderer extends StackedXYAreaRenderer3 {
         RectangleEdge domainEdge = plot.getDomainAxisEdge();
         RectangleEdge rangeEdge = plot.getRangeAxisEdge();
 
-        // --- compute this item's stacked top/base values -------------
         double x1 = dataset.getXValue(series, item);
         double y1 = dataset.getYValue(series, item);
         if (Double.isNaN(y1)) {
@@ -194,7 +146,6 @@ public class SmoothedStackedXYAreaRenderer extends StackedXYAreaRenderer3 {
         double transTop = rangeAxis.valueToJava2D(topValue, dataArea, rangeEdge);
         double transBase = rangeAxis.valueToJava2D(baseValue, dataArea, rangeEdge);
 
-        // --- accumulate points for later smoothed fill ----------------
         boolean duplicate = !Double.isNaN(s.lastTransX)
             && Math.abs(transX - s.lastTransX) < DUPLICATE_X_EPS;
         if (!Double.isNaN(transX) && !Double.isNaN(transTop)
@@ -215,7 +166,6 @@ public class SmoothedStackedXYAreaRenderer extends StackedXYAreaRenderer3 {
             s.lastTransX = transX;
         }
 
-        // --- entity / tooltip hotspot (unchanged behaviour, per item) --
         EntityCollection entities = null;
         if (info != null) {
             entities = info.getOwner().getEntityCollection();
@@ -250,18 +200,11 @@ public class SmoothedStackedXYAreaRenderer extends StackedXYAreaRenderer3 {
             addEntity(entities, hotspot, dataset, series, item, transX, transTop);
         }
 
-        // --- flush: paint the smoothed area for this series ------------
         if (item == s.getLastItemIndex()) {
             paintSmoothedSeries(g2, orientation, s);
         }
     }
 
-    /**
-     * Splits the accumulated points into contiguous runs of identical
-     * paint and fills each run as a smoothed polygon. Adjacent runs share
-     * one boundary point so there is no seam/gap between differently
-     * coloured sections (used for selection-region highlighting).
-     */
     private void paintSmoothedSeries(Graphics2D g2, PlotOrientation orientation,
                                      SmoothState s) {
         int n = s.topPoints.size();
@@ -269,7 +212,7 @@ public class SmoothedStackedXYAreaRenderer extends StackedXYAreaRenderer3 {
             return;
         }
         if (n == 1) {
-            return; // a single point cannot form a visible filled area
+            return;
         }
 
         int idx = 0;
@@ -298,8 +241,6 @@ public class SmoothedStackedXYAreaRenderer extends StackedXYAreaRenderer3 {
             return;
         }
         if (m == 1) {
-            // degenerate run - draw a thin line so something is visible
-            // rather than silently dropping it.
             Point2D t = tops.get(0);
             Point2D b = bottoms.get(0);
             GeneralPath line = new GeneralPath();
@@ -310,10 +251,6 @@ public class SmoothedStackedXYAreaRenderer extends StackedXYAreaRenderer3 {
             return;
         }
 
-        // Compute each boundary curve exactly once, forward, so that
-        // whenever the *same* control points are used as the opposite
-        // boundary of a neighbouring series, the resulting geometry is
-        // bit-identical (only the traversal direction differs).
         List<Point2D> topCurve = computeMonotoneCurve(tops, orientation);
         List<Point2D> bottomCurve = computeMonotoneCurve(bottoms, orientation);
 
@@ -325,11 +262,6 @@ public class SmoothedStackedXYAreaRenderer extends StackedXYAreaRenderer3 {
         }
         List<Point2D> bottomReversed = new ArrayList<Point2D>(bottomCurve);
         Collections.reverse(bottomReversed);
-        // first point of bottomReversed == last point of bottomCurve ==
-        // top-right corner-ish point already reached via topCurve's last
-        // point in value, but geometrically it's the base at the same x,
-        // so start appending from index 0 of the reversed list (it is the
-        // right-most base point, distinct from the top boundary).
         for (Point2D p : bottomReversed) {
             path.lineTo(p.getX(), p.getY());
         }
@@ -346,23 +278,6 @@ public class SmoothedStackedXYAreaRenderer extends StackedXYAreaRenderer3 {
         }
     }
 
-    /**
-     * Computes a monotone cubic Hermite interpolation (Fritsch-Carlson)
-     * through the given control points, expressed in Java2D space, and
-     * returns the full list of points (including the originals) tracing
-     * the curve in the <em>same order</em> as the input. The curve never
-     * exceeds the local min/max of its two neighbouring control points,
-     * so - unlike a natural cubic spline - it cannot overshoot and
-     * therefore cannot produce self-intersecting loops in the resulting
-     * fill path.
-     *
-     * @param points  control points, must have monotonically increasing
-     *                domain-axis coordinate (x for VERTICAL orientation,
-     *                y for HORIZONTAL orientation).
-     * @param orientation  the plot orientation.
-     *
-     * @return the interpolated point list, same traversal order as input.
-     */
     private List<Point2D> computeMonotoneCurve(List<Point2D> points,
                                                PlotOrientation orientation) {
 
@@ -391,22 +306,19 @@ public class SmoothedStackedXYAreaRenderer extends StackedXYAreaRenderer3 {
         }
 
         int segCount = n - 1;
-        double[] d = new double[segCount]; // secant slopes
+        double[] d = new double[segCount];
         for (int i = 0; i < segCount; i++) {
             double h = x[i + 1] - x[i];
             d[i] = (h > 1.0e-9) ? (y[i + 1] - y[i]) / h : 0.0;
         }
 
-        double[] mtan = new double[n]; // tangents
+        double[] mtan = new double[n];
         mtan[0] = d[0];
         mtan[n - 1] = d[segCount - 1];
         for (int i = 1; i < n - 1; i++) {
             mtan[i] = (d[i - 1] + d[i]) / 2.0;
         }
 
-        // Fritsch-Carlson monotonicity constraint (sequential sweep -
-        // deliberately uses already-adjusted tangents from the previous
-        // iteration, matching the standard reference algorithm).
         for (int i = 0; i < segCount; i++) {
             if (d[i] == 0.0) {
                 mtan[i] = 0.0;
@@ -431,12 +343,9 @@ public class SmoothedStackedXYAreaRenderer extends StackedXYAreaRenderer3 {
             }
         }
 
-        // Sample each segment using cubic Hermite basis functions.
         for (int i = 0; i < segCount; i++) {
             double h = x[i + 1] - x[i];
             if (h <= 1.0e-9) {
-                // degenerate (near-zero width) segment - nothing to
-                // interpolate, just carry the endpoint forward.
                 Point2D endPoint = orientation == PlotOrientation.HORIZONTAL
                     ? new Point2D.Double(y[i + 1], x[i + 1])
                     : new Point2D.Double(x[i + 1], y[i + 1]);
@@ -464,10 +373,6 @@ public class SmoothedStackedXYAreaRenderer extends StackedXYAreaRenderer3 {
         return result;
     }
 
-    /**
-     * Duplicate of the private {@code getStackValues} helper in
-     * {@link StackedXYAreaRenderer3} (not accessible from a subclass).
-     */
     private double[] getStackValuesLocal(TableXYDataset dataset, int series,
                                          int index) {
         double[] result = new double[2];

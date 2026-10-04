@@ -2,6 +2,7 @@ package ru.dimension.ui.view.panel.config.connection;
 
 import static ru.dimension.ui.model.view.tab.ConnectionTypeTabPane.HTTP;
 import static ru.dimension.ui.model.view.tab.ConnectionTypeTabPane.JDBC;
+import static ru.dimension.ui.model.view.tab.ConnectionTypeTabPane.JMX;
 
 import java.util.ResourceBundle;
 import jakarta.inject.Inject;
@@ -55,6 +56,11 @@ public class ConnectionPanel extends JPanel {
   private final ParseRadioButtonPanel parseRadioButtonPanel;
   private final JButton btnLoadHttp;
 
+  private final JXTextField jTextFieldJmxName;
+  private final JXTextField jTextFieldJmxURL;
+  private final JXTextField jTextFieldJmxUserName;
+  private final JPasswordField jTextFieldJmxPassword;
+
   @Inject
   public ConnectionPanel(@Named("connectionButtonPanel") ButtonPanel connectionButtonPanel,
                          @Named("connectionTemplateCase") JXTableCase connectionTemplateCase) {
@@ -99,6 +105,17 @@ public class ConnectionPanel extends JPanel {
     this.methodRadioButtonPanel.setButtonNotView();
     this.parseRadioButtonPanel = new ParseRadioButtonPanel();
     this.parseRadioButtonPanel.setButtonNotView();
+    this.jTextFieldJmxName = new JXTextField();
+    this.jTextFieldJmxName.setPrompt(bundleDefault.getString("cName"));
+    this.jTextFieldJmxName.setEditable(false);
+    this.jTextFieldJmxURL = new JXTextField();
+    this.jTextFieldJmxURL.setPrompt(bundleDefault.getString("cJmxURL"));
+    this.jTextFieldJmxURL.setEditable(false);
+    this.jTextFieldJmxUserName = new JXTextField();
+    this.jTextFieldJmxUserName.setPrompt(bundleDefault.getString("cUserName"));
+    this.jTextFieldJmxUserName.setEditable(false);
+    this.jTextFieldJmxPassword = new JPasswordField();
+    this.jTextFieldJmxPassword.setEditable(false);
 
     this.connectionTemplateCase = connectionTemplateCase;
 
@@ -109,6 +126,10 @@ public class ConnectionPanel extends JPanel {
     this.jTextFieldConnectionPassword.setBorder(finalBorder);
     this.jTextFieldConnectionJar.setBorder(finalBorder);
     this.jTextFieldConnectionDriver.setBorder(finalBorder);
+    this.jTextFieldJmxName.setBorder(finalBorder);
+    this.jTextFieldJmxURL.setBorder(finalBorder);
+    this.jTextFieldJmxUserName.setBorder(finalBorder);
+    this.jTextFieldJmxPassword.setBorder(finalBorder);
 
     JPanel jarPanel = new TextFieldWithButtonPanel(jarButton, jTextFieldConnectionJar);
 
@@ -149,6 +170,20 @@ public class ConnectionPanel extends JPanel {
 
     gblHTTP.done();
 
+    JPanel jmxPanel = new JPanel();
+    PainlessGridBag gblJMX = new PainlessGridBag(jmxPanel, PGHelper.getPGConfig(), false);
+    gblJMX.row()
+        .cell(new JLabel("Name")).cell(jTextFieldJmxName).fillX()
+        .cell(new JLabel("          ")).cell(new JLabel("User name")).cell(jTextFieldJmxUserName).fillX();
+    gblJMX.row()
+        .cell(new JLabel("URL")).cell(jTextFieldJmxURL).fillX()
+        .cell(new JLabel("          ")).cell(new JLabel("Password")).cell(jTextFieldJmxPassword).fillX();
+    gblJMX.row()
+        .cellXRemainder(new JLabel(bundleDefault.getString("cJmxHint"))).fillX();
+    gblJMX.row().cellXYRemainder(new JLabel()).fillXY();
+
+    gblJMX.done();
+
     JPanel templatePanel = new JPanel();
     PainlessGridBag gblTemplate = new PainlessGridBag(templatePanel, PGHelper.getPGConfig(0), false);
     gblTemplate.row()
@@ -161,6 +196,7 @@ public class ConnectionPanel extends JPanel {
     this.connTypeTab = new ConnTypeTab();
     this.connTypeTab.add(jdbcPanel, JDBC.getName());
     this.connTypeTab.add(httpPanel, HTTP.getName());
+    this.connTypeTab.add(jmxPanel, JMX.getName());
 
     PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(), false);
     gbl.row().cellXRemainder(connectionButtonPanel).fillX();
@@ -177,10 +213,17 @@ public class ConnectionPanel extends JPanel {
       connTypeTab.setSelectedTab(tabbedPane);
       connTypeTab.setEnabledTab(tabbedPane, true);
       connTypeTab.setEnabledTab(ConnectionTypeTabPane.HTTP, false);
+      connTypeTab.setEnabledTab(ConnectionTypeTabPane.JMX, false);
     } else if (tabbedPane.equals(ConnectionTypeTabPane.HTTP)) {
       connTypeTab.setSelectedTab(tabbedPane);
       connTypeTab.setEnabledTab(tabbedPane, true);
       connTypeTab.setEnabledTab(ConnectionTypeTabPane.JDBC, false);
+      connTypeTab.setEnabledTab(ConnectionTypeTabPane.JMX, false);
+    } else if (tabbedPane.equals(ConnectionTypeTabPane.JMX)) {
+      connTypeTab.setSelectedTab(tabbedPane);
+      connTypeTab.setEnabledTab(tabbedPane, true);
+      connTypeTab.setEnabledTab(ConnectionTypeTabPane.JDBC, false);
+      connTypeTab.setEnabledTab(ConnectionTypeTabPane.HTTP, false);
     }
   }
 }

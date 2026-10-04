@@ -92,6 +92,14 @@ public final class MultiSelectQueryHandler {
             available.add(new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()));
             addedIds.add(q.getId());
           });
+    } else if (hasConnection && connType == ConnectionType.JMX) {
+      profileManager.getJmxOrphanQueryInfoList().stream()
+          .filter(q -> !addedIds.contains(q.getId()))
+          .filter(q -> !selectedNames.contains(q.getName()))
+          .forEach(q -> {
+            available.add(new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()));
+            addedIds.add(q.getId());
+          });
     } else {
       if (driver != null) {
         profileManager.getQueryInfoListByConnDriver(driver).stream()
@@ -183,6 +191,13 @@ public final class MultiSelectQueryHandler {
 
     if (hasConnection && connType == ConnectionType.HTTP) {
       profileManager.getHttpOrphanQueryInfoList().stream()
+          .filter(q -> !addedIds.contains(q.getId()))
+          .forEach(q -> {
+            available.add(new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()));
+            addedIds.add(q.getId());
+          });
+    } else if (hasConnection && connType == ConnectionType.JMX) {
+      profileManager.getJmxOrphanQueryInfoList().stream()
           .filter(q -> !addedIds.contains(q.getId()))
           .forEach(q -> {
             available.add(new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()));

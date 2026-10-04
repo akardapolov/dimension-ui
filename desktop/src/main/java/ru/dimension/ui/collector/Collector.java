@@ -18,6 +18,10 @@ public interface Collector {
                         QueryInfo queryInfo,
                         TableInfo tableInfo);
 
+  void fillMetadataJmx(ConnectionInfo connectionInfo,
+                       QueryInfo queryInfo,
+                       TableInfo tableInfo);
+
   void start(ProfileInfo profileInfo);
 
   void stop(ProfileInfo profileInfo);

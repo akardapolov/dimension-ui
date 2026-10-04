@@ -200,6 +200,8 @@ public class PRChartPresenter extends BaseUnitPresenter<PRChartView> implements 
       return new ClientRealtimeSCP(model.getSqlQueryState(), dStore, config, key, topMapSelected);
     } else if (GatherDataMode.BY_CLIENT_HTTP.equals(queryInfo.getGatherDataMode())) {
       return new ClientRealtimeSCP(model.getSqlQueryState(), dStore, config, key, topMapSelected);
+    } else if (GatherDataMode.BY_CLIENT_JMX.equals(queryInfo.getGatherDataMode())) {
+      return new ClientRealtimeSCP(model.getSqlQueryState(), dStore, config, key, topMapSelected);
     } else {
       return new ServerRealtimeSCP(model.getSqlQueryState(), dStore, config, key, topMapSelected);
     }

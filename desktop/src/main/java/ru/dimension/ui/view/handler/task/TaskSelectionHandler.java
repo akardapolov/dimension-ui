@@ -215,6 +215,18 @@ public final class TaskSelectionHandler extends AbstractTableSelectionHandler<Ta
       return result;
     }
 
+    if (hasConnection && connectionType == ConnectionType.JMX) {
+      profileManager.getQueryInfoList().stream()
+          .filter(q -> q.getGatherDataMode() == GatherDataMode.BY_CLIENT_JMX)
+          .filter(q -> !addedIds.contains(q.getId()))
+          .forEach(q -> {
+            result.add(new QueryTableRow(q.getId(), q.getName(), q.getDescription(), q.getText()));
+            addedIds.add(q.getId());
+          });
+
+      return result;
+    }
+
     if (driver != null) {
       profileManager.getQueryInfoListByConnDriver(driver).stream()
           .filter(q -> !addedIds.contains(q.getId()))

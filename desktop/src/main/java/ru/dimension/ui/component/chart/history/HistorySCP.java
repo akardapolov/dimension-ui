@@ -321,7 +321,7 @@ public class HistorySCP extends SCP {
           log.info(GatherDataMode.BY_SERVER_JDBC.name());
           loadDataHistoryServer(chartRange);
         }
-        case BY_CLIENT_JDBC, BY_CLIENT_HTTP -> {
+        case BY_CLIENT_JDBC, BY_CLIENT_HTTP, BY_CLIENT_JMX -> {
           log.info(GatherDataMode.BY_CLIENT_JDBC.name());
           loadDataHistoryClientExp(chartRange, config.getChartInfo().getPullTimeoutClient());
         }

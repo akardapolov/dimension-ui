@@ -60,6 +60,7 @@ import ru.dimension.ui.router.event.EventDispatcher;
 import ru.dimension.ui.view.panel.template.TemplateConnPanel;
 import ru.dimension.ui.view.panel.template.TemplateEditPanel;
 import ru.dimension.ui.view.panel.template.TemplateHTTPConnPanel;
+import ru.dimension.ui.view.panel.template.TemplateJmxConnPanel;
 import ru.dimension.ui.view.table.row.Rows.TemplateConnectionRow;
 import ru.dimension.ui.view.table.row.Rows.TemplateMetricRow;
 import ru.dimension.ui.view.table.row.Rows.TemplateQueryRow;
@@ -89,6 +90,7 @@ public class TemplatePresenter extends WindowAdapter
 
   private final TemplateConnPanel templateConnPanel;
   private final TemplateHTTPConnPanel templateHTTPConnPanel;
+  private final TemplateJmxConnPanel templateJmxConnPanel;
   private final ConnTypeTab connectionTabPane;
 
   private final JXTextArea taskDescription;
@@ -115,6 +117,7 @@ public class TemplatePresenter extends WindowAdapter
                            @Named("templateMetricsCase") TTTable<TemplateMetricRow, JXTable> templateMetricsTable,
                            @Named("templateConnPanel") TemplateConnPanel templateConnPanel,
                            @Named("templateHTTPConnPanel") TemplateHTTPConnPanel templateHTTPConnPanel,
+                           @Named("templateJmxConnPanel") TemplateJmxConnPanel templateJmxConnPanel,
                            @Named("templateConnectionTab") ConnTypeTab connectionTabPane,
                            @Named("templateTaskDescription") JXTextArea taskDescription,
                            @Named("templateQueryDescription") JXTextArea queryDescription,
@@ -144,6 +147,7 @@ public class TemplatePresenter extends WindowAdapter
 
     this.templateConnPanel = templateConnPanel;
     this.templateHTTPConnPanel = templateHTTPConnPanel;
+    this.templateJmxConnPanel = templateJmxConnPanel;
     this.templateMetricsTable = templateMetricsTable;
 
     this.connectionTabPane = connectionTabPane;
@@ -240,17 +244,33 @@ public class TemplatePresenter extends WindowAdapter
             templateConnPanel.getConnectionDriver().setText(connection.getDriver());
 
             templateHTTPConnPanel.setEmpty();
+            templateJmxConnPanel.setEmpty();
             connectionTabPane.setSelectedTab(ConnectionTypeTabPane.JDBC);
             connectionTabPane.setEnabledTab(ConnectionTypeTabPane.JDBC, true);
             connectionTabPane.setEnabledTab(ConnectionTypeTabPane.HTTP, false);
+            connectionTabPane.setEnabledTab(ConnectionTypeTabPane.JMX, false);
           } else if (connection.getType().equals(ru.dimension.ui.model.type.ConnectionType.HTTP)) {
             templateHTTPConnPanel.getConnectionName().setText(connection.getName());
             templateHTTPConnPanel.getConnectionURL().setText(connection.getUrl());
 
             templateConnPanel.setEmpty();
+            templateJmxConnPanel.setEmpty();
             connectionTabPane.setSelectedTab(ConnectionTypeTabPane.HTTP);
             connectionTabPane.setEnabledTab(ConnectionTypeTabPane.HTTP, true);
             connectionTabPane.setEnabledTab(ConnectionTypeTabPane.JDBC, false);
+            connectionTabPane.setEnabledTab(ConnectionTypeTabPane.JMX, false);
+          } else if (connection.getType().equals(ru.dimension.ui.model.type.ConnectionType.JMX)) {
+            templateJmxConnPanel.getConnectionName().setText(connection.getName());
+            templateJmxConnPanel.getConnectionURL().setText(connection.getUrl());
+            templateJmxConnPanel.getConnectionUserName().setText(connection.getUserName());
+            templateJmxConnPanel.getConnectionPassword().setText(connection.getPassword());
+
+            templateConnPanel.setEmpty();
+            templateHTTPConnPanel.setEmpty();
+            connectionTabPane.setSelectedTab(ConnectionTypeTabPane.JMX);
+            connectionTabPane.setEnabledTab(ConnectionTypeTabPane.JMX, true);
+            connectionTabPane.setEnabledTab(ConnectionTypeTabPane.JDBC, false);
+            connectionTabPane.setEnabledTab(ConnectionTypeTabPane.HTTP, false);
           }
 
           templateConnTable.table().setRowSelectionInterval(0, 0);
@@ -374,9 +394,11 @@ public class TemplatePresenter extends WindowAdapter
         templateEditPanel.getConnJar().setText(connection.getJar());
 
         templateEditPanel.setEmptyHttpPanel();
+        templateEditPanel.setEmptyJmxPanel();
         templateEditPanel.getConnTypeTab().setSelectedTab(ConnectionTypeTabPane.JDBC);
         templateEditPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.JDBC, true);
         templateEditPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.HTTP, false);
+        templateEditPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.JMX, false);
       } else if (connection.getType().equals(ConnectionType.HTTP)) {
         templateEditPanel.getJTextFieldHttpName().setText(connection.getName());
         templateEditPanel.getJTextFieldHttpURL().setText(connection.getUrl());
@@ -384,9 +406,23 @@ public class TemplatePresenter extends WindowAdapter
         templateEditPanel.getParseRadioButtonPanel().setSelectedRadioButton(connection.getParseType());
 
         templateEditPanel.setEmptyJdbcPanel();
+        templateEditPanel.setEmptyJmxPanel();
         templateEditPanel.getConnTypeTab().setSelectedTab(ConnectionTypeTabPane.HTTP);
         templateEditPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.HTTP, true);
         templateEditPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.JDBC, false);
+        templateEditPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.JMX, false);
+      } else if (connection.getType().equals(ConnectionType.JMX)) {
+        templateEditPanel.getJTextFieldJmxName().setText(connection.getName());
+        templateEditPanel.getJTextFieldJmxURL().setText(connection.getUrl());
+        templateEditPanel.getJTextFieldJmxUserName().setText(connection.getUserName());
+        templateEditPanel.getJTextFieldJmxPassword().setText("");
+
+        templateEditPanel.setEmptyJdbcPanel();
+        templateEditPanel.setEmptyHttpPanel();
+        templateEditPanel.getConnTypeTab().setSelectedTab(ConnectionTypeTabPane.JMX);
+        templateEditPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.JMX, true);
+        templateEditPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.JDBC, false);
+        templateEditPanel.getConnTypeTab().setEnabledTab(ConnectionTypeTabPane.HTTP, false);
       }
 
       templateEditPanel.getQueryName().setText(query.getName());
@@ -407,6 +443,8 @@ public class TemplatePresenter extends WindowAdapter
         changeStatusIfEntityExist(Connection.class, templateEditPanel.getConnName().getText());
       } else if (connection.getType().equals(ru.dimension.ui.model.type.ConnectionType.HTTP)) {
         changeStatusIfEntityExist(Connection.class, templateEditPanel.getJTextFieldHttpName().getText());
+      } else if (connection.getType().equals(ru.dimension.ui.model.type.ConnectionType.JMX)) {
+        changeStatusIfEntityExist(Connection.class, templateEditPanel.getJTextFieldJmxName().getText());
       }
 
       DefaultTableModel defaultTableModel = templateEditPanel.getTemplateQueryCase().getDefaultTableModel();
@@ -421,7 +459,8 @@ public class TemplatePresenter extends WindowAdapter
       if (!templateEditPanel.getProfileName().getText().trim().isEmpty() &&
           !templateEditPanel.getTaskName().getText().trim().isEmpty() &&
           (!templateEditPanel.getConnName().getText().trim().isEmpty() ||
-              !templateEditPanel.getJTextFieldHttpName().getText().trim().isEmpty())) {
+              !templateEditPanel.getJTextFieldHttpName().getText().trim().isEmpty() ||
+              !templateEditPanel.getJTextFieldJmxName().getText().trim().isEmpty())) {
         raiseAnErrorIfEntityExist(Profile.class, templateEditPanel.getProfileName().getText());
 
         raiseAnErrorIfEntityExist(Task.class, templateEditPanel.getTaskName().getText());
@@ -430,6 +469,8 @@ public class TemplatePresenter extends WindowAdapter
           raiseAnErrorIfEntityExist(Connection.class, templateEditPanel.getConnName().getText());
         } else if (connection.getType().equals(ru.dimension.ui.model.type.ConnectionType.HTTP)) {
           raiseAnErrorIfEntityExist(Connection.class, templateEditPanel.getJTextFieldHttpName().getText());
+        } else if (connection.getType().equals(ru.dimension.ui.model.type.ConnectionType.JMX)) {
+          raiseAnErrorIfEntityExist(Connection.class, templateEditPanel.getJTextFieldJmxName().getText());
         }
 
         DefaultTableModel defaultTableModel = templateEditPanel.getTemplateQueryCase().getDefaultTableModel();
@@ -500,6 +541,12 @@ public class TemplatePresenter extends WindowAdapter
                                                                        .getButtonGroup());
           ParseType parseType = ParseType.valueOf(selectedParse.getText().toUpperCase());
           connection.setParseType(parseType);
+        } else if (connection.getType().equals(ru.dimension.ui.model.type.ConnectionType.JMX)) {
+          connection.setName(templateEditPanel.getJTextFieldJmxName().getText());
+          connection.setUrl(templateEditPanel.getJTextFieldJmxURL().getText().trim());
+          connection.setUserName(templateEditPanel.getJTextFieldJmxUserName().getText());
+          connection.setPassword(encryptDecrypt.encrypt(String.valueOf(templateEditPanel.getJTextFieldJmxPassword()
+                                                                             .getPassword())));
         }
 
         configurationManager.addConfig(connection, Connection.class);

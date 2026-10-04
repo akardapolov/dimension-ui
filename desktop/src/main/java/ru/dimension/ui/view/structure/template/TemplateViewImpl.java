@@ -34,6 +34,7 @@ import ru.dimension.ui.model.config.Task;
 import ru.dimension.ui.model.view.tab.ConnectionTypeTabPane;
 import ru.dimension.ui.view.panel.template.TemplateConnPanel;
 import ru.dimension.ui.view.panel.template.TemplateHTTPConnPanel;
+import ru.dimension.ui.view.panel.template.TemplateJmxConnPanel;
 import ru.dimension.ui.view.structure.TemplateView;
 import ru.dimension.ui.view.tab.ConnTypeTab;
 import ru.dimension.ui.view.table.row.Rows.TemplateConnectionRow;
@@ -60,6 +61,7 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
 
   private final TemplateConnPanel templateConnPanel;
   private final TemplateHTTPConnPanel templateHTTPConnPanel;
+  private final TemplateJmxConnPanel templateJmxConnPanel;
 
   private final JXTextArea taskDescription;
   private final JXTextArea queryDescription;
@@ -74,6 +76,7 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
                           @Named("templateMetricsCase") TTTable<TemplateMetricRow, JXTable> templateMetricsTable,
                           @Named("templateConnPanel") TemplateConnPanel templateConnPanel,
                           @Named("templateHTTPConnPanel") TemplateHTTPConnPanel templateHTTPConnPanel,
+                          @Named("templateJmxConnPanel") TemplateJmxConnPanel templateJmxConnPanel,
                           @Named("templateConnectionTab") ConnTypeTab connectionTabPane,
                           @Named("templateTaskDescription") JXTextArea taskDescription,
                           @Named("templateQueryDescription") JXTextArea queryDescription,
@@ -88,6 +91,7 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
 
     this.templateConnPanel = templateConnPanel;
     this.templateHTTPConnPanel = templateHTTPConnPanel;
+    this.templateJmxConnPanel = templateJmxConnPanel;
 
     this.taskDescription = taskDescription;
     this.queryDescription = queryDescription;
@@ -96,6 +100,7 @@ public class TemplateViewImpl extends JDialog implements TemplateView {
     this.connectionTabPane = connectionTabPane;
     this.connectionTabPane.add(this.templateConnPanel, ConnectionTypeTabPane.JDBC.getName());
     this.connectionTabPane.add(this.templateHTTPConnPanel, ConnectionTypeTabPane.HTTP.getName());
+    this.connectionTabPane.add(this.templateJmxConnPanel, ConnectionTypeTabPane.JMX.getName());
 
     this.jPanelLine = new JPanel(new GridLayout(1, 7, 5, 5));
     this.jPanel0Line = new JPanel(new GridLayout(1, 3, 5, 5));

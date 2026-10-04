@@ -69,6 +69,7 @@ public class TemplateEditPanel extends JDialog {
   private final ConnTypeTab connTypeTab;
   private final JPanel jdbcPanel;
   private final JPanel httpPanel;
+  private final JPanel jmxPanel;
   private final JXTextField connName;
   private final JXTextField connUserName;
   private final JPasswordField connPassword;
@@ -80,6 +81,11 @@ public class TemplateEditPanel extends JDialog {
   private final JXTextField jTextFieldHttpURL;
   private final MethodRadioButtonPanel methodRadioButtonPanel;
   private final ParseRadioButtonPanel parseRadioButtonPanel;
+
+  private final JXTextField jTextFieldJmxName;
+  private final JXTextField jTextFieldJmxURL;
+  private final JXTextField jTextFieldJmxUserName;
+  private final JPasswordField jTextFieldJmxPassword;
 
   private final JXTextField queryName;
   private final JXTextField queryDesc;
@@ -132,6 +138,7 @@ public class TemplateEditPanel extends JDialog {
     this.connTypeTab = new ConnTypeTab();
     this.jdbcPanel = new JPanel();
     this.httpPanel = new JPanel();
+    this.jmxPanel = new JPanel();
 
     this.connName = new JXTextField();
     this.connName.setPrompt("Connection name");
@@ -156,6 +163,13 @@ public class TemplateEditPanel extends JDialog {
     this.methodRadioButtonPanel.setButtonView();
     this.parseRadioButtonPanel = new ParseRadioButtonPanel();
     this.parseRadioButtonPanel.setButtonView();
+    this.jTextFieldJmxName = new JXTextField();
+    this.jTextFieldJmxName.setPrompt(bundleDefault.getString("cName"));
+    this.jTextFieldJmxURL = new JXTextField();
+    this.jTextFieldJmxURL.setPrompt(bundleDefault.getString("cJmxURL"));
+    this.jTextFieldJmxUserName = new JXTextField();
+    this.jTextFieldJmxUserName.setPrompt(bundleDefault.getString("cUserName"));
+    this.jTextFieldJmxPassword = new JPasswordField();
 
     this.queryName = new JXTextField();
     this.queryName.setPrompt("Query name");
@@ -325,8 +339,24 @@ public class TemplateEditPanel extends JDialog {
 
     gblHTTP.done();
 
+    PainlessGridBag gblJMX = new PainlessGridBag(jmxPanel, PGHelper.getPGConfig(), false);
+    gblJMX.row()
+        .cell(new JLabel("Name")).cellXRemainder(jTextFieldJmxName).fillX();
+    gblJMX.row()
+        .cell(new JLabel("URL")).cellXRemainder(jTextFieldJmxURL).fillX();
+    gblJMX.row()
+        .cell(new JLabel("User name")).cell(jTextFieldJmxUserName).fillX()
+        .cell(new JLabel("Password")).cell(jTextFieldJmxPassword).fillX();
+    gblJMX.row()
+        .cellXRemainder(new JLabel(bundleDefault.getString("cJmxHint"))).fillX();
+    gblJMX.row()
+        .cellXYRemainder(new JLabel()).fillXY();
+
+    gblJMX.done();
+
     this.connTypeTab.add(jdbcPanel, ConnectionTypeTabPane.JDBC.getName());
     this.connTypeTab.add(httpPanel, ConnectionTypeTabPane.HTTP.getName());
+    this.connTypeTab.add(jmxPanel, ConnectionTypeTabPane.JMX.getName());
 
     return connTypeTab;
   }
@@ -356,5 +386,12 @@ public class TemplateEditPanel extends JDialog {
     this.jTextFieldHttpURL.setText("");
     this.methodRadioButtonPanel.setButtonView();
     this.parseRadioButtonPanel.setButtonView();
+  }
+
+  public void setEmptyJmxPanel() {
+    this.jTextFieldJmxName.setText("");
+    this.jTextFieldJmxURL.setText("");
+    this.jTextFieldJmxUserName.setText("");
+    this.jTextFieldJmxPassword.setText("");
   }
 }

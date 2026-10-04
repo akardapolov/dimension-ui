@@ -24,4 +24,10 @@ public class ChartUISettings {
   @SerializedName(value = "hideChartPadding")
   private boolean hideChartPadding = true;
 
+  @SerializedName(value = "legendFixedSize")
+  private boolean legendFixedSize = false;
+
+  @SerializedName(value = "legendFixedWidth")
+  private int legendFixedWidth = 150;
+
 }

@@ -356,6 +356,7 @@ public class ModelIconProviders {
       case FIREBIRD -> "Firebird";
       case SQLITE -> "SQLite";
       case HTTP -> "HTTP/REST API";
+      case JMX -> "Java Monitoring (JMX)";
       case UNKNOWN -> "Unknown Database";
     };
   }

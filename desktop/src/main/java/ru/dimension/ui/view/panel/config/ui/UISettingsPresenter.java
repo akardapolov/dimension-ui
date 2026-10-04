@@ -48,6 +48,8 @@ public class UISettingsPresenter {
       view.getChartSettingsPanel().setHideXAxis(settings.getChartSettings().isHideXAxis());
       view.getChartSettingsPanel().setHidePlotInsets(settings.getChartSettings().isHidePlotInsets());
       view.getChartSettingsPanel().setHideChartPadding(settings.getChartSettings().isHideChartPadding());
+      view.getChartSettingsPanel().setLegendFixedSize(settings.getChartSettings().isLegendFixedSize());
+      view.getChartSettingsPanel().setLegendFixedWidth(settings.getChartSettings().getLegendFixedWidth());
     } catch (Exception e) {
       log.error("Failed to load UI settings", e);
     }
@@ -61,6 +63,8 @@ public class UISettingsPresenter {
       settings.getChartSettings().setHideXAxis(view.getChartSettingsPanel().isHideXAxis());
       settings.getChartSettings().setHidePlotInsets(view.getChartSettingsPanel().isHidePlotInsets());
       settings.getChartSettings().setHideChartPadding(view.getChartSettingsPanel().isHideChartPadding());
+      settings.getChartSettings().setLegendFixedSize(view.getChartSettingsPanel().isLegendFixedSize());
+      settings.getChartSettings().setLegendFixedWidth(view.getChartSettingsPanel().getLegendFixedWidth());
 
       List<UISettings> existing = configurationManager.getConfigList(UISettings.class);
       if (existing.isEmpty()) {

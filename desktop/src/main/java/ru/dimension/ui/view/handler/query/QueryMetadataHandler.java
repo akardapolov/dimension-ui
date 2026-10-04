@@ -32,6 +32,7 @@ import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.bus.EventBus;
 import ru.dimension.ui.bus.event.UpdateMetadataColumnsEvent;
 import ru.dimension.ui.collector.HttpLoader;
+import ru.dimension.ui.collector.JmxLoader;
 import ru.dimension.ui.collector.collect.prometheus.ExporterParser;
 import ru.dimension.ui.collector.http.HttpResponseFetcher;
 import ru.dimension.ui.exception.NotFoundException;
@@ -57,7 +58,7 @@ import ru.dimension.ui.view.table.row.Rows.QueryRow;
 
 @Log4j2
 @Singleton
-public final class QueryMetadataHandler implements ActionListener, CommonViewHandler, HttpLoader {
+public final class QueryMetadataHandler implements ActionListener, CommonViewHandler, HttpLoader, JmxLoader {
 
   private final JXTableCase profileCase;
   private final JXTableCase taskCase;
@@ -368,6 +369,8 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
       loadMetadataJdbc(connectionInfo);
     } else if (ConnectionType.HTTP.equals(connectionInfo.getType())) {
       loadMetadataHttp(connectionInfo);
+    } else if (ConnectionType.JMX.equals(connectionInfo.getType())) {
+      loadMetadataJmx(connectionInfo);
     } else {
       loadMetadataJdbc(connectionInfo);
     }
@@ -470,6 +473,53 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
       sProfile.setCompression(true);
 
       fillSProfileFromResponse(exporterParser, httpResponseFetcher.fetchResponse(getHttpProtocol(connectionInfo)), sProfile);
+      tProfile = dStore.loadDirectTableMetadata(sProfile);
+    } catch (Exception e) {
+      log.catching(e);
+      throw new RuntimeException(e);
+    }
+
+    queryInfo.setDbType(connectionInfo.getDbType());
+    queryInfo.setMetricList(new ArrayList<>());
+
+    tableInfo.setTableType(tProfile.getTableType());
+    tableInfo.setIndexType(tProfile.getIndexType());
+    tableInfo.setBackendType(tProfile.getBackendType());
+    tableInfo.setCompression(tProfile.getCompression());
+    tableInfo.setCProfiles(tProfile.getCProfiles());
+
+    autoSelectTimestampColumn(tableInfo);
+
+    profileManager.updateQuery(queryInfo);
+    profileManager.updateTable(tableInfo);
+
+    updateMetadataUI(tableInfo);
+
+    fillTimestampComboBox(tableInfo.getCProfiles());
+
+    updateTableInfo(tableInfo);
+
+    configMetadataCase.getDefaultTableModel().fireTableDataChanged();
+
+    publishMetadataUpdate(queryInfo.getId(), queryInfo.getName(), tableInfo.getCProfiles());
+  }
+
+  private void loadMetadataJmx(ConnectionInfo connectionInfo) {
+    int queryId = getSelectedQueryId();
+
+    QueryInfo queryInfo = getQueryInfo(queryId);
+    TableInfo tableInfo = getTableInfo(queryInfo);
+
+    TProfile tProfile;
+    try {
+      SProfile sProfile = new SProfile();
+      sProfile.setTableName(tableInfo.getTableName());
+      sProfile.setTableType(tableInfo.getTableType() == null ? TType.TIME_SERIES : tableInfo.getTableType());
+      sProfile.setIndexType(tableInfo.getIndexType() == null ? IType.LOCAL : tableInfo.getIndexType());
+      sProfile.setBackendType(tableInfo.getBackendType() == null ? BType.BERKLEYDB : tableInfo.getBackendType());
+      sProfile.setCompression(true);
+
+      fillSProfileJmx(sProfile);
       tProfile = dStore.loadDirectTableMetadata(sProfile);
     } catch (Exception e) {
       log.catching(e);

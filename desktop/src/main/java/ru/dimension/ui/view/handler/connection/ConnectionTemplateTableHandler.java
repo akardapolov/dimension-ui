@@ -111,6 +111,12 @@ public final class ConnectionTemplateTableHandler implements ListSelectionListen
         connectionPanel.getParseRadioButtonPanel().setSelectedRadioButton(select.getParseType());
       }
       connectionPanel.setSelectedTabFull(ConnectionTypeTabPane.HTTP);
+    } else if (ConnectionType.JMX.equals(select.getType())) {
+      connectionPanel.getJTextFieldJmxName().setText(select.getName());
+      connectionPanel.getJTextFieldJmxURL().setText(select.getUrl());
+      connectionPanel.getJTextFieldJmxUserName().setText(select.getUserName());
+      connectionPanel.getJTextFieldJmxPassword().setText(select.getPassword());
+      connectionPanel.setSelectedTabFull(ConnectionTypeTabPane.JMX);
     } else {
       connectionPanel.getJTextFieldConnectionName().setText(select.getName());
       connectionPanel.getJTextFieldConnectionURL().setText(select.getUrl());
@@ -147,6 +153,7 @@ public final class ConnectionTemplateTableHandler implements ListSelectionListen
   private void enterTemplatePreviewMode() {
     connectionPanel.getJTextFieldConnectionName().setEditable(true);
     connectionPanel.getJTextFieldHttpName().setEditable(true);
+    connectionPanel.getJTextFieldJmxName().setEditable(true);
 
     connectionPanel.getJTextFieldConnectionUserName().setEditable(false);
     connectionPanel.getJTextFieldConnectionPassword().setEditable(false);
@@ -154,6 +161,9 @@ public final class ConnectionTemplateTableHandler implements ListSelectionListen
     connectionPanel.getJTextFieldConnectionJar().setEditable(false);
     connectionPanel.getJTextFieldConnectionURL().setEditable(false);
     connectionPanel.getJTextFieldHttpURL().setEditable(false);
+    connectionPanel.getJTextFieldJmxURL().setEditable(false);
+    connectionPanel.getJTextFieldJmxUserName().setEditable(false);
+    connectionPanel.getJTextFieldJmxPassword().setEditable(false);
 
     connectionPanel.getConnectionButtonPanel().getBtnNew().setEnabled(false);
     connectionPanel.getConnectionButtonPanel().getBtnCopy().setEnabled(false);
@@ -205,6 +215,8 @@ public final class ConnectionTemplateTableHandler implements ListSelectionListen
     String newName;
     if (ConnectionType.HTTP.equals(select.getType())) {
       newName = connectionPanel.getJTextFieldHttpName().getText();
+    } else if (ConnectionType.JMX.equals(select.getType())) {
+      newName = connectionPanel.getJTextFieldJmxName().getText();
     } else {
       newName = connectionPanel.getJTextFieldConnectionName().getText();
     }
@@ -238,6 +250,10 @@ public final class ConnectionTemplateTableHandler implements ListSelectionListen
     if (ConnectionType.HTTP.equals(copy.getType())) {
       copy.setHttpMethod(select.getHttpMethod());
       copy.setParseType(select.getParseType());
+    }
+
+    if (ConnectionType.JMX.equals(copy.getType())) {
+      copy.setUrl(select.getUrl() == null ? "" : select.getUrl().trim());
     }
 
     profileManager.addConnection(copy);

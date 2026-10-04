@@ -24,15 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Tests for the {@link SmoothedStackedXYAreaRenderer} class.
- */
 public class SmoothedStackedXYAreaRendererTest {
 
-    /**
-     * A sparse two-series dataset (five points each) - enough points to
-     * exercise the spline interpolation path of the renderer.
-     */
     private DefaultTableXYDataset createSparseDataset() {
         DefaultTableXYDataset result = new DefaultTableXYDataset();
         XYSeries series1 = new XYSeries("Series 1", false, false);
@@ -52,10 +45,6 @@ public class SmoothedStackedXYAreaRendererTest {
         return result;
     }
 
-    /**
-     * Test chart drawing with an empty dataset to ensure that this special
-     * case doesn't cause any exceptions.
-     */
     @Test
     public void testDrawWithEmptyDataset() {
         JFreeChart chart = ChartFactory.createStackedXYAreaChart("title", "x",
@@ -70,11 +59,6 @@ public class SmoothedStackedXYAreaRendererTest {
         g2.dispose();
     }
 
-    /**
-     * Test chart drawing with a sparse dataset (the case the renderer is
-     * made for): the spline path for top and bottom boundaries must run
-     * without exceptions and produce non-empty pixels.
-     */
     @Test
     public void testDrawWithSparseDataset() {
         JFreeChart chart = ChartFactory.createStackedXYAreaChart("title", "x",
@@ -91,10 +75,6 @@ public class SmoothedStackedXYAreaRendererTest {
         assertTrue(hasNonWhitePixels(image));
     }
 
-    /**
-     * The precision setting must be honoured and trigger a repaint event;
-     * non-positive values must be rejected.
-     */
     @Test
     public void testPrecision() {
         SmoothedStackedXYAreaRenderer r = new SmoothedStackedXYAreaRenderer();
@@ -107,9 +87,6 @@ public class SmoothedStackedXYAreaRendererTest {
                 () -> new SmoothedStackedXYAreaRenderer(null, null, -1));
     }
 
-    /**
-     * Test that the equals() method distinguishes all fields.
-     */
     @Test
     public void testEquals() {
         SmoothedStackedXYAreaRenderer r1 = new SmoothedStackedXYAreaRenderer();
@@ -123,9 +100,6 @@ public class SmoothedStackedXYAreaRendererTest {
         assertEquals(r1, r2);
     }
 
-    /**
-     * Confirm that cloning works.
-     */
     @Test
     public void testCloning() throws CloneNotSupportedException {
         SmoothedStackedXYAreaRenderer r1 = new SmoothedStackedXYAreaRenderer();
@@ -136,9 +110,6 @@ public class SmoothedStackedXYAreaRendererTest {
         assertEquals(r1, r2);
     }
 
-    /**
-     * Serialize an instance, restore it, and check for equality.
-     */
     @Test
     public void testSerialization() throws IOException, ClassNotFoundException {
         SmoothedStackedXYAreaRenderer r1 = new SmoothedStackedXYAreaRenderer();

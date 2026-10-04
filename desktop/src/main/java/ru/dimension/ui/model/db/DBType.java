@@ -10,6 +10,7 @@ public enum DBType {
   FIREBIRD("firebird", "SELECT CURRENT_TIMESTAMP FROM RDB$DATABASE"),
   SQLITE("sqlite", "SELECT date('now')"),
   HTTP("https?://", ""),
+  JMX("service:jmx", ""),
   UNKNOWN("", "");
 
   private final String urlPattern;

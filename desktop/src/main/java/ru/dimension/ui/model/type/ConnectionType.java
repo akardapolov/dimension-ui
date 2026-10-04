@@ -2,7 +2,8 @@ package ru.dimension.ui.model.type;
 
 public enum ConnectionType {
   JDBC("JDBC"),
-  HTTP("HTTP");
+  HTTP("HTTP"),
+  JMX("JMX");
 
   private final String name;
 

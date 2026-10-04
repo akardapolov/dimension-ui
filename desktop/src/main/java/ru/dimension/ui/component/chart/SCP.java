@@ -27,9 +27,11 @@ import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.helper.ColorHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
+import ru.dimension.ui.manager.ConfigurationManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.config.ChartUISettings;
 import ru.dimension.ui.model.config.Metric;
+import ru.dimension.ui.model.config.UISettings;
 import ru.dimension.ui.model.data.CategoryTableXYDatasetRealTime;
 import ru.dimension.ui.model.function.GroupFunction;
 import ru.dimension.ui.model.view.SeriesType;
@@ -84,9 +86,30 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
     this.stackedChart = new StackedChart(getChartPanel(this.chartDataset), colorHelper);
     this.stackedChart.setLegendFontSize(config.getLegendFontSize());
     this.stackedChart.setSelectionWheelEnabled(config.isSelectionWheelEnabled());
+
+    ChartUISettings chartUISettings = loadChartUISettings();
+    if (chartUISettings != null) {
+      this.stackedChart.setLegendFixedWidth(chartUISettings.getLegendFixedWidth());
+      this.stackedChart.setLegendFixedSize(chartUISettings.isLegendFixedSize());
+    } else {
+      this.stackedChart.setLegendFixedSize(false);
+    }
+
     this.stackedChart.initialize();
 
     LaF.setBackgroundAndTextColorForStackedChartPanel(LafColorGroup.CHART_PANEL, this.stackedChart);
+  }
+
+  private ChartUISettings loadChartUISettings() {
+    try {
+      List<UISettings> settingsList = ServiceLocator.get(ConfigurationManager.class).getConfigList(UISettings.class);
+      if (!settingsList.isEmpty()) {
+        return settingsList.get(0).getChartSettings();
+      }
+    } catch (Exception e) {
+      log.warn("Could not load UI settings for chart legend", e);
+    }
+    return null;
   }
 
   protected void createColor(ColorHelper colorHelper) {
@@ -237,6 +260,11 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
 
   public void setChartUISettings(ChartUISettings chartUISettings) {
     this.chartUISettings = chartUISettings;
+
+    if (this.stackedChart != null && chartUISettings != null) {
+      this.stackedChart.setLegendFixedWidth(chartUISettings.getLegendFixedWidth());
+      this.stackedChart.setLegendFixedSize(chartUISettings.isLegendFixedSize());
+    }
   }
 
   public void setLegendTitleVisible(boolean visible) {

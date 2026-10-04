@@ -9,6 +9,11 @@ public class ConnTypeTab extends JTabbedPane {
     switch (tab) {
       case JDBC -> this.setSelectedIndex(0);
       case HTTP -> this.setSelectedIndex(1);
+      case JMX -> {
+        if (getTabCount() > 2) {
+          this.setSelectedIndex(2);
+        }
+      }
     }
   }
 
@@ -17,6 +22,11 @@ public class ConnTypeTab extends JTabbedPane {
     switch (tab) {
       case JDBC -> this.setEnabledAt(0, enabled);
       case HTTP -> this.setEnabledAt(1, enabled);
+      case JMX -> {
+        if (getTabCount() > 2) {
+          this.setEnabledAt(2, enabled);
+        }
+      }
     }
   }
 }

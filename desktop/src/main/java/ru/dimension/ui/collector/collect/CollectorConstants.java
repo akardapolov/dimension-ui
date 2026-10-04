@@ -6,6 +6,8 @@ public interface CollectorConstants {
 
   String PROTOCOL_HTTP = "http";
 
+  String PROTOCOL_JMX = "jmx";
+
   String DIGEST_AUTH = "Digest Auth";
 
   String PARSE_DEFAULT = "default";

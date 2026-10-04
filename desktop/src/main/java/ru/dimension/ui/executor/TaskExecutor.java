@@ -12,6 +12,7 @@ import ru.dimension.ui.collector.by.ByTarget;
 import ru.dimension.ui.collector.collect.AbstractCollect;
 import ru.dimension.ui.collector.collect.HttpCollect;
 import ru.dimension.ui.collector.collect.JdbcCollect;
+import ru.dimension.ui.collector.collect.JmxCollect;
 import ru.dimension.ui.collector.http.HttpResponseFetcher;
 import ru.dimension.ui.manager.ConnectionPoolManager;
 import ru.dimension.ui.model.ProfileTaskKey;
@@ -22,6 +23,7 @@ import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.TaskInfo;
 import ru.dimension.ui.model.sql.GatherDataMode;
+import ru.dimension.ui.security.EncryptDecrypt;
 import ru.dimension.ui.router.event.EventDispatcher;
 import ru.dimension.ui.state.SqlQueryState;
 
@@ -52,6 +54,7 @@ public class TaskExecutor {
                       SqlQueryState sqlQueryState,
                       EventDispatcher eventDispatcher,
                       HttpResponseFetcher httpResponseFetcher,
+                      EncryptDecrypt encryptDecrypt,
                       DStore dStore) {
     this.profileInfo = profileInfo;
     this.taskInfo = taskInfo;
@@ -80,6 +83,9 @@ public class TaskExecutor {
         this.loader = new HttpCollect(profileTaskQueryKey,
                                       taskInfo, connectionInfo, queryInfo, tableInfo, sqlQueryState,
                                       httpResponseFetcher, dStore);
+      } else if (GatherDataMode.BY_CLIENT_JMX.equals(queryInfo.getGatherDataMode())) {
+        this.loader = new JmxCollect(profileTaskQueryKey, connectionInfo, encryptDecrypt,
+                                     tableInfo, sqlQueryState, dStore);
       } else {
         throw new IllegalArgumentException("Unsupported gather data mode: " + queryInfo.getGatherDataMode());
       }
@@ -135,6 +141,9 @@ public class TaskExecutor {
     running.set(false);
     if (periodicTask != null) {
       periodicTask.interrupt();
+    }
+    if (loader instanceof JmxCollect jmxCollect) {
+      jmxCollect.close();
     }
   }
 

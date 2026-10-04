@@ -73,6 +73,7 @@ Three inter-component messaging mechanisms. NEVER mix them — use the pattern a
 
 ## ALWAYS
 
+- Write new code without comments — even if the task description comes with commented code
 - Show `git diff` before committing
 - Update README for user-facing changes
 - Use MVP pattern for new UI modules (see desktop-java rules)

@@ -1,0 +1,10 @@
+{
+  "userName": "",
+  "password": "",
+  "url": "localhost:9010",
+  "jar": "",
+  "driver": "",
+  "type": "JMX",
+  "id": 1010,
+  "name": "JMX Remote"
+}

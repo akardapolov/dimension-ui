@@ -7,11 +7,15 @@ import java.util.TimeZone;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import javax.management.remote.JMXConnector;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.profile.SProfile;
 import ru.dimension.db.model.profile.TProfile;
 import ru.dimension.db.model.profile.table.BType;
+import ru.dimension.db.model.profile.table.IType;
+import ru.dimension.db.model.profile.table.TType;
+import ru.dimension.ui.collector.collect.common.JmxProtocol;
 import ru.dimension.ui.collector.collect.prometheus.ExporterParser;
 import ru.dimension.ui.collector.http.HttpResponseFetcher;
 import ru.dimension.ui.executor.TaskExecutorPool;
@@ -19,13 +23,14 @@ import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.info.ProfileInfo;
 import ru.dimension.ui.model.info.QueryInfo;
 import ru.dimension.ui.model.info.TableInfo;
+import ru.dimension.ui.security.EncryptDecrypt;
 import ru.dimension.ui.state.SqlQueryState;
 import ru.dimension.ui.manager.ProfileManager;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 
 @Log4j2
 @Singleton
-public class CollectorImpl implements Collector, JdbcLoader, HttpLoader {
+public class CollectorImpl implements Collector, JdbcLoader, HttpLoader, JmxLoader {
 
   private final DStore dStore;
   private final SqlQueryState sqlQueryState;
@@ -37,19 +42,23 @@ public class CollectorImpl implements Collector, JdbcLoader, HttpLoader {
 
   private final HttpResponseFetcher httpResponseFetcher;
 
+  private final EncryptDecrypt encryptDecrypt;
+
   @Inject
   public CollectorImpl(@Named("localDB") DStore dStore,
                        @Named("sqlQueryState") SqlQueryState sqlQueryState,
                        @Named("profileManager") ProfileManager profileManager,
                        TaskExecutorPool taskExecutorPool,
                        @Named("exporterParser") ExporterParser exporterParser,
-                       @Named("httpResponseFetcher") HttpResponseFetcher httpResponseFetcher) {
+                       @Named("httpResponseFetcher") HttpResponseFetcher httpResponseFetcher,
+                       EncryptDecrypt encryptDecrypt) {
     this.dStore = dStore;
     this.sqlQueryState = sqlQueryState;
     this.profileManager = profileManager;
     this.taskExecutorPool = taskExecutorPool;
     this.exporterParser = exporterParser;
     this.httpResponseFetcher = httpResponseFetcher;
+    this.encryptDecrypt = encryptDecrypt;
   }
 
   @Override
@@ -90,10 +99,15 @@ public class CollectorImpl implements Collector, JdbcLoader, HttpLoader {
       SProfile sProfile;
       if (tableInfo.getSProfile().getCsTypeMap().isEmpty()) {
         sProfile = new SProfile();
+        sProfile.setTableName(tableInfo.getTableName());
+        sProfile.setTableType(TType.TIME_SERIES);
+        sProfile.setIndexType(IType.LOCAL);
         sProfile.setBackendType(BType.BERKLEYDB);
+        sProfile.setCompression(true);
         fillSProfileFromResponse(exporterParser, httpResponseFetcher.fetchResponse(getHttpProtocol(connectionInfo)), sProfile);
       } else {
         sProfile = tableInfo.getSProfile();
+        sProfile.setTableName(tableInfo.getTableName());
         sProfile.setBackendType(BType.BERKLEYDB);
       }
 
@@ -105,6 +119,49 @@ public class CollectorImpl implements Collector, JdbcLoader, HttpLoader {
       tableInfo.setCompression(tProfile.getCompression());
       tableInfo.setCProfiles(tProfile.getCProfiles());
 
+      queryInfo.setDeltaLocalServerTime(0);
+    } catch (Exception e) {
+      log.catching(e);
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public void fillMetadataJmx(ConnectionInfo connectionInfo,
+                              QueryInfo queryInfo,
+                              TableInfo tableInfo) {
+    try {
+      JmxProtocol jmxProtocol = getJmxProtocol(connectionInfo, encryptDecrypt);
+      if (!jmxProtocol.isLocal()) {
+        try (JMXConnector checkConnector = connect(jmxProtocol)) {
+          log.info("JMX connection check for: {} -> {}", connectionInfo.getName(), checkConnector.getConnectionId());
+        }
+      }
+
+      SProfile sProfile;
+      if (tableInfo.getSProfile().getCsTypeMap().isEmpty()) {
+        sProfile = new SProfile();
+        sProfile.setTableName(tableInfo.getTableName());
+        sProfile.setTableType(TType.TIME_SERIES);
+        sProfile.setIndexType(IType.LOCAL);
+        sProfile.setBackendType(BType.BERKLEYDB);
+        sProfile.setCompression(true);
+        fillSProfileJmx(sProfile);
+      } else {
+        sProfile = tableInfo.getSProfile();
+        sProfile.setTableName(tableInfo.getTableName());
+        sProfile.setBackendType(BType.BERKLEYDB);
+      }
+
+      TProfile tProfile = dStore.loadDirectTableMetadata(sProfile);
+
+      tableInfo.setTableType(tProfile.getTableType());
+      tableInfo.setIndexType(tProfile.getIndexType());
+      tableInfo.setBackendType(tProfile.getBackendType());
+      tableInfo.setCompression(tProfile.getCompression());
+      tableInfo.setCProfiles(tProfile.getCProfiles());
+
+      queryInfo.setDbType(connectionInfo.getDbType());
       queryInfo.setDeltaLocalServerTime(0);
     } catch (Exception e) {
       log.catching(e);

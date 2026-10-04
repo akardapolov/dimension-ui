@@ -1,0 +1,10 @@
+{
+  "description": "JMX remote JVM monitoring",
+  "pullTimeout": 1,
+  "connectionId": 1010,
+  "queryList": [
+    1010
+  ],
+  "id": 1010,
+  "name": "JMX remote task"
+}

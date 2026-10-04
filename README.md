@@ -62,6 +62,7 @@ Key Features of **Dimension UI**:
 | 5 | **No-code DB Exploration**               | Ad-hoc data visualization from external databases via JDBC with automatic SQL query generation. Both time-series and regular table data supported                                                                          |
 | 6 | **Dashboard System**                     | Displaying metrics from multiple sources in a single interface. Quick access to metrics simplifies workflows when reviewing large volumes of analytical data                                                               |
 | 7 | **Built-in Reporting System**            | Generating PDF reports based on collected data for further analysis                                                                                                                                                        |
+| 8 | **JVM Monitoring via JMX**                | Built-in JMX collector for this application JVM (local mode) and remote JVMs: heap, non-heap, classloading and GC metrics without external agents                                                                         |
 
 [Return to Contents](#Contents)
 

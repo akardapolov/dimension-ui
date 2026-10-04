@@ -35,6 +35,7 @@ import ru.dimension.ui.view.panel.config.ui.UISettingsPanel;
 import ru.dimension.ui.view.panel.template.TemplateConnPanel;
 import ru.dimension.ui.view.panel.template.TemplateEditPanel;
 import ru.dimension.ui.view.panel.template.TemplateHTTPConnPanel;
+import ru.dimension.ui.view.panel.template.TemplateJmxConnPanel;
 import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.view.tab.ConnTypeTab;
 import ru.dimension.ui.view.table.row.Rows;
@@ -61,6 +62,7 @@ public final class UIComponentsConfig {
         .bindNamed(UISettingsPanel.class,       "uiSettingsPanel",       UISettingsPanel.class)
         .bindNamed(TemplateConnPanel.class,     "templateConnPanel",     TemplateConnPanel.class)
         .bindNamed(TemplateHTTPConnPanel.class, "templateHTTPConnPanel", TemplateHTTPConnPanel.class)
+        .bindNamed(TemplateJmxConnPanel.class,  "templateJmxConnPanel",  TemplateJmxConnPanel.class)
         .bindNamed(TemplateEditPanel.class,     "templateEditPanel",     TemplateEditPanel.class)
 
         .provideNamed(JXTableCase.class, "profileConfigCase",    s(() -> getTypedJXTableCase(ProfileRow.class)))

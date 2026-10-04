@@ -255,6 +255,8 @@ public class RealtimeUnitPresenter extends BaseUnitPresenter<RealtimeUnitView> i
       return new ClientRealtimeSCP(sqlQueryState, dStore, config, key, topMapSelected);
     } else if (GatherDataMode.BY_CLIENT_HTTP.equals(queryInfo.getGatherDataMode())) {
       return new ClientRealtimeSCP(sqlQueryState, dStore, config, key, topMapSelected);
+    } else if (GatherDataMode.BY_CLIENT_JMX.equals(queryInfo.getGatherDataMode())) {
+      return new ClientRealtimeSCP(sqlQueryState, dStore, config, key, topMapSelected);
     } else {
       return new ServerRealtimeSCP(sqlQueryState, dStore, config, key, topMapSelected);
     }

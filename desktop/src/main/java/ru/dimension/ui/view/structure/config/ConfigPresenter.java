@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import javax.management.remote.JMXConnector;
 import javax.swing.JCheckBox;
 import javax.swing.SwingUtilities;
 import javax.swing.table.TableColumn;
@@ -39,6 +40,8 @@ import ru.dimension.ui.bus.event.ProfileAddEvent;
 import ru.dimension.ui.bus.event.ProfileRemoveEvent;
 import ru.dimension.ui.bus.event.UpdateMetadataColumnsEvent;
 import ru.dimension.ui.bus.event.UpdateQueryList;
+import ru.dimension.ui.collector.JmxLoader;
+import ru.dimension.ui.collector.collect.common.JmxProtocol;
 import ru.dimension.ui.helper.event.EventRouteRegistry;
 import ru.dimension.ui.helper.event.EventUtils;
 import ru.dimension.ui.manager.ConfigurationManager;
@@ -55,6 +58,7 @@ import ru.dimension.ui.model.type.ConnectionType;
 import ru.dimension.ui.model.view.ConfigState;
 import ru.dimension.ui.router.event.EventDispatcher;
 import ru.dimension.ui.router.listener.ConfigListener;
+import ru.dimension.ui.security.EncryptDecrypt;
 import ru.dimension.ui.state.NavigatorState;
 import ru.dimension.ui.view.structure.ConfigView;
 import ru.dimension.ui.view.table.renderer.ConnectionStatusCellRenderer;
@@ -65,7 +69,7 @@ import ru.dimension.ui.view.table.row.Rows.TaskRow;
 
 @Log4j2
 @Singleton
-public class ConfigPresenter extends WindowAdapter implements ConfigListener {
+public class ConfigPresenter extends WindowAdapter implements ConfigListener, JmxLoader {
 
   private static final int CONNECTION_CHECK_TIMEOUT_SECONDS = 10;
   private static final int THREAD_POOL_SIZE = 4;
@@ -76,6 +80,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
   private final ConfigurationManager configurationManager;
   private final ProfileManager profileManager;
   private final ConnectionPoolManager connectionPoolManager;
+  private final EncryptDecrypt encryptDecrypt;
 
   private final JXTableCase profileCase;
   private final JXTableCase taskCase;
@@ -104,6 +109,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
                          @Named("configurationManager") ConfigurationManager configurationManager,
                          @Named("profileManager") ProfileManager profileManager,
                          @Named("connectionPoolManager") ConnectionPoolManager connectionPoolManager,
+                         EncryptDecrypt encryptDecrypt,
                          @Named("profileConfigCase") JXTableCase profileCase,
                          @Named("taskConfigCase") JXTableCase taskCase,
                          @Named("connectionConfigCase") JXTableCase connectionCase,
@@ -115,6 +121,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
     this.configurationManager = configurationManager;
     this.profileManager = profileManager;
     this.connectionPoolManager = connectionPoolManager;
+    this.encryptDecrypt = encryptDecrypt;
 
     this.profileCase = profileCase;
     this.taskCase = taskCase;
@@ -503,6 +510,8 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
           return checkJdbcConnection(connectionInfo);
         case HTTP:
           return checkHttpConnection(connectionInfo);
+        case JMX:
+          return checkJmxConnection(connectionInfo);
         default:
           log.warn("Unknown connection type: {} for connection: {}", type, connection.getName());
           return ConnectionStatus.NOT_CONNECTED;
@@ -579,6 +588,25 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener {
 
     } catch (Exception e) {
       log.error("Error checking HTTP connection {}: {}", connectionInfo.getName(), e.getMessage());
+      return ConnectionStatus.NOT_CONNECTED;
+    }
+  }
+
+  private ConnectionStatus checkJmxConnection(ConnectionInfo connectionInfo) {
+    try {
+      JmxProtocol jmxProtocol = getJmxProtocol(connectionInfo, encryptDecrypt);
+
+      if (jmxProtocol.isLocal()) {
+        return ConnectionStatus.READY;
+      }
+
+      try (JMXConnector jmxConnector = connect(jmxProtocol)) {
+        return jmxConnector.getConnectionId() != null
+            ? ConnectionStatus.READY
+            : ConnectionStatus.NOT_CONNECTED;
+      }
+    } catch (Exception e) {
+      log.error("Error checking JMX connection {}: {}", connectionInfo.getName(), e.getMessage());
       return ConnectionStatus.NOT_CONNECTED;
     }
   }

@@ -113,6 +113,8 @@ public interface ProfileManager {
 
   List<QueryInfo> getHttpOrphanQueryInfoList();
 
+  List<QueryInfo> getJmxOrphanQueryInfoList();
+
   void updateCache();
 
   void loadDeltaLocalServerTime(ProfileTaskQueryKey profileTaskQueryKey);

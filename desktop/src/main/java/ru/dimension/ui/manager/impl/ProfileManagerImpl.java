@@ -222,7 +222,8 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
     connection.setHttpMethod(connectionInfo.getHttpMethod());
     connection.setParseType(connectionInfo.getParseType());
 
-    connectionInfo.setDbType(getDBType(connection.getUrl()));
+    connectionInfo.setDbType(ConnectionType.JMX.equals(connection.getType())
+                                 ? DBType.JMX : getDBType(connection.getUrl()));
 
     configurationManager.updateConfig(connection, Connection.class);
     appCache.putConnectionInfo(connectionInfo);
@@ -390,7 +391,8 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
           connectionInfo.setUrl(connection.getUrl());
           connectionInfo.setJar(connection.getJar());
           connectionInfo.setDriver(connection.getDriver());
-          connectionInfo.setDbType(getDBType(connection.getUrl()));
+          connectionInfo.setDbType(ConnectionType.JMX.equals(connection.getType())
+                                       ? DBType.JMX : getDBType(connection.getUrl()));
           connectionInfo.setType(connection.getType());
           connectionInfo.setHttpMethod(connection.getHttpMethod());
           connectionInfo.setParseType(connection.getParseType());
@@ -563,6 +565,13 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
   public List<QueryInfo> getHttpOrphanQueryInfoList() {
     return getOrphanQueryInfoList().stream()
         .filter(q -> q.getGatherDataMode() == GatherDataMode.BY_CLIENT_HTTP)
+        .toList();
+  }
+
+  @Override
+  public List<QueryInfo> getJmxOrphanQueryInfoList() {
+    return getOrphanQueryInfoList().stream()
+        .filter(q -> q.getGatherDataMode() == GatherDataMode.BY_CLIENT_JMX)
         .toList();
   }
 

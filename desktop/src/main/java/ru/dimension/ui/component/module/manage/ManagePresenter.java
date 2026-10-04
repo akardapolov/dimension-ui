@@ -2,6 +2,7 @@ package ru.dimension.ui.component.module.manage;
 
 import static ru.dimension.ui.model.sql.GatherDataMode.BY_CLIENT_HTTP;
 import static ru.dimension.ui.model.sql.GatherDataMode.BY_CLIENT_JDBC;
+import static ru.dimension.ui.model.sql.GatherDataMode.BY_CLIENT_JMX;
 import static ru.dimension.ui.model.sql.GatherDataMode.BY_SERVER_JDBC;
 
 import jakarta.inject.Inject;
@@ -40,6 +41,7 @@ import ru.dimension.ui.model.info.TableInfo;
 import ru.dimension.ui.model.info.TaskInfo;
 import ru.dimension.ui.model.view.ProgressbarState;
 import ru.dimension.ui.router.event.EventDispatcher;
+import ru.dimension.ui.security.EncryptDecrypt;
 import ru.dimension.ui.state.SqlQueryState;
 
 @Log4j2
@@ -56,6 +58,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
   private final Collector collector;
   private final SqlQueryState sqlQueryState;
   private final HttpResponseFetcher httpResponseFetcher;
+  private final EncryptDecrypt encryptDecrypt;
   private final DStore dStore;
 
   private final ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(1);
@@ -78,6 +81,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
                          HttpResponseFetcher httpResponseFetcher,
                          SqlQueryState sqlQueryState,
                          Collector collector,
+                         EncryptDecrypt encryptDecrypt,
                          DStore dStore) {
     this.component = component;
     this.view = view;
@@ -90,6 +94,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
     this.collector = collector;
     this.sqlQueryState = sqlQueryState;
     this.httpResponseFetcher = httpResponseFetcher;
+    this.encryptDecrypt = encryptDecrypt;
     this.dStore = dStore;
 
     setupListeners();
@@ -217,6 +222,15 @@ public class ManagePresenter implements ActionListener, MessageAction {
                     lastTimestampLocalDb = System.currentTimeMillis();
                   }
                   sqlQueryState.initializeLastTimestamp(profileTaskQueryKey, lastTimestampLocalDb);
+                } else if (BY_CLIENT_JMX.equals(queryInfo.getGatherDataMode())) {
+                  collector.fillMetadataJmx(connectionInfo, queryInfo, tableInfo);
+
+                  long lastTimestampLocalDb = dStore.getLast(tableInfo.getTableName(), Long.MIN_VALUE, Long.MIN_VALUE);
+
+                  if (lastTimestampLocalDb == 0) {
+                    lastTimestampLocalDb = System.currentTimeMillis();
+                  }
+                  sqlQueryState.initializeLastTimestamp(profileTaskQueryKey, lastTimestampLocalDb);
                 }
 
                 profileManager.updateQuery(queryInfo);
@@ -301,6 +315,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
                                    sqlQueryState,
                                    eventDispatcher,
                                    httpResponseFetcher,
+                                   encryptDecrypt,
                                    dStore);
 
               taskExecutorPool.add(profileTaskQueryKey, taskExecutor);

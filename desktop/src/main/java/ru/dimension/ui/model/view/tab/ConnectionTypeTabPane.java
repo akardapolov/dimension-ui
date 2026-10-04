@@ -2,7 +2,8 @@ package ru.dimension.ui.model.view.tab;
 
 public enum ConnectionTypeTabPane {
   JDBC("JDBC"),
-  HTTP("HTTP");
+  HTTP("HTTP"),
+  JMX("JMX");
 
   private final String name;
 

@@ -15,7 +15,12 @@ import ru.dimension.ui.view.LoadingDialog;
 @Log4j2
 public class Application {
 
-  public static void main(String... args) {
+  static void main() {
+    Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+      log.error("Uncaught exception in thread: {}", thread.getName());
+      log.catching(throwable);
+    });
+
     System.getProperties().setProperty("oracle.jdbc.J2EE13Compliant", "true");
 
     if ("ru".equals(System.getProperty("user.language"))) {

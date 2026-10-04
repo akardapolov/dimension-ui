@@ -29,6 +29,7 @@ public class DBTypeIcon implements Icon {
   private static final Color FIREBIRD_COLOR = new Color(0xF4511E);
   private static final Color SQLITE_COLOR = new Color(0x003B57);
   private static final Color HTTP_COLOR = new Color(0x4CAF50);
+  private static final Color JMX_COLOR = new Color(0x8E24AA);
   private static final Color UNKNOWN_COLOR = Color.GRAY;
 
   private static final Font ICON_FONT = new Font("SansSerif", Font.BOLD, 9);
@@ -50,6 +51,7 @@ public class DBTypeIcon implements Icon {
       case FIREBIRD -> FIREBIRD_COLOR;
       case SQLITE -> SQLITE_COLOR;
       case HTTP -> HTTP_COLOR;
+      case JMX -> JMX_COLOR;
       case UNKNOWN -> UNKNOWN_COLOR;
     };
   }
@@ -80,6 +82,7 @@ public class DBTypeIcon implements Icon {
       case FIREBIRD -> drawFirebird(g2, x, y);
       case SQLITE -> drawSQLite(g2, x, y);
       case HTTP -> drawHTTP(g2, x, y);
+      case JMX -> drawJMX(g2, x, y);
       case UNKNOWN -> drawUnknown(g2, x, y);
     }
 
@@ -208,6 +211,18 @@ public class DBTypeIcon implements Icon {
     g2.draw(new Arc2D.Double(x + 3, y + 8.5, SIZE - 6, 3, 180, 180, Arc2D.OPEN));
     g2.setFont(ICON_FONT);
     g2.drawString("?", x + 5, y + 10);
+  }
+
+  private void drawJMX(Graphics2D g2, int x, int y) {
+    g2.setStroke(new BasicStroke(1.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+    g2.draw(new Line2D.Double(x + 3, y + 1, x + 5, y + 4));
+    g2.draw(new Line2D.Double(x + 7, y + 1, x + 5, y + 4));
+    g2.draw(new Line2D.Double(x + 7, y + 1, x + 9, y + 4));
+    g2.draw(new Line2D.Double(x + 11, y + 1, x + 9, y + 4));
+    g2.draw(new Line2D.Double(x + 3, y + 4, x + 11, y + 4));
+    g2.draw(new Line2D.Double(x + 3, y + 4, x + 3, y + 10));
+    g2.draw(new Line2D.Double(x + 11, y + 4, x + 11, y + 10));
+    g2.draw(new Arc2D.Double(x + 3, y + 7, SIZE - 6, 6, 180, 180, Arc2D.OPEN));
   }
 
   @Override

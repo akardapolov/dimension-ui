@@ -1,0 +1,8 @@
+{
+  "text": "",
+  "description": "Remote JVM monitoring via JMX: heap, non-heap, classloading, GC",
+  "gatherDataMode": "BY_CLIENT_JMX",
+  "metricList": [],
+  "id": 1010,
+  "name": "JMX remote"
+}
