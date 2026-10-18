@@ -63,6 +63,7 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
       case EXPAND_COLLAPSE_ALL -> expandCollapseAll(message);
       case SHOW_CHART_FULL -> handleShowChartFull(message);
       case COLOR_SCHEME_CHANGED -> handleColorSchemeChanged(message);
+      case CHART_UI_SETTINGS_CHANGED -> handleChartUISettingsChanged();
     }
   }
 
@@ -293,6 +294,30 @@ public class PreviewChartsPresenter implements MessageAction, CollectStartStopLi
         } catch (Exception e) {
           log.error("Error refreshing series colors in dialog", e);
         }
+      }
+    }
+  }
+
+  private void handleChartUISettingsChanged() {
+    if (model == null || model.getChartPanes() == null) {
+      return;
+    }
+
+    model.getChartPanes().values().forEach(chartMap ->
+        chartMap.values().forEach(chartModule -> {
+          try {
+            chartModule.refreshAxisSettings();
+          } catch (Exception e) {
+            log.error("Error refreshing axis settings for chart: {}", chartModule.getTitle(), e);
+          }
+        }));
+
+    ChartDetailDialog dialog = model.getChartDetailDialog();
+    if (dialog != null && dialog.isVisible()) {
+      try {
+        dialog.getChartModule().refreshAxisSettings();
+      } catch (Exception e) {
+        log.error("Error refreshing axis settings in dialog", e);
       }
     }
   }

@@ -4,11 +4,9 @@ import static ru.dimension.ui.model.view.TemplateAction.LOAD;
 import static ru.dimension.ui.model.view.TemplateAction.SAVE;
 
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
-import javax.swing.JComponent;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableColumn;
@@ -27,6 +25,7 @@ import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.laf.LafColorGroup;
 import ru.dimension.ui.model.column.ConnectionColumnNames;
 import ru.dimension.ui.model.column.MetricsColumnNames;
+import ru.dimension.ui.model.table.JXTableCase;
 import ru.dimension.ui.view.custom.DetailedComboBox;
 import ru.dimension.ui.view.panel.config.ButtonPanel;
 import ru.dimension.ui.view.panel.config.profile.MultiSelectTaskPanel;
@@ -34,9 +33,15 @@ import ru.dimension.ui.view.panel.config.query.MainQueryPanel;
 import ru.dimension.ui.view.panel.config.query.MetadataQueryPanel;
 import ru.dimension.ui.view.panel.config.query.MetricQueryPanel;
 import ru.dimension.ui.view.panel.config.task.MultiSelectQueryPanel;
+import ru.dimension.ui.view.panel.template.ConnectionSectionPanel;
+import ru.dimension.ui.view.panel.template.ProfileSectionPanel;
+import ru.dimension.ui.view.panel.template.QueriesSectionPanel;
+import ru.dimension.ui.view.panel.template.TaskSectionPanel;
+import ru.dimension.ui.view.panel.template.TemplateDetailsPanel;
+import ru.dimension.ui.view.panel.template.TemplateEditDialog;
 import ru.dimension.ui.view.tab.ConfigTab;
 import ru.dimension.ui.view.table.icon.ModelIconProviders;
-import ru.dimension.ui.model.table.JXTableCase;
+import ru.dimension.ui.view.table.icon.VectorIcons;
 import ru.dimension.ui.view.table.row.Rows.ConnectionTemplateRow;
 import ru.dimension.ui.view.table.row.Rows.MetadataRow;
 import ru.dimension.ui.view.table.row.Rows.TemplateConnectionRow;
@@ -45,6 +50,9 @@ import ru.dimension.ui.view.table.row.Rows.TemplateQueryRow;
 import ru.dimension.ui.view.table.row.Rows.TemplateTaskRow;
 
 public final class UIFactory {
+
+  /** Тот же цвет, что используется для иконки метрик в TTTable-колонках (ModelIconProviders). */
+  private static final Color METRIC_ICON_COLOR = new Color(0x10, 0xB9, 0x81);
 
   private UIFactory() {
   }
@@ -118,11 +126,13 @@ public final class UIFactory {
         .build();
   }
 
+  /**
+   * Общий стиль для TT-таблиц верхнего уровня шаблонов (Task/Connection/Query/Metrics
+   * превью). Делегирует в {@link GUIHelper#applyStandardTableStyle(JTable)} — тот же
+   * контраст текста/темы, что и во всех остальных таблицах приложения.
+   */
   private static void configureStandardJXTable(JXTable table) {
-    table.setShowVerticalLines(true);
-    table.setShowHorizontalLines(true);
-    table.setGridColor(Color.GRAY);
-    table.setIntercellSpacing(new Dimension(1, 1));
+    GUIHelper.applyStandardTableStyle(table);
     table.getTableHeader().setVisible(true);
   }
 
@@ -259,34 +269,13 @@ public final class UIFactory {
     );
 
     JXTable table = tt.table();
-    table.setShowVerticalLines(true);
-    table.setShowHorizontalLines(true);
-    table.setGridColor(Color.GRAY);
-    table.setIntercellSpacing(new Dimension(1, 1));
+    GUIHelper.applyStandardTableStyle(table);
     table.setEditable(true);
 
     table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
     table.setHorizontalScrollEnabled(true);
 
-    DefaultTableCellRenderer truncatingRenderer = new DefaultTableCellRenderer() {
-      @Override
-      public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-        String tooltip = null;
-        if (value != null) {
-          String str = value.toString();
-          if (str.length() > 30) {
-            tooltip = str;
-            value = str.substring(0, 30) + "...";
-          }
-        }
-        Component c = super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
-        if (c instanceof JComponent) {
-          ((JComponent) c).setToolTipText(tooltip);
-        }
-        return c;
-      }
-    };
-
+    DefaultTableCellRenderer truncatingRenderer = GUIHelper.getTruncatingRenderer(30);
     table.setDefaultRenderer(String.class, truncatingRenderer);
     table.setDefaultRenderer(Object.class, truncatingRenderer);
 
@@ -333,25 +322,7 @@ public final class UIFactory {
     table.getColumnExt(0).setVisible(false);
     table.setEditable(false);
 
-    DefaultTableCellRenderer truncatingRenderer = new DefaultTableCellRenderer() {
-      @Override
-      public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-        String tooltip = null;
-        if (value != null) {
-          String str = value.toString();
-          if (str.length() > 30) {
-            tooltip = str;
-            value = str.substring(0, 30) + "...";
-          }
-        }
-        Component c = super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
-        if (c instanceof JComponent) {
-          ((JComponent) c).setToolTipText(tooltip);
-        }
-        return c;
-      }
-    };
-
+    DefaultTableCellRenderer truncatingRenderer = GUIHelper.getTruncatingRenderer(30);
     table.setDefaultRenderer(String.class, truncatingRenderer);
     table.setDefaultRenderer(Object.class, truncatingRenderer);
 
@@ -361,6 +332,13 @@ public final class UIFactory {
       TableColumn col = table.getColumnModel().getColumn(1);
       col.setMinWidth(30);
       col.setMaxWidth(80);
+    }
+
+    // Визуальная метка строки: иконка метрики у колонки Name (после скрытия
+    // ID-колонки колонка Name становится нулевой в column model).
+    if (table.getColumnCount() > 0) {
+      table.getColumnModel().getColumn(0).setCellRenderer(
+          GUIHelper.getIconTruncatingRenderer(new VectorIcons.Metric(METRIC_ICON_COLOR), 30));
     }
 
     if (jxTableCase.getJScrollPane() != null) {
@@ -417,10 +395,7 @@ public final class UIFactory {
     );
 
     JXTable table = tt.table();
-    table.setShowVerticalLines(true);
-    table.setShowHorizontalLines(true);
-    table.setGridColor(Color.GRAY);
-    table.setIntercellSpacing(new Dimension(1, 1));
+    GUIHelper.applyStandardTableStyle(table);
 
     return new JXTableCase(tt);
   }
@@ -439,5 +414,34 @@ public final class UIFactory {
         ServiceLocator.get(JXTableCase.class, "selectedQueryCase"),
         ServiceLocator.get(JXTableCase.class, "templateListQueryCase")
     );
+  }
+
+  /**
+   * TTTable — generic-класс, но из-за type erasure в реестре он хранится как
+   * raw TTTable.class + имя. Поэтому получаем его через raw-тип и
+   * приводим с unchecked cast — так же, как это сделано для всех остальных
+   * TTTable-полей, инжектируемых через @Named в презентерах/вью.
+   */
+  @SuppressWarnings("unchecked")
+  public static TemplateDetailsPanel createTemplateDetailsPanel() {
+    TTTable<TemplateQueryRow, JXTable> queryPreviewTable =
+        (TTTable<TemplateQueryRow, JXTable>) (TTTable<?, ?>) ServiceLocator.get(TTTable.class, "templateQueryPreviewCase");
+    TTTable<TemplateMetricRow, JXTable> metricsPreviewTable =
+        (TTTable<TemplateMetricRow, JXTable>) (TTTable<?, ?>) ServiceLocator.get(TTTable.class, "templateMetricsCase");
+
+    return new TemplateDetailsPanel(
+        queryPreviewTable,
+        metricsPreviewTable,
+        ServiceLocator.get(JXTextArea.class, "templateTaskDescription"),
+        ServiceLocator.get(JXTextArea.class, "templateQueryDescription"),
+        ServiceLocator.get(RSyntaxTextArea.class, "templateQueryText"));
+  }
+
+  public static TemplateEditDialog createTemplateEditDialog() {
+    return new TemplateEditDialog(
+        ServiceLocator.get(ProfileSectionPanel.class, "templateProfileSection"),
+        ServiceLocator.get(TaskSectionPanel.class, "templateTaskSection"),
+        ServiceLocator.get(ConnectionSectionPanel.class, "templateConnectionSection"),
+        ServiceLocator.get(QueriesSectionPanel.class, "templateQueriesSection"));
   }
 }

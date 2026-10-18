@@ -34,6 +34,10 @@ public class AdHocChartPresenter implements MessageAction {
     historyUnit.handleLegendChangeAll(showLegend);
   }
 
+  public void refreshAxisSettings() {
+    historyUnit.refreshAxisSettings();
+  }
+
   public void updateHistoryRange(RangeHistory range) {
     historyUnit.getView().getHistoryRangePanel().setSelectedRange(range);
     historyUnit.handleHistoryRangeChange("configChange", range);

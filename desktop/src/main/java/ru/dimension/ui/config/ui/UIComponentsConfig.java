@@ -5,7 +5,6 @@ import static ru.dimension.ui.helper.GUIHelper.getTypedJXTableCase;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
-import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JTabbedPane;
@@ -32,12 +31,14 @@ import ru.dimension.ui.view.panel.config.query.QueryPanel;
 import ru.dimension.ui.view.panel.config.task.MultiSelectQueryPanel;
 import ru.dimension.ui.view.panel.config.task.TaskPanel;
 import ru.dimension.ui.view.panel.config.ui.UISettingsPanel;
-import ru.dimension.ui.view.panel.template.TemplateConnPanel;
-import ru.dimension.ui.view.panel.template.TemplateEditPanel;
-import ru.dimension.ui.view.panel.template.TemplateHTTPConnPanel;
-import ru.dimension.ui.view.panel.template.TemplateJmxConnPanel;
+import ru.dimension.ui.view.panel.template.ConnectionSectionPanel;
+import ru.dimension.ui.view.panel.template.ProfileSectionPanel;
+import ru.dimension.ui.view.panel.template.QueriesSectionPanel;
+import ru.dimension.ui.view.panel.template.TaskSectionPanel;
+import ru.dimension.ui.view.panel.template.TemplateCatalogPanel;
+import ru.dimension.ui.view.panel.template.TemplateDetailsPanel;
+import ru.dimension.ui.view.panel.template.TemplateEditDialog;
 import ru.dimension.ui.view.tab.ConfigTab;
-import ru.dimension.ui.view.tab.ConnTypeTab;
 import ru.dimension.ui.view.table.row.Rows;
 import ru.dimension.ui.view.table.row.Rows.ConnectionRow;
 import ru.dimension.ui.view.table.row.Rows.ProfileRow;
@@ -60,10 +61,15 @@ public final class UIComponentsConfig {
         .bindNamed(ConnectionPanel.class,       "connectionConfigPanel", ConnectionPanel.class)
         .bindNamed(QueryPanel.class,            "queryConfigPanel",      QueryPanel.class)
         .bindNamed(UISettingsPanel.class,       "uiSettingsPanel",       UISettingsPanel.class)
-        .bindNamed(TemplateConnPanel.class,     "templateConnPanel",     TemplateConnPanel.class)
-        .bindNamed(TemplateHTTPConnPanel.class, "templateHTTPConnPanel", TemplateHTTPConnPanel.class)
-        .bindNamed(TemplateJmxConnPanel.class,  "templateJmxConnPanel",  TemplateJmxConnPanel.class)
-        .bindNamed(TemplateEditPanel.class,     "templateEditPanel",     TemplateEditPanel.class)
+
+        // ---- Templates: каталог (левая панель, дерево JDBC/JMX/HTTP) ----
+        .bindNamed(TemplateCatalogPanel.class,  "templateCatalogPanel",  TemplateCatalogPanel.class)
+
+        // ---- Templates: секции формы редактирования (чеклист справа, Вариант C) ----
+        .bindNamed(ProfileSectionPanel.class,    "templateProfileSection",    ProfileSectionPanel.class)
+        .bindNamed(TaskSectionPanel.class,       "templateTaskSection",       TaskSectionPanel.class)
+        .bindNamed(ConnectionSectionPanel.class, "templateConnectionSection", ConnectionSectionPanel.class)
+        .bindNamed(QueriesSectionPanel.class,    "templateQueriesSection",    QueriesSectionPanel.class)
 
         .provideNamed(JXTableCase.class, "profileConfigCase",    s(() -> getTypedJXTableCase(ProfileRow.class)))
         .provideNamed(JXTableCase.class, "taskConfigCase",       s(() -> getTypedJXTableCase(TaskRow.class)))
@@ -71,7 +77,6 @@ public final class UIComponentsConfig {
         .provideNamed(JXTableCase.class, "queryConfigCase",      s(() -> getTypedJXTableCase(QueryRow.class)))
 
         .provideNamed(ConfigTab.class,   "configTab",             s(UIFactory::createConfigTab))
-        .provideNamed(ConnTypeTab.class, "templateConnectionTab", s(ConnTypeTab::new))
         .provideNamed(JTabbedPane.class, "mainQueryTab",          s(JTabbedPane::new))
 
         .provideNamed(DetailedComboBox.class, "taskConnectionComboBox",          s(UIFactory::createTaskConnectionComboBox))
@@ -99,20 +104,19 @@ public final class UIComponentsConfig {
         .provideNamed(MetadataQueryPanel.class, "metadataQueryPanel", s(UIFactory::createMetadataQueryPanel))
         .provideNamed(MetricQueryPanel.class,   "metricQueryPanel",   s(UIFactory::createMetricQueryPanel))
 
-        .provideNamed(TTTable.class, "templateTaskCase",    s(UIFactory::createTemplateTaskCase))
-        .provideNamed(TTTable.class, "templateConnCase",    s(UIFactory::createTemplateConnCase))
-        .provideNamed(TTTable.class, "templateQueryCase",   s(UIFactory::createTemplateQueryCase))
-        .provideNamed(TTTable.class, "templateMetricsCase", s(UIFactory::createTemplateMetricsCase))
+        // ---- Templates: превью-таблицы для правой панели обзора (Вариант 2) ----
+        .provideNamed(TTTable.class, "templateQueryPreviewCase", s(UIFactory::createTemplateQueryCase))
+        .provideNamed(TTTable.class, "templateMetricsCase",      s(UIFactory::createTemplateMetricsCase))
 
         .provideNamed(JXTextArea.class, "templateTaskDescription",  s(UIFactory::createTemplateTaskDescription))
         .provideNamed(JXTextArea.class, "templateQueryDescription", s(UIFactory::createTemplateQueryDescription))
-        .provideNamed(JXTextArea.class, "templateProfileDescSave",  s(UIFactory::createTemplateProfileDescSave))
-        .provideNamed(JXTextArea.class, "templateTaskDescSave",     s(UIFactory::createTemplateTaskDescSave))
 
         .provideNamed(RSyntaxTextArea.class, "templateQueryText", s(UIFactory::createTemplateQueryText))
 
-        .provideNamed(JButton.class, "templateLoadJButton", s(UIFactory::createTemplateLoadJButton))
-        .provideNamed(JButton.class, "templateSaveJButton", s(UIFactory::createTemplateSaveJButton))
+        // ---- Templates: составные панели верхнего уровня ----
+        .provideNamed(TemplateDetailsPanel.class, "templateDetailsPanel", s(UIFactory::createTemplateDetailsPanel))
+        // ---- Templates: отдельный диалог редактирования (открывается по Load to Configuration) ----
+        .provideNamed(TemplateEditDialog.class, "templateEditDialog", s(UIFactory::createTemplateEditDialog))
 
         .provideNamed(ButtonPanel.class, "profileButtonPanel",     s(ButtonPanel::new))
         .provideNamed(ButtonPanel.class, "taskButtonPanel",        s(ButtonPanel::new))

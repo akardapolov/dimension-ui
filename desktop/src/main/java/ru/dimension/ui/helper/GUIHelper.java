@@ -13,10 +13,12 @@ import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultCellEditor;
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
@@ -73,6 +75,83 @@ public class GUIHelper {
 
   private GUIHelper() {}
 
+  /**
+   * Цвет текста таблиц, зависящий от текущей темы (Light/Dark). Используется
+   * вместо захардкоженных Color.BLACK/Color.DARK_GRAY в кастомных рендерах —
+   * именно хардкод чёрного цвета был причиной того, что текст в некоторых
+   * таблицах "сливался" с фоном на тёмной теме.
+   */
+  public static Color getTableTextColor() {
+    return LaF.getBackgroundColor(TABLE_FONT_COLOR, LaF.getLafType());
+  }
+
+  /**
+   * Единый визуальный стиль для всех "ручных" таблиц приложения (как
+   * JXTable, так и обычный JTable — используется, например, в диалоге
+   * детализации запроса шаблона): контрастная сетка, увеличенная высота
+   * строки, жирный заголовок и, главное, — цвет текста из текущей темы
+   * вместо захардкоженного чёрного.
+   * <p>
+   * Применяется централизованно из базовых фабричных методов ниже, чтобы
+   * не размазывать одни и те же пять строк по каждому месту создания
+   * таблицы в приложении.
+   */
+  public static void applyStandardTableStyle(JTable table) {
+    table.setShowVerticalLines(true);
+    table.setShowHorizontalLines(true);
+    table.setGridColor(Color.GRAY);
+    table.setIntercellSpacing(new Dimension(1, 1));
+    table.setRowHeight(22);
+    table.setForeground(getTableTextColor());
+    table.setSelectionForeground(getTableTextColor());
+    if (table.getTableHeader() != null) {
+      table.getTableHeader().setFont(table.getTableHeader().getFont().deriveFont(Font.BOLD));
+      table.getTableHeader().setReorderingAllowed(false);
+    }
+  }
+
+  /**
+   * Рендерер с обрезкой длинного текста и tooltip с полным значением —
+   * вынесен в общее место (раньше дублировался внутри UIFactory отдельно
+   * для Metadata- и Metrics-таблиц). НЕ переопределяет цвет текста —
+   * компонент наследует foreground/background от самой JTable, поэтому
+   * корректно подстраивается под текущую тему (светлую/тёмную).
+   */
+  public static DefaultTableCellRenderer getTruncatingRenderer(int maxLength) {
+    return new DefaultTableCellRenderer() {
+      @Override
+      public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                     boolean hasFocus, int row, int column) {
+        String tooltip = null;
+        if (value != null) {
+          String str = value.toString();
+          if (str.length() > maxLength) {
+            tooltip = str;
+            value = str.substring(0, maxLength) + "...";
+          }
+        }
+        Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+        if (c instanceof JComponent jc) {
+          jc.setToolTipText(tooltip);
+        }
+        return c;
+      }
+    };
+  }
+
+  /**
+   * То же самое, что {@link #getTruncatingRenderer(int)}, но с постоянной
+   * иконкой слева от текста — простая визуальная метка строки для таблиц,
+   * которые не построены через TTTable/RowIconProvider (там иконки строк
+   * уже есть "из коробки").
+   */
+  public static DefaultTableCellRenderer getIconTruncatingRenderer(Icon icon, int maxLength) {
+    DefaultTableCellRenderer renderer = getTruncatingRenderer(maxLength);
+    renderer.setIcon(icon);
+    renderer.setIconTextGap(6);
+    return renderer;
+  }
+
   public static JXTable getJXTable(int rowCount) {
     JXTable jxTable = new JXTable();
     jxTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
@@ -81,8 +160,8 @@ public class GUIHelper {
     jxTable.setEditable(false);
     jxTable.setVisibleRowCount(rowCount);
     jxTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-    jxTable.setShowVerticalLines(true);
-    jxTable.setShowHorizontalLines(true);
+
+    applyStandardTableStyle(jxTable);
 
     jxTable.getTableHeader().setPreferredSize(new Dimension(1, 16));
     jxTable.getTableHeader().setMinimumSize(new Dimension(1, 16));
@@ -297,8 +376,7 @@ public class GUIHelper {
     };
     jxTable.setColumnControlVisible(true);
     jxTable.setSortable(false);
-    jxTable.setShowVerticalLines(true);
-    jxTable.setShowHorizontalLines(true);
+    applyStandardTableStyle(jxTable);
 
     JScrollPane jScrollPane = getJScrollPane(jxTable);
 
@@ -323,8 +401,6 @@ public class GUIHelper {
     jxTable.setModel(defaultTableModel);
     jxTable.setSortable(false);
     jxTable.setEditable(true);
-    jxTable.setShowVerticalLines(true);
-    jxTable.setShowHorizontalLines(true);
 
     JScrollPane jScrollPane = getJScrollPane(jxTable);
 
@@ -354,8 +430,6 @@ public class GUIHelper {
     jxTable.setModel(defaultTableModel);
     jxTable.setSortable(false);
     jxTable.setEditable(true);
-    jxTable.setShowVerticalLines(true);
-    jxTable.setShowHorizontalLines(true);
 
     JScrollPane jScrollPane = getJScrollPane(jxTable);
 
@@ -397,8 +471,8 @@ public class GUIHelper {
     jxTable.setHorizontalScrollEnabled(true);
     jxTable.setVisibleRowCount(rowCountTable);
     jxTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-    jxTable.setShowVerticalLines(true);
-    jxTable.setShowHorizontalLines(true);
+
+    applyStandardTableStyle(jxTable);
 
     jxTable.setSortable(false);
     jxTable.setEditable(true);
@@ -512,6 +586,7 @@ public class GUIHelper {
     };
     jxTable.setColumnControlVisible(true);
     jxTable.setSortable(false);
+    applyStandardTableStyle(jxTable);
 
     JScrollPane jScrollPane = getJScrollPane(jxTable);
 
@@ -609,10 +684,7 @@ public class GUIHelper {
   }
 
   public static void configureStandardTableProperties(JXTable table) {
-    table.setShowVerticalLines(true);
-    table.setShowHorizontalLines(true);
-    table.setGridColor(java.awt.Color.GRAY);
-    table.setIntercellSpacing(new java.awt.Dimension(1, 1));
+    applyStandardTableStyle(table);
     table.setEditable(false);
     table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
   }

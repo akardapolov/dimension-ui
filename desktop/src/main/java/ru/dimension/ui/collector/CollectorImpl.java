@@ -85,6 +85,8 @@ public class CollectorImpl implements Collector, JdbcLoader, HttpLoader, JmxLoad
       log.info("Server timestamp for: {} is: {}", profileTaskQueryKey, toLocalDateTime(serverDateTime));
       log.info("Last timestamp for: {} is: {}", profileTaskQueryKey, toLocalDateTime(sqlQueryState.getLastTimestamp(profileTaskQueryKey)));
 
+      profileManager.updateTable(tableInfo);
+
     } catch (Exception e) {
       log.catching(e);
       throw new RuntimeException(e);
@@ -120,6 +122,8 @@ public class CollectorImpl implements Collector, JdbcLoader, HttpLoader, JmxLoad
       tableInfo.setCProfiles(tProfile.getCProfiles());
 
       queryInfo.setDeltaLocalServerTime(0);
+
+      profileManager.updateTable(tableInfo);
     } catch (Exception e) {
       log.catching(e);
       throw new RuntimeException(e);
@@ -163,6 +167,8 @@ public class CollectorImpl implements Collector, JdbcLoader, HttpLoader, JmxLoad
 
       queryInfo.setDbType(connectionInfo.getDbType());
       queryInfo.setDeltaLocalServerTime(0);
+
+      profileManager.updateTable(tableInfo);
     } catch (Exception e) {
       log.catching(e);
       throw new RuntimeException(e);

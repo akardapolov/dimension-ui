@@ -88,6 +88,12 @@ public class AdHocHistoryUnitPresenter implements UnitPresenter, HelperChart {
     updateChartInternal(null, null);
   }
 
+  public void refreshAxisSettings() {
+    if (chart != null) {
+      chart.refreshAxisSettings();
+    }
+  }
+
   @Override
   public void handleLegendChangeAll(Boolean showLegend) {
     boolean visibility = showLegend != null && showLegend;

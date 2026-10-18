@@ -3,277 +3,98 @@ package ru.dimension.ui.view.structure.template;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
 import javax.swing.AbstractAction;
-import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
 import javax.swing.JRootPane;
-import javax.swing.JScrollPane;
-import javax.swing.JTabbedPane;
+import javax.swing.JSplitPane;
 import javax.swing.KeyStroke;
-import javax.swing.border.EtchedBorder;
+import javax.swing.SwingUtilities;
 import lombok.extern.log4j.Log4j2;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.jdesktop.swingx.JXTable;
-import org.jdesktop.swingx.JXTextArea;
-import org.jdesktop.swingx.JXTitledSeparator;
-import org.painlessgridbag.PainlessGridBag;
-import ru.dimension.tt.swing.TTTable;
-import ru.dimension.ui.helper.PGHelper;
-import ru.dimension.ui.model.config.Connection;
-import ru.dimension.ui.model.config.Query;
-import ru.dimension.ui.model.config.Task;
-import ru.dimension.ui.model.view.tab.ConnectionTypeTabPane;
-import ru.dimension.ui.view.panel.template.TemplateConnPanel;
-import ru.dimension.ui.view.panel.template.TemplateHTTPConnPanel;
-import ru.dimension.ui.view.panel.template.TemplateJmxConnPanel;
+import ru.dimension.ui.view.panel.template.TemplateCatalogPanel;
+import ru.dimension.ui.view.panel.template.TemplateDetailsPanel;
 import ru.dimension.ui.view.structure.TemplateView;
-import ru.dimension.ui.view.tab.ConnTypeTab;
-import ru.dimension.ui.view.table.row.Rows.TemplateConnectionRow;
-import ru.dimension.ui.view.table.row.Rows.TemplateMetricRow;
-import ru.dimension.ui.view.table.row.Rows.TemplateQueryRow;
-import ru.dimension.ui.view.table.row.Rows.TemplateTaskRow;
 
 @Log4j2
 @Singleton
 public class TemplateViewImpl extends JDialog implements TemplateView {
 
-  private final JButton templateLoadJButton;
-
-  private final TTTable<TemplateTaskRow, JXTable> templateTaskTable;
-  private final TTTable<TemplateConnectionRow, JXTable> templateConnTable;
-  private final TTTable<TemplateQueryRow, JXTable> templateQueryTable;
-  private final TTTable<TemplateMetricRow, JXTable> templateMetricsTable;
-
-  private final JPanel jPanelLine;
-  private final JPanel jPanel0Line;
-  private final JPanel jPanel1Line;
-  private final JPanel jPanel2Line;
-  private final JPanel jPanel3Line;
-
-  private final TemplateConnPanel templateConnPanel;
-  private final TemplateHTTPConnPanel templateHTTPConnPanel;
-  private final TemplateJmxConnPanel templateJmxConnPanel;
-
-  private final JXTextArea taskDescription;
-  private final JXTextArea queryDescription;
-  private final RSyntaxTextArea queryText;
-  private final JTabbedPane connectionTabPane;
+  private final TemplateCatalogPanel catalogPanel;
 
   @Inject
-  public TemplateViewImpl(@Named("templateLoadJButton") JButton templateLoadJButton,
-                          @Named("templateTaskCase") TTTable<TemplateTaskRow, JXTable> templateTaskTable,
-                          @Named("templateConnCase") TTTable<TemplateConnectionRow, JXTable> templateConnTable,
-                          @Named("templateQueryCase") TTTable<TemplateQueryRow, JXTable> templateQueryTable,
-                          @Named("templateMetricsCase") TTTable<TemplateMetricRow, JXTable> templateMetricsTable,
-                          @Named("templateConnPanel") TemplateConnPanel templateConnPanel,
-                          @Named("templateHTTPConnPanel") TemplateHTTPConnPanel templateHTTPConnPanel,
-                          @Named("templateJmxConnPanel") TemplateJmxConnPanel templateJmxConnPanel,
-                          @Named("templateConnectionTab") ConnTypeTab connectionTabPane,
-                          @Named("templateTaskDescription") JXTextArea taskDescription,
-                          @Named("templateQueryDescription") JXTextArea queryDescription,
-                          @Named("templateQueryText") RSyntaxTextArea queryText) {
+  public TemplateViewImpl(@Named("templateCatalogPanel") TemplateCatalogPanel catalogPanel,
+                          @Named("templateDetailsPanel") TemplateDetailsPanel detailsPanel) {
+    this.catalogPanel = catalogPanel;
 
-    this.templateLoadJButton = templateLoadJButton;
+    JSplitPane mainSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, catalogPanel, detailsPanel);
+    mainSplit.setDividerLocation(280);
+    mainSplit.setBorder(null);
 
-    this.templateTaskTable = templateTaskTable;
-    this.templateConnTable = templateConnTable;
-    this.templateQueryTable = templateQueryTable;
-    this.templateMetricsTable = templateMetricsTable;
+    setLayout(new BorderLayout());
+    add(mainSplit, BorderLayout.CENTER);
 
-    this.templateConnPanel = templateConnPanel;
-    this.templateHTTPConnPanel = templateHTTPConnPanel;
-    this.templateJmxConnPanel = templateJmxConnPanel;
-
-    this.taskDescription = taskDescription;
-    this.queryDescription = queryDescription;
-    this.queryText = queryText;
-
-    this.connectionTabPane = connectionTabPane;
-    this.connectionTabPane.add(this.templateConnPanel, ConnectionTypeTabPane.JDBC.getName());
-    this.connectionTabPane.add(this.templateHTTPConnPanel, ConnectionTypeTabPane.HTTP.getName());
-    this.connectionTabPane.add(this.templateJmxConnPanel, ConnectionTypeTabPane.JMX.getName());
-
-    this.jPanelLine = new JPanel(new GridLayout(1, 7, 5, 5));
-    this.jPanel0Line = new JPanel(new GridLayout(1, 3, 5, 5));
-    this.jPanel1Line = new JPanel(new GridLayout(1, 3, 3, 3));
-    this.jPanel2Line = new JPanel(new GridLayout(1, 3, 3, 3));
-    this.jPanel3Line = new JPanel(new GridLayout(1, 2, 3, 3));
-
-    PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(), false);
-    gbl.row()
-        .cellXYRemainder(fillContentPane()).fillXY();
-
-    gbl.done();
-
-    this.setTitle("Templates");
-    this.setEscToClose();
-    this.packTemplate(false);
-  }
-
-  private JPanel fillContentPane() {
-    JPanel panelSettings = new JPanel();
-    panelSettings.setBorder(new EtchedBorder());
-
-    PainlessGridBag gbl = new PainlessGridBag(panelSettings, PGHelper.getPGConfig(), false);
-
-    jPanelLine.add(templateLoadJButton);
-    jPanelLine.add(new JLabel());
-    jPanelLine.add(new JLabel());
-    jPanelLine.add(new JLabel());
-    jPanelLine.add(new JLabel());
-    jPanelLine.add(new JLabel());
-    jPanelLine.add(new JLabel());
-
-    jPanel0Line.add(new JXTitledSeparator("Task"));
-    jPanel0Line.add(new JXTitledSeparator("Connection"));
-    jPanel0Line.add(new JXTitledSeparator("Query"));
-
-    jPanel1Line.add(this.templateTaskTable.scrollPane());
-    jPanel1Line.add(this.templateConnTable.scrollPane());
-    jPanel1Line.add(this.templateQueryTable.scrollPane());
-
-    jPanel2Line.add(fillTaskPanel());
-    jPanel2Line.add(fillConnPanel());
-    jPanel2Line.add(fillQueryPanel());
-
-    jPanel3Line.setLayout(new GridLayout(1, 2, 3, 3));
-    jPanel3Line.add(fillSqlText());
-    jPanel3Line.add(fillMetrics());
-
-    gbl.row().cell(jPanelLine).fillX();
-    gbl.row().cell(jPanel0Line).fillX();
-    gbl.row().cell(jPanel1Line).fillXY();
-    gbl.row().cell(jPanel2Line).fillX();
-    gbl.row().cellXYRemainder(jPanel3Line).fillXY();
-
-    gbl.done();
-
-    return panelSettings;
-  }
-
-  private JPanel fillTaskPanel() {
-    JPanel jPanel = new JPanel();
-    PainlessGridBag gbl = new PainlessGridBag(jPanel, PGHelper.getPGConfig(), false);
-
-    gbl.row()
-        .cellXRemainder(new JXTitledSeparator("Description")).fillX();
-    gbl.row()
-        .cellXYRemainder(new JScrollPane(taskDescription)).fillXY();
-    gbl.done();
-
-    return jPanel;
-  }
-
-  private JPanel fillQueryPanel() {
-    JPanel jPanel = new JPanel();
-    PainlessGridBag gbl = new PainlessGridBag(jPanel, PGHelper.getPGConfig(), false);
-
-    gbl.row()
-        .cell(new JXTitledSeparator("Description")).fillX();
-    gbl.row()
-        .cellXYRemainder(new JScrollPane(queryDescription)).fillXY();
-
-    gbl.done();
-
-    return jPanel;
-  }
-
-  private JPanel fillConnPanel() {
-    JPanel jPanel = new JPanel();
-
-    PainlessGridBag gbl = new PainlessGridBag(jPanel, PGHelper.getPGConfig(), false);
-
-    gbl.row()
-        .cell(new JXTitledSeparator("Connection details")).fillX();
-    gbl.row()
-        .cellXYRemainder(connectionTabPane).fillXY();
-
-    gbl.done();
-    return jPanel;
-  }
-
-  private JPanel fillSqlText() {
-    JPanel jPanel = new JPanel();
-    PainlessGridBag gbl = new PainlessGridBag(jPanel, PGHelper.getPGConfig(), false);
-
-    gbl.row()
-        .cell(new JXTitledSeparator("SQL text")).fillX();
-    gbl.row()
-        .cellXYRemainder(new JScrollPane(queryText)).fillXY();
-
-    gbl.done();
-    return jPanel;
-  }
-
-  private JPanel fillMetrics() {
-    JPanel jPanel = new JPanel();
-    PainlessGridBag gbl = new PainlessGridBag(jPanel, PGHelper.getPGConfig(), false);
-
-    gbl.row()
-        .cell(new JXTitledSeparator("Metrics")).fillX();
-    gbl.row()
-        .cellXYRemainder(templateMetricsTable.scrollPane()).fillXY();
-
-    gbl.done();
-    return jPanel;
+    setTitle("Templates");
+    setEscToClose();
+    packTemplate(false);
   }
 
   @Override
   public void bindPresenter(TemplatePresenter templatePresenter) {
     addWindowListener(templatePresenter);
-
-    templatePresenter.fillModel(Task.class);
-    templatePresenter.fillModel(Connection.class);
-    templatePresenter.fillModel(Query.class);
   }
 
   @Override
   public void showTemplate() {
-    this.packTemplate(true);
+    packTemplate(true);
   }
 
   @Override
   public void hideTemplate() {
-    this.packTemplate(false);
+    packTemplate(false);
   }
 
   private void packTemplate(boolean visible) {
-    this.setModal(true);
-    this.setResizable(true);
-    this.pack();
+    setModal(false);
+    setResizable(true);
+    pack();
+    setSize(new Dimension(Toolkit.getDefaultToolkit().getScreenSize().width - 300,
+                          Toolkit.getDefaultToolkit().getScreenSize().height - 100));
+    setLocation(Toolkit.getDefaultToolkit().getScreenSize().width / 2 - getWidth() / 2,
+                Toolkit.getDefaultToolkit().getScreenSize().height / 2 - getHeight() / 2);
+    if (visible) {
+      setVisible(true);
+      requestActivation();
+    } else {
+      setVisible(false);
+    }
+  }
 
-    this.setSize(new Dimension(Toolkit.getDefaultToolkit().getScreenSize().width - 400,
-                               Toolkit.getDefaultToolkit().getScreenSize().height - 100));
-    this.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width) / 2 - getWidth() / 2,
-                     (Toolkit.getDefaultToolkit().getScreenSize().height) / 2 - getHeight() / 2);
-
-    this.setVisible(visible);
+  private void requestActivation() {
+    SwingUtilities.invokeLater(() -> {
+      toFront();
+      setAlwaysOnTop(true);
+      setAlwaysOnTop(false);
+      requestFocus();
+      catalogPanel.requestSearchFocus();
+    });
   }
 
   private void setEscToClose() {
     setDefaultCloseOperation(JDialog.HIDE_ON_CLOSE);
-
     final String actionKey = "TEMPLATE_DIALOG_CLOSE_ON_ESC";
     JRootPane root = getRootPane();
-
     root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
         .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), actionKey);
-
     root.getActionMap().put(actionKey, new AbstractAction() {
       @Override
       public void actionPerformed(ActionEvent e) {
-        TemplateViewImpl.this.dispatchEvent(
-            new WindowEvent(TemplateViewImpl.this, WindowEvent.WINDOW_CLOSING)
-        );
+        TemplateViewImpl.this.dispatchEvent(new WindowEvent(TemplateViewImpl.this, WindowEvent.WINDOW_CLOSING));
       }
     });
   }

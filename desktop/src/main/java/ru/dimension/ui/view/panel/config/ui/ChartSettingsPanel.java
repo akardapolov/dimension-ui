@@ -17,6 +17,7 @@ import java.awt.event.ActionListener;
 import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.Arrays;
+import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
@@ -40,16 +41,31 @@ public class ChartSettingsPanel extends JPanel {
   private static final int LEGEND_WIDTH_MEDIUM = 150;
   private static final int LEGEND_WIDTH_WIDE   = 200;
 
+  private static final int VALUE_AXIS_WIDTH_NARROW = 40;
+  private static final int VALUE_AXIS_WIDTH_MEDIUM = 50;
+  private static final int VALUE_AXIS_WIDTH_WIDE   = 60;
+
   private final JCheckBox chkHideBuiltInLegend;
   private final JCheckBox chkHideYAxis;
   private final JCheckBox chkHideXAxis;
   private final JCheckBox chkHidePlotInsets;
   private final JCheckBox chkHideChartPadding;
   private final JCheckBox chkFixedLegendSize;
+  private final JCheckBox chkAbbreviateValues;
+  private final JCheckBox chkFixedValueAxisSize;
+
+  private final JCheckBox chkHideYAxisLabel;
+  private final JCheckBox chkHideYAxisValues;
+  private final JCheckBox chkHideXAxisLabel;
+  private final JCheckBox chkHideXAxisValues;
 
   private final JRadioButton rbLegendWidthNarrow;
   private final JRadioButton rbLegendWidthMedium;
   private final JRadioButton rbLegendWidthWide;
+
+  private final JRadioButton rbValueAxisWidthNarrow;
+  private final JRadioButton rbValueAxisWidthMedium;
+  private final JRadioButton rbValueAxisWidthWide;
 
   private final ChartPreviewPanel previewPanel;
 
@@ -63,11 +79,23 @@ public class ChartSettingsPanel extends JPanel {
     chkHidePlotInsets    = new JCheckBox("Plot insets");
     chkHideChartPadding  = new JCheckBox("Chart padding");
     chkFixedLegendSize   = new JCheckBox("Fixed legend size");
+    chkAbbreviateValues  = new JCheckBox("Abbreviate values");
+    chkFixedValueAxisSize = new JCheckBox("Fixed value axis size");
+
+    chkHideYAxisLabel    = new JCheckBox("Label");
+    chkHideYAxisValues   = new JCheckBox("Values");
+    chkHideXAxisLabel    = new JCheckBox("Label");
+    chkHideXAxisValues   = new JCheckBox("Values");
 
     rbLegendWidthNarrow  = new JRadioButton(LEGEND_WIDTH_NARROW + " px");
     rbLegendWidthMedium  = new JRadioButton(LEGEND_WIDTH_MEDIUM + " px");
     rbLegendWidthWide    = new JRadioButton(LEGEND_WIDTH_WIDE + " px");
     rbLegendWidthMedium.setSelected(true);
+
+    rbValueAxisWidthNarrow  = new JRadioButton(VALUE_AXIS_WIDTH_NARROW + " px");
+    rbValueAxisWidthMedium  = new JRadioButton(VALUE_AXIS_WIDTH_MEDIUM + " px");
+    rbValueAxisWidthWide    = new JRadioButton(VALUE_AXIS_WIDTH_WIDE + " px");
+    rbValueAxisWidthMedium.setSelected(true);
 
     previewPanel = new ChartPreviewPanel(this);
 
@@ -108,8 +136,31 @@ public class ChartSettingsPanel extends JPanel {
     legendWidthPanel.add(rbLegendWidthWide);
     legendPane.add(legendWidthPanel);
 
+    JXTaskPane valuePane = new JXTaskPane();
+    valuePane.setTitle("Value");
+    valuePane.setCollapsed(false);
+    chkAbbreviateValues.setAlignmentX(LEFT_ALIGNMENT);
+    valuePane.add(chkAbbreviateValues);
+    chkFixedValueAxisSize.setAlignmentX(LEFT_ALIGNMENT);
+    valuePane.add(chkFixedValueAxisSize);
+
+    ButtonGroup valueAxisWidthGroup = new ButtonGroup();
+    valueAxisWidthGroup.add(rbValueAxisWidthNarrow);
+    valueAxisWidthGroup.add(rbValueAxisWidthMedium);
+    valueAxisWidthGroup.add(rbValueAxisWidthWide);
+
+    JPanel valueAxisWidthPanel = new JPanel();
+    valueAxisWidthPanel.setLayout(new BoxLayout(valueAxisWidthPanel, BoxLayout.X_AXIS));
+    valueAxisWidthPanel.setOpaque(false);
+    valueAxisWidthPanel.setAlignmentX(LEFT_ALIGNMENT);
+    valueAxisWidthPanel.add(rbValueAxisWidthNarrow);
+    valueAxisWidthPanel.add(rbValueAxisWidthMedium);
+    valueAxisWidthPanel.add(rbValueAxisWidthWide);
+    valuePane.add(valueAxisWidthPanel);
+
     container.add(zonesPane);
     container.add(legendPane);
+    container.add(valuePane);
 
     PainlessGridBag gbl = new PainlessGridBag(this, PGHelper.getPGConfig(), false);
     gbl.row().cellXYRemainder(scrollPane).fillXY();
@@ -121,9 +172,25 @@ public class ChartSettingsPanel extends JPanel {
     chkHideXAxis        .addActionListener(repaint);
     chkHidePlotInsets   .addActionListener(repaint);
     chkHideChartPadding .addActionListener(repaint);
+    chkAbbreviateValues .addActionListener(repaint);
+    chkFixedValueAxisSize.addActionListener(repaint);
+    rbValueAxisWidthNarrow .addActionListener(repaint);
+    rbValueAxisWidthMedium .addActionListener(repaint);
+    rbValueAxisWidthWide   .addActionListener(repaint);
+    chkHideYAxisLabel   .addActionListener(repaint);
+    chkHideYAxisValues  .addActionListener(repaint);
+    chkHideXAxisLabel   .addActionListener(repaint);
+    chkHideXAxisValues  .addActionListener(repaint);
 
     chkFixedLegendSize.addActionListener(e -> updateLegendWidthEnabled());
     updateLegendWidthEnabled();
+
+    chkFixedValueAxisSize.addActionListener(e -> updateValueAxisWidthEnabled());
+    updateValueAxisWidthEnabled();
+
+    chkHideYAxis.addActionListener(e -> updateAxisOptionsEnabled());
+    chkHideXAxis.addActionListener(e -> updateAxisOptionsEnabled());
+    updateAxisOptionsEnabled();
   }
 
   private void updateLegendWidthEnabled() {
@@ -131,6 +198,36 @@ public class ChartSettingsPanel extends JPanel {
     rbLegendWidthNarrow.setEnabled(enabled);
     rbLegendWidthMedium.setEnabled(enabled);
     rbLegendWidthWide.setEnabled(enabled);
+  }
+
+  private void updateValueAxisWidthEnabled() {
+    boolean enabled = chkFixedValueAxisSize.isSelected();
+    rbValueAxisWidthNarrow.setEnabled(enabled);
+    rbValueAxisWidthMedium.setEnabled(enabled);
+    rbValueAxisWidthWide.setEnabled(enabled);
+  }
+
+  private void updateAxisOptionsEnabled() {
+    boolean yEnabled = !chkHideYAxis.isSelected();
+    chkHideYAxisLabel.setEnabled(yEnabled);
+    chkHideYAxisValues.setEnabled(yEnabled);
+
+    boolean xEnabled = !chkHideXAxis.isSelected();
+    chkHideXAxisLabel.setEnabled(xEnabled);
+    chkHideXAxisValues.setEnabled(xEnabled);
+  }
+
+  private JPanel buildAxisOptionsPanel(JCheckBox labelChk, JCheckBox valuesChk) {
+    JPanel panel = new JPanel();
+    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+    panel.setOpaque(false);
+    panel.setBorder(BorderFactory.createEmptyBorder(0, 16, 0, 0));
+    panel.setAlignmentX(LEFT_ALIGNMENT);
+    labelChk.setAlignmentX(LEFT_ALIGNMENT);
+    valuesChk.setAlignmentX(LEFT_ALIGNMENT);
+    panel.add(labelChk);
+    panel.add(valuesChk);
+    return panel;
   }
 
   private JPanel buildZonesContent() {
@@ -146,15 +243,22 @@ public class ChartSettingsPanel extends JPanel {
     left.add(separator);
     left.add(Box.createVerticalStrut(4));
 
-    for (JCheckBox chk : new JCheckBox[]{
-        chkHideBuiltInLegend,
-        chkHideYAxis,
-        chkHideXAxis,
-        chkHidePlotInsets,
-        chkHideChartPadding}) {
-      chk.setAlignmentX(LEFT_ALIGNMENT);
-      left.add(chk);
-    }
+    chkHideBuiltInLegend.setAlignmentX(LEFT_ALIGNMENT);
+    left.add(chkHideBuiltInLegend);
+
+    chkHideYAxis.setAlignmentX(LEFT_ALIGNMENT);
+    left.add(chkHideYAxis);
+    left.add(buildAxisOptionsPanel(chkHideYAxisLabel, chkHideYAxisValues));
+
+    chkHideXAxis.setAlignmentX(LEFT_ALIGNMENT);
+    left.add(chkHideXAxis);
+    left.add(buildAxisOptionsPanel(chkHideXAxisLabel, chkHideXAxisValues));
+
+    chkHidePlotInsets.setAlignmentX(LEFT_ALIGNMENT);
+    left.add(chkHidePlotInsets);
+
+    chkHideChartPadding.setAlignmentX(LEFT_ALIGNMENT);
+    left.add(chkHideChartPadding);
 
     JPanel previewWrapper = new JPanel(new BorderLayout());
     previewWrapper.setOpaque(false);
@@ -173,6 +277,10 @@ public class ChartSettingsPanel extends JPanel {
   public boolean isHidePlotInsets()    { return chkHidePlotInsets.isSelected(); }
   public boolean isHideChartPadding()  { return chkHideChartPadding.isSelected(); }
   public boolean isLegendFixedSize()   { return chkFixedLegendSize.isSelected(); }
+  public boolean isHideYAxisLabel()    { return chkHideYAxisLabel.isSelected(); }
+  public boolean isHideYAxisValues()   { return chkHideYAxisValues.isSelected(); }
+  public boolean isHideXAxisLabel()    { return chkHideXAxisLabel.isSelected(); }
+  public boolean isHideXAxisValues()   { return chkHideXAxisValues.isSelected(); }
   public int getLegendFixedWidth() {
     if (rbLegendWidthWide.isSelected()) {
       return LEGEND_WIDTH_WIDE;
@@ -185,10 +293,14 @@ public class ChartSettingsPanel extends JPanel {
 
   public void setHideCustomLegend(boolean v)  {}
   public void setHideBuiltInLegend(boolean v) { chkHideBuiltInLegend.setSelected(v); previewPanel.repaint(); }
-  public void setHideYAxis(boolean v)         { chkHideYAxis.setSelected(v);         previewPanel.repaint(); }
-  public void setHideXAxis(boolean v)         { chkHideXAxis.setSelected(v);         previewPanel.repaint(); }
+  public void setHideYAxis(boolean v)         { chkHideYAxis.setSelected(v); updateAxisOptionsEnabled(); previewPanel.repaint(); }
+  public void setHideXAxis(boolean v)         { chkHideXAxis.setSelected(v); updateAxisOptionsEnabled(); previewPanel.repaint(); }
   public void setHidePlotInsets(boolean v)    { chkHidePlotInsets.setSelected(v);    previewPanel.repaint(); }
   public void setHideChartPadding(boolean v)  { chkHideChartPadding.setSelected(v);  previewPanel.repaint(); }
+  public void setHideYAxisLabel(boolean v)    { chkHideYAxisLabel.setSelected(v);    previewPanel.repaint(); }
+  public void setHideYAxisValues(boolean v)   { chkHideYAxisValues.setSelected(v);   previewPanel.repaint(); }
+  public void setHideXAxisLabel(boolean v)    { chkHideXAxisLabel.setSelected(v);    previewPanel.repaint(); }
+  public void setHideXAxisValues(boolean v)   { chkHideXAxisValues.setSelected(v);   previewPanel.repaint(); }
   public void setLegendFixedSize(boolean v)   { chkFixedLegendSize.setSelected(v); updateLegendWidthEnabled(); }
   public void setLegendFixedWidth(int width) {
     if (width <= LEGEND_WIDTH_NARROW) {
@@ -201,6 +313,31 @@ public class ChartSettingsPanel extends JPanel {
     updateLegendWidthEnabled();
   }
 
+  public boolean isValueAbbreviation()  { return chkAbbreviateValues.isSelected(); }
+  public boolean isValueAxisFixedSize() { return chkFixedValueAxisSize.isSelected(); }
+  public int getValueAxisFixedWidth() {
+    if (rbValueAxisWidthWide.isSelected()) {
+      return VALUE_AXIS_WIDTH_WIDE;
+    }
+    if (rbValueAxisWidthNarrow.isSelected()) {
+      return VALUE_AXIS_WIDTH_NARROW;
+    }
+    return VALUE_AXIS_WIDTH_MEDIUM;
+  }
+
+  public void setValueAbbreviation(boolean v)  { chkAbbreviateValues.setSelected(v); previewPanel.repaint(); }
+  public void setValueAxisFixedSize(boolean v) { chkFixedValueAxisSize.setSelected(v); updateValueAxisWidthEnabled(); previewPanel.repaint(); }
+  public void setValueAxisFixedWidth(int width) {
+    if (width <= VALUE_AXIS_WIDTH_NARROW) {
+      rbValueAxisWidthNarrow.setSelected(true);
+    } else if (width >= VALUE_AXIS_WIDTH_WIDE) {
+      rbValueAxisWidthWide.setSelected(true);
+    } else {
+      rbValueAxisWidthMedium.setSelected(true);
+    }
+    updateValueAxisWidthEnabled();
+  }
+
   public void addChangeListener(ActionListener listener) {
     chkHideBuiltInLegend.addActionListener(listener);
     chkHideYAxis        .addActionListener(listener);
@@ -211,6 +348,15 @@ public class ChartSettingsPanel extends JPanel {
     rbLegendWidthNarrow .addActionListener(listener);
     rbLegendWidthMedium .addActionListener(listener);
     rbLegendWidthWide   .addActionListener(listener);
+    chkAbbreviateValues   .addActionListener(listener);
+    chkFixedValueAxisSize .addActionListener(listener);
+    rbValueAxisWidthNarrow.addActionListener(listener);
+    rbValueAxisWidthMedium.addActionListener(listener);
+    rbValueAxisWidthWide  .addActionListener(listener);
+    chkHideYAxisLabel   .addActionListener(listener);
+    chkHideYAxisValues  .addActionListener(listener);
+    chkHideXAxisLabel   .addActionListener(listener);
+    chkHideXAxisValues  .addActionListener(listener);
   }
 
   private static final class ChartPreviewPanel extends JPanel {
@@ -403,7 +549,10 @@ public class ChartSettingsPanel extends JPanel {
 
       g.setFont(getFont().deriveFont(Font.PLAIN, 8f));
       FontMetrics fm = g.getFontMetrics();
-      String[] lbls = {"0", "25", "50", "75"};
+      String[] lbls = cfg.isValueAbbreviation()
+          ? new String[]{"0", "2.5K", "5K", "7.5K"}
+          : new String[]{"0", "25", "50", "75"};
+      boolean showValues = !cfg.isHideYAxisValues();
 
       for (int i = 0; i < lbls.length; i++) {
         int ty = py + ph - Math.round((float) ph * i / (lbls.length - 1));
@@ -420,9 +569,11 @@ public class ChartSettingsPanel extends JPanel {
         g.setColor(withAlpha(borderColor(), 180));
         g.setStroke(new BasicStroke(0.7f));
         g.drawLine(ax + aw - 3, ty, ax + aw, ty);
-        g.setColor(secondaryText());
-        int sw = fm.stringWidth(lbls[i]);
-        g.drawString(lbls[i], ax + aw - 4 - sw, textY);
+        if (showValues) {
+          g.setColor(secondaryText());
+          int sw = fm.stringWidth(lbls[i]);
+          g.drawString(lbls[i], ax + aw - 4 - sw, textY);
+        }
       }
     }
 
@@ -434,6 +585,7 @@ public class ChartSettingsPanel extends JPanel {
       g.setFont(getFont().deriveFont(Font.PLAIN, 8f));
       FontMetrics fm = g.getFontMetrics();
       String[] labels = {"10:00", "11:00", "12:00", "13:00"};
+      boolean showValues = !cfg.isHideXAxisValues();
 
       for (int i = 0; i < labels.length; i++) {
         int tx = px + Math.round((float) pw * i / (labels.length - 1));
@@ -451,8 +603,10 @@ public class ChartSettingsPanel extends JPanel {
         g.setColor(withAlpha(borderColor(), 180));
         g.setStroke(new BasicStroke(0.7f));
         g.drawLine(tx, ay, tx, ay + 3);
-        g.setColor(secondaryText());
-        g.drawString(labels[i], textX, ay + fm.getAscent() + 2);
+        if (showValues) {
+          g.setColor(secondaryText());
+          g.drawString(labels[i], textX, ay + fm.getAscent() + 2);
+        }
       }
     }
 

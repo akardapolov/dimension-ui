@@ -19,6 +19,10 @@ public final class Internationalization {
     language = languageLocale;
   }
 
+  public static String getLanguage() {
+    return language;
+  }
+
   private static Locale updateLocale(String lang) {
     Locale locale = new Locale(lang);
     Locale.setDefault(locale);

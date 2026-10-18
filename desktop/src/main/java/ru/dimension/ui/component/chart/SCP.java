@@ -21,7 +21,6 @@ import org.jfree.chart.plot.PlotOrientation;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.model.output.StackedColumn;
 import ru.dimension.di.ServiceLocator;
-import ru.dimension.ui.Application;
 import ru.dimension.ui.component.chart.holder.DetailAndAnalyzeHolder;
 import ru.dimension.ui.exception.NotFoundException;
 import ru.dimension.ui.helper.ColorHelper;
@@ -89,8 +88,10 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
 
     ChartUISettings chartUISettings = loadChartUISettings();
     if (chartUISettings != null) {
+      this.chartUISettings = chartUISettings;
       this.stackedChart.setLegendFixedWidth(chartUISettings.getLegendFixedWidth());
       this.stackedChart.setLegendFixedSize(chartUISettings.isLegendFixedSize());
+      this.stackedChart.applyAxisSettings(chartUISettings);
     } else {
       this.stackedChart.setLegendFixedSize(false);
     }
@@ -264,6 +265,15 @@ public abstract class SCP extends JPanel implements HelperChart, DetailChart {
     if (this.stackedChart != null && chartUISettings != null) {
       this.stackedChart.setLegendFixedWidth(chartUISettings.getLegendFixedWidth());
       this.stackedChart.setLegendFixedSize(chartUISettings.isLegendFixedSize());
+      this.stackedChart.applyAxisSettings(chartUISettings);
+    }
+  }
+
+  public void refreshAxisSettings() {
+    ChartUISettings settings = loadChartUISettings();
+    if (settings != null && this.stackedChart != null) {
+      this.chartUISettings = settings;
+      this.stackedChart.applyAxisSettings(settings);
     }
   }
 

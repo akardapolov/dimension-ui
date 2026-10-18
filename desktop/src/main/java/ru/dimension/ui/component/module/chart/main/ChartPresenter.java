@@ -133,6 +133,12 @@ public class ChartPresenter implements MessageAction {
     insightUnit.refreshSeriesColors();
   }
 
+  public void refreshAxisSettings() {
+    realtimeUnit.refreshAxisSettings();
+    historyUnit.refreshAxisSettings();
+    insightUnit.refreshAxisSettings();
+  }
+
   @Override
   public void receive(Message message) {
     log.info("Message received >>> {} with action >>> {}", message.destination(), message.action());

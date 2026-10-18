@@ -18,6 +18,18 @@ public class ChartUISettings {
   @SerializedName(value = "hideXAxis")
   private boolean hideXAxis = true;
 
+  @SerializedName(value = "hideYAxisLabel")
+  private boolean hideYAxisLabel = false;
+
+  @SerializedName(value = "hideYAxisValues")
+  private boolean hideYAxisValues = false;
+
+  @SerializedName(value = "hideXAxisLabel")
+  private boolean hideXAxisLabel = false;
+
+  @SerializedName(value = "hideXAxisValues")
+  private boolean hideXAxisValues = false;
+
   @SerializedName(value = "hidePlotInsets")
   private boolean hidePlotInsets = true;
 
@@ -29,5 +41,14 @@ public class ChartUISettings {
 
   @SerializedName(value = "legendFixedWidth")
   private int legendFixedWidth = 150;
+
+  @SerializedName(value = "valueAbbreviation")
+  private boolean valueAbbreviation = true;
+
+  @SerializedName(value = "valueAxisFixedSize")
+  private boolean valueAxisFixedSize = true;
+
+  @SerializedName(value = "valueAxisFixedWidth")
+  private int valueAxisFixedWidth = 50;
 
 }

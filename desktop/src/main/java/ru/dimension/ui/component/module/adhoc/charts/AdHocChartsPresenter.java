@@ -132,7 +132,21 @@ public class AdHocChartsPresenter implements MessageAction {
       case REMOVE_ALL_CHARTS_FOR_TABLE_OR_VIEW -> handleRemoveAllChartsForTableOrView(message);
       case CHART_LEGEND_STATE_ALL -> chartLegendStateAll(message);
       case EXPAND_COLLAPSE_ALL -> expandCollapseAll(message);
+      case CHART_UI_SETTINGS_CHANGED -> handleChartUISettingsChanged();
     }
+  }
+
+  private void handleChartUISettingsChanged() {
+    if (model == null || model.getChartPanes() == null) return;
+
+    model.getChartPanes().values().forEach(chartMap ->
+        chartMap.values().forEach(chartModule -> {
+          try {
+            chartModule.refreshAxisSettings();
+          } catch (Exception e) {
+            log.error("Error refreshing axis settings for adhoc chart: {}", chartModule.getTitle(), e);
+          }
+        }));
   }
 
   private void handleRemoveAllChartsForTableOrView(Message message) {

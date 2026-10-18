@@ -192,6 +192,9 @@ public abstract class Axis implements Cloneable, Serializable {
     /** The label for the axis. */
     private transient AttributedString label;
 
+    /** A flag indicating whether or not the axis label is visible. */
+    private boolean labelVisible = true;
+
     /** The font for displaying the axis label. */
     private Font labelFont;
 
@@ -426,7 +429,18 @@ public abstract class Axis implements Cloneable, Serializable {
         s.addAttributes(this.labelFont.getAttributes(), 0, label.length());
         return s;
     }
-    
+
+    public boolean isLabelVisible() {
+        return this.labelVisible;
+    }
+
+    public void setLabelVisible(boolean flag) {
+        if (flag != this.labelVisible) {
+            this.labelVisible = flag;
+            fireChangeEvent();
+        }
+    }
+
     /**
      * Returns the font for the axis label.
      *
@@ -1210,7 +1224,7 @@ public abstract class Axis implements Cloneable, Serializable {
 
         Rectangle2D result = new Rectangle2D.Double();
         AttributedString axisLabel = getLabel();
-        if (axisLabel != null) {
+        if (axisLabel != null && this.labelVisible) {
             TextLayout layout = new TextLayout(axisLabel.getIterator(), 
                     g2.getFontRenderContext());
             Rectangle2D bounds = layout.getBounds();
@@ -1251,7 +1265,7 @@ public abstract class Axis implements Cloneable, Serializable {
         // it is unlikely that 'state' will be null, but check anyway...
         ParamChecks.nullNotPermitted(state, "state");
 
-        if (label == null) {
+        if (label == null || !this.labelVisible) {
             return state;
         }
 
@@ -1417,6 +1431,9 @@ public abstract class Axis implements Cloneable, Serializable {
             return false;
         }
         if (!this.labelLocation.equals(that.labelLocation)) {
+            return false;
+        }
+        if (this.labelVisible != that.labelVisible) {
             return false;
         }
         if (this.axisLineVisible != that.axisLineVisible) {

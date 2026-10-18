@@ -234,6 +234,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
                 }
 
                 profileManager.updateQuery(queryInfo);
+                profileManager.updateTable(tableInfo);
               } catch (Exception e) {
                 profileManager.setProfileInfoStatusById(key.getProfileId(), RunStatus.NOT_RUNNING);
                 sqlQueryState.clear(profileTaskQueryKey);

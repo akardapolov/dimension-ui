@@ -274,6 +274,12 @@ If you need to view detailed information for a selected dimension, clicking the 
 
 ![Dashboard details](media/view/dashboard-details.png)
 
+### Value Axis Formatting
+
+On all charts, values below 1000 on the value axis are displayed as-is, while larger values are abbreviated depending on the application language: `1.5K`, `1.3M`, `2.7B` for English and `1,5 тыс.`, `1,3 млн`, `2,7 млрд` for Russian. In the application settings (**Configuration** → **UI** → **Value**) you can disable abbreviation and enable a fixed value axis width so that plot areas are aligned across charts.
+
+In the **Hide / Show Zones** section, each axis (**Y-axis**, **X-axis**) has separate options: **Label** hides the axis caption (for example, "Value"), and **Values** hides the numbers on the axis line while keeping the axis itself and the grid.
+
 [Return to Table of Contents](#contents)
 
 ## Data analysis

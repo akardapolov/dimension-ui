@@ -59,6 +59,7 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
       case CHART_LEGEND_STATE_ALL -> chartLegendStateAll(message);
       case EXPAND_COLLAPSE_ALL -> expandCollapseAll(message);
       case COLOR_SCHEME_CHANGED -> handleColorSchemeChanged(message);
+      case CHART_UI_SETTINGS_CHANGED -> handleChartUISettingsChanged();
     }
   }
 
@@ -138,6 +139,21 @@ public class ChartsPresenter implements MessageAction, CollectStartStopListener 
         });
       }
     });
+  }
+
+  private void handleChartUISettingsChanged() {
+    if (model == null || model.getChartPanes() == null) {
+      return;
+    }
+
+    model.getChartPanes().values().forEach(chartMap ->
+        chartMap.values().forEach(chartModule -> {
+          try {
+            chartModule.refreshAxisSettings();
+          } catch (Exception e) {
+            log.error("Error refreshing axis settings for chart: {}", chartModule.getTitle(), e);
+          }
+        }));
   }
 
   private void handleAddChart(Message message) {

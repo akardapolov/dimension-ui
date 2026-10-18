@@ -136,4 +136,8 @@ public class ChartModule extends AbstractTabbedModule<ChartModel> {
   public void refreshSeriesColors() {
     presenter.refreshSeriesColors();
   }
+
+  public void refreshAxisSettings() {
+    presenter.refreshAxisSettings();
+  }
 }

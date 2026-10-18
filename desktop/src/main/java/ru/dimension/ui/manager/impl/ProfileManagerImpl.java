@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.db.exception.TableNameEmptyException;
+import ru.dimension.db.model.profile.TProfile;
 import ru.dimension.ui.cache.AppCache;
 import ru.dimension.ui.collector.JdbcLoader;
 import ru.dimension.ui.exception.NotFoundException;
@@ -243,6 +244,11 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
   @Override
   public void updateTable(TableInfo tableInfo) {
     Table table = configurationManager.getConfig(Table.class, tableInfo.getTableName());
+    if (table == null) {
+      addTable(tableInfo);
+      return;
+    }
+
     table.setCompression(tableInfo.getCompression());
     table.setTableType(tableInfo.getTableType());
     table.setIndexType(tableInfo.getIndexType());
@@ -439,6 +445,27 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
           tableInfo.setCProfiles(table.getCProfiles());
           tableInfo.setDimensionColumnList(table.getDimensionColumnList());
 
+          if (tableInfo.getCProfiles() == null || tableInfo.getCProfiles().isEmpty()) {
+            try {
+              TProfile tProfile = dStore.getTProfile(table.getTableName());
+              if (tProfile != null && tProfile.getCProfiles() != null && !tProfile.getCProfiles().isEmpty()) {
+                tableInfo.setTableType(tProfile.getTableType());
+                tableInfo.setIndexType(tProfile.getIndexType());
+                tableInfo.setBackendType(tProfile.getBackendType());
+                tableInfo.setCompression(tProfile.getCompression());
+                tableInfo.setCProfiles(tProfile.getCProfiles());
+
+                table.setCProfiles(tProfile.getCProfiles());
+                table.setTableType(tProfile.getTableType());
+                table.setIndexType(tProfile.getIndexType());
+                table.setBackendType(tProfile.getBackendType());
+                table.setCompression(tProfile.getCompression());
+                configurationManager.updateConfig(table, Table.class);
+              }
+            } catch (Exception ignored) {
+            }
+          }
+
           this.appCache.putTableInfo(tableInfo);
         });
   }
@@ -447,8 +474,12 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
                                            List<Integer> queryIdList) {
     List<TableInfo> list = new ArrayList<>();
     queryIdList.forEach(queryId -> {
-      TableInfo tableInfo = new TableInfo();
-      tableInfo.setTableName(queryIdNameMap.get(queryId));
+      String tableName = queryIdNameMap.get(queryId);
+      if (tableName != null) {
+        TableInfo tableInfo = new TableInfo();
+        tableInfo.setTableName(tableName);
+        list.add(tableInfo);
+      }
     });
 
     return list;

@@ -204,6 +204,18 @@ public class LaF {
           case DARK -> new Color(147, 215, 175);
         };
       }
+      case TEMPLATE_CARD -> {
+        return switch (lafType) {
+          case DEFAULT, LIGHT -> Color.white;
+          case DARK -> new Color(60, 63, 65);
+        };
+      }
+      case TEMPLATE_CARD_TITLE -> {
+        return switch (lafType) {
+          case DEFAULT, LIGHT -> new Color(0x55, 0x55, 0x55);
+          case DARK -> new Color(0xBB, 0xBB, 0xBB);
+        };
+      }
       default -> throw new IllegalArgumentException("Unexpected value: " + lafColorGroup);
     }
   }

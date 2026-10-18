@@ -40,6 +40,7 @@ import org.jfree.chart.LegendItem;
 import org.jfree.chart.LegendItemSource;
 import org.jfree.chart.SelectionWheelHandler;
 import org.jfree.chart.axis.DateAxis;
+import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.PeriodAxis;
 import org.jfree.chart.axis.PeriodAxisLabelInfo;
 import org.jfree.chart.axis.ValueAxis;
@@ -77,6 +78,7 @@ import org.jfree.data.time.Day;
 import org.jfree.data.time.Hour;
 import org.jfree.data.time.Month;
 import org.jfree.data.time.Year;
+import ru.dimension.ui.helper.AbbreviatedNumberFormat;
 import ru.dimension.ui.helper.ColorHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.model.config.ChartUISettings;
@@ -520,6 +522,35 @@ public class StackedChart implements SelectionChangeListener<XYCursor>, DynamicC
     syncLegendInteractionState(legendTitle.isVisible());
 
     jFreeChart.fireChartChanged();
+  }
+
+  public void applyAxisSettings(ChartUISettings settings) {
+    if (settings == null) {
+      return;
+    }
+
+    ValueAxis rangeAxis = this.xyPlot.getRangeAxis();
+    if (rangeAxis instanceof NumberAxis numberAxis) {
+      numberAxis.setNumberFormatOverride(settings.isValueAbbreviation()
+                                             ? AbbreviatedNumberFormat.create()
+                                             : null);
+      numberAxis.setFixedDimension(settings.isValueAxisFixedSize()
+                                       ? settings.getValueAxisFixedWidth()
+                                       : 0.0);
+    }
+    if (rangeAxis != null) {
+      rangeAxis.setLabelVisible(!settings.isHideYAxisLabel());
+      rangeAxis.setTickLabelsVisible(!settings.isHideYAxisValues());
+    }
+
+    ValueAxis domainAxis = this.xyPlot.getDomainAxis();
+    if (domainAxis != null) {
+      domainAxis.setLabelVisible(!settings.isHideXAxisLabel());
+      domainAxis.setTickLabelsVisible(!settings.isHideXAxisValues());
+    }
+
+    this.jFreeChart.fireChartChanged();
+    this.chartPanel.repaint();
   }
 
   private void setLegendNoWrap(boolean noWrap) {

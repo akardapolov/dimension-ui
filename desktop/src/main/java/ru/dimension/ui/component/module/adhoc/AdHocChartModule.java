@@ -61,4 +61,8 @@ public class AdHocChartModule extends JXTaskPane {
   public void updateHistoryCustomRange(ChartRange range) {
     this.presenter.updateHistoryCustomRange(range);
   }
+
+  public void refreshAxisSettings() {
+    this.presenter.refreshAxisSettings();
+  }
 }

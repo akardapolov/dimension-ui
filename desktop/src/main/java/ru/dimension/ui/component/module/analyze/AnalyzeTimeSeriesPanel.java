@@ -37,9 +37,12 @@ import org.jdesktop.swingx.JXTaskPaneContainer;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.util.IDetailPanel;
 import org.painlessgridbag.PainlessGridBag;
+import ru.dimension.di.ServiceLocator;
 import ru.dimension.ui.component.block.InsightConfigBlock;
 import ru.dimension.ui.component.model.ChartCardState;
 import ru.dimension.ui.component.module.analyze.handler.TablePopupCellEditorHandler;
@@ -48,12 +51,16 @@ import ru.dimension.ui.component.module.analyze.timeseries.algorithm.TimeSeriesA
 import ru.dimension.ui.component.module.analyze.timeseries.algorithm.anomaly.MatrixProfileAlgorithm;
 import ru.dimension.ui.component.module.analyze.timeseries.algorithm.forecast.ARIMAlgorithm;
 import ru.dimension.ui.component.module.analyze.timeseries.AlgorithmSettingsPanel;
+import ru.dimension.ui.helper.AbbreviatedNumberFormat;
 import ru.dimension.ui.helper.DialogHelper;
+import ru.dimension.ui.manager.ConfigurationManager;
 import ru.dimension.ui.helper.GUIHelper;
 import ru.dimension.ui.helper.PGHelper;
 import ru.dimension.ui.laf.LaF;
 import ru.dimension.ui.model.column.ColumnNames;
 import ru.dimension.ui.model.column.SeriesNames;
+import ru.dimension.ui.model.config.ChartUISettings;
+import ru.dimension.ui.model.config.UISettings;
 import ru.dimension.ui.model.data.CategoryTableXYDatasetRealTime;
 import ru.dimension.ui.model.table.JXTableCase;
 
@@ -381,6 +388,29 @@ public abstract class AnalyzeTimeSeriesPanel extends JPanel implements IDetailPa
     plot.getRenderer().setSeriesPaint(0, getColor(value));
     plot.getRenderer().setSeriesStroke(0, new BasicStroke(2.0f));
 
+    ChartUISettings chartUISettings = loadChartUISettings();
+    if (chartUISettings != null) {
+      ValueAxis rangeAxis = plot.getRangeAxis();
+      if (rangeAxis instanceof NumberAxis numberAxis) {
+        numberAxis.setNumberFormatOverride(chartUISettings.isValueAbbreviation()
+                                               ? AbbreviatedNumberFormat.create()
+                                               : null);
+        numberAxis.setFixedDimension(chartUISettings.isValueAxisFixedSize()
+                                         ? chartUISettings.getValueAxisFixedWidth()
+                                         : 0.0);
+      }
+      if (rangeAxis != null) {
+        rangeAxis.setLabelVisible(!chartUISettings.isHideYAxisLabel());
+        rangeAxis.setTickLabelsVisible(!chartUISettings.isHideYAxisValues());
+      }
+
+      ValueAxis domainAxis = plot.getDomainAxis();
+      if (domainAxis != null) {
+        domainAxis.setLabelVisible(!chartUISettings.isHideXAxisLabel());
+        domainAxis.setTickLabelsVisible(!chartUISettings.isHideXAxisValues());
+      }
+    }
+
     if (plot.getSeriesCount() > 1) {
       float width = 2.0f;
       float[] dash = { 2.0f, 5.0f };
@@ -408,6 +438,18 @@ public abstract class AnalyzeTimeSeriesPanel extends JPanel implements IDetailPa
 
   private Color getColor(String value) {
     return seriesColorMap.get(value);
+  }
+
+  private ChartUISettings loadChartUISettings() {
+    try {
+      List<UISettings> settingsList = ServiceLocator.get(ConfigurationManager.class).getConfigList(UISettings.class);
+      if (!settingsList.isEmpty()) {
+        return settingsList.get(0).getChartSettings();
+      }
+    } catch (Exception e) {
+      log.warn("Could not load UI settings for value axis", e);
+    }
+    return null;
   }
 
   @Override

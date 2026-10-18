@@ -73,6 +73,12 @@ public abstract class BaseUnitPresenter<V extends UnitView> implements UnitPrese
     }
   }
 
+  public void refreshAxisSettings() {
+    if (chart != null) {
+      chart.refreshAxisSettings();
+    }
+  }
+
   @Override
   public void handleLegendChangeAll(Boolean showLegend) {
     boolean visibility = showLegend != null && showLegend;

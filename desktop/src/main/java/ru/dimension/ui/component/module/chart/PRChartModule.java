@@ -108,6 +108,10 @@ public class PRChartModule extends JXTaskPane implements IRealTimePreviewChart {
     this.presenter.refreshSeriesColors();
   }
 
+  public void refreshAxisSettings() {
+    this.presenter.refreshAxisSettings();
+  }
+
   @Override
   public JXTaskPane asTaskPane() {
     return this;
