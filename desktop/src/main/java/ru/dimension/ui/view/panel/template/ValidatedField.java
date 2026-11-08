@@ -127,6 +127,8 @@ public class ValidatedField extends JPanel {
   public String getText() { return textField.getText(); }
   public JXTextField getTextField() { return textField; }
 
+  public void setEditable(boolean editable) { textField.setEditable(editable); }
+
   public boolean isUserEdited() { return userEdited; }
 
   /** Сбросить флаг "тронуто пользователем" без изменения текста (после успешного сохранения). */

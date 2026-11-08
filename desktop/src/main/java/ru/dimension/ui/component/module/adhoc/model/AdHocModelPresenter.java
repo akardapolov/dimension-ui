@@ -77,7 +77,6 @@ public class AdHocModelPresenter implements HelperChart {
   private volatile ExecutorService connectionCheckExecutor;
 
   private Thread periodicTask;
-  private java.sql.Connection connection;
   private String connectionName = "";
   private DStore dStore;
   private TProfile tProfile;
@@ -245,7 +244,6 @@ public class AdHocModelPresenter implements HelperChart {
 
           tProfile = null;
           dStore = null;
-          connection = null;
           currentConnectionId = 0;
           connectionName = "";
           hasTimestampColumns = false;
@@ -430,7 +428,6 @@ public class AdHocModelPresenter implements HelperChart {
   private void clearAllDependentDataAndState() {
     tProfile = null;
     dStore = null;
-    connection = null;
     currentConnectionId = 0;
     connectionName = "";
     hasTimestampColumns = false;
@@ -732,24 +729,29 @@ public class AdHocModelPresenter implements HelperChart {
       return;
     }
 
-    running.set(true);
-    clearUIElements();
-
     ConnectionRow connectionRow = view.getSelectedConnectionRow();
     if (connectionRow == null) return;
 
     if (!model.isConnectionReady(connectionRow.getId())) {
       log.warn("Connection {} is not ready, cannot proceed", connectionRow.getId());
-      running.set(false);
       return;
     }
+
+    running.set(true);
+    clearUIElements();
 
     currentConnectionId = connectionRow.getId();
     connectionName = connectionRow.getName();
 
+    final int connectionId = currentConnectionId;
     periodicTask = Thread.ofVirtual().start(() -> {
-      loadMetadata(currentConnectionId);
-      running.set(false);
+      try {
+        loadMetadata(connectionId);
+      } catch (Exception e) {
+        ConnectionErrorHelper.logConnectionError(connectionName, e);
+      } finally {
+        running.set(false);
+      }
     });
   }
 
@@ -929,54 +931,54 @@ public class AdHocModelPresenter implements HelperChart {
     int connectionId = connectionRow.getId();
     try {
       ConnectionInfo connectionInfo = model.getProfileManager().getConnectionInfoById(connectionId);
-      java.sql.Connection connection = model.getConnectionPoolManager().getConnection(connectionInfo);
 
-      String queryText = buildMetadataQuery(tableName, connectionInfo.getDbType());
+      try (java.sql.Connection connection = model.getConnectionPoolManager().getConnection(connectionInfo)) {
+        String queryText = buildMetadataQuery(tableName, connectionInfo.getDbType());
 
-      dStore = model.getAdHocDatabaseManager().getDataBase(connectionInfo);
-      tProfile = dStore.loadJdbcTableMetadata(connection, queryText, getSProfile(tableName, TType.TIME_SERIES, connectionInfo.getDbType()));
-      log.info("Loaded metadata for table: {}", tableName);
+        dStore = model.getAdHocDatabaseManager().getDataBase(connectionInfo);
+        tProfile = dStore.loadJdbcTableMetadata(connection, queryText, getSProfile(tableName, TType.TIME_SERIES, connectionInfo.getDbType()));
+        log.info("Loaded metadata for table: {}", tableName);
 
-      if (tProfile.getCProfiles() == null || tProfile.getCProfiles().isEmpty()) {
-        log.warn("No columns found for table: {}. The table might be empty or have unsupported column types.", tableName);
-        view.getStatusLabel().setText("No columns found for table: " + tableName);
-        view.clearColumnTable();
-        view.clearTimestampTable();
-        hasTimestampColumns = false;
-        view.setColumnTableEnabled(true);
-        return;
-      }
-
-      TableInfo tableInfo = new TableInfo(tProfile);
-      tableInfo.setDimensionColumnList(new ArrayList<>());
-      createQueryInfo(tableName, queryText);
-
-      updateColumnDisplays(tProfile.getCProfiles(), tableName);
-
-      if (view.getTimestampTable().model().getRowCount() == 0) {
-        hasTimestampColumns = false;
-
-        SProfile regularSProfile = getSProfile(tableName, TType.REGULAR, connectionInfo.getDbType());
-        regularSProfile.setTableType(TType.REGULAR);
-        tProfile = dStore.loadJdbcTableMetadata(connection, queryText, regularSProfile);
-
-        log.info("No timestamp columns found for table: {}. Raw mode will be used via table/view checkbox.", tableName);
-
-        view.getStatusLabel().setText("Table: " + tableName + " (no timestamp columns — use table checkbox for raw view)");
-        view.setColumnTableEnabled(false);
-
-        boolean wasSelected = model.isTableOrViewSelected(currentConnectionId, tableName);
-        if (wasSelected) {
-          rawPanelAddedForTable = true;
-          rawPanelTableName = tableName;
+        if (tProfile.getCProfiles() == null || tProfile.getCProfiles().isEmpty()) {
+          log.warn("No columns found for table: {}. The table might be empty or have unsupported column types.", tableName);
+          view.getStatusLabel().setText("No columns found for table: " + tableName);
+          view.clearColumnTable();
+          view.clearTimestampTable();
+          hasTimestampColumns = false;
+          view.setColumnTableEnabled(true);
+          return;
         }
-      } else {
-        hasTimestampColumns = true;
-        view.setColumnTableEnabled(true);
-        selectFirstTimestamp();
-        view.getStatusLabel().setText("Table/view name: " + tableName);
-      }
 
+        TableInfo tableInfo = new TableInfo(tProfile);
+        tableInfo.setDimensionColumnList(new ArrayList<>());
+        createQueryInfo(tableName, queryText);
+
+        updateColumnDisplays(tProfile.getCProfiles(), tableName);
+
+        if (view.getTimestampTable().model().getRowCount() == 0) {
+          hasTimestampColumns = false;
+
+          SProfile regularSProfile = getSProfile(tableName, TType.REGULAR, connectionInfo.getDbType());
+          regularSProfile.setTableType(TType.REGULAR);
+          tProfile = dStore.loadJdbcTableMetadata(connection, queryText, regularSProfile);
+
+          log.info("No timestamp columns found for table: {}. Raw mode will be used via table/view checkbox.", tableName);
+
+          view.getStatusLabel().setText("Table: " + tableName + " (no timestamp columns — use table checkbox for raw view)");
+          view.setColumnTableEnabled(false);
+
+          boolean wasSelected = model.isTableOrViewSelected(currentConnectionId, tableName);
+          if (wasSelected) {
+            rawPanelAddedForTable = true;
+            rawPanelTableName = tableName;
+          }
+        } else {
+          hasTimestampColumns = true;
+          view.setColumnTableEnabled(true);
+          selectFirstTimestamp();
+          view.getStatusLabel().setText("Table/view name: " + tableName);
+        }
+      }
     } catch (SQLException e) {
       ConnectionErrorHelper.logConnectionError(tableName, e);
       view.getStatusLabel().setText("SQL error: " + ConnectionErrorHelper.extractRootCause(e));
@@ -1065,12 +1067,7 @@ public class AdHocModelPresenter implements HelperChart {
   }
 
   private void reloadTables() {
-    if (running.get() || removingConnection.get()) return;
-
-    if (connection == null) {
-      log.debug("Connection is null, skipping reloadTables");
-      return;
-    }
+    if (removingConnection.get()) return;
 
     ConnectionRow connectionRow = view.getSelectedConnectionRow();
     if (connectionRow == null || connectionRow.getId() <= 0) return;
@@ -1088,14 +1085,15 @@ public class AdHocModelPresenter implements HelperChart {
       return;
     }
 
-    running.set(true);
+    if (!running.compareAndSet(false, true)) return;
+
     clearUIElementsReloadTables();
     connectionName = connectionRow.getName();
 
     periodicTask = Thread.ofVirtual().start(() -> {
-      try {
+      try (java.sql.Connection connection = model.getConnectionPoolManager().getConnection(connectionInfo)) {
         DatabaseMetaData metaData = connection.getMetaData();
-        processSchema(connectionInfo, metaData);
+        processSchema(connectionInfo, connection, metaData);
       } catch (Exception e) {
         ConnectionErrorHelper.logConnectionError(connectionName, e);
         DialogHelper.showErrorDialog(null,
@@ -1120,18 +1118,20 @@ public class AdHocModelPresenter implements HelperChart {
       }
 
       model.getAdHocDatabaseManager().createDataBase(connectionInfo);
-      connection = model.getConnectionPoolManager().getDatasource(connectionInfo).getConnection();
-      DatabaseMetaData metaData = connection.getMetaData();
 
-      getSchemasCatalogs(connectionInfo, metaData).forEach(view.getSchemaCatalogCBox()::addItem);
-      processSchema(connectionInfo, metaData);
+      try (java.sql.Connection connection = model.getConnectionPoolManager().getConnection(connectionInfo)) {
+        DatabaseMetaData metaData = connection.getMetaData();
+
+        getSchemasCatalogs(connectionInfo, metaData).forEach(view.getSchemaCatalogCBox()::addItem);
+        processSchema(connectionInfo, connection, metaData);
+      }
     } catch (SQLException e) {
       ConnectionErrorHelper.logConnectionError(connectionName, e);
       DialogHelper.showErrorDialog(null, "Error on loading connection: " + connectionName, "Connection error", e);
     }
   }
 
-  private void processSchema(ConnectionInfo connectionInfo, DatabaseMetaData metaData) {
+  private void processSchema(ConnectionInfo connectionInfo, java.sql.Connection connection, DatabaseMetaData metaData) {
     if (connectionInfo == null) {
       log.warn("ConnectionInfo is null, skipping processSchema");
       return;

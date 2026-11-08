@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import javax.swing.SwingUtilities;
 import net.engio.mbassy.listener.Handler;
 import ru.dimension.ui.bus.EventBus;
 import ru.dimension.ui.component.broker.MessageBroker;
@@ -59,6 +60,11 @@ public class EventRouteRegistry {
   @Handler
   public void onEvent(Object event) {
     if (event == null) return;
+
+    if (!SwingUtilities.isEventDispatchThread()) {
+      SwingUtilities.invokeLater(() -> onEvent(event));
+      return;
+    }
 
     Class<?> type = event.getClass();
 

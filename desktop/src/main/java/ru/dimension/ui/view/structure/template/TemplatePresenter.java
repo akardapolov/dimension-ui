@@ -306,6 +306,7 @@ public class TemplatePresenter extends WindowAdapter implements TemplateListener
     Set<String> connNames = lowerNames(configurationManager.getConfigList(Connection.class));
     draft.setConnName(suggestCopiedName(connection.getName(), connNames));
     draft.setConnUrl(connection.getUrl());
+    draft.setJmxLocalMode(connection.isJmxLocalMode());
     draft.setConnUserName(connection.getUserName());
     draft.setConnJar(connection.getJar());
     draft.setConnDriver(connection.getDriver());

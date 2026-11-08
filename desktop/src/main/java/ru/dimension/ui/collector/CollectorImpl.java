@@ -18,6 +18,7 @@ import ru.dimension.db.model.profile.table.TType;
 import ru.dimension.ui.collector.collect.common.JmxProtocol;
 import ru.dimension.ui.collector.collect.prometheus.ExporterParser;
 import ru.dimension.ui.collector.http.HttpResponseFetcher;
+import ru.dimension.ui.executor.TaskExecutor;
 import ru.dimension.ui.executor.TaskExecutorPool;
 import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.info.ProfileInfo;
@@ -185,20 +186,28 @@ public class CollectorImpl implements Collector, JdbcLoader, HttpLoader, JmxLoad
         .forEach(taskId -> profileManager.getQueryInfoList(profileId, taskId)
             .forEach(queryInfo -> {
               ProfileTaskQueryKey profileTaskQueryKey = new ProfileTaskQueryKey(profileId, taskId, queryInfo.getId());
-              taskExecutorPool.get(profileTaskQueryKey).start(startUpTimeMillis);
+              TaskExecutor taskExecutor = taskExecutorPool.get(profileTaskQueryKey);
+              if (taskExecutor == null) {
+                throw new IllegalStateException("Task executor not found for " + profileTaskQueryKey);
+              }
+              taskExecutor.start(startUpTimeMillis);
             }));
   }
 
   @Override
   public void stop(ProfileInfo profileInfo) {
-    int profileId = profileInfo.getId();
-
-    profileInfo.getTaskInfoList()
-        .forEach(taskId -> profileManager.getQueryInfoList(profileId, taskId)
-            .forEach(queryInfo -> {
-              ProfileTaskQueryKey profileTaskQueryKey = new ProfileTaskQueryKey(profileId, taskId, queryInfo.getId());
-              taskExecutorPool.get(profileTaskQueryKey).stop();
-            }));
+    for (ProfileTaskQueryKey key : profileManager.getProfileTaskQueryKeyList(profileInfo.getId())) {
+      TaskExecutor taskExecutor = taskExecutorPool.remove(key);
+      if (taskExecutor == null) {
+        log.warn("Task executor not found for {}, nothing to stop", key);
+        continue;
+      }
+      try {
+        taskExecutor.stop();
+      } catch (RuntimeException e) {
+        log.error("Failed to stop task executor for {}", key, e);
+      }
+    }
   }
 
   private LocalDateTime toLocalDateTime(long ofEpochMilli) {

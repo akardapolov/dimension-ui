@@ -1,28 +1,21 @@
 package ru.dimension.ui.manager.impl;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.dbcp2.BasicDataSource;
-import ru.dimension.ui.exception.TimeoutConnectionException;
 import ru.dimension.ui.helper.ConnectionErrorHelper;
-import ru.dimension.ui.model.ProfileTaskKey;
+import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.security.EncryptDecrypt;
 import ru.dimension.ui.manager.ConnectionPoolManager;
@@ -34,8 +27,8 @@ public class ConnectionPoolManagerImpl implements ConnectionPoolManager {
   private final EncryptDecrypt encryptDecrypt;
 
   private final Map<Integer, BasicDataSource> dataSourceMap = new ConcurrentHashMap<>();
-  private final Map<Integer, List<Connection>> connectionMap = new ConcurrentHashMap<>();
-  private final Map<Integer, Map<ProfileTaskKey, Connection>> connectionForTaskMap = new ConcurrentHashMap<>();
+  private final Map<Integer, URLClassLoader> classLoaderMap = new ConcurrentHashMap<>();
+  private final Map<Integer, Map<ProfileTaskQueryKey, Connection>> connectionForTaskMap = new ConcurrentHashMap<>();
 
   @Inject
   public ConnectionPoolManagerImpl(EncryptDecrypt encryptDecrypt) {
@@ -49,16 +42,22 @@ public class ConnectionPoolManagerImpl implements ConnectionPoolManager {
 
   @Override
   public BasicDataSource getDatasource(ConnectionInfo connectionInfo) {
-    BasicDataSource basicDataSource = null;
+    return dataSourceMap.computeIfAbsent(connectionInfo.getId(), id -> createDataSourceInternal(connectionInfo));
+  }
+
+  private BasicDataSource createDataSourceInternal(ConnectionInfo connectionInfo) {
+    URLClassLoader classLoader = null;
     try {
-      basicDataSource = new BasicDataSource();
-      basicDataSource.setDriverClassLoader(getClassLoader(connectionInfo.getJar()));
+      classLoader = getClassLoader(connectionInfo.getJar());
+
+      BasicDataSource basicDataSource = new BasicDataSource();
+      basicDataSource.setDriverClassLoader(classLoader);
       basicDataSource.setDriverClassName(connectionInfo.getDriver());
       basicDataSource.setUrl(connectionInfo.getUrl());
       basicDataSource.setUsername(connectionInfo.getUserName());
       basicDataSource.setPassword(encryptDecrypt.decrypt(connectionInfo.getPassword()));
-      basicDataSource.setInitialSize(3);
-      basicDataSource.setMaxTotal(5);
+      basicDataSource.setInitialSize(0);
+      basicDataSource.setMaxTotal(20);
       basicDataSource.setMaxWaitMillis(TimeUnit.SECONDS.toMillis(5));
 
       if (connectionInfo.getDriver().contains("clickhouse")) {
@@ -72,81 +71,78 @@ public class ConnectionPoolManagerImpl implements ConnectionPoolManager {
         basicDataSource.addConnectionProperty("encrypt", "true");
         basicDataSource.addConnectionProperty("trustServerCertificate", "true");
       }
-
-      if (!dataSourceMap.containsKey(connectionInfo.getId())) {
-        dataSourceMap.put(connectionInfo.getId(), basicDataSource);
+      classLoaderMap.put(connectionInfo.getId(), classLoader);
+      return basicDataSource;
+    } catch (Exception e) {
+      if (classLoader != null) {
+        try {
+          classLoader.close();
+        } catch (IOException ignored) {
+        }
       }
-    } catch (ClassNotFoundException | IllegalAccessException | InstantiationException | MalformedURLException e) {
       ConnectionErrorHelper.logConnectionError(connectionInfo.getName(), new RuntimeException(e));
       throw new RuntimeException("Failed to create data source: " + e.getMessage(), e);
     }
-
-    return basicDataSource;
   }
 
-  private ClassLoader getClassLoader(String jar) throws ClassNotFoundException, InstantiationException,
+  private URLClassLoader getClassLoader(String jar) throws ClassNotFoundException, InstantiationException,
       IllegalAccessException, MalformedURLException {
     URL url = new File(jar.trim()).toURI().toURL();
-    URLClassLoader ucl = new URLClassLoader(new URL[]{url});
-    return ucl;
+    return new URLClassLoader(new URL[]{url});
   }
 
   @Override
-  public Connection getConnection(ConnectionInfo connectionInfo) {
+  public Connection getConnection(ConnectionInfo connectionInfo) throws SQLException {
     try {
-      BasicDataSource dataSource = getDatasource(connectionInfo);
-      if (dataSource == null) {
-        log.error("DataSource is null for connection: {}", connectionInfo.getName());
-        return null;
+      Connection connection = getDatasource(connectionInfo).getConnection();
+      if (connection.isClosed()) {
+        throw new SQLException("Connection is closed for: " + connectionInfo.getName());
       }
-
-      Connection connection = dataSource.getConnection();
-      if (connection == null || connection.isClosed()) {
-        log.error("Connection is null or closed for: {}", connectionInfo.getName());
-        return null;
-      }
-
       return connection;
-    } catch (Exception e) {
-      ConnectionErrorHelper.logConnectionError(connectionInfo.getName(), e);
-      return null;
+    } catch (RuntimeException e) {
+      throw new SQLException("Failed to get connection: " + e.getMessage(), e);
     }
   }
 
   @Override
-  public Connection getConnection(ConnectionInfo connectionInfo, ProfileTaskKey profileTaskKey) throws SQLException {
+  public Connection getConnection(ConnectionInfo connectionInfo, ProfileTaskQueryKey profileTaskQueryKey) throws SQLException {
     if (connectionInfo == null || connectionInfo.getId() <= 0) {
       throw new IllegalArgumentException("ConnectionInfo cannot be null");
     }
 
-    if (!connectionForTaskMap.containsKey(connectionInfo.getId())) {
-      connectionForTaskMap.put(connectionInfo.getId(), new HashMap<>());
-    }
+    Map<ProfileTaskQueryKey, Connection> taskConnections =
+        connectionForTaskMap.computeIfAbsent(connectionInfo.getId(), id -> new ConcurrentHashMap<>());
 
-    Map<ProfileTaskKey, Connection> taskConnections = connectionForTaskMap.get(connectionInfo.getId());
-    if (!taskConnections.containsKey(profileTaskKey)) {
-      Connection connection = futureExecutionWithTimeout(5, connectionInfo);
-      taskConnections.put(profileTaskKey, connection);
+    synchronized (taskConnections) {
+      Connection connection = taskConnections.get(profileTaskQueryKey);
+      if (connection == null || connection.isClosed()) {
+        closeConnectionSafely(connection, connectionInfo.getId());
+        connection = getDatasource(connectionInfo).getConnection();
+        taskConnections.put(profileTaskQueryKey, connection);
+      }
+      return connection;
     }
+  }
 
-    return taskConnections.get(profileTaskKey);
+  @Override
+  public void releaseTaskConnection(int connectionId, ProfileTaskQueryKey profileTaskQueryKey) {
+    Map<ProfileTaskQueryKey, Connection> taskConnections = connectionForTaskMap.get(connectionId);
+    if (taskConnections != null) {
+      Connection connection = taskConnections.remove(profileTaskQueryKey);
+      if (connection != null) {
+        closeConnectionSafely(connection, connectionId);
+        log.info("Released task connection for connectionId: {}, key: {}", connectionId, profileTaskQueryKey);
+      }
+    }
   }
 
   @Override
   public void removeConnection(int connectionId) {
     log.info("Removing connection pool resources for connectionId: {}", connectionId);
 
-    List<Connection> connections = connectionMap.remove(connectionId);
-    if (connections != null) {
-      for (Connection conn : connections) {
-        closeConnectionSafely(conn, connectionId);
-      }
-      log.info("Closed {} connections from connectionMap for connectionId: {}", connections.size(), connectionId);
-    }
-
-    Map<ProfileTaskKey, Connection> taskConnections = connectionForTaskMap.remove(connectionId);
+    Map<ProfileTaskQueryKey, Connection> taskConnections = connectionForTaskMap.remove(connectionId);
     if (taskConnections != null) {
-      for (Map.Entry<ProfileTaskKey, Connection> entry : taskConnections.entrySet()) {
+      for (Map.Entry<ProfileTaskQueryKey, Connection> entry : taskConnections.entrySet()) {
         closeConnectionSafely(entry.getValue(), connectionId);
       }
       log.info("Closed {} task connections for connectionId: {}", taskConnections.size(), connectionId);
@@ -162,6 +158,16 @@ public class ConnectionPoolManagerImpl implements ConnectionPoolManager {
       }
     }
 
+    URLClassLoader classLoader = classLoaderMap.remove(connectionId);
+    if (classLoader != null) {
+      try {
+        classLoader.close();
+        log.info("Closed URLClassLoader for connectionId: {}", connectionId);
+      } catch (IOException e) {
+        log.error("Error closing URLClassLoader for connectionId: {}", connectionId, e);
+      }
+    }
+
     log.info("Successfully removed all connection pool resources for connectionId: {}", connectionId);
   }
 
@@ -174,27 +180,6 @@ public class ConnectionPoolManagerImpl implements ConnectionPoolManager {
       } catch (SQLException e) {
         log.error("Error closing connection for connectionId: {}", connectionId, e);
       }
-    }
-  }
-
-  private Connection futureExecutionWithTimeout(int timeoutSeconds,
-                                                ConnectionInfo connectionInfo) {
-    ExecutorService executor = Executors.newSingleThreadExecutor();
-    Callable<Connection> task = () -> dataSourceMap.get(connectionInfo.getId()).getConnection();
-
-    Future<Connection> future = executor.submit(task);
-    try {
-      return future.get(timeoutSeconds, TimeUnit.SECONDS);
-    } catch (TimeoutException e) {
-      future.cancel(true);
-      throw new TimeoutConnectionException(
-          "Timeout " + timeoutSeconds + " sec. is exceed to get data from: " + connectionInfo);
-    } catch (Exception e) {
-      ConnectionErrorHelper.logConnectionError(connectionInfo.getName(), e);
-      dataSourceMap.remove(connectionInfo.getId());
-      throw new RuntimeException("Failed to get connection: " + e.getMessage(), e);
-    } finally {
-      executor.shutdownNow();
     }
   }
 }

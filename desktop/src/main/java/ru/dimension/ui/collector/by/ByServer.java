@@ -37,19 +37,24 @@ public class ByServer implements ByTarget {
 
   @Override
   public PreparedStatement getPreparedStatement(long begin, long end) throws SQLException {
-
-    PreparedStatement ps;
-
     String columnTimestamp = getColumnTimestamp(tableInfo);
 
     String sqlText = queryInfo.getText()
         + " WHERE " + columnTimestamp + " BETWEEN ? AND ? "
-        + " ORDER BY " + getColumnTimestamp(tableInfo);
+        + " ORDER BY " + columnTimestamp;
 
-    ps = connection.prepareStatement(sqlText);
-
-    ps.setTimestamp(1, new Timestamp(begin));
-    ps.setTimestamp(2, new Timestamp(end));
+    PreparedStatement ps = connection.prepareStatement(sqlText);
+    try {
+      ps.setTimestamp(1, new Timestamp(begin));
+      ps.setTimestamp(2, new Timestamp(end));
+    } catch (SQLException | RuntimeException e) {
+      try {
+        ps.close();
+      } catch (SQLException closeEx) {
+        e.addSuppressed(closeEx);
+      }
+      throw e;
+    }
 
     log.info("By server: {} begin: {} end: {}", profileTaskQueryKey, toLocalDateTime(begin), toLocalDateTime(end));
 

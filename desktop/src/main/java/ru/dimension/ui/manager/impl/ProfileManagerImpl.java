@@ -192,7 +192,7 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
   @Override
   public void updateProfile(ProfileInfo profileInfo) {
     Profile profile = configurationManager.getConfig(Profile.class, profileInfo.getName());
-    profile.setDescription(profile.getDescription());
+    profile.setDescription(profileInfo.getDescription());
     profile.setTaskList(profileInfo.getTaskInfoList());
 
     configurationManager.updateConfig(profile, Profile.class);
@@ -228,6 +228,8 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
 
     configurationManager.updateConfig(connection, Connection.class);
     appCache.putConnectionInfo(connectionInfo);
+
+    connectionPoolManager.removeConnection(connectionInfo.getId());
   }
 
   @Override
@@ -281,6 +283,7 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
   public void deleteConnection(int connectionId, String connectionName) {
     configurationManager.deleteConfig(connectionName, Connection.class);
     appCache.deleteConnectionInfo(connectionId);
+    connectionPoolManager.removeConnection(connectionId);
   }
 
   @Override
@@ -614,27 +617,38 @@ public class ProfileManagerImpl implements ProfileManager, JdbcLoader {
   @Override
   public void loadDeltaLocalServerTime(ProfileTaskQueryKey profileTaskQueryKey) {
     TaskInfo taskInfo = appCache.getTaskInfo(profileTaskQueryKey.getTaskId());
-    ConnectionInfo connectionInfo = appCache.getConnectionInfo(taskInfo.getConnectionId());
     QueryInfo queryInfo = appCache.getQueryInfo(profileTaskQueryKey.getQueryId());
-    TableInfo tableInfo = appCache.getTableInfo(queryInfo.getName());
+    if (taskInfo == null || queryInfo == null) {
+      log.warn("Skip delta local/server time: task or query not found for {}", profileTaskQueryKey);
+      return;
+    }
 
-    try {
-      queryInfo.setDbType(connectionInfo.getDbType());
-      connectionPoolManager.createDataSource(connectionInfo);
-      java.sql.Connection connection = connectionPoolManager.getConnection(connectionInfo);
+    ConnectionInfo connectionInfo = appCache.getConnectionInfo(taskInfo.getConnectionId());
+    TableInfo tableInfo = appCache.getTableInfo(queryInfo.getName());
+    if (connectionInfo == null || tableInfo == null) {
+      log.warn("Skip delta local/server time for query '{}': connection or table info not found",
+               queryInfo.getName());
+      return;
+    }
+
+    queryInfo.setDbType(connectionInfo.getDbType());
+
+    try (java.sql.Connection connection = connectionPoolManager.getConnection(connectionInfo)) {
       long localDateTime = System.currentTimeMillis();
       long serverDateTime = getSysdate(queryInfo.getDbType().getQuery(), connection, log);
 
       queryInfo.setDeltaLocalServerTime(localDateTime - serverDateTime);
 
-      if (dStore.getTProfile(tableInfo.getTableName()).getCProfiles().isEmpty()) {
+      TProfile tProfile = dStore.getTProfile(tableInfo.getTableName());
+      if (tProfile == null || tProfile.getCProfiles() == null || tProfile.getCProfiles().isEmpty()) {
         dStore.loadJdbcTableMetadata(connection, queryInfo.getText(), tableInfo.getSProfile());
       }
-
-      updateQuery(queryInfo);
-    } catch (SQLException | TableNameEmptyException e) {
-      log.info("Error to get connection to fill delta local server time");
-      log.catching(e);
+    } catch (SQLException | TableNameEmptyException | RuntimeException e) {
+      log.warn("Error to fill delta local server time for connection '{}': {}",
+               connectionInfo.getName(), e.getMessage());
+      return;
     }
+
+    updateQuery(queryInfo);
   }
 }

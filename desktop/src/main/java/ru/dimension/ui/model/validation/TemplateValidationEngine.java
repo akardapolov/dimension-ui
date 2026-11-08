@@ -78,7 +78,8 @@ public final class TemplateValidationEngine {
       }
     }
 
-    if (draft.getConnUrl() == null || draft.getConnUrl().trim().isEmpty()) {
+    boolean urlRequired = draft.getConnectionType() != ConnectionType.JMX || !draft.isJmxLocalMode();
+    if (urlRequired && (draft.getConnUrl() == null || draft.getConnUrl().trim().isEmpty())) {
       issues.add(new ValidationIssue(ValidationSection.CONNECTION, "conn.url", ValidationSeverity.ERROR,
                                      "URL is required", null));
     }

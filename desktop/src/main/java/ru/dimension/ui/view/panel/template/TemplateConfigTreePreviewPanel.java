@@ -45,8 +45,9 @@ public class TemplateConfigTreePreviewPanel extends JPanel {
       profileNode.add(taskNode);
 
       String connType = draft.getConnectionType() == null ? "JDBC" : draft.getConnectionType().getName();
+      String connUrl = draft.isJmxLocalMode() ? "Local JVM" : nz(draft.getConnUrl());
       taskNode.add(new DefaultMutableTreeNode(
-          "Connection [" + connType + "]: " + nz(draft.getConnName()) + " · " + nz(draft.getConnUrl())));
+          "Connection [" + connType + "]: " + nz(draft.getConnName()) + " · " + connUrl));
 
       DefaultMutableTreeNode queriesNode =
           new DefaultMutableTreeNode("Queries (" + draft.getQueries().size() + ")");

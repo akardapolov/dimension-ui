@@ -26,6 +26,7 @@ public class TemplateDraft {
   private String connUrl = "";
   private String connJar = "";
   private String connDriver = "";
+  private boolean jmxLocalMode;
 
   private final List<QueryDraft> queries = new ArrayList<>();
 

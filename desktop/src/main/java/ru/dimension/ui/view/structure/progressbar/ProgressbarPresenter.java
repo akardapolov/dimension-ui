@@ -3,6 +3,7 @@ package ru.dimension.ui.view.structure.progressbar;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import javax.swing.SwingUtilities;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.ui.model.view.ProgressbarState;
 import ru.dimension.ui.router.event.EventDispatcher;
@@ -27,6 +28,10 @@ public class ProgressbarPresenter implements ProgressbarListener {
 
   @Override
   public void fireProgressbarVisible(ProgressbarState progressbarState) {
-    this.progressbarView.setProgressbarVisible(progressbarState);
+    if (SwingUtilities.isEventDispatchThread()) {
+      this.progressbarView.setProgressbarVisible(progressbarState);
+    } else {
+      SwingUtilities.invokeLater(() -> this.progressbarView.setProgressbarVisible(progressbarState));
+    }
   }
 }

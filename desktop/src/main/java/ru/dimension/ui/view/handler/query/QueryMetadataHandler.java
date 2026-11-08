@@ -13,6 +13,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
@@ -72,6 +74,7 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
   private final ExporterParser exporterParser;
   private final HttpResponseFetcher httpResponseFetcher;
   private final DStore dStore;
+  private final ExecutorService loadExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
   private final JCheckBox checkboxConfig;
   private final MetadataQueryPanel metadataQueryPanel;
@@ -168,17 +171,22 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
         }
       }
 
+      int querySelectedRow = queryCase.getJxTable().getSelectedRow();
+      ConnectionInfo connectionInfo = getConnectionInfo();
+
+      metadataQueryPanel.getLoadMetadata().setEnabled(false);
       CompletableFuture<Object> future = CompletableFuture.supplyAsync(() -> {
         try {
-          loadMetadata();
+          loadMetadata(queryID, querySelectedRow, connectionInfo);
         } catch (Exception ex) {
-          JOptionPane.showMessageDialog(null, ex.getMessage(),
-                                        "General Error", JOptionPane.ERROR_MESSAGE);
+          SwingUtilities.invokeLater(() ->
+                                          JOptionPane.showMessageDialog(null, ex.getMessage(),
+                                                                        "General Error", JOptionPane.ERROR_MESSAGE));
           throw new RuntimeException(ex);
         }
         return null;
-      }).exceptionally(exception -> {
-        metadataQueryPanel.getEditMetadata().setEnabled(false);
+      }, loadExecutor).exceptionally(exception -> {
+        SwingUtilities.invokeLater(() -> metadataQueryPanel.getEditMetadata().setEnabled(false));
         Throwable cause = exception.getCause();
         if (cause instanceof RuntimeException) {
           throw (RuntimeException) cause;
@@ -186,8 +194,11 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
         throw new RuntimeException(cause);
       });
 
-      future.thenRun(() -> JOptionPane.showMessageDialog(null, "Metadata download completed",
-                                                         "Information", JOptionPane.INFORMATION_MESSAGE));
+      future.thenRun(() -> SwingUtilities.invokeLater(() ->
+                                                          JOptionPane.showMessageDialog(null, "Metadata download completed",
+                                                                                        "Information", JOptionPane.INFORMATION_MESSAGE)));
+      future.whenComplete((result, exception) ->
+                              SwingUtilities.invokeLater(() -> metadataQueryPanel.getLoadMetadata().setEnabled(true)));
       return;
     }
 
@@ -212,14 +223,15 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
       tableInfo.setBackendType(BType.BERKLEYDB);
 
       ConnectionInfo connectionInfo = getConnectionInfo();
-      try {
-        connectionPoolManager.createDataSource(connectionInfo);
-        Connection connection = connectionPoolManager.getConnection(connectionInfo);
-
-        TProfile tProfile = dStore.loadJdbcTableMetadata(connection, queryInfo.getText(), tableInfo.getSProfile());
-        tableInfo.setCProfiles(tProfile.getCProfiles());
-      } catch (SQLException | TableNameEmptyException ex) {
-        throw new RuntimeException(ex);
+      boolean jdbcLike = !ConnectionType.HTTP.equals(connectionInfo.getType())
+          && !ConnectionType.JMX.equals(connectionInfo.getType());
+      if (jdbcLike) {
+        try (Connection connection = openConnection(connectionInfo)) {
+          TProfile tProfile = dStore.loadJdbcTableMetadata(connection, queryInfo.getText(), tableInfo.getSProfile());
+          tableInfo.setCProfiles(tProfile.getCProfiles());
+        } catch (SQLException | TableNameEmptyException ex) {
+          throw new RuntimeException(ex);
+        }
       }
 
       updateTableInfo(tableInfo);
@@ -360,74 +372,56 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
         .toList();
   }
 
-  private void loadMetadata() {
-    int querySelectedRow = queryCase.getJxTable().getSelectedRow();
-
-    ConnectionInfo connectionInfo = getConnectionInfo();
-
+  private void loadMetadata(int queryId, int querySelectedRow, ConnectionInfo connectionInfo) {
     if (ConnectionType.JDBC.equals(connectionInfo.getType())) {
-      loadMetadataJdbc(connectionInfo);
+      loadMetadataJdbc(connectionInfo, queryId);
     } else if (ConnectionType.HTTP.equals(connectionInfo.getType())) {
-      loadMetadataHttp(connectionInfo);
+      loadMetadataHttp(connectionInfo, queryId);
     } else if (ConnectionType.JMX.equals(connectionInfo.getType())) {
-      loadMetadataJmx(connectionInfo);
+      loadMetadataJmx(connectionInfo, queryId);
     } else {
-      loadMetadataJdbc(connectionInfo);
+      loadMetadataJdbc(connectionInfo, queryId);
     }
 
-    queryCase.getJxTable().setRowSelectionInterval(querySelectedRow, querySelectedRow);
+    SwingUtilities.invokeLater(() -> {
+      JXTable table = queryCase.getJxTable();
+      if (querySelectedRow < table.getRowCount()) {
+        table.setRowSelectionInterval(querySelectedRow, querySelectedRow);
+      }
+    });
   }
 
-  private void loadMetadataJdbc(ConnectionInfo connectionInfo) {
-    Connection connection;
+  private void loadMetadataJdbc(ConnectionInfo connectionInfo, int queryId) {
+    QueryInfo queryInfo = getQueryInfo(queryId);
+    TableInfo tableInfo = getTableInfo(queryInfo);
+
+    TProfile tProfile;
+    Connection connection = openConnection(connectionInfo);
     try {
-      connectionPoolManager.createDataSource(connectionInfo);
-      connection = connectionPoolManager.getConnection(connectionInfo);
+      tProfile = dStore.loadJdbcTableMetadata(connection, queryInfo.getText(), tableInfo.getSProfile());
     } catch (Exception e) {
-      log.error("Failed to create datasource or get connection for '{}': {}",
-                connectionInfo.getName(), e.getMessage());
+      log.error("Failed to load JDBC table metadata for query '{}': {}",
+                queryInfo.getName(), e.getMessage());
       throw new RuntimeException(
-          "Cannot connect to database '" + connectionInfo.getName() + "'.\n"
-              + "Please check connection settings and credentials.\n\n"
+          "Failed to load metadata for query '" + queryInfo.getName() + "'.\n\n"
               + "Details: " + getRootCauseMessage(e), e);
+    } finally {
+      closeQuietly(connection);
     }
 
-    if (connection == null) {
-      log.error("Connection is null for '{}'", connectionInfo.getName());
-      throw new RuntimeException(
-          "Cannot connect to database '" + connectionInfo.getName() + "'.\n"
-              + "Please check connection settings and credentials.");
-    }
+    List<Metric> metricList = new ArrayList<>();
 
-    try {
-      int queryId = getSelectedQueryId();
+    queryInfo.setDbType(connectionInfo.getDbType());
+    queryInfo.setMetricList(metricList);
 
-      QueryInfo queryInfo = getQueryInfo(queryId);
-      TableInfo tableInfo = getTableInfo(queryInfo);
+    tableInfo.setCProfiles(tProfile.getCProfiles());
 
-      TProfile tProfile;
-      try {
-        tProfile = dStore.loadJdbcTableMetadata(connection, queryInfo.getText(), tableInfo.getSProfile());
-      } catch (Exception e) {
-        log.error("Failed to load JDBC table metadata for query '{}': {}",
-                  queryInfo.getName(), e.getMessage());
-        throw new RuntimeException(
-            "Failed to load metadata for query '" + queryInfo.getName() + "'.\n\n"
-                + "Details: " + getRootCauseMessage(e), e);
-      }
+    autoSelectTimestampColumn(tableInfo);
 
-      List<Metric> metricList = new ArrayList<>();
+    profileManager.updateQuery(queryInfo);
+    profileManager.updateTable(tableInfo);
 
-      queryInfo.setDbType(connectionInfo.getDbType());
-      queryInfo.setMetricList(metricList);
-
-      tableInfo.setCProfiles(tProfile.getCProfiles());
-
-      autoSelectTimestampColumn(tableInfo);
-
-      profileManager.updateQuery(queryInfo);
-      profileManager.updateTable(tableInfo);
-
+    SwingUtilities.invokeLater(() -> {
       updateMetadataUI(tableInfo);
 
       fillTimestampComboBox(tableInfo.getCProfiles());
@@ -436,16 +430,26 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
       fillConfigMetadata(tableInfo, configMetadataCase);
 
       publishMetadataUpdate(queryInfo.getId(), queryInfo.getName(), tableInfo.getCProfiles());
-    } catch (RuntimeException e) {
-      throw e;
-    } finally {
-      try {
-        if (!connection.isClosed()) {
-          connection.close();
-        }
-      } catch (SQLException e) {
-        log.warn("Failed to close connection after metadata load: {}", e.getMessage());
-      }
+    });
+  }
+
+  private Connection openConnection(ConnectionInfo connectionInfo) {
+    try {
+      return connectionPoolManager.getConnection(connectionInfo);
+    } catch (Exception e) {
+      log.error("Failed to get connection for '{}': {}", connectionInfo.getName(), e.getMessage());
+      throw new RuntimeException(
+          "Cannot connect to database '" + connectionInfo.getName() + "'.\n"
+              + "Please check connection settings and credentials.\n\n"
+              + "Details: " + getRootCauseMessage(e), e);
+    }
+  }
+
+  private static void closeQuietly(Connection connection) {
+    try {
+      connection.close();
+    } catch (SQLException e) {
+      log.warn("Failed to close connection: {}", e.getMessage());
     }
   }
 
@@ -457,9 +461,7 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
     return cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName();
   }
 
-  private void loadMetadataHttp(ConnectionInfo connectionInfo) {
-    int queryId = getSelectedQueryId();
-
+  private void loadMetadataHttp(ConnectionInfo connectionInfo, int queryId) {
     QueryInfo queryInfo = getQueryInfo(queryId);
     TableInfo tableInfo = getTableInfo(queryInfo);
 
@@ -493,20 +495,20 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
     profileManager.updateQuery(queryInfo);
     profileManager.updateTable(tableInfo);
 
-    updateMetadataUI(tableInfo);
+    SwingUtilities.invokeLater(() -> {
+      updateMetadataUI(tableInfo);
 
-    fillTimestampComboBox(tableInfo.getCProfiles());
+      fillTimestampComboBox(tableInfo.getCProfiles());
 
-    updateTableInfo(tableInfo);
+      updateTableInfo(tableInfo);
 
-    configMetadataCase.getDefaultTableModel().fireTableDataChanged();
+      configMetadataCase.getDefaultTableModel().fireTableDataChanged();
 
-    publishMetadataUpdate(queryInfo.getId(), queryInfo.getName(), tableInfo.getCProfiles());
+      publishMetadataUpdate(queryInfo.getId(), queryInfo.getName(), tableInfo.getCProfiles());
+    });
   }
 
-  private void loadMetadataJmx(ConnectionInfo connectionInfo) {
-    int queryId = getSelectedQueryId();
-
+  private void loadMetadataJmx(ConnectionInfo connectionInfo, int queryId) {
     QueryInfo queryInfo = getQueryInfo(queryId);
     TableInfo tableInfo = getTableInfo(queryInfo);
 
@@ -540,15 +542,17 @@ public final class QueryMetadataHandler implements ActionListener, CommonViewHan
     profileManager.updateQuery(queryInfo);
     profileManager.updateTable(tableInfo);
 
-    updateMetadataUI(tableInfo);
+    SwingUtilities.invokeLater(() -> {
+      updateMetadataUI(tableInfo);
 
-    fillTimestampComboBox(tableInfo.getCProfiles());
+      fillTimestampComboBox(tableInfo.getCProfiles());
 
-    updateTableInfo(tableInfo);
+      updateTableInfo(tableInfo);
 
-    configMetadataCase.getDefaultTableModel().fireTableDataChanged();
+      configMetadataCase.getDefaultTableModel().fireTableDataChanged();
 
-    publishMetadataUpdate(queryInfo.getId(), queryInfo.getName(), tableInfo.getCProfiles());
+      publishMetadataUpdate(queryInfo.getId(), queryInfo.getName(), tableInfo.getCProfiles());
+    });
   }
 
   private void autoSelectTimestampColumn(TableInfo tableInfo) {

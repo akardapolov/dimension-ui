@@ -19,7 +19,10 @@ public class TaskExecutorPool {
 
   public void add(ProfileTaskQueryKey profileTaskQueryKey,
                   TaskExecutor taskExecutor) {
-    taskExecutorMap.put(profileTaskQueryKey, taskExecutor);
+    TaskExecutor previous = taskExecutorMap.put(profileTaskQueryKey, taskExecutor);
+    if (previous != null && previous != taskExecutor) {
+      log.warn("Task Executor for {} was replaced without stop", profileTaskQueryKey);
+    }
   }
 
   public TaskExecutor get(ProfileTaskQueryKey profileTaskQueryKey) {
@@ -27,7 +30,7 @@ public class TaskExecutorPool {
   }
 
   public void stop(ProfileTaskQueryKey profileTaskQueryKey) {
-    TaskExecutor executor = taskExecutorMap.get(profileTaskQueryKey);
+    TaskExecutor executor = taskExecutorMap.remove(profileTaskQueryKey);
     if (executor != null) {
       executor.stop();
       log.info("Stopped Task Executor for {}", profileTaskQueryKey);
@@ -37,7 +40,7 @@ public class TaskExecutorPool {
     }
   }
 
-  public void remove(ProfileTaskQueryKey profileTaskQueryKey) {
-    taskExecutorMap.remove(profileTaskQueryKey);
+  public TaskExecutor remove(ProfileTaskQueryKey profileTaskQueryKey) {
+    return taskExecutorMap.remove(profileTaskQueryKey);
   }
 }

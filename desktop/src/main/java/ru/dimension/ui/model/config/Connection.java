@@ -21,4 +21,8 @@ public class Connection extends ConfigEntity {
 
   private Method httpMethod;
   private ParseType parseType;
+
+  public boolean isJmxLocalMode() {
+    return type == ConnectionType.JMX && (url == null || url.isBlank());
+  }
 }

@@ -15,7 +15,6 @@ import ru.dimension.ui.collector.collect.JdbcCollect;
 import ru.dimension.ui.collector.collect.JmxCollect;
 import ru.dimension.ui.collector.http.HttpResponseFetcher;
 import ru.dimension.ui.manager.ConnectionPoolManager;
-import ru.dimension.ui.model.ProfileTaskKey;
 import ru.dimension.ui.model.ProfileTaskQueryKey;
 import ru.dimension.ui.model.info.ConnectionInfo;
 import ru.dimension.ui.model.info.ProfileInfo;
@@ -37,12 +36,14 @@ public class TaskExecutor {
   private final int pullTimeout;
 
   private final EventDispatcher eventDispatcher;
+  private final ConnectionPoolManager connectionPoolManager;
+  private final int connectionId;
+  private final ProfileTaskQueryKey profileTaskQueryKey;
 
-  private Connection connection = null;
   private final AbstractCollect loader;
 
   private final AtomicBoolean running = new AtomicBoolean(false);
-  private Thread periodicTask;
+  private volatile Thread periodicTask;
   private long lastExecutionTime;
 
   public TaskExecutor(ProfileInfo profileInfo,
@@ -61,21 +62,22 @@ public class TaskExecutor {
     this.queryInfo = queryInfo;
 
     this.eventDispatcher = eventDispatcher;
+    this.connectionPoolManager = connectionPoolManager;
+    this.connectionId = connectionInfo.getId();
 
     this.pullTimeout = taskInfo.getPullTimeout();
 
-    ProfileTaskKey profileTaskKey = new ProfileTaskKey(profileInfo.getId(), taskInfo.getId());
-
     ProfileTaskQueryKey profileTaskQueryKey = new ProfileTaskQueryKey(profileInfo.getId(), taskInfo.getId(), queryInfo.getId());
+    this.profileTaskQueryKey = profileTaskQueryKey;
 
     try {
       if (GatherDataMode.BY_CLIENT_JDBC.equals(queryInfo.getGatherDataMode())) {
-        connection = connectionPoolManager.getConnection(connectionInfo, profileTaskKey);
+        Connection connection = connectionPoolManager.getConnection(connectionInfo, profileTaskQueryKey);
         ByTarget byClient = new ByClient(profileTaskQueryKey, queryInfo, connection);
         this.loader = new JdbcCollect(byClient, connection, profileTaskQueryKey,
                                       taskInfo, queryInfo, tableInfo, sqlQueryState, dStore);
       } else if (GatherDataMode.BY_SERVER_JDBC.equals(queryInfo.getGatherDataMode())) {
-        connection = connectionPoolManager.getConnection(connectionInfo, profileTaskKey);
+        Connection connection = connectionPoolManager.getConnection(connectionInfo, profileTaskQueryKey);
         ByTarget byServer = new ByServer(profileTaskQueryKey, queryInfo, tableInfo, connection, sqlQueryState);
         this.loader = new JdbcCollect(byServer, connection, profileTaskQueryKey,
                                       taskInfo, queryInfo, tableInfo, sqlQueryState, dStore);
@@ -91,6 +93,7 @@ public class TaskExecutor {
       }
     } catch (Exception e) {
       log.catching(e);
+      connectionPoolManager.releaseTaskConnection(connectionId, profileTaskQueryKey);
       throw new RuntimeException(e);
     }
   }
@@ -139,12 +142,19 @@ public class TaskExecutor {
 
   public void stop() {
     running.set(false);
-    if (periodicTask != null) {
-      periodicTask.interrupt();
+    Thread taskThread = periodicTask;
+    if (taskThread != null) {
+      taskThread.interrupt();
+      try {
+        taskThread.join(Duration.ofSeconds(5));
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
     }
     if (loader instanceof JmxCollect jmxCollect) {
       jmxCollect.close();
     }
+    connectionPoolManager.releaseTaskConnection(connectionId, profileTaskQueryKey);
   }
 
   private void run() {

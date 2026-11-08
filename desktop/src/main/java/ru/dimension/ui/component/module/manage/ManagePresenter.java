@@ -17,6 +17,8 @@ import javax.swing.SwingUtilities;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.core.DStore;
 import ru.dimension.di.Assisted;
+import ru.dimension.ui.bus.EventBus;
+import ru.dimension.ui.bus.event.UpdateMetadataColumnsEvent;
 import ru.dimension.ui.collector.Collector;
 import ru.dimension.ui.collector.http.HttpResponseFetcher;
 import ru.dimension.ui.component.broker.Message;
@@ -52,6 +54,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
 
   private final ManageView view;
   private final EventDispatcher eventDispatcher;
+  private final EventBus eventBus;
   private final ProfileManager profileManager;
   private final TaskExecutorPool taskExecutorPool;
   private final ConnectionPoolManager connectionPoolManager;
@@ -75,6 +78,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
                          @Assisted ManageView view,
                          PreviewModuleFactory previewModuleFactory,
                          EventDispatcher eventDispatcher,
+                         EventBus eventBus,
                          ProfileManager profileManager,
                          TaskExecutorPool taskExecutorPool,
                          ConnectionPoolManager connectionPoolManager,
@@ -88,6 +92,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
     this.previewModuleFactory = previewModuleFactory;
 
     this.eventDispatcher = eventDispatcher;
+    this.eventBus = eventBus;
     this.profileManager = profileManager;
     this.taskExecutorPool = taskExecutorPool;
     this.connectionPoolManager = connectionPoolManager;
@@ -157,6 +162,7 @@ public class ManagePresenter implements ActionListener, MessageAction {
         actionPerformed(actionName, capturedKey);
       } catch (Exception exception) {
         log.catching(exception);
+        setProfileStatusJLabel(capturedKey);
 
         ActionName actionNameMessage = ActionName.START;
         if (ActionName.STOP.name().equals(actionName)) {
@@ -164,7 +170,8 @@ public class ManagePresenter implements ActionListener, MessageAction {
         }
 
         String title = "Error for " + actionNameMessage.name() + " action";
-        DialogHelper.showErrorDialog(null, exception.getMessage(), title, exception);
+        SwingUtilities.invokeLater(() ->
+                                       DialogHelper.showErrorDialog(null, exception.getMessage(), title, exception));
 
         throw new RuntimeException(exception);
       } finally {
@@ -205,14 +212,11 @@ public class ManagePresenter implements ActionListener, MessageAction {
                     .filter(f -> f.getTableName().equals(queryInfo.getName())).findAny()
                     .orElseThrow(() -> new NotFoundException("Table not found by name: " + queryInfo.getName()));
 
-                if (BY_CLIENT_JDBC.equals(queryInfo.getGatherDataMode())) {
-                  connectionPoolManager.createDataSource(connectionInfo);
-                  Connection connection = connectionPoolManager.getConnection(connectionInfo);
-                  collector.fillMetadataJdbc(profileTaskQueryKey, queryInfo, tableInfo, connection);
-                } else if (BY_SERVER_JDBC.equals(queryInfo.getGatherDataMode())) {
-                  connectionPoolManager.createDataSource(connectionInfo);
-                  Connection connection = connectionPoolManager.getConnection(connectionInfo);
-                  collector.fillMetadataJdbc(profileTaskQueryKey, queryInfo, tableInfo, connection);
+                if (BY_CLIENT_JDBC.equals(queryInfo.getGatherDataMode())
+                    || BY_SERVER_JDBC.equals(queryInfo.getGatherDataMode())) {
+                  try (Connection connection = connectionPoolManager.getConnection(connectionInfo)) {
+                    collector.fillMetadataJdbc(profileTaskQueryKey, queryInfo, tableInfo, connection);
+                  }
                 } else if (BY_CLIENT_HTTP.equals(queryInfo.getGatherDataMode())) {
                   collector.fillMetadataHttp(connectionInfo, queryInfo, tableInfo);
 
@@ -235,6 +239,11 @@ public class ManagePresenter implements ActionListener, MessageAction {
 
                 profileManager.updateQuery(queryInfo);
                 profileManager.updateTable(tableInfo);
+
+                eventBus.publish(new UpdateMetadataColumnsEvent(
+                    queryInfo.getId(),
+                    queryInfo.getName(),
+                    tableInfo.getCProfiles() != null ? tableInfo.getCProfiles() : List.of()));
               } catch (Exception e) {
                 profileManager.setProfileInfoStatusById(key.getProfileId(), RunStatus.NOT_RUNNING);
                 sqlQueryState.clear(profileTaskQueryKey);
@@ -288,86 +297,92 @@ public class ManagePresenter implements ActionListener, MessageAction {
 
       ProfileInfo profileInfo = profileManager.getProfileInfoById(key.getProfileId());
 
-      profileInfo.getTaskInfoList()
-          .forEach(taskId -> {
-            TaskInfo taskInfo = profileManager.getTaskInfoById(taskId);
-            ConnectionInfo connectionInfo = profileManager.getConnectionInfoById(taskInfo.getConnectionId());
+      try {
+        profileInfo.getTaskInfoList()
+            .forEach(taskId -> {
+              TaskInfo taskInfo = profileManager.getTaskInfoById(taskId);
+              ConnectionInfo connectionInfo = profileManager.getConnectionInfoById(taskInfo.getConnectionId());
 
-            List<QueryInfo> queryInfoList = profileManager.getQueryInfoList().stream()
-                .filter(f -> taskInfo.getQueryInfoList().stream().anyMatch(qId -> qId == f.getId()))
-                .toList();
+              List<QueryInfo> queryInfoList = profileManager.getQueryInfoList().stream()
+                  .filter(f -> taskInfo.getQueryInfoList().stream().anyMatch(qId -> qId == f.getId()))
+                  .toList();
 
-            List<TableInfo> tableInfoList = profileManager.getTableInfoList().stream()
-                .filter(f -> queryInfoList.stream().anyMatch(qId -> qId.getName().equalsIgnoreCase(f.getTableName())))
-                .toList();
+              List<TableInfo> tableInfoList = profileManager.getTableInfoList().stream()
+                  .filter(f -> queryInfoList.stream().anyMatch(qId -> qId.getName().equalsIgnoreCase(f.getTableName())))
+                  .toList();
 
-            queryInfoList.forEach(queryInfo -> {
-              TableInfo tableInfo = tableInfoList.stream()
-                  .filter(f -> f.getTableName().equals(queryInfo.getName()))
-                  .findAny()
-                  .orElseThrow(() -> new NotFoundException("Table info not found.."));
+              queryInfoList.forEach(queryInfo -> {
+                TableInfo tableInfo = tableInfoList.stream()
+                    .filter(f -> f.getTableName().equals(queryInfo.getName()))
+                    .findAny()
+                    .orElseThrow(() -> new NotFoundException("Table info not found.."));
 
-              ProfileTaskQueryKey profileTaskQueryKey = new ProfileTaskQueryKey(
-                  key.getProfileId(), taskInfo.getId(), queryInfo.getId());
+                ProfileTaskQueryKey profileTaskQueryKey = new ProfileTaskQueryKey(
+                    key.getProfileId(), taskInfo.getId(), queryInfo.getId());
 
-              TaskExecutor taskExecutor =
-                  new TaskExecutor(profileInfo, taskInfo, queryInfo, tableInfo, connectionInfo,
-                                   connectionPoolManager,
-                                   sqlQueryState,
-                                   eventDispatcher,
-                                   httpResponseFetcher,
-                                   encryptDecrypt,
-                                   dStore);
+                TaskExecutor taskExecutor =
+                    new TaskExecutor(profileInfo, taskInfo, queryInfo, tableInfo, connectionInfo,
+                                     connectionPoolManager,
+                                     sqlQueryState,
+                                     eventDispatcher,
+                                     httpResponseFetcher,
+                                     encryptDecrypt,
+                                     dStore);
 
-              taskExecutorPool.add(profileTaskQueryKey, taskExecutor);
+                taskExecutorPool.add(profileTaskQueryKey, taskExecutor);
+              });
             });
-          });
 
-      collector.start(profileInfo);
+        collector.start(profileInfo);
+      } catch (RuntimeException ex) {
+        cleanupAfterFailedStart(profileInfo, key);
+        throw ex;
+      }
     } else if (ActionName.STOP.name().equals(actionName)) {
       ProfileInfo profileInfo = profileManager.getProfileInfoById(key.getProfileId());
 
       if (eventDispatcher.isProfileOnDashboardRunning(key.getProfileId())) {
         String message = String.format("Charts running on the Dashboard tab for the %s", profileInfo.getName());
-        DialogHelper.showMessageDialog(null, message, "Information");
+        SwingUtilities.invokeLater(() ->
+                                       DialogHelper.showMessageDialog(null, message, "Information"));
       }
 
       profileManager.setProfileInfoStatusById(key.getProfileId(), RunStatus.NOT_RUNNING);
       eventDispatcher.fireOnStopOnWorkspaceProfileView(key.getProfileId());
 
-      try {
-        collector.stop(profileInfo);
-      } finally {
-        profileInfo.getTaskInfoList()
-            .forEach(taskId -> profileManager.getQueryInfoList(key.getProfileId(), taskId)
-                .forEach(queryInfo -> {
-                  ProfileTaskQueryKey profileTaskQueryKey = new ProfileTaskQueryKey(key.getProfileId(), taskId, queryInfo.getId());
-                  taskExecutorPool.remove(profileTaskQueryKey);
-                }));
-      }
+      collector.stop(profileInfo);
     } else if (ActionName.PREVIEW.name().equals(actionName)) {
-      handlePreviewAction();
+      handlePreviewAction(key);
     }
 
-    setProfileStatusJLabel();
+    setProfileStatusJLabel(key);
   }
 
-  private void handlePreviewAction() {
-    if (previewModule != null && previewModule.getModel().getKey().equals(key)) {
-      log.info("Already running preview model by key: {}", key);
-    } else {
-      eventDispatcher.clearListenerPreviewByClass(PreviewModule.class);
-      previewModule = previewModuleFactory.create(PreviewMode.PREVIEW, key);
-      eventDispatcher.addCollectStartStopPreviewListener(key, previewModule);
-    }
-
-    previewModule.show();
+  private void cleanupAfterFailedStart(ProfileInfo profileInfo, ProfileTaskQueryKey key) {
+    profileManager.setProfileInfoStatusById(key.getProfileId(), RunStatus.NOT_RUNNING);
+    eventDispatcher.fireOnStopOnWorkspaceProfileView(key.getProfileId());
+    collector.stop(profileInfo);
   }
 
-  private void setProfileStatusJLabel() {
+  private void handlePreviewAction(ProfileTaskQueryKey key) {
+    SwingUtilities.invokeLater(() -> {
+      if (previewModule != null && previewModule.getModel().getKey().equals(key)) {
+        log.info("Already running preview model by key: {}", key);
+      } else {
+        eventDispatcher.clearListenerPreviewByClass(PreviewModule.class);
+        previewModule = previewModuleFactory.create(PreviewMode.PREVIEW, key);
+        eventDispatcher.addCollectStartStopPreviewListener(key, previewModule);
+      }
+
+      previewModule.show();
+    });
+  }
+
+  private void setProfileStatusJLabel(ProfileTaskQueryKey key) {
     ProfileInfo profileInfo = profileManager.getProfileInfoById(key.getProfileId());
     if (profileInfo != null) {
-      view.getProfileActionPanel().setButtonState(profileInfo.getName(), profileInfo.getStatus());
+      SwingUtilities.invokeLater(() ->
+                                     view.getProfileActionPanel().setButtonState(profileInfo.getName(), profileInfo.getStatus()));
     }
   }
 
@@ -377,17 +392,17 @@ public class ManagePresenter implements ActionListener, MessageAction {
 
     switch (message.action()) {
       case SET_PROFILE_TASK_QUERY_KEY -> {
-        key = message.parameters().get("key");
-        profileSelected = true;
+        SwingUtilities.invokeLater(() -> {
+          key = message.parameters().get("key");
+          profileSelected = true;
 
-        ProfileInfo profileInfo = profileManager.getProfileInfoById(key.getProfileId());
-        if (profileInfo != null) {
-          SwingUtilities.invokeLater(() -> {
+          ProfileInfo profileInfo = profileManager.getProfileInfoById(key.getProfileId());
+          if (profileInfo != null) {
             view.getProfileActionPanel().getPreview().setEnabled(true);
             view.getProfileActionPanel().getPreview().setToolTipText(null);
             view.getProfileActionPanel().setButtonState(profileInfo.getName(), profileInfo.getStatus());
-          });
-        }
+          }
+        });
       }
     }
   }

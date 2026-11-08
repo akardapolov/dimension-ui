@@ -2,7 +2,10 @@ package ru.dimension.ui.view.panel.template;
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.util.List;
+import javax.swing.ButtonGroup;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
@@ -65,6 +68,9 @@ public class ConnectionSectionPanel extends JPanel {
 
   private final JXTextField jmxUser;
   private final JPasswordField jmxPassword;
+
+  private final JRadioButton jmxRemote;
+  private final JRadioButton jmxLocal;
 
   private ConnectionType currentType = ConnectionType.JDBC;
 
@@ -142,8 +148,16 @@ public class ConnectionSectionPanel extends JPanel {
     this.jmxPassword.setBorder(border);
     this.jmxPassword.setToolTipText(PASSWORD_TOOLTIP);
 
+    this.jmxRemote = new JRadioButton("Remote (URL)", true);
+    this.jmxLocal = new JRadioButton("Local JVM", false);
+
+    ButtonGroup jmxModeGroup = new ButtonGroup();
+    jmxModeGroup.add(jmxRemote);
+    jmxModeGroup.add(jmxLocal);
+
     JPanel jmxPanel = new JPanel();
     PainlessGridBag gblJmx = new PainlessGridBag(jmxPanel, PGHelper.getPGConfig(0), false);
+    gblJmx.row().cell(new JLabel("Mode")).cell(jmxRemote).cell(jmxLocal).cellXRemainder(new JLabel()).fillX();
     gblJmx.row().cell(new JLabel("Username")).cellXRemainder(jmxUser).fillX();
     gblJmx.row().cell(new JLabel("Password")).cellXRemainder(jmxPassword).fillX();
     gblJmx.row().cellXYRemainder(new JLabel()).fillXY();
@@ -172,6 +186,15 @@ public class ConnectionSectionPanel extends JPanel {
     addPasswordDocListener(jdbcPassword, onChange);
     addDocListener(jmxUser, onChange);
     addPasswordDocListener(jmxPassword, onChange);
+
+    ItemListener jmxModeListener = e -> {
+      if (e.getStateChange() == ItemEvent.SELECTED) {
+        syncUrlEditable();
+        onChange.run();
+      }
+    };
+    jmxRemote.addItemListener(jmxModeListener);
+    jmxLocal.addItemListener(jmxModeListener);
   }
 
   private void addDocListener(JXTextField field, Runnable onChange) {
@@ -198,6 +221,11 @@ public class ConnectionSectionPanel extends JPanel {
     connName.setText(draft.getConnName());
     connUrl.setText(draft.getConnUrl());
 
+    boolean jmxLocalSelected = currentType == ConnectionType.JMX && draft.isJmxLocalMode();
+    jmxLocal.setSelected(jmxLocalSelected);
+    jmxRemote.setSelected(!jmxLocalSelected);
+    syncUrlEditable();
+
     jdbcUser.setText(draft.getConnUserName());
     jdbcJar.setText(draft.getConnJar());
     jdbcDriver.setText(draft.getConnDriver());
@@ -219,10 +247,16 @@ public class ConnectionSectionPanel extends JPanel {
 
   public void applyTo(TemplateDraft draft) {
     draft.setConnName(connName.getText());
-    draft.setConnUrl(connUrl.getText());
+    boolean jmxLocalSelected = currentType == ConnectionType.JMX && jmxLocal.isSelected();
+    draft.setJmxLocalMode(jmxLocalSelected);
+    draft.setConnUrl(jmxLocalSelected ? "" : connUrl.getText());
     draft.setConnUserName(currentType == ConnectionType.JMX ? jmxUser.getText() : jdbcUser.getText());
     draft.setConnJar(jdbcJar.getText());
     draft.setConnDriver(jdbcDriver.getText());
+  }
+
+  private void syncUrlEditable() {
+    connUrl.setEditable(currentType != ConnectionType.JMX || !jmxLocal.isSelected());
   }
 
   /**
@@ -232,7 +266,11 @@ public class ConnectionSectionPanel extends JPanel {
    */
   public void applyIssues(List<ValidationIssue> issues) {
     connName.setIssue(findIssue(issues, "conn.name"));
-    connUrl.setIssue(findIssue(issues, "conn.url"));
+    if (currentType == ConnectionType.JMX && jmxLocal.isSelected()) {
+      connUrl.setIssue(null);
+    } else {
+      connUrl.setIssue(findIssue(issues, "conn.url"));
+    }
 
     ValidationIssue jarIssue = findIssue(issues, "conn.jar");
     if (jarIssue != null && currentType == ConnectionType.JDBC) {

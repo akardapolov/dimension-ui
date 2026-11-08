@@ -32,6 +32,7 @@ import javax.swing.table.TableColumn;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.jdesktop.swingx.JXTable;
+import ru.dimension.tt.model.TTTableModel;
 import ru.dimension.tt.swing.TTTable;
 import ru.dimension.ui.bus.EventBus;
 import ru.dimension.ui.bus.event.ConnectionAddEvent;
@@ -611,32 +612,72 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener, Jm
     }
   }
 
+  /**
+   * Точечное обновление статусов в таблице CONNECTION.
+   *
+   * Раньше здесь вызывался fireTableDataChanged(), который шлёт TableModelEvent
+   * с firstRow=0, lastRow=Integer.MAX_VALUE. JTable на такое событие вызывает
+   * clearSelectionAndLeadAnchor() — выделение сбрасывается, срабатывает
+   * ConnectionSelectionHandler.onSelection(empty), форма очищается, а
+   * setEditModeForTab(tab, false) не вызывается — таблицы остаются disabled.
+   *
+   * Теперь обновляем только реально изменившиеся ячейки через fireTableCellUpdated.
+   * Такое событие (firstRow == lastRow) НЕ трогает выделение.
+   */
   private void updateConnectionTableStatus() {
     TTTable<ConnectionRow, JXTable> tt = connectionCase.getTypedTable();
     if (tt == null) {
       return;
     }
 
-    boolean changed = false;
-    for (int i = 0; i < tt.model().getRowCount(); i++) {
-      ConnectionRow row = tt.model().itemAt(i);
-      if (row != null) {
-        ConnectionStatus newStatus = connectionStatusMap.getOrDefault(row.getId(), ConnectionStatus.NOT_CONNECTED);
-        if (row.getStatus() != newStatus) {
-          row.setStatus(newStatus);
-          changed = true;
-        }
-      }
+    TTTableModel<ConnectionRow> model = tt.model();
+    int rowCount = model.getRowCount();
+    if (rowCount == 0) {
+      return;
     }
 
-    if (changed) {
-      isUpdatingTableStatus = true;
-      try {
-        tt.model().fireTableDataChanged();
-      } finally {
-        isUpdatingTableStatus = false;
+    int statusCol = findStatusModelColumnIndex(model);
+    if (statusCol < 0) {
+      log.debug("Status column not found in Connection model");
+      return;
+    }
+
+    isUpdatingTableStatus = true;
+    try {
+      for (int i = 0; i < rowCount; i++) {
+        ConnectionRow row = model.itemAt(i);
+        if (row == null) {
+          continue;
+        }
+
+        ConnectionStatus newStatus =
+            connectionStatusMap.getOrDefault(row.getId(), ConnectionStatus.NOT_CONNECTED);
+
+        if (row.getStatus() != newStatus) {
+          row.setStatus(newStatus);
+          model.fireTableCellUpdated(i, statusCol);
+        }
+      }
+    } finally {
+      isUpdatingTableStatus = false;
+    }
+  }
+
+  private int findStatusModelColumnIndex(TTTableModel<ConnectionRow> model) {
+    try {
+      return model.schema().modelIndexOf("Status");
+    } catch (IllegalArgumentException ignored) {
+    }
+    try {
+      return model.schema().modelIndexOf("status");
+    } catch (IllegalArgumentException ignored) {
+    }
+    for (int i = 0; i < model.getColumnCount(); i++) {
+      if ("Status".equals(model.getColumnName(i))) {
+        return i;
       }
     }
+    return -1;
   }
 
   public void fireProfileAdd(ProfileAddEvent event) {
@@ -723,6 +764,7 @@ public class ConfigPresenter extends WindowAdapter implements ConfigListener, Jm
       statusCheckInProgress = false;
       connectionStatusMap.clear();
     }
+    SwingUtilities.invokeLater(this::updateConnectionTableStatus);
     log.debug("Connection status check reset");
   }
 

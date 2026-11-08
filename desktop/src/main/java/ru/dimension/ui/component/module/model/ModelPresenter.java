@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.swing.SwingUtilities;
 import lombok.extern.log4j.Log4j2;
 import ru.dimension.db.model.profile.CProfile;
 import ru.dimension.ui.component.broker.Destination;
@@ -145,6 +146,11 @@ public class ModelPresenter {
   }
 
   public void handleMetadataColumnsUpdate(int queryId, String queryName, List<CProfile> columns) {
+    if (!SwingUtilities.isEventDispatchThread()) {
+      SwingUtilities.invokeLater(() -> handleMetadataColumnsUpdate(queryId, queryName, columns));
+      return;
+    }
+
     log.info("Updating metadata columns for queryId={}, queryName={}, columnCount={}",
              queryId, queryName, columns.size());
 

@@ -52,27 +52,22 @@ public class JdbcCollect extends AbstractCollect implements JdbcLoader {
     long begin = sqlQueryState.getLastTimestamp(profileTaskQueryKey);
     long end = getSysdate(queryInfo.getDbType().getQuery(), connection, log);
 
-    try {
-
-      PreparedStatement ps = byTarget.getPreparedStatement(begin, end);
+    try (PreparedStatement ps = byTarget.getPreparedStatement(begin, end)) {
       ps.setFetchSize(resultSetFetchSize);
 
-      ResultSet r = ps.executeQuery();
+      try (ResultSet r = ps.executeQuery()) {
+        long lastTimeStampDB = dStore.putDataJdbc(tableInfo.getTableName(), r);
 
-      long lastTimeStampDB = dStore.putDataJdbc(tableInfo.getTableName(), r);
-
-      if (byTarget instanceof ByServer) {
-        sqlQueryState.setLastTimestamp(profileTaskQueryKey, end);
-      } else if (byTarget instanceof ByClient) {
-        if (lastTimeStampDB != -1) {
-          sqlQueryState.setLastTimestamp(profileTaskQueryKey, lastTimeStampDB);
-        } else {
+        if (byTarget instanceof ByServer) {
           sqlQueryState.setLastTimestamp(profileTaskQueryKey, end);
+        } else if (byTarget instanceof ByClient) {
+          if (lastTimeStampDB != -1) {
+            sqlQueryState.setLastTimestamp(profileTaskQueryKey, lastTimeStampDB);
+          } else {
+            sqlQueryState.setLastTimestamp(profileTaskQueryKey, end);
+          }
         }
       }
-
-      r.close();
-      ps.close();
     } catch (Exception e) {
       sqlQueryState.setLastTimestamp(profileTaskQueryKey, end);
 

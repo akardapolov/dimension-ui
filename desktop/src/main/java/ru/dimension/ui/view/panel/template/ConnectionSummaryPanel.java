@@ -124,7 +124,7 @@ public class ConnectionSummaryPanel extends JPanel {
         httpParsePanel.setSelectedRadioButton(connection.getParseType());
       }
       case JMX -> {
-        jmxUrl.setText(connection.getUrl());
+        jmxUrl.setText(connection.isJmxLocalMode() ? "Local JVM" : connection.getUrl());
         jmxUser.setText(connection.getUserName());
         jmxPassword.setText(connection.getPassword() == null || connection.getPassword().isEmpty() ? "" : "••••••••");
       }

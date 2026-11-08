@@ -74,6 +74,12 @@ public final class ConnectionSelectionHandler extends AbstractTableSelectionHand
   @Override
   protected void onSelection(Optional<ConnectionRow> item) {
     Integer id = item.map(ConnectionRow::getId).orElse(null);
+
+    if (id == null && isEditingActive() && context.getSelectedConnectionId() != null) {
+      log.debug("Ignoring empty selection while editing connection {}", context.getSelectedConnectionId());
+      return;
+    }
+
     context.setSelectedConnectionId(id);
 
     if (id == null) {
@@ -126,6 +132,11 @@ public final class ConnectionSelectionHandler extends AbstractTableSelectionHand
     if (!checkboxConfig.isSelected()) {
       highlightService.highlightFromConnection(id);
     }
+  }
+
+  private boolean isEditingActive() {
+    return connectionButtonPanel.getBtnSave().isEnabled()
+        || connectionButtonPanel.getBtnCancel().isEnabled();
   }
 
   private void applyCheckboxState(boolean enabled) {
